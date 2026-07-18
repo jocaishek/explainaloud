@@ -12,6 +12,10 @@ const links = [
 export function Navbar() {
   const pathname = usePathname();
 
+  if (pathname === "/") {
+    return null;
+  }
+
   return (
     <nav className="border-b border-border bg-background">
       <div className="mx-auto flex h-14 max-w-3xl items-center gap-6 px-4">
