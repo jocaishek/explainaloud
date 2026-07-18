@@ -1,61 +1,33 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Light Mode Default — cream canvas with a rosewood/yale/cerulean/frost brand palette */
-  --color-background: #f7f0e3;
-  --color-foreground: #21344a;
-  --color-muted: #efe6d4;
-  --color-muted-foreground: oklch(0.5 0.02 250);
-  --color-card: #fffcf5;
-  --color-card-foreground: #21344a;
-  --color-popover: #fffcf5;
-  --color-popover-foreground: #21344a;
-  --color-border: #e6dac2;
-  --color-input: #e6dac2;
-  --color-primary: #21344a;
-  --color-primary-foreground: #fffcf5;
-  --color-secondary: #efe6d4;
-  --color-secondary-foreground: #21344a;
-  --color-accent: #efe6d4;
-  --color-accent-foreground: #21344a;
-  --color-destructive: oklch(0.577 0.245 27.325);
-  --color-ring: oklch(0.556 0 0);
+  /* Dark Mode Default — #121212 canvas, single rich baby-blue accent */
+  --color-background: #121212;
+  --color-foreground: #a1a1aa;
+  --color-muted: #1e1e1e;
+  --color-muted-foreground: #71717a;
+  --color-card: #171717;
+  --color-card-foreground: #a1a1aa;
+  --color-popover: #171717;
+  --color-popover-foreground: #a1a1aa;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-input: rgba(255, 255, 255, 0.1);
+  --color-primary: #ffffff;
+  --color-primary-foreground: #121212;
+  --color-secondary: #1e1e1e;
+  --color-secondary-foreground: #ffffff;
+  --color-accent: #1e1e1e;
+  --color-accent-foreground: #ffffff;
+  --color-destructive: oklch(0.637 0.237 25.331);
+  --color-ring: #4a90e2;
 
-  /* Brand palette */
-  --color-cream: #f7f0e3;
-  --color-rosewood: #c33c54;
-  --color-yale: #254e70;
-  --color-cerulean: #37718e;
-  --color-frost: #8ee3ef;
-
-  --color-brand: var(--color-rosewood);
-  --color-brand-foreground: #fffcf5;
+  /* Brand */
+  --color-brand: #4a90e2;
+  --color-brand-foreground: #ffffff;
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
-}
-
-.dark {
-  --color-background: oklch(0.145 0 0);
-  --color-foreground: oklch(0.985 0 0);
-  --color-muted: oklch(0.269 0 0);
-  --color-muted-foreground: oklch(0.708 0 0);
-  --color-card: oklch(0.145 0 0);
-  --color-card-foreground: oklch(0.985 0 0);
-  --color-popover: oklch(0.145 0 0);
-  --color-popover-foreground: oklch(0.985 0 0);
-  --color-border: oklch(0.269 0 0);
-  --color-input: oklch(0.269 0 0);
-  --color-primary: oklch(0.985 0 0);
-  --color-primary-foreground: oklch(0.205 0 0);
-  --color-secondary: oklch(0.269 0 0);
-  --color-secondary-foreground: oklch(0.985 0 0);
-  --color-accent: oklch(0.269 0 0);
-  --color-accent-foreground: oklch(0.985 0 0);
-  --color-destructive: oklch(0.396 0.141 25.723);
-  --color-ring: oklch(0.556 0 0);
-  --color-brand-foreground: oklch(0.145 0 0);
 }
 
 @layer base {
@@ -64,6 +36,51 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+/* Glassmorphism surface used by all UI mockups and bento cards.
+   Only reads as glass when a glow orb sits behind it — keep the
+   ambient gradients in place wherever this class is used. */
+.glass {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
+}
+
+/* Hover lift for glass cards — pointer devices only */
+@media (hover: hover) and (pointer: fine) {
+  .glass-lift {
+    transition:
+      transform 200ms cubic-bezier(0.23, 1, 0.32, 1),
+      border-color 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .glass-lift:hover {
+    transform: translateY(-4px);
+    border-color: rgba(255, 255, 255, 0.18);
+    box-shadow:
+      inset 0 1px 1px rgba(255, 255, 255, 0.1),
+      0 12px 32px -16px rgba(74, 144, 226, 0.35);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-lift,
+  .glass-lift:hover {
+    transition: none;
+    transform: none;
   }
 }
 
