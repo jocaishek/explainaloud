@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
 import { useInView } from "~/hooks/use-in-view";
 import { useTypewriter } from "~/hooks/use-typewriter";
@@ -350,9 +351,14 @@ function GlassCard({
   className?: string;
 }) {
   return (
-    <div className={cn("glass glass-lift rounded-2xl", className)}>
+    <Card
+      className={cn(
+        "glass glass-lift gap-0 rounded-2xl border-0 bg-transparent py-0 shadow-none",
+        className,
+      )}
+    >
       {children}
-    </div>
+    </Card>
   );
 }
 
