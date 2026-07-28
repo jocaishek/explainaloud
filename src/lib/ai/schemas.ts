@@ -115,7 +115,12 @@ export const spansSchema = z.object({
       z.object({
         text: z.string(),
         status: spanStatus,
-        key_point: z.string().nullish(),
+        key_point: z
+          .union([z.string(), z.number()])
+          .nullish()
+          .transform((value) =>
+            typeof value === "number" ? String(value) : value,
+          ),
         issue: z.string().nullish(),
       }),
     )

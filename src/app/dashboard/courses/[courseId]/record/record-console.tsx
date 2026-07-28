@@ -108,6 +108,10 @@ export function RecordConsole({
   );
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [failedAnalysis, setFailedAnalysis] = useState<{
+    sessionId: string;
+    transcript: string;
+  } | null>(null);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -380,9 +384,11 @@ export function RecordConsole({
       const json = await response.json();
       if (!response.ok) {
         setError(json.error ?? "Couldn't analyse that session.");
+        setFailedAnalysis({ sessionId, transcript: text });
         return;
       }
 
+      setFailedAnalysis(null);
       if (Array.isArray(json.spans)) setSpans(json.spans);
       if (json.orchestration) setAgentRun(json.orchestration);
       if (json.report) {
@@ -398,6 +404,7 @@ export function RecordConsole({
       }
     } catch {
       setError("Couldn't reach the analyser.");
+      setFailedAnalysis({ sessionId, transcript: text });
     }
   }
 
@@ -407,6 +414,14 @@ export function RecordConsole({
     setError(null);
     setStatus("analyzing");
     await analyzeSession(text, session.id);
+    setStatus("idle");
+  }
+
+  async function retryGapCoach() {
+    if (!failedAnalysis) return;
+    setError(null);
+    setStatus("analyzing");
+    await analyzeSession(failedAnalysis.transcript, failedAnalysis.sessionId);
     setStatus("idle");
   }
 
@@ -433,6 +448,7 @@ export function RecordConsole({
     );
     setConfirmDeleteId(null);
     setDeletingId(null);
+    if (failedAnalysis?.sessionId === sessionId) setFailedAnalysis(null);
 
     if (displayedSessionId === sessionId) {
       setDisplayedSessionId(null);
@@ -463,6 +479,7 @@ export function RecordConsole({
 
     setError(null);
     setNotice(null);
+    setFailedAnalysis(null);
 
     // Ask for the microphone FIRST and wait for the user to answer the
     // browser prompt. A denied prompt must not burn one of the day's five
@@ -779,9 +796,24 @@ export function RecordConsole({
         )}
 
         {error && (
-          <p role="alert" className="max-w-sm text-sm text-destructive">
-            {error}
-          </p>
+          <div
+            role="alert"
+            className="flex max-w-sm flex-col items-center gap-2"
+          >
+            <p className="text-sm text-destructive">{error}</p>
+            {failedAnalysis && (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={status !== "idle"}
+                onClick={() => void retryGapCoach()}
+                className="rounded-full"
+              >
+                {status === "analyzing" ? "Retrying…" : "Retry Gap Coach"}
+              </Button>
+            )}
+          </div>
         )}
       </div>
 
@@ -852,6 +884,9 @@ export function RecordConsole({
                   &ldquo;{gap.phrase}&rdquo;
                 </p>
                 <p className="mt-2 text-sm whitespace-pre-wrap text-foreground">
+                  <span className="font-semibold text-strong">
+                    Explanation:{" "}
+                  </span>
                   {conciseTeachingText(gap.explanation)}
                 </p>
               </div>

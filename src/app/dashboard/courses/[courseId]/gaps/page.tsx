@@ -243,6 +243,9 @@ export default async function GapReportPage({
                 </Link>
                 {weakness.explanation && (
                   <p className="max-w-2xl text-sm leading-6 text-foreground">
+                    <span className="font-semibold text-strong">
+                      Explanation:{" "}
+                    </span>
                     {conciseTeachingText(weakness.explanation)}
                   </p>
                 )}

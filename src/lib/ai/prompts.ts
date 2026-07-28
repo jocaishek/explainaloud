@@ -238,7 +238,7 @@ Return JSON:
     {
       "text": "exact substring",
       "status": "correct" | "gap" | "neutral",
-      "key_point": "which key point this relates to, or null",
+      "key_point": "the related key point text, or null (never an index)",
       "issue": "for gaps only: one sentence naming what was missed, or null"
     }
   ],

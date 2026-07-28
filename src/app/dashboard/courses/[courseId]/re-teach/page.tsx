@@ -106,6 +106,9 @@ export default async function ReTeachPage({
 
               {gap.explanation && (
                 <p className="max-w-2xl text-sm leading-6 text-foreground">
+                  <span className="font-semibold text-strong">
+                    Explanation:{" "}
+                  </span>
                   {conciseTeachingText(gap.explanation)}
                 </p>
               )}
