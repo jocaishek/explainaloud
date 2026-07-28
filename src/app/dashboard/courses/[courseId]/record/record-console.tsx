@@ -102,6 +102,11 @@ export function RecordConsole({
   const [sessions, setSessions] = useState(initialSessions);
   const [used, setUsed] = useState(recordingsUsed);
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
+  const [displayedSessionId, setDisplayedSessionId] = useState<string | null>(
+    null,
+  );
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -345,6 +350,7 @@ export function RecordConsole({
     }
 
     setSessions((prev) => [data, ...prev]);
+    setDisplayedSessionId(data.id);
 
     // Only now — after the student has stopped — do we ask for teaching.
     if (!courseReady || text.length < 24) {
@@ -380,6 +386,7 @@ export function RecordConsole({
       if (json.orchestration) setAgentRun(json.orchestration);
       if (json.report) {
         setReport(json.report);
+        setDisplayedSessionId(sessionId);
         setSessions((prev) =>
           prev.map((session) =>
             session.id === sessionId
@@ -400,6 +407,41 @@ export function RecordConsole({
     setStatus("analyzing");
     await analyzeSession(text, session.id);
     setStatus("idle");
+  }
+
+  async function deleteSession(sessionId: string) {
+    setDeletingId(sessionId);
+    setError(null);
+
+    const supabase = createClient();
+    const { data: deleted, error: deleteError } = await supabase
+      .from("course_sessions")
+      .delete()
+      .eq("id", sessionId)
+      .select("id")
+      .single<{ id: string }>();
+
+    if (deleteError || !deleted) {
+      setError("Couldn't delete that session. Try again.");
+      setDeletingId(null);
+      return;
+    }
+
+    setSessions((previous) =>
+      previous.filter((session) => session.id !== sessionId),
+    );
+    setConfirmDeleteId(null);
+    setDeletingId(null);
+
+    if (displayedSessionId === sessionId) {
+      setDisplayedSessionId(null);
+      setTranscript("");
+      setInterim("");
+      setSpans([]);
+      setReport(null);
+      setAgentRun(null);
+      transcriptRef.current = "";
+    }
   }
 
   async function startRecording() {
@@ -481,6 +523,7 @@ export function RecordConsole({
     setSpans([]);
     setReport(null);
     setAgentRun(null);
+    setDisplayedSessionId(null);
     setNotice(null);
     transcriptRef.current = "";
     browserTranscriptRef.current = "";
@@ -826,7 +869,7 @@ export function RecordConsole({
           {sessions.map((session) => (
             <div
               key={session.id}
-              className="flex items-start gap-3 rounded-lg border border-border bg-surface p-3"
+              className="flex flex-wrap items-start gap-3 rounded-lg border border-border bg-surface p-3"
             >
               <div className="min-w-0 flex-1">
                 <p className="text-xs text-subtle">
@@ -855,6 +898,43 @@ export function RecordConsole({
                     Build gap report
                   </Button>
                 )}
+              {confirmDeleteId === session.id ? (
+                <fieldset
+                  aria-label={`Confirm deleting session from ${new Date(session.started_at).toLocaleString()}`}
+                  className="flex shrink-0 items-center gap-1.5 border-0 p-0"
+                >
+                  <span className="text-xs text-subtle">Are you sure?</span>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="destructive"
+                    disabled={deletingId === session.id}
+                    onClick={() => void deleteSession(session.id)}
+                  >
+                    {deletingId === session.id ? "Deleting…" : "Yes"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="xs"
+                    variant="ghost"
+                    disabled={deletingId === session.id}
+                    onClick={() => setConfirmDeleteId(null)}
+                  >
+                    No
+                  </Button>
+                </fieldset>
+              ) : (
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="destructive"
+                  disabled={deletingId !== null || status !== "idle"}
+                  onClick={() => setConfirmDeleteId(session.id)}
+                  aria-label={`Delete session from ${new Date(session.started_at).toLocaleString()}`}
+                >
+                  Delete
+                </Button>
+              )}
             </div>
           ))}
         </div>
