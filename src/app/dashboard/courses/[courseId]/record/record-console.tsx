@@ -73,6 +73,30 @@ const WARN_AT_MS = 30_000;
  */
 const MAX_RESTARTS = 8;
 
+/**
+ * How many failed audio-fallback caption passes to tolerate before dropping
+ * live captions for the rest of the session. Safari's fragmented-MP4 chunks
+ * aren't always decodable as a prefix, so a partial upload can fail every
+ * time — retrying it forever wastes a transcription call every few seconds
+ * when the complete recording at the end will transcribe fine.
+ */
+const MAX_LIVE_CAPTION_FAILURES = 3;
+
+/**
+ * Safari exposes `webkitSpeechRecognition`, but starting it takes over audio
+ * input and tears down the `getUserMedia` stream that MediaRecorder is writing
+ * from — trading the local recording (which the final transcript depends on)
+ * for captions that Apple's service frequently refuses anyway. WebKit gets
+ * server captions from the first second instead.
+ */
+function browserCaptionsUsable() {
+  if (typeof navigator === "undefined") return false;
+  const isAppleWebKit =
+    /apple/i.test(navigator.vendor) &&
+    !/chrome|chromium|edg\//i.test(navigator.userAgent);
+  return !isAppleWebKit;
+}
+
 type ApiPayload = {
   error?: string;
   transcript?: string;
@@ -173,6 +197,7 @@ export function RecordConsole({
     null,
   );
   const liveTranscribeBusyRef = useRef(false);
+  const liveTranscribeFailuresRef = useRef(0);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const deadlineRef = useRef<number>(0);
   const restartsRef = useRef(0);
@@ -250,6 +275,24 @@ export function RecordConsole({
    * fails with `network`. When it does, periodically transcribe the complete
    * recording so far and replace the on-screen draft with that newer result.
    */
+  /**
+   * Give up on live captions after repeated failures. The recording itself is
+   * untouched — it still transcribes in full when the student finishes — so
+   * this only stops burning a call every few seconds on audio the service
+   * can't decode mid-stream.
+   */
+  const noteLiveCaptionFailure = useCallback(() => {
+    liveTranscribeFailuresRef.current += 1;
+    if (liveTranscribeFailuresRef.current < MAX_LIVE_CAPTION_FAILURES) return;
+    if (liveTranscribeTimerRef.current) {
+      clearInterval(liveTranscribeTimerRef.current);
+      liveTranscribeTimerRef.current = null;
+    }
+    setNotice(
+      "Live captions aren't available in this browser. Keep going — your full transcript arrives when you finish.",
+    );
+  }, []);
+
   const transcribeLiveAudio = useCallback(async () => {
     if (
       liveTranscribeBusyRef.current ||
@@ -282,23 +325,27 @@ export function RecordConsole({
         json.transcript.trim() &&
         !manualStopRef.current
       ) {
+        liveTranscribeFailuresRef.current = 0;
         const text = json.transcript.trim();
         serverTranscriptRef.current = text;
         transcriptRef.current = text;
         setTranscript(text);
         setInterim("");
+      } else if (!response.ok) {
+        noteLiveCaptionFailure();
       }
     } catch {
       // The final full-audio transcription remains the source of truth.
+      noteLiveCaptionFailure();
     } finally {
       liveTranscribeBusyRef.current = false;
     }
-  }, [courseId]);
+  }, [courseId, noteLiveCaptionFailure]);
 
   function startServerCaptions() {
     if (liveTranscribeTimerRef.current) return;
     setNotice(
-      "Live captions are using the secure audio fallback and will update every few seconds.",
+      "Captions in this browser transcribe your audio server-side, so they update every few seconds instead of word by word.",
     );
     liveTranscribeTimerRef.current = setInterval(() => {
       void transcribeLiveAudio();
@@ -546,7 +593,9 @@ export function RecordConsole({
   }
 
   async function startRecording() {
-    const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+    const Ctor = browserCaptionsUsable()
+      ? (window.SpeechRecognition ?? window.webkitSpeechRecognition)
+      : undefined;
 
     // Dispose of a completed engine before resetting this session's stop
     // guard. A late `onend` from the old instance must not finish the new
@@ -634,6 +683,7 @@ export function RecordConsole({
     manualStopRef.current = false;
     restartsRef.current = 0;
     liveCaptionsDisabledRef.current = false;
+    liveTranscribeFailuresRef.current = 0;
     finishingRef.current = false;
 
     // Capture audio locally for the entire session. Browser speech
@@ -1011,7 +1061,7 @@ export function RecordConsole({
               {session.transcript && session.transcript.trim().length >= 24 && (
                 <Button
                   type="button"
-                  size="sm"
+                  size="xs"
                   variant="outline"
                   disabled={status !== "idle"}
                   onClick={() => void retryAnalysis(session)}
