@@ -89,6 +89,87 @@ function normalizeEvidence(value: string) {
   return value.replace(/\s+/gu, " ").trim().toLocaleLowerCase();
 }
 
+const CITATION_STOP_WORDS = new Set([
+  "about",
+  "after",
+  "also",
+  "and",
+  "are",
+  "can",
+  "for",
+  "from",
+  "has",
+  "have",
+  "into",
+  "its",
+  "more",
+  "not",
+  "that",
+  "the",
+  "their",
+  "then",
+  "this",
+  "use",
+  "uses",
+  "using",
+  "was",
+  "were",
+  "with",
+]);
+
+function evidenceWords(value: string) {
+  return new Set(
+    normalizeEvidence(value)
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .split(/\s+/u)
+      .filter((word) => word.length >= 3 && !CITATION_STOP_WORDS.has(word)),
+  );
+}
+
+/**
+ * Models sometimes identify the right source but paraphrase its quote. Repair
+ * that formatting error without trusting the paraphrase: select the exact
+ * source sentence with the strongest lexical match to the generated claim.
+ */
+function bestExactCitation(
+  claim: string,
+  sources: SourceRow[],
+): CourseCitation | null {
+  const claimWords = evidenceWords(claim);
+  let best:
+    | {
+        citation: CourseCitation;
+        score: number;
+      }
+    | undefined;
+
+  for (const source of sources) {
+    const sentences = source.content
+      .replace(/\s+/gu, " ")
+      .split(/(?<=[.!?])\s+/u)
+      .map((sentence) => sentence.trim())
+      .filter((sentence) => sentence.length >= 24);
+
+    for (const sentence of sentences) {
+      const sentenceWords = evidenceWords(sentence);
+      const score = [...claimWords].filter((word) =>
+        sentenceWords.has(word),
+      ).length;
+      if (score < 2 || (best && score <= best.score)) continue;
+      best = {
+        citation: {
+          source: source.filename,
+          quote: sentence,
+          url: source.url,
+        },
+        score,
+      };
+    }
+  }
+
+  return best?.citation ?? null;
+}
+
 /**
  * Model citations are untrusted output. Keep only citations whose filename
  * resolves to an uploaded source and whose quoted text appears in that file.
@@ -131,13 +212,40 @@ function verifyCourseCitations(
   course: GeneratedCourse,
   sources: SourceRow[],
 ): GeneratedCourse {
+  const courseCitations = verifiedCitations(course.citations, sources);
+
   return {
     ...course,
-    citations: verifiedCitations(course.citations, sources),
-    sections: course.sections.map((section) => ({
-      ...section,
-      citations: verifiedCitations(section.citations, sources),
-    })),
+    citations:
+      courseCitations.length > 0
+        ? courseCitations
+        : [
+            bestExactCitation(
+              `${course.summary} ${course.notes.join(" ")}`,
+              sources,
+            ),
+          ].filter((citation): citation is CourseCitation => !!citation),
+    sections: course.sections.map((section) => {
+      const citations = verifiedCitations(section.citations, sources);
+      return {
+        ...section,
+        citations:
+          citations.length > 0
+            ? citations
+            : [
+                bestExactCitation(
+                  [
+                    section.title,
+                    section.intuition,
+                    section.technical,
+                    section.example,
+                    ...section.key_points,
+                  ].join(" "),
+                  sources,
+                ),
+              ].filter((citation): citation is CourseCitation => !!citation),
+      };
+    }),
   };
 }
 
