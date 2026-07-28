@@ -28,6 +28,10 @@ const PIPELINES: Record<Pipeline, Array<{ role: string; task: string }>> = {
       role: "Accuracy Reviewer",
       task: "Audits the draft independently before it is saved.",
     },
+    {
+      role: "Video Researcher",
+      task: "Finds direct educational videos matched to the finished lesson.",
+    },
   ],
   recording: [
     {
@@ -159,7 +163,7 @@ export function AgentOrchestration({
                   agent.status === "running" ? "text-brand" : "text-subtle",
                 )}
               >
-                {agent.provider ?? STATUS_LABELS[agent.status]}
+                {STATUS_LABELS[agent.status]}
               </span>
             </div>
             <p className="mt-1.5 text-xs leading-relaxed text-subtle">

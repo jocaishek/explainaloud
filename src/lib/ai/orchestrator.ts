@@ -21,6 +21,7 @@ import {
   spansSchema,
 } from "~/lib/ai/schemas";
 import { renderSources, type SourceRow } from "~/lib/ai/sources";
+import { discoverCourseVideos } from "~/lib/video-search";
 
 const REVIEW_OUTPUT_TOKENS = 900;
 const REVIEW_EVIDENCE_CHARS = 6_000;
@@ -216,6 +217,25 @@ ${renderSources(params.sources)}`,
       );
     }
   }
+
+  const videoDiscovery = await discoverCourseVideos(
+    params.topic,
+    course.video_searches,
+  );
+  course = { ...course, videos: videoDiscovery.videos };
+  agents.push(
+    agentStep(
+      "video-researcher",
+      "Video Researcher",
+      "Find direct educational videos for the finished course.",
+      videoDiscovery.videos.length > 0
+        ? `Found ${videoDiscovery.videos.length} direct video${videoDiscovery.videos.length === 1 ? "" : "s"} matched to this course.`
+        : "No reliable direct videos were found, so no search-page links were added.",
+      {
+        status: videoDiscovery.videos.length > 0 ? "completed" : "degraded",
+      },
+    ),
+  );
 
   const orchestration: AgentRun = {
     run_id: runId,

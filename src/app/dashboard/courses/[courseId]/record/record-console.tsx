@@ -990,7 +990,7 @@ function ColouredTranscript({
           "transition-colors duration-500",
           span.status === "correct" && "text-green-500",
           span.status === "gap" &&
-            "rounded bg-red-500/10 font-medium text-red-500 underline decoration-red-500/40 decoration-wavy underline-offset-4",
+            "rounded bg-red-500/10 font-medium text-red-500",
           span.status === "neutral" && "text-subtle",
         );
 

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { KnowledgeScore } from "~/components/knowledge-score";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { conciseTeachingText } from "~/lib/ai/presentation";
 import type { GapReport, SpanStatus } from "~/lib/ai/schemas";
@@ -97,43 +98,7 @@ export default async function GapReportPage({
 
   return (
     <div className="flex flex-col gap-8">
-      <section aria-labelledby="score-heading" className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-baseline justify-between gap-3">
-          <h2
-            id="score-heading"
-            className="text-base font-semibold text-strong"
-          >
-            Knowledge score
-          </h2>
-          <p className="font-mono text-2xl font-semibold text-strong tabular-nums">
-            {score}
-            <span className="text-sm font-normal text-subtle"> / 100</span>
-          </p>
-        </div>
-        <div
-          role="progressbar"
-          aria-label={`Knowledge score: ${score} out of 100`}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={score}
-          className="h-2 overflow-hidden rounded-full bg-muted"
-        >
-          <div
-            className={cn(
-              "h-full rounded-full",
-              score >= 75
-                ? "bg-green-500"
-                : score >= 50
-                  ? "bg-amber-500"
-                  : "bg-red-500",
-            )}
-            style={{ width: `${score}%` }}
-          />
-        </div>
-        <p className="max-w-2xl text-sm text-foreground">
-          {session.report.verdict}
-        </p>
-      </section>
+      <KnowledgeScore score={score} verdict={session.report.verdict} />
 
       {session.transcript && spans.length > 0 && (
         <section
@@ -179,7 +144,7 @@ export default async function GapReportPage({
                     key={`${index}-${span.text.slice(0, 16)}`}
                     targetId={`weakness-${weakness.id}`}
                     title={span.issue ?? "Jump to this weakness"}
-                    className="rounded bg-red-500/10 text-red-600 underline decoration-red-500/50 decoration-wavy underline-offset-4 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-red-400"
+                    className="rounded bg-red-500/10 text-red-600 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-red-400"
                   >
                     {span.text}
                   </ScrollToTargetLink>

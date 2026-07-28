@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { SourceItem } from "~/components/source-uploader";
-import type { GeneratedCourse } from "~/lib/ai/schemas";
+import { courseSchema } from "~/lib/ai/schemas";
 import { requireUser } from "~/lib/supabase/server";
 import { CourseBuilder } from "./course-builder";
 
@@ -15,15 +15,14 @@ export default async function CoursePage({
   const [{ data: course }, { data: sources }] = await Promise.all([
     supabase
       .from("courses")
-      .select("topic, input_notes, status, generated, generated_by")
+      .select("topic, input_notes, status, generated")
       .eq("id", courseId)
       .eq("user_id", user.id)
       .maybeSingle<{
         topic: string;
         input_notes: string | null;
         status: string;
-        generated: GeneratedCourse | null;
-        generated_by: string | null;
+        generated: unknown;
       }>(),
     supabase
       .from("course_sources")
@@ -37,6 +36,9 @@ export default async function CoursePage({
   if (!course) {
     notFound();
   }
+  const parsedCourse = course.generated
+    ? courseSchema.safeParse(course.generated)
+    : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -55,8 +57,7 @@ export default async function CoursePage({
         courseId={courseId}
         topic={course.topic}
         initialSources={sources ?? []}
-        initialCourse={course.generated}
-        generatedBy={course.generated_by}
+        initialCourse={parsedCourse?.success ? parsedCourse.data : null}
       />
     </div>
   );

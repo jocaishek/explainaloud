@@ -73,6 +73,14 @@ const courseResponseSchema = z.object({
    * that always resolves. The UI turns these into real search links.
    */
   video_searches: z.array(z.string().min(1)).default([]),
+  videos: z
+    .array(
+      z.object({
+        title: z.string().min(1),
+        url: z.string().url(),
+      }),
+    )
+    .default([]),
   /** Further-reading suggestions, also expressed as searchable phrases. */
   resources: z
     .array(z.object({ label: z.string().min(1), why: z.string().default("") }))

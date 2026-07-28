@@ -9,7 +9,6 @@ const STEPS = [
   { slug: "/record", label: "Record" },
   { slug: "/gaps", label: "Gap Report" },
   { slug: "/re-teach", label: "Re-Teach" },
-  { slug: "/re-explain", label: "Re-Explain" },
 ];
 
 export function CourseNav({ courseId }: { courseId: string }) {

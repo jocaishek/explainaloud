@@ -12,10 +12,6 @@ import { courseSectionId } from "~/lib/course-sections";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 
-/** Turns a model-supplied search phrase into a link that always resolves. */
-function youtubeSearch(query: string) {
-  return `https://www.youtube.com/results?search_query=${encodeURIComponent(query)}`;
-}
 function webSearch(query: string) {
   return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
 }
@@ -25,19 +21,17 @@ export function CourseBuilder({
   topic,
   initialSources,
   initialCourse,
-  generatedBy,
 }: {
   courseId: string;
   topic: string;
   initialSources: SourceItem[];
   initialCourse: GeneratedCourse | null;
-  generatedBy: string | null;
 }) {
   const router = useRouter();
   const [sources, setSources] = useState(initialSources);
   const [course, setCourse] = useState(initialCourse);
-  const [provider, setProvider] = useState(generatedBy);
   const [generating, setGenerating] = useState(false);
+  const [findingVideos, setFindingVideos] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Course sections render inside an entrance animation. A browser hash jump
@@ -67,13 +61,35 @@ export function CourseBuilder({
         setError(json.error ?? "Course generation failed.");
       } else {
         setCourse(json.course);
-        setProvider(json.provider);
         router.refresh();
       }
     } catch {
       setError("Couldn't reach the server.");
     }
     setGenerating(false);
+  }
+
+  async function findVideos(refresh = false) {
+    setFindingVideos(true);
+    setError(null);
+    try {
+      const response = await fetch(
+        `/api/courses/${courseId}/videos${refresh ? "?refresh=1" : ""}`,
+        { method: "POST" },
+      );
+      const json = await response.json();
+      if (!response.ok) {
+        setError(json.error ?? "Couldn't find direct videos.");
+      } else if (Array.isArray(json.videos)) {
+        setCourse((current) =>
+          current ? { ...current, videos: json.videos } : current,
+        );
+        router.refresh();
+      }
+    } catch {
+      setError("Couldn't reach the video search.");
+    }
+    setFindingVideos(false);
   }
 
   return (
@@ -120,12 +136,6 @@ export function CourseBuilder({
               Start explaining
             </Link>
           </Button>
-        )}
-
-        {provider && (
-          <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-            via {provider}
-          </span>
         )}
       </div>
 
@@ -191,32 +201,62 @@ export function CourseBuilder({
               </section>
             ))}
 
-            {course.video_searches.length > 0 && (
+            {course.videos.length > 0 ? (
               <section className="flex flex-col gap-3">
                 <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
                   Watch
                 </h2>
                 <div className="flex flex-col gap-2">
-                  {course.video_searches.map((query) => (
+                  {course.videos.map((video) => (
                     <a
-                      key={query}
-                      href={youtubeSearch(query)}
+                      key={video.url}
+                      href={video.url}
                       target="_blank"
                       rel="noreferrer noopener"
                       className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:text-strong"
                     >
-                      <span className="min-w-0 flex-1">{query}</span>
+                      <span className="min-w-0 flex-1">{video.title}</span>
                       <span
                         aria-hidden
                         className="shrink-0 font-mono text-[10px] text-subtle"
                       >
-                        YOUTUBE →
+                        YOUTUBE ↗
                       </span>
                     </a>
                   ))}
                 </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={findingVideos}
+                  onClick={() => findVideos(true)}
+                  className="w-fit rounded-full text-subtle"
+                >
+                  {findingVideos ? "Checking videos…" : "Refresh direct videos"}
+                </Button>
               </section>
-            )}
+            ) : course.video_searches.length > 0 ? (
+              <section className="flex flex-col items-start gap-2">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                  Watch
+                </h2>
+                <p className="text-sm text-subtle">
+                  Find direct videos matched to this course. This uses one basic
+                  search credit and saves the results.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={findingVideos}
+                  onClick={() => findVideos()}
+                  className="rounded-full"
+                >
+                  {findingVideos ? "Finding videos…" : "Find direct videos"}
+                </Button>
+              </section>
+            ) : null}
 
             {course.resources.length > 0 && (
               <section className="flex flex-col gap-3">
