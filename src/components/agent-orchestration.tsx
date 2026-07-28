@@ -175,52 +175,55 @@ export function AgentOrchestration({
         </button>
       )}
 
+      {/* One agent per row. Five side-by-side columns squeezed a name, a status
+          and a sentence into ~150px each, which is what made this hard to read;
+          stacking gives every line the full width it needs. */}
       {open && (
-        <ol className="grid sm:grid-cols-2 xl:grid-cols-5">
-          {agents.map((agent, index) => (
+        <ol className="divide-y divide-border">
+          {agents.map((agent) => (
             <li
               key={agent.id}
               className={cn(
-                "relative min-w-0 px-4 py-3",
-                // Dividers follow the grid: a top border on every row after the
-                // first, a left border on every column after the first. Hard-coded
-                // `md:border-l` on all-but-one drew a line down the wrong edges
-                // once the row wrapped.
-                index > 0 && "border-t border-border sm:border-t-0",
-                index >= 2 && "sm:border-t sm:border-border",
-                index >= 5 && "xl:border-t xl:border-border",
-                "sm:[&:not(:nth-child(odd))]:border-l sm:[&:not(:nth-child(odd))]:border-border",
-                "xl:[&:not(:first-child)]:border-l xl:[&:not(:first-child)]:border-border",
+                "flex items-start gap-3 px-4 py-3.5",
                 agent.status === "running" && "bg-brand/[0.04]",
               )}
             >
-              <div className="flex items-center gap-2">
-                <span
-                  aria-hidden
-                  className={cn(
-                    "size-2 shrink-0 rounded-full",
-                    agent.status === "queued" && "bg-muted-foreground/35",
-                    agent.status === "running" && "animate-pulse bg-brand",
-                    agent.status === "completed" && "bg-emerald-500",
-                    agent.status === "revised" && "bg-amber-500",
-                    agent.status === "degraded" && "bg-amber-500",
-                  )}
-                />
-                <span className="truncate text-sm font-semibold text-strong">
-                  {agent.role}
-                </span>
-                <span
-                  className={cn(
-                    "ml-auto shrink-0 font-mono text-[9px] tracking-[0.08em] uppercase",
-                    agent.status === "running" ? "text-brand" : "text-subtle",
-                  )}
-                >
-                  {STATUS_LABELS[agent.status]}
-                </span>
+              <span
+                aria-hidden
+                className={cn(
+                  "mt-1.5 size-2 shrink-0 rounded-full",
+                  agent.status === "queued" && "bg-muted-foreground/35",
+                  agent.status === "running" && "animate-pulse bg-brand",
+                  agent.status === "completed" && "bg-emerald-500",
+                  agent.status === "revised" && "bg-amber-500",
+                  agent.status === "degraded" && "bg-amber-500",
+                )}
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                  <span className="text-sm font-semibold text-strong">
+                    {agent.role}
+                  </span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      agent.status === "queued" &&
+                        "bg-muted-foreground/10 text-subtle",
+                      agent.status === "running" && "bg-brand/15 text-brand",
+                      agent.status === "completed" &&
+                        "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
+                      (agent.status === "revised" ||
+                        agent.status === "degraded") &&
+                        "bg-amber-500/15 text-amber-600 dark:text-amber-400",
+                    )}
+                  >
+                    {STATUS_LABELS[agent.status]}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm leading-relaxed text-subtle">
+                  {agent.summary}
+                </p>
               </div>
-              <p className="mt-1.5 line-clamp-2 text-xs leading-relaxed text-subtle">
-                {agent.summary}
-              </p>
             </li>
           ))}
         </ol>
