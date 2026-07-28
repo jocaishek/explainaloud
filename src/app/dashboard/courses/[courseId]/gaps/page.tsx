@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { KnowledgeScore } from "~/components/knowledge-score";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
-import { conciseTeachingText } from "~/lib/ai/presentation";
 import type { GapReport, SpanStatus } from "~/lib/ai/schemas";
 import { requireUser } from "~/lib/supabase/server";
 import { cn } from "~/lib/utils";
@@ -167,7 +166,7 @@ export default async function GapReportPage({
             })}
           </p>
           <p className="text-xs text-subtle">
-            Select any red text to jump to the matching explanation.
+            Select any red text to jump to the matching weakness.
           </p>
         </section>
       )}
@@ -235,20 +234,15 @@ export default async function GapReportPage({
                 <h3 className="text-sm font-semibold text-strong">
                   {weakness.phrase}
                 </h3>
+                {/* The report says what was missed; Re-Teach is where it gets
+                    explained. Printing the explanation here too meant the
+                    answer arrived before the student had registered the gap. */}
                 <Link
                   href={`/dashboard/courses/${courseId}/re-teach#gap-${weakness.id}`}
                   className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Re-teach this
                 </Link>
-                {weakness.explanation && (
-                  <p className="max-w-2xl text-sm leading-6 text-foreground">
-                    <span className="font-semibold text-strong">
-                      Explanation:{" "}
-                    </span>
-                    {conciseTeachingText(weakness.explanation)}
-                  </p>
-                )}
               </article>
             ))}
           </div>
