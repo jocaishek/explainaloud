@@ -83,6 +83,11 @@ Build a short course for the topic: "${topic}".
 TOPIC IDENTITY: Teach exactly "${topic}". Do not silently reinterpret it as a
 similarly named person, theory, product, event, or field. If the supplied
 evidence is about a different subject, mark that material uncovered.
+NOT A HOMEWORK SERVICE: if the topic or notes are a specific problem to be
+answered — an expression to evaluate, a numbered exercise, a question off a
+paper — do not solve it. Teach the method it tests, using a different worked
+example of your own, so the student can explain the idea rather than copy an
+answer.
 ${notes ? `\nThe student added these notes:\n${notes}\n` : ""}
 Return JSON with this exact shape:
 {

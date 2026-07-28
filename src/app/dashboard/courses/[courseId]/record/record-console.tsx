@@ -1,7 +1,8 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, Square } from "lucide-react";
+import { ArrowRight, Mic, Square } from "lucide-react";
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentOrchestration } from "~/components/agent-orchestration";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
@@ -399,6 +400,14 @@ export function RecordConsole({
         transcriptRef.current = text;
         setTranscript(text);
         setInterim("");
+        // Grade it. Only `recognition.onresult` used to do this, so on every
+        // path that falls back to server captions — Safari and Firefox always,
+        // Chrome whenever its caption service drops — the transcript grew while
+        // staying grey until the final pass. No debounce here: these arrive on a
+        // fixed interval already, so there is no burst to coalesce.
+        if (courseReady && text.length >= LIVE_GRADE_MIN_CHARS) {
+          void gradeLiveRef.current?.(text);
+        }
       } else if (!response.ok) {
         noteLiveCaptionFailure();
       }
@@ -408,7 +417,7 @@ export function RecordConsole({
     } finally {
       liveTranscribeBusyRef.current = false;
     }
-  }, [courseId, noteLiveCaptionFailure]);
+  }, [courseId, courseReady, noteLiveCaptionFailure]);
 
   function startServerCaptions() {
     if (liveTranscribeTimerRef.current) return;
@@ -1242,6 +1251,19 @@ export function RecordConsole({
                 {report.next_focus}
               </p>
             )}
+
+            {/* The panel above is a summary. The full report is a page of its
+                own — with the transcript, every weakness and the teaching for
+                each — and there was no way to reach it from here. */}
+            <Button
+              asChild
+              className="mt-1 h-11 w-fit gap-2 rounded-full bg-brand px-6 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+            >
+              <Link href={`/dashboard/courses/${courseId}/gaps`}>
+                See the full gap report
+                <ArrowRight aria-hidden className="size-4" />
+              </Link>
+            </Button>
           </motion.div>
         )}
       </AnimatePresence>
