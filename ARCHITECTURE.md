@@ -30,7 +30,8 @@ flowchart TD
 
 ## Course creation
 
-1. The student signs in with email/password or Google and completes onboarding.
+1. Email/password students verify the emailed confirmation link before
+   onboarding. Google identities arrive provider-verified and continue directly.
 2. They create a topic and may upload source files.
 3. `POST /api/courses/[courseId]/generate` authenticates the request and loads
    only rows owned by that user.

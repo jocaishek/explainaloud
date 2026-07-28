@@ -1187,6 +1187,9 @@ function oauthErrorMessage(): string {
 
 function authErrorMessage(mode: AuthMode, message: string): string {
   const lower = message.toLowerCase();
+  if (lower.includes("email not confirmed")) {
+    return "Verify your email before logging in. Check your inbox for the confirmation link.";
+  }
   if (
     lower.includes("already registered") ||
     lower.includes("already exists")
@@ -1210,6 +1213,8 @@ function AuthCard() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
+  const [resending, setResending] = useState(false);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -1335,6 +1340,27 @@ function AuthCard() {
     }
 
     setStage("reset-sent");
+  }
+
+  async function handleResendVerification() {
+    setResending(true);
+    setResendStatus(null);
+
+    const supabase = createClient();
+    const { error: resendError } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim().toLowerCase(),
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    setResending(false);
+    setResendStatus(
+      resendError
+        ? "We couldn't resend the link yet. Wait a minute, then try again."
+        : "A new verification link is on its way.",
+    );
   }
 
   return (
@@ -1492,9 +1518,52 @@ function AuthCard() {
       )}
 
       {stage === "check-email" && (
-        <p className="text-sm text-[#A1A1AA]">
-          Check your email to confirm your account.
-        </p>
+        <div className="glow-ring flex w-full flex-col gap-5 rounded-2xl bg-[#171717] p-6">
+          <div>
+            <h3 className="text-base font-semibold text-white">
+              Verify your email
+            </h3>
+            <p className="mt-2 text-sm leading-6 text-[#A1A1AA]">
+              We sent a verification link to{" "}
+              <span className="font-medium text-white">
+                {email.trim().toLowerCase()}
+              </span>
+              . Open it to continue to Ropes.
+            </p>
+          </div>
+
+          <p className="text-xs leading-5 text-[#71717A]">
+            Didn&apos;t get it? Check spam, or resend the email after a minute.
+          </p>
+
+          {resendStatus && (
+            <p role="status" className="text-sm text-[#A1A1AA]">
+              {resendStatus}
+            </p>
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            disabled={resending}
+            onClick={handleResendVerification}
+            className="h-11 rounded-full border-[#333333] bg-[#1E1E1E] font-medium text-white transition-transform duration-200 ease-out hover:bg-[#262626] active:scale-[0.98]"
+          >
+            {resending ? "Resending…" : "Resend verification email"}
+          </Button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setStage("form");
+              setResendStatus(null);
+            }}
+            className="text-center text-xs font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+          >
+            Back to log in
+          </button>
+        </div>
       )}
     </div>
   );

@@ -44,6 +44,18 @@ Fill in your values in `.env.local` for development and in the Vercel project
 settings for Preview and Production. Never prefix server-only keys with
 `NEXT_PUBLIC_`.
 
+## Authentication Email
+
+Email/password accounts must verify the confirmation link before they can sign
+in. In Supabase, keep **Authentication → Sign In / Providers → Email → Confirm
+email** enabled and add every deployed `/auth/callback` URL to the Auth redirect
+allow-list.
+
+Before accepting public sign-ups, configure a custom SMTP provider in Supabase.
+The built-in sender is for testing and only delivers to organization-team
+addresses. Google Workspace SMTP, Resend, Postmark, SendGrid, and other SMTP
+providers are supported.
+
 ## Scripts
 
 | Command | Description |
