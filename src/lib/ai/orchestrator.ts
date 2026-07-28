@@ -148,7 +148,13 @@ function bestExactCitation(
       .replace(/\s+/gu, " ")
       .split(/(?<=[.!?])\s+/u)
       .map((sentence) => sentence.trim())
-      .filter((sentence) => sentence.length >= 24);
+      .filter(
+        (sentence) =>
+          sentence.length >= 24 &&
+          sentence.length <= 360 &&
+          !/[#`]/u.test(sentence) &&
+          !sentence.includes("[...]"),
+      );
 
     for (const sentence of sentences) {
       const sentenceWords = evidenceWords(sentence);
