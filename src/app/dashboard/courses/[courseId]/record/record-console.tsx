@@ -437,15 +437,26 @@ export function RecordConsole({
           },
           LIVE_REQUEST_TIMEOUT_MS,
         );
-        // Let the next tick try this text again rather than treating a rate
-        // limit or a hiccup as "already graded" and waiting for more speech —
-        // a student who stops talking after a failed pass would otherwise sit
-        // in front of grey text until they said something new.
+        // Let the next tick try this text again rather than treating a hiccup
+        // as "already graded" and waiting for more speech — a student who stops
+        // talking after a failed pass would otherwise sit in front of grey text
+        // until they said something new.
+        //
+        // Except on 429. There the minute's budget is already spent, and
+        // re-sending identical text every 1.2s spends what little is left on a
+        // question we just asked. Waiting for new speech is both cheaper and
+        // likelier to succeed.
         if (!response.ok) {
-          lastGradedTextRef.current = "";
+          if (response.status !== 429) lastGradedTextRef.current = "";
           return;
         }
         if (seq !== liveSeqRef.current) return; // superseded
+        // Stopping does not cancel a request already in flight. `liveSeqRef`
+        // only orders live passes against each other, so without this a slow
+        // one — a rate-limit retry can take twenty seconds — could return after
+        // the final pass has painted the graded transcript and overwrite it
+        // with partial colours that no longer match the report beneath them.
+        if (manualStopRef.current) return;
         // A pass that started before a reset would splice its tail spans onto
         // a head that no longer exists, mismatching text and colour.
         if (gradedTextRef.current !== head) return;
@@ -568,6 +579,20 @@ export function RecordConsole({
       clearTimeout(liveTranscribeTimerRef.current);
       liveTranscribeTimerRef.current = null;
     }
+
+    // Hand the transcript back to browser recognition, which may well still be
+    // running: server captions start on a *transient* recognition error, and
+    // recognition restarts itself. Once a server caption had landed,
+    // `onresult` stopped writing — it defers to `serverTranscriptRef` — so
+    // giving up here used to freeze the transcript on screen for the rest of
+    // the recording even while the engine was still producing words.
+    //
+    // Carrying the server text across rather than clearing it keeps what is on
+    // screen, and keeps it a prefix of what comes next, so the graded spans
+    // survive instead of being thrown away by the next pass.
+    browserTranscriptRef.current = transcriptRef.current;
+    serverTranscriptRef.current = "";
+
     setNotice(
       "Live captions aren't available in this browser. Keep going — your full transcript arrives when you finish.",
     );
