@@ -6,6 +6,7 @@ import { createCourse } from "~/app/dashboard/actions";
 import { LocalDayField } from "~/components/local-day-field";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { BROAD_TOPIC_MESSAGE, isTopicTooBroad } from "~/lib/topic-scope";
 import {
   ACCEPT_ATTRIBUTE,
   ACCEPTED_EXTENSIONS,
@@ -16,6 +17,7 @@ import { cn } from "~/lib/utils";
 
 const ERROR_MESSAGES: Record<string, string> = {
   missing_topic: "Enter a topic before continuing.",
+  topic_too_broad: BROAD_TOPIC_MESSAGE,
   create_failed: "Something went wrong creating that course. Try again.",
   topic_limit:
     "You\u2019ve hit today\u2019s limit of 2 new topics. It resets at midnight your time.",
@@ -131,13 +133,21 @@ export function NewTopicForm({
     event.preventDefault();
     if (pending) return;
 
+    const formData = new FormData(event.currentTarget);
+    const topic = String(formData.get("topic") ?? "");
+    if (isTopicTooBroad(topic)) {
+      setError(BROAD_TOPIC_MESSAGE);
+      setStatus(null);
+      return;
+    }
+
     setPending(true);
     setError(null);
 
     let courseId = createdCourseId;
     if (!courseId) {
       setStatus("Creating your topic…");
-      const result = await createCourse(new FormData(event.currentTarget));
+      const result = await createCourse(formData);
       if (!result.ok) {
         setError(ERROR_MESSAGES[result.error]);
         setStatus(null);
@@ -184,6 +194,13 @@ export function NewTopicForm({
           disabled={!!createdCourseId}
           placeholder="e.g. Photosynthesis, the Krebs cycle, Bayes' theorem…"
           className="h-11 border-input bg-surface text-base text-strong placeholder:text-subtle"
+          aria-invalid={error === BROAD_TOPIC_MESSAGE}
+          aria-describedby={
+            error === BROAD_TOPIC_MESSAGE ? "new-topic-error" : undefined
+          }
+          onChange={() => {
+            if (error === BROAD_TOPIC_MESSAGE) setError(null);
+          }}
         />
         <textarea
           name="notes"
@@ -292,7 +309,11 @@ export function NewTopicForm({
         </p>
       )}
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p
+          id="new-topic-error"
+          role="alert"
+          className="max-w-[65ch] text-sm leading-6 text-destructive"
+        >
           {error}
         </p>
       )}

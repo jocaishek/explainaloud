@@ -4,12 +4,17 @@ import { revalidatePath } from "next/cache";
 import { folderNameError, isFolderColor, topicNameError } from "~/lib/folders";
 import { claimQuota, localDay } from "~/lib/limits";
 import { requireUser } from "~/lib/supabase/server";
+import { isTopicTooBroad } from "~/lib/topic-scope";
 
 export type CreateCourseResult =
   | { ok: true; courseId: string }
   | {
       ok: false;
-      error: "missing_topic" | "topic_limit" | "create_failed";
+      error:
+        | "missing_topic"
+        | "topic_too_broad"
+        | "topic_limit"
+        | "create_failed";
     };
 
 export async function createCourse(
@@ -25,6 +30,10 @@ export async function createCourse(
 
   if (!topic) {
     return { ok: false, error: "missing_topic" };
+  }
+
+  if (isTopicTooBroad(topic)) {
+    return { ok: false, error: "topic_too_broad" };
   }
 
   const quota = await claimQuota(supabase, "topic", day);
