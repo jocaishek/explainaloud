@@ -27,7 +27,17 @@ export default function AppleIcon() {
       }}
     >
       {/* Full-bleed square: iOS applies its own corner mask. */}
-      <svg width="150" height="150" viewBox="0 0 64 64" fill="none">
+      {/* Rasterised to PNG, so the label is inert here — but the lint rule is
+          right in general, and `role`/`aria-label` satisfy it without a
+          <title> child, which Satori does not render. */}
+      <svg
+        width="150"
+        height="150"
+        viewBox="0 0 64 64"
+        fill="none"
+        role="img"
+        aria-label="Ropes"
+      >
         <path
           d={MARK}
           stroke="#ffffff"
