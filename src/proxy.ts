@@ -27,7 +27,17 @@ export async function proxy(request: NextRequest) {
   );
 
   // Refresh the auth token
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { pathname } = request.nextUrl;
+  const isProtected =
+    pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding");
+
+  if (!user && isProtected) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 
   return response;
 }

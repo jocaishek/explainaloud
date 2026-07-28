@@ -7,26 +7,29 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import {
-  ArrowRight,
-  ChevronDown,
-  FileText,
-  Film,
-  Mic,
-  Presentation,
-  Sparkles,
-  Upload,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { ArrowRight } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { type Example, ExampleCarousel } from "~/components/example-carousel";
+import { Magnetic } from "~/components/magnetic";
+import { Marquee } from "~/components/marquee";
+import { PasswordField } from "~/components/password-field";
+import { ScrollProgress } from "~/components/scroll-progress";
+import { SmoothScroll } from "~/components/smooth-scroll";
+import { Spotlight } from "~/components/spotlight";
+import { TiltCard } from "~/components/tilt-card";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { Input } from "~/components/ui/input";
+import { useCyclingTypewriter } from "~/hooks/use-cycling-typewriter";
 import { useInView } from "~/hooks/use-in-view";
-import { useTypewriter } from "~/hooks/use-typewriter";
+import { emailError } from "~/lib/email";
+import { passwordRequirementError } from "~/lib/password";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 
-type Stage = "form" | "done";
+type AuthMode = "signup" | "login";
+type Stage = "form" | "check-email" | "forgot-password" | "reset-sent";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 const EASE_CSS = "ease-[cubic-bezier(0.23,1,0.32,1)]";
@@ -55,67 +58,190 @@ function Reveal({
   );
 }
 
+/**
+ * Headline reveal, one word at a time. Each word rises out of a slight blur —
+ * the blur is what makes it read as "coming into focus" rather than a plain
+ * fade, and it hides the sub-pixel jitter of the y-translation.
+ */
+function WordReveal({
+  text,
+  className,
+  delay = 0,
+  accent = [],
+}: {
+  text: string;
+  className?: string;
+  delay?: number;
+  /** Words rendered in the brand color — one highlighted phrase per headline. */
+  accent?: string[];
+}) {
+  const shouldReduceMotion = useReducedMotion();
+  const words = text.split(" ");
+
+  // One observer on the headline, staggering its children — not one observer
+  // per word. Per-word observers are both wasteful and unreliable: a short
+  // word can fail to trigger and stay stuck at opacity 0 while its neighbors
+  // animate in, leaving a hole in the sentence.
+  return (
+    <motion.span
+      className={className}
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, margin: "-60px" }}
+      transition={{
+        staggerChildren: shouldReduceMotion ? 0 : 0.045,
+        delayChildren: delay / 1000,
+      }}
+    >
+      {words.map((word, i) => (
+        // Real whitespace has to live between the word spans, not as a margin
+        // on them: an inline-block with `mr-*` looks spaced but concatenates
+        // into "Theillusionof..." when copied or read aloud.
+        // biome-ignore lint/suspicious/noArrayIndexKey: static text, words repeat
+        <Fragment key={`${word}-${i}`}>
+          <motion.span
+            className={cn(
+              "inline-block",
+              // Accent words switch to the italic display serif. The serif
+              // sits smaller on the same point size, so it gets nudged up to
+              // keep the baseline optically level with the sans around it.
+              accent.includes(word.replace(/[.,]/g, "")) &&
+                "font-display text-[1.12em] leading-[0.9] font-normal text-brand italic",
+            )}
+            variants={{
+              hidden: shouldReduceMotion
+                ? { opacity: 0 }
+                : { opacity: 0, y: 16, filter: "blur(8px)" },
+              visible: {
+                opacity: 1,
+                y: 0,
+                filter: "blur(0px)",
+                transition: { duration: 0.6, ease: EASE },
+              },
+            }}
+          >
+            {word}
+          </motion.span>{" "}
+        </Fragment>
+      ))}
+    </motion.span>
+  );
+}
+
 export default function Home() {
   const journeyRef = useRef<HTMLDivElement>(null);
 
   return (
-    <main className="relative flex flex-col items-center overflow-x-clip bg-background text-foreground">
+    // `dark` is pinned here rather than inherited: the whole marketing design
+    // is glass and glow over a near-black canvas, which has no light-mode
+    // equivalent. The signed-in app is the part that honours the theme choice.
+    <main className="dark relative flex min-h-screen flex-col items-center overflow-x-clip bg-background text-foreground">
+      <SmoothScroll />
+      <ScrollProgress />
       <Nav />
 
       {/* ── Section 1: Hero ─────────────────────────────────────────── */}
-      <section className="relative flex w-full flex-col items-center px-6 py-24 sm:py-32">
-        <GlowOrb className="-top-32 left-1/2 h-[36rem] w-[48rem] -translate-x-1/2" />
+      <section className="relative flex w-full flex-col items-center px-6 pt-16 pb-24 sm:pt-24 sm:pb-32">
+        <GlowOrb className="-top-32 left-1/2 h-[34rem] w-[52rem] -translate-x-1/2 opacity-[0.16]" />
 
         <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
-          <Reveal>
-            <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight text-balance text-white sm:text-6xl">
-              Know when you actually understand it.
-            </h1>
-          </Reveal>
+          <Eyebrow index="01" label="Teach it back" />
+          <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight text-balance text-white sm:text-6xl">
+            <WordReveal
+              text="Know when you actually understand it."
+              accent={["understand"]}
+            />
+          </h1>
           <Reveal delay={100}>
             <p className="max-w-2xl text-lg text-[#A1A1AA]">
-              Know exactly when you actually understand it. TeachItBack listens
-              to you explain your course material out loud, transcribes it live,
-              and seamlessly fills in the missing steps so you can study
-              smarter, not harder.
+              TeachItBack listens to you explain your course material out loud,
+              transcribes it live, and fills in the steps you skipped — so you
+              study smarter, not harder.
+            </p>
+          </Reveal>
+          <Reveal delay={140}>
+            <p className="font-mono text-sm text-[#71717A]">
+              Try it on{" "}
+              <TypedText phrases={HERO_TOPICS} className="text-brand" />
             </p>
           </Reveal>
           <Reveal delay={180} className="mt-2">
-            <Button
-              asChild
-              size="lg"
-              className="bg-brand px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand)] transition-[transform,box-shadow] hover:bg-brand/90 hover:shadow-[0_0_56px_-8px_var(--color-brand)] active:scale-[0.98]"
-            >
-              <a href="#waitlist">Join the Waitlist</a>
-            </Button>
+            <Magnetic>
+              <Button
+                asChild
+                size="lg"
+                className="shine group h-12 rounded-full bg-brand px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_64px_-8px_var(--color-brand)] active:scale-[0.97]"
+              >
+                <a href="#signup">
+                  Sign up free
+                  <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-out group-hover:translate-x-1" />
+                </a>
+              </Button>
+            </Magnetic>
           </Reveal>
         </div>
 
-        {/* 3-step abstract flow — Lucide icons, no CSS arrows */}
+        {/* Three-step flow, set as type rather than icon tiles. */}
         <Reveal delay={280} className="mt-20 w-full">
-          <div className="mx-auto flex max-w-2xl flex-col items-center justify-center gap-6 sm:flex-row sm:gap-4">
-            <FlowStep icon={Upload} label="Upload sources" />
-            <PulseArrow />
-            <FlowStep icon={Mic} label="Explain out loud" />
-            <PulseArrow />
-            <FlowStep icon={Sparkles} label="Get gaps filled" />
+          <div className="mx-auto flex max-w-3xl flex-col items-stretch gap-4 sm:flex-row">
+            <FlowStep step="01" label="Upload your sources" />
+            <FlowStep step="02" label="Explain it out loud" />
+            <FlowStep step="03" label="Get the gaps filled" />
           </div>
         </Reveal>
       </section>
 
+      {/* ── Examples: what a real session looks like ─────────────────────
+          No `overflow-hidden` on this section: the carousel pins itself with
+          `position: sticky`, which any scroll-clipping ancestor would break.
+          The clipping lives on the sticky panel inside instead. */}
+      <section className="relative w-full">
+        <ExampleCarousel
+          examples={EXAMPLES}
+          header={
+            <div className="relative mx-auto flex max-w-4xl flex-col items-center px-6 text-center">
+              <GlowOrb className="-top-10 left-1/2 h-72 w-[36rem] -translate-x-1/2" />
+              <Eyebrow index="02" label="Today's board" className="mb-4" />
+              <h2 className="relative text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+                <WordReveal
+                  text="What a session looks like"
+                  accent={["session"]}
+                />
+              </h2>
+              <Reveal delay={120} className="mt-4">
+                <p className="max-w-md text-[#A1A1AA]">
+                  A topic, an explanation scored on how well you actually said
+                  it, and the exact step you skipped. Keep scrolling to turn the
+                  ring.
+                </p>
+              </Reveal>
+            </div>
+          }
+        />
+      </section>
+
+      {/* Ticker + stat band: a beat of motion between the hero and the essay. */}
+      <div className="w-full border-y border-white/10 py-4">
+        <Marquee items={MARQUEE_ITEMS} />
+      </div>
+
       {/* Sections 2 → 5 share one scroll-drawn squiggle that winds from
-          "The illusion of competence" all the way down to the waitlist. */}
+          "The illusion of competence" all the way down to the sign-up form. */}
       <div ref={journeyRef} className="relative w-full">
         <ScrollSquiggle target={journeyRef} />
 
         {/* ── Section 2: The Illusion of Competence ─────────────────── */}
         <section className="w-full px-6 py-24">
           <div className="mx-auto grid max-w-4xl gap-10 md:grid-cols-[1fr_1.2fr] md:gap-16">
-            <Reveal>
+            <div>
+              <Eyebrow index="03" label="Why it works" className="mb-4" />
               <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-                The illusion of competence
+                <WordReveal
+                  text="The illusion of competence"
+                  accent={["illusion"]}
+                />
               </h2>
-            </Reveal>
+            </div>
             <Reveal delay={120}>
               <div className="flex max-w-prose flex-col gap-5 text-lg text-[#A1A1AA]">
                 <p>
@@ -132,122 +258,124 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Section 3: Bento Grid ───────────────────────────────────── */}
+        {/* ── Section 3: Feature grid ──────────────────────────────────── */}
         <section className="relative w-full px-6 py-24">
           {/* Glow orbs BEHIND the glass cards — these make the blur visible */}
           <GlowOrb className="top-16 left-[22%] h-80 w-80" />
           <GlowOrb className="bottom-16 right-[18%] h-96 w-96" />
 
-          <div className="relative mx-auto grid w-full max-w-4xl gap-8 md:grid-cols-3 md:grid-rows-2">
-            <Reveal delay={0} className="md:col-span-1 md:row-span-2">
-              <GlassCard className="flex h-full flex-col justify-between gap-6 p-6">
-                <div>
-                  <div className="mb-4 flex items-center gap-2">
-                    <span className="relative flex size-2">
-                      <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-75" />
-                      <span className="relative inline-flex size-2 rounded-full bg-brand" />
+          <Eyebrow
+            index="04"
+            label="What you get"
+            className="mx-auto mb-4 max-w-6xl"
+          />
+
+          <FeatureRow>
+            <FeatureCard>
+              <div className="mb-4 flex items-center gap-2">
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-75" />
+                  <span className="relative inline-flex size-2 rounded-full bg-brand" />
+                </span>
+                <span className="text-xs font-medium text-[#A1A1AA]">
+                  Recording
+                </span>
+              </div>
+              <h3 className="text-lg font-semibold text-white">
+                Live transcription
+              </h3>
+              <p className="mt-2 text-sm text-[#A1A1AA]">
+                Watch your explanation take shape as you speak.
+              </p>
+              <LiveTranscript />
+            </FeatureCard>
+
+            <FeatureCard>
+              <h3 className="text-lg font-semibold text-white">
+                Gaps get filled, not just flagged
+              </h3>
+              <p className="mt-2 text-sm text-[#A1A1AA]">
+                Skip a step and a short correction appears right where you
+                needed it.
+              </p>
+              <p className="mt-auto rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-[#A1A1AA]">
+                the Calvin cycle{" "}
+                <span className="font-medium text-brand">
+                  fixes CO₂ into glucose
+                </span>
+              </p>
+            </FeatureCard>
+
+            <FeatureCard>
+              <h3 className="text-lg font-semibold text-white">
+                Built from your sources
+              </h3>
+              <p className="mt-2 text-sm text-[#A1A1AA]">
+                Upload what you already have.
+              </p>
+              <div className="mt-auto flex flex-col gap-2 font-mono text-[11px] tracking-[0.14em] text-[#71717A] uppercase">
+                <span className="border-t border-white/10 pt-2">
+                  Textbook chapters
+                </span>
+                <span className="border-t border-white/10 pt-2">
+                  Lecture recordings
+                </span>
+                <span className="border-t border-white/10 pt-2">
+                  Slide decks
+                </span>
+              </div>
+            </FeatureCard>
+
+            <FeatureCard>
+              <h3 className="text-lg font-semibold text-white">
+                Then builds you a plan
+              </h3>
+              <p className="mt-2 text-sm text-[#A1A1AA]">
+                Your gap report becomes a short plan: review, practice, or
+                mastered.
+              </p>
+              <div className="mt-auto flex flex-col gap-2">
+                {PLAN_ITEMS.map((item) => (
+                  <div
+                    key={item.label}
+                    className="flex items-center gap-2 text-xs"
+                  >
+                    <span
+                      className={cn(
+                        "size-1.5 shrink-0 rounded-full",
+                        item.status === "Review"
+                          ? "bg-brand"
+                          : item.status === "Practice"
+                            ? "bg-white/40"
+                            : "bg-white/20",
+                      )}
+                    />
+                    <span className="truncate text-[#A1A1AA]">
+                      {item.label}
                     </span>
-                    <span className="text-xs font-medium text-[#A1A1AA]">
-                      Recording
+                    <span className="ml-auto shrink-0 text-[#71717A]">
+                      {item.status}
                     </span>
                   </div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Live transcription
-                  </h3>
-                  <p className="mt-2 text-sm text-[#A1A1AA]">
-                    Watch your explanation take shape as you speak.
-                  </p>
-                </div>
-                <LiveTranscript />
-              </GlassCard>
-            </Reveal>
-
-            <Reveal delay={80} className="md:col-span-2 md:row-span-1">
-              <GlassCard className="flex h-full flex-col justify-between gap-4 p-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Gaps get filled, not just flagged
-                  </h3>
-                  <p className="mt-2 max-w-prose text-sm text-[#A1A1AA]">
-                    Skip a step and a short correction appears right where you
-                    needed it.
-                  </p>
-                </div>
-                <p className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-[#A1A1AA]">
-                  the Calvin cycle{" "}
-                  <span className="rounded bg-brand px-1.5 py-0.5 text-xs font-medium text-white">
-                    + fixes CO₂ into glucose
-                  </span>
-                </p>
-              </GlassCard>
-            </Reveal>
-
-            <Reveal delay={160} className="md:col-span-1 md:row-span-1">
-              <GlassCard className="flex h-full flex-col justify-between gap-4 p-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Built from your sources
-                  </h3>
-                  <p className="mt-2 text-sm text-[#A1A1AA]">
-                    Upload what you already have.
-                  </p>
-                </div>
-                <div className="flex gap-4 text-[#A1A1AA]">
-                  <FileText aria-label="PDF documents" className="size-5" />
-                  <Film aria-label="Video recordings" className="size-5" />
-                  <Presentation aria-label="Slide decks" className="size-5" />
-                </div>
-              </GlassCard>
-            </Reveal>
-
-            <Reveal delay={240} className="md:col-span-1 md:row-span-1">
-              <GlassCard className="flex h-full flex-col justify-between gap-4 p-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-white">
-                    Then builds you a plan
-                  </h3>
-                  <p className="mt-2 text-sm text-[#A1A1AA]">
-                    Your gap report becomes a short plan: review, practice, or
-                    mastered.
-                  </p>
-                </div>
-                <div className="flex flex-col gap-1.5">
-                  {PLAN_ITEMS.map((item) => (
-                    <div
-                      key={item.label}
-                      className="flex items-center justify-between gap-2 rounded-md border border-white/10 bg-white/[0.03] px-2.5 py-1.5 text-xs"
-                    >
-                      <span className="truncate text-[#A1A1AA]">
-                        {item.label}
-                      </span>
-                      <span
-                        className={cn(
-                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium",
-                          item.status === "Review"
-                            ? "bg-brand text-white"
-                            : "bg-white/[0.08] text-[#A1A1AA]",
-                        )}
-                      >
-                        {item.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </GlassCard>
-            </Reveal>
-          </div>
+                ))}
+              </div>
+            </FeatureCard>
+          </FeatureRow>
         </section>
 
         {/* ── Section 4: How it works, in detail ──────────────────────── */}
         <section className="relative w-full px-6 py-24">
-          <Reveal className="mx-auto mb-20 max-w-2xl text-center">
+          <div className="mx-auto mb-20 flex max-w-2xl flex-col items-center text-center">
+            <Eyebrow index="05" label="The flow" className="mb-4" />
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-              How it works
+              <WordReveal text="How it works" accent={["works"]} />
             </h2>
-            <p className="mt-4 text-lg text-[#A1A1AA]">
-              Click record, speak, learn.
-            </p>
-          </Reveal>
+            <Reveal delay={120} className="mt-4">
+              <p className="text-lg text-[#A1A1AA]">
+                Click record, speak, learn.
+              </p>
+            </Reveal>
+          </div>
 
           <div className="relative mx-auto flex max-w-4xl flex-col gap-24">
             <DeepDiveRow
@@ -272,25 +400,28 @@ export default function Home() {
           </div>
 
           <Reveal className="mt-20 flex justify-center">
-            <WaitlistLead />
+            <SignUpLead />
           </Reveal>
         </section>
 
-        {/* ── Section 5: Waitlist / Footer ────────────────────────────── */}
+        {/* ── Section 5: Sign up / Footer ─────────────────────────────── */}
         <section className="relative flex w-full flex-col items-center px-6 py-24">
           <GlowOrb className="top-0 left-1/2 h-80 w-[40rem] -translate-x-1/2" />
 
-          <Reveal className="relative flex flex-col items-center text-center">
+          <div className="relative flex flex-col items-center text-center">
+            <Eyebrow index="06" label="Get started" className="mb-4" />
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-              Be first to try it
+              <WordReveal text="Create your account" accent={["account"]} />
             </h2>
-            <p className="mt-4 max-w-md text-lg text-[#A1A1AA]">
-              Join the waitlist and we&apos;ll email you when it&apos;s ready.
-            </p>
-          </Reveal>
+            <Reveal delay={120} className="mt-4">
+              <p className="max-w-md text-lg text-[#A1A1AA]">
+                Sign up free and we&apos;ll email you when TeachItBack is ready.
+              </p>
+            </Reveal>
+          </div>
 
           <Reveal delay={120} className="relative mt-10 w-full max-w-md">
-            <WaitlistCta />
+            <AuthCard />
           </Reveal>
         </section>
       </div>
@@ -305,36 +436,169 @@ export default function Home() {
   );
 }
 
+const MARQUEE_ITEMS = [
+  "Explain it out loud",
+  "Recognition isn't recall",
+  "Gaps filled, not just flagged",
+  "Built from your own sources",
+  "Teach it back",
+];
+
+/* Illustrative sessions, not real user data — nothing has shipped yet. The
+   copy is written so it reads as "here's what a session looks like" rather
+   than as a testimonial from someone who used it. */
+const EXAMPLES: Example[] = [
+  {
+    subject: "Biology",
+    topic: "Explain how the Calvin cycle fixes carbon",
+    confidence: 54,
+    gap: "Said energy becomes glucose “directly” — skipped the G3P intermediate entirely.",
+  },
+  {
+    subject: "Organic chemistry",
+    topic: "Walk through an SN2 reaction mechanism",
+    confidence: 71,
+    gap: "Got the backside attack right, never mentioned why bulky substrates kill the rate.",
+  },
+  {
+    subject: "Macroeconomics",
+    topic: "Why does raising rates slow inflation?",
+    confidence: 38,
+    gap: "Named the mechanism but couldn't connect it to borrowing cost or demand.",
+  },
+  {
+    subject: "Linear algebra",
+    topic: "What does an eigenvector actually mean?",
+    confidence: 82,
+    gap: "Strong geometric intuition, shaky on why the eigenvalue can be negative.",
+  },
+  {
+    subject: "Neuroscience",
+    topic: "Describe how an action potential propagates",
+    confidence: 61,
+    gap: "Skipped the refractory period, so the explanation allowed backward travel.",
+  },
+  {
+    subject: "Statistics",
+    topic: "What is a p-value actually telling you?",
+    confidence: 45,
+    gap: "Described it as the chance the hypothesis is true — that's the inverse.",
+  },
+  {
+    subject: "Computer science",
+    topic: "Why is quicksort O(n log n) on average?",
+    confidence: 76,
+    gap: "Explained the partitioning but never justified the log n recursion depth.",
+  },
+];
+
+/* Rotating examples typed out under the hero headline. */
+const HERO_TOPICS = [
+  "the Calvin cycle.",
+  "an SN2 mechanism.",
+  "why rates slow inflation.",
+  "what an eigenvector is.",
+];
+
 const PLAN_ITEMS: Array<{ label: string; status: string }> = [
   { label: "Electron transport chain", status: "Review" },
   { label: "Calvin cycle", status: "Practice" },
   { label: "Light reactions", status: "Mastered" },
 ];
 
+/* Floating capsule nav that detaches from the page edge as you scroll: it
+   narrows and lifts into a frosted pill rather than staying a full-bleed bar. */
 function Nav() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
-    <header className="flex w-full items-center justify-between border-b border-white/10 px-8 py-5">
-      <span className="text-base font-semibold tracking-tight text-white">
-        TeachItBack
-      </span>
-      <Button
-        asChild
-        size="sm"
-        className="bg-brand font-semibold text-white transition-transform hover:bg-brand/90 active:scale-[0.98]"
+    <header className="sticky top-0 z-40 w-full px-4 pt-4">
+      <nav
+        className={cn(
+          "mx-auto flex items-center justify-between gap-4 rounded-full py-2 pr-2 pl-5 transition-[max-width,background-color,box-shadow] duration-500",
+          EASE_CSS,
+          scrolled ? "capsule max-w-2xl" : "max-w-4xl bg-transparent",
+        )}
       >
-        <a href="#waitlist">Join waitlist</a>
-      </Button>
+        <span className="text-base font-semibold tracking-tight text-white">
+          TeachItBack
+        </span>
+        <Magnetic strength={16}>
+          <Button
+            asChild
+            size="sm"
+            className="shine group h-9 rounded-full bg-brand px-5 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+          >
+            <a href="#signup">
+              Sign up
+              <ArrowRight className="ml-0.5 size-3.5 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
+            </a>
+          </Button>
+        </Magnetic>
+      </nav>
     </header>
+  );
+}
+
+/* Small tracked mono label that numbers each section — the editorial spine
+   that makes a long scroll feel navigable instead of endless. */
+function Eyebrow({
+  index,
+  label,
+  className,
+}: {
+  index: string;
+  label: string;
+  className?: string;
+}) {
+  return (
+    <Reveal className={className}>
+      <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.18em] text-[#71717A] uppercase">
+        <span className="text-brand">{index}</span>
+        <span aria-hidden className="h-px w-6 bg-white/15" />
+        {label}
+      </p>
+    </Reveal>
   );
 }
 
 /* Low-opacity blurred blue orb. Positioned absolutely inside a relative
    section, always behind content — this is what makes the glass cards read
-   as glass. */
-function GlowOrb({ className }: { className?: string }) {
+   as glass. Drifts against the scroll direction for depth; the parallax is
+   spring-damped so it never feels pinned to the scrollbar.
+   Tailwind's translate utilities use the `translate` property in v4, so the
+   inline `transform` Motion writes here composes with them instead of
+   clobbering the -translate-x-1/2 centering some callers rely on. */
+function GlowOrb({
+  className,
+  drift = 60,
+}: {
+  className?: string;
+  drift?: number;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const shouldReduceMotion = useReducedMotion();
+  const { scrollYProgress } = useScroll({
+    target: ref,
+    offset: ["start end", "end start"],
+  });
+  const y = useSpring(useTransform(scrollYProgress, [0, 1], [drift, -drift]), {
+    stiffness: 60,
+    damping: 24,
+  });
+
   return (
-    <div
+    <motion.div
+      ref={ref}
       aria-hidden
+      style={shouldReduceMotion ? undefined : { y }}
       className={cn(
         "pointer-events-none absolute rounded-full bg-brand opacity-[0.18] blur-[70px]",
         className,
@@ -353,47 +617,65 @@ function GlassCard({
   return (
     <Card
       className={cn(
-        "glass glass-lift gap-0 rounded-2xl border-0 bg-transparent py-0 shadow-none",
+        "glass glass-lift gap-0 overflow-hidden rounded-2xl border-0 bg-transparent py-0 shadow-none",
         className,
       )}
     >
-      {children}
+      <Spotlight className="flex flex-1 flex-col">{children}</Spotlight>
     </Card>
   );
 }
 
-/* Arrow between hero flow steps. Nudges along its own axis; the outer span
-   carries the mobile rotation so the nudge follows the arrow's direction. */
-function PulseArrow() {
-  const shouldReduceMotion = useReducedMotion();
-
+/* All four feature cards on screen at once. They were a drag-scroll rail;
+   at four cards that was a gesture standing between the reader and content
+   already small enough to fit, so the cards shrank instead. */
+function FeatureRow({ children }: { children: React.ReactNode }) {
   return (
-    <span aria-hidden className="inline-block rotate-90 text-brand sm:rotate-0">
-      <motion.span
-        className="block"
-        animate={shouldReduceMotion ? undefined : { x: [0, 5, 0] }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
-      >
-        <ArrowRight className="size-5" />
-      </motion.span>
-    </span>
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {children}
+    </div>
+  );
+}
+
+/* A feature card. Fluid width now that the row is a grid, and shorter than
+   the old rail cards so four fit a laptop viewport without scrolling. */
+function FeatureCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <TiltCard className={cn("w-full", className)}>
+      <GlassCard className="flex h-64 flex-col p-5">{children}</GlassCard>
+    </TiltCard>
   );
 }
 
 /* One winding line drawn across sections 2 → 5 as the user scrolls. It
    weaves left and right, ducking behind the glass cards it crosses, and
-   ends at the waitlist form. The viewBox stretches to the wrapper's size;
+   ends at the sign-up form. The viewBox stretches to the wrapper's size;
    vectorEffect keeps the stroke width constant. */
+/**
+ * Every join after the first uses `S` (smooth curveto), which derives its
+ * first control point by reflecting the previous segment's second control
+ * point through the join. That makes tangent continuity structural rather
+ * than something to hand-tune — the old hand-written `C` chain kinked where
+ * the control points fell out of line, worst of all in the tail.
+ *
+ * The tail is now a single long sweep into (500, 985) — centred on the
+ * sign-up card — instead of three short wiggles that read as a stumble right
+ * where the line is meant to be leading somewhere.
+ */
 const SQUIGGLE_PATH = [
   "M 150 22",
   "C 400 55, 740 40, 810 130",
-  "C 870 210, 420 200, 260 265",
-  "C 120 320, 660 315, 725 415",
-  "C 770 490, 300 475, 240 565",
-  "C 190 640, 690 620, 735 705",
-  "C 770 780, 560 790, 520 825",
-  "C 470 870, 310 860, 285 905",
-  "C 265 950, 420 975, 500 985",
+  "S 420 200, 260 265",
+  "S 660 315, 725 415",
+  "S 300 475, 240 565",
+  "S 690 620, 735 705",
+  "S 480 880, 500 985",
 ].join(" ");
 
 function ScrollSquiggle({
@@ -530,44 +812,65 @@ function ScrollSquiggle({
   );
 }
 
-/* Animated cue at the end of "How it works" leading down to the waitlist. */
-function WaitlistLead() {
+/* Cue at the end of "How it works" leading down to the sign-up form. */
+function SignUpLead() {
   const shouldReduceMotion = useReducedMotion();
 
   return (
     <a
-      href="#waitlist"
-      className="group flex flex-col items-center gap-3 text-sm font-medium text-[#A1A1AA] transition-colors hover:text-white"
+      href="#signup"
+      className="group flex flex-col items-center gap-3 font-mono text-xs tracking-[0.18em] text-[#A1A1AA] uppercase transition-colors hover:text-white"
     >
       Ready when you are
       <motion.span
         aria-hidden
-        animate={shouldReduceMotion ? undefined : { y: [0, 6, 0] }}
-        transition={{ duration: 1.6, repeat: Infinity, ease: "easeInOut" }}
-        className="glass flex size-10 items-center justify-center rounded-full transition-colors group-hover:border-white/25"
-      >
-        <ChevronDown className="size-5 text-brand" />
-      </motion.span>
+        animate={shouldReduceMotion ? undefined : { scaleY: [1, 1.5, 1] }}
+        transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+        className="block h-8 w-px origin-top bg-gradient-to-b from-brand to-transparent"
+      />
     </a>
   );
 }
 
-function FlowStep({
-  icon: Icon,
-  label,
-}: {
-  icon: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
-  label: string;
-}) {
+/* Hero flow step — a numbered rule and a label. No icon: a glyph here would
+   only restate the words next to it. */
+function FlowStep({ step, label }: { step: string; label: string }) {
   return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="glass flex size-14 items-center justify-center rounded-2xl">
-        <Icon aria-hidden className="size-6 text-brand" />
-      </div>
-      <span className="text-sm font-medium whitespace-nowrap text-[#A1A1AA]">
+    <div className="group flex-1 border-t border-white/10 pt-4 transition-colors duration-200 ease-out hover:border-brand/50">
+      <p className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+        {step}
+      </p>
+      <p className="mt-2 text-left text-sm font-medium text-[#A1A1AA] transition-colors duration-200 group-hover:text-white">
         {label}
-      </span>
+      </p>
     </div>
+  );
+}
+
+/* Looping typewriter with a caret that blinks while idle and holds solid
+   while characters are moving — a caret that blinks mid-word reads as a
+   rendering glitch rather than as typing. */
+function TypedText({
+  phrases,
+  className,
+}: {
+  phrases: string[];
+  className?: string;
+}) {
+  const { text, idle, done } = useCyclingTypewriter(phrases);
+
+  return (
+    <span className={className}>
+      {text}
+      {!done && (
+        <span
+          aria-hidden
+          className={cn("ml-px inline-block", idle && "animate-caret")}
+        >
+          |
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -605,32 +908,59 @@ function DeepDiveRow({
           </h3>
           <p className="mt-3 max-w-prose text-[#A1A1AA]">{body}</p>
         </div>
-        <div className="relative w-full max-w-sm flex-1">
-          <GlassCard className="min-h-56">{mockup}</GlassCard>
-        </div>
+        <MockupPanel reversed={reversed}>{mockup}</MockupPanel>
       </div>
     </Reveal>
   );
 }
 
-const TRANSCRIPT_WORDS = [
-  "...and",
-  "that",
-  "energy",
-  "turns",
-  "directly",
-  "into",
-  "glucose.",
+/* The mockup swings up from a tilted-back resting position as it enters,
+   then follows the cursor once it's settled. Both rotations live on nested
+   elements so the entrance and the hover tilt never fight over `transform`. */
+function MockupPanel({
+  children,
+  reversed,
+}: {
+  children: React.ReactNode;
+  reversed: boolean;
+}) {
+  const shouldReduceMotion = useReducedMotion();
+
+  return (
+    <motion.div
+      className="relative w-full max-w-sm flex-1"
+      initial={
+        shouldReduceMotion
+          ? { opacity: 0 }
+          : {
+              opacity: 0,
+              y: 40,
+              rotateX: 18,
+              rotateY: reversed ? 10 : -10,
+              scale: 0.95,
+            }
+      }
+      whileInView={{ opacity: 1, y: 0, rotateX: 0, rotateY: 0, scale: 1 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.9, ease: EASE }}
+      style={{ transformPerspective: 1000 }}
+    >
+      <TiltCard>
+        <GlassCard className="min-h-56">{children}</GlassCard>
+      </TiltCard>
+    </motion.div>
+  );
+}
+
+const TRANSCRIPT_LINES = [
+  "...and that energy turns directly into glucose.",
+  "...so the electrons just move down the chain.",
+  "...which is where the carbon gets fixed, I think.",
 ];
 
 function LiveTranscript() {
-  const { ref, visibleWords, done } = useTypewriter(TRANSCRIPT_WORDS, 140);
-
   return (
-    <div
-      ref={ref}
-      className="rounded-lg border border-white/10 bg-white/[0.03] p-3"
-    >
+    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3">
       <div className="mb-2 flex h-6 items-end gap-1">
         {[0, 1, 2, 3, 4].map((i) => (
           <span
@@ -641,12 +971,7 @@ function LiveTranscript() {
         ))}
       </div>
       <p className="min-h-[2.5rem] text-xs text-[#A1A1AA]">
-        {visibleWords.join(" ")}
-        {!done && (
-          <span aria-hidden className="text-brand">
-            |
-          </span>
-        )}
+        <TypedText phrases={TRANSCRIPT_LINES} />
       </p>
     </div>
   );
@@ -671,6 +996,10 @@ function SourcesPanel() {
   );
 }
 
+/* Single phrase on purpose: the "Flagged" line below quotes the word
+   "directly", so cycling other sentences here would make it nonsense. */
+const EXPLAIN_LINES = ["...energy turns directly into glucose."];
+
 function ExplainPanel() {
   return (
     <div className="flex flex-col gap-2.5 p-5 text-xs">
@@ -681,8 +1010,10 @@ function ExplainPanel() {
         &ldquo;That happens in the chloroplasts.&rdquo;
       </p>
       <div className="rounded-md border border-brand/20 bg-brand/10 p-3">
-        <p className="text-white">
-          &ldquo;...energy turns directly into glucose.&rdquo;
+        <p className="min-h-8 text-white">
+          &ldquo;
+          <TypedText phrases={EXPLAIN_LINES} />
+          &rdquo;
         </p>
         <p className="mt-1.5 font-medium text-[#8FBCEC]">
           Flagged: what do you mean by &ldquo;directly&rdquo;?
@@ -721,50 +1052,236 @@ function GapPanel() {
   );
 }
 
-function WaitlistCta() {
+function oauthErrorMessage(): string {
+  return "That sign-in method isn't set up yet. Try email instead.";
+}
+
+function authErrorMessage(mode: AuthMode, message: string): string {
+  const lower = message.toLowerCase();
+  if (
+    lower.includes("already registered") ||
+    lower.includes("already exists")
+  ) {
+    return "That email already has an account. Try logging in instead.";
+  }
+  if (lower.includes("invalid login credentials")) {
+    return "Wrong email or password.";
+  }
+  if (mode === "signup" && lower.includes("password")) {
+    return "Password isn't strong enough. Use 8+ characters with a mix of uppercase, lowercase, numbers, and symbols.";
+  }
+  return "Something went wrong. Try again.";
+}
+
+function AuthCard() {
+  const router = useRouter();
+  const [mode, setMode] = useState<AuthMode>("signup");
   const [stage, setStage] = useState<Stage>("form");
   const [email, setEmail] = useState("");
-  const [goal, setGoal] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(
+    null,
+  );
+
+  function switchMode(next: AuthMode) {
+    setMode(next);
+    setError(null);
+  }
+
+  async function handleOAuth(provider: "google" | "apple") {
+    setError(null);
+    setOauthLoading(provider);
+
+    const supabase = createClient();
+    const { error: oauthError } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+
+    if (oauthError) {
+      setError(oauthErrorMessage());
+      setOauthLoading(null);
+    }
+    // On success the browser redirects away, so no further state change here.
+  }
 
   async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+
+    if (mode === "signup") {
+      // Reject throwaway and undeliverable domains before we ever ask
+      // Supabase to create the account.
+      const addressError = emailError(email);
+      if (addressError) {
+        setError(addressError);
+        return;
+      }
+      const requirementError = passwordRequirementError(password);
+      if (requirementError) {
+        setError(requirementError);
+        return;
+      }
+    }
+
+    setSubmitting(true);
+
+    const supabase = createClient();
+    const trimmedEmail = email.trim().toLowerCase();
+
+    if (mode === "signup") {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: trimmedEmail,
+        password,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      });
+
+      setSubmitting(false);
+
+      if (signUpError) {
+        setError(authErrorMessage(mode, signUpError.message));
+        return;
+      }
+
+      if (data.session) {
+        // New account — collect the profile before the dashboard.
+        router.push("/onboarding");
+      } else {
+        setStage("check-email");
+      }
+      return;
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: trimmedEmail,
+      password,
+    });
+
+    if (signInError) {
+      setSubmitting(false);
+      setError(authErrorMessage(mode, signInError.message));
+      return;
+    }
+
+    router.push("/dashboard");
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
 
     const supabase = createClient();
-    const { error: insertError } = await supabase
-      .from("waitlist_signups")
-      .insert({
-        email: email.trim().toLowerCase(),
-        learning_goal: goal || null,
-      });
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+      email.trim().toLowerCase(),
+      {
+        redirectTo: `${window.location.origin}/auth/callback?next=/auth/update-password`,
+      },
+    );
 
     setSubmitting(false);
 
-    if (insertError) {
-      setError(
-        insertError.code === "23505"
-          ? "That email is already on the list."
-          : "Something went wrong. Try again.",
-      );
+    if (resetError) {
+      setError("Something went wrong. Try again.");
       return;
     }
 
-    setStage("done");
+    setStage("reset-sent");
   }
 
   return (
     <div
-      id="waitlist"
+      id="signup"
       className="flex min-h-24 w-full scroll-mt-24 flex-col items-center justify-start"
     >
+      {stage === "forgot-password" && (
+        <form
+          onSubmit={handleForgotPassword}
+          className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-[#171717] p-6"
+        >
+          <div>
+            <h3 className="text-base font-semibold text-white">
+              Reset your password
+            </h3>
+            <p className="mt-1 text-sm text-[#71717A]">
+              We&apos;ll email you a link to set a new password.
+            </p>
+          </div>
+          <Input
+            type="email"
+            required
+            placeholder="you@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="h-11 border-[#333333] bg-[#1E1E1E] text-base text-white placeholder:text-[#71717A]"
+          />
+          {error && <p className="text-sm text-destructive">{error}</p>}
+          <Button
+            type="submit"
+            disabled={submitting}
+            className="shine h-11 rounded-full bg-brand font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_44px_-8px_var(--color-brand)] active:scale-[0.97]"
+          >
+            {submitting ? "Sending…" : "Send reset link"}
+          </Button>
+          <button
+            type="button"
+            onClick={() => {
+              setStage("form");
+              setError(null);
+            }}
+            className="text-center text-xs font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+          >
+            Back to log in
+          </button>
+        </form>
+      )}
+
+      {stage === "reset-sent" && (
+        <p className="text-sm text-[#A1A1AA]">
+          Check your email for a link to reset your password.
+        </p>
+      )}
+
       {stage === "form" && (
         <form
           onSubmit={handleSubmit}
-          className="flex w-full flex-col gap-4 rounded-2xl border border-white/10 bg-[#171717] p-6 shadow-xl shadow-black/40"
+          className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-[#171717] p-6"
         >
+          <div className="flex flex-col gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={oauthLoading !== null}
+              onClick={() => handleOAuth("google")}
+              className="h-11 gap-2 rounded-full border-[#333333] bg-[#1E1E1E] font-medium text-white transition-transform duration-200 ease-out hover:bg-[#262626] active:scale-[0.98]"
+            >
+              <GoogleIcon className="size-4" />
+              {oauthLoading === "google"
+                ? "Redirecting…"
+                : "Continue with Google"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={oauthLoading !== null}
+              onClick={() => handleOAuth("apple")}
+              className="h-11 gap-2 rounded-full border-[#333333] bg-[#1E1E1E] font-medium text-white transition-transform duration-200 ease-out hover:bg-[#262626] active:scale-[0.98]"
+            >
+              <AppleIcon className="size-4" />
+              {oauthLoading === "apple"
+                ? "Redirecting…"
+                : "Continue with Apple"}
+            </Button>
+          </div>
+
+          <div className="flex items-center gap-3 text-xs text-[#71717A]">
+            <span className="h-px flex-1 bg-white/10" />
+            or continue with email
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+
           <div className="flex flex-col gap-3">
             <Input
               type="email"
@@ -774,34 +1291,116 @@ function WaitlistCta() {
               onChange={(e) => setEmail(e.target.value)}
               className="h-11 border-[#333333] bg-[#1E1E1E] text-base text-white placeholder:text-[#71717A]"
             />
-            <Input
-              type="text"
-              placeholder="What are you trying to learn?"
-              value={goal}
-              onChange={(e) => setGoal(e.target.value)}
-              className="h-11 border-[#333333] bg-[#1E1E1E] text-base text-white placeholder:text-[#71717A]"
+            <PasswordField
+              value={password}
+              onChange={setPassword}
+              minLength={mode === "signup" ? 8 : undefined}
+              autoComplete={
+                mode === "signup" ? "new-password" : "current-password"
+              }
+              showStrength={mode === "signup"}
+              showGenerate={mode === "signup"}
             />
+            {mode === "login" && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStage("forgot-password");
+                  setError(null);
+                }}
+                className="self-end text-xs font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+              >
+                Forgot password?
+              </button>
+            )}
           </div>
           {error && <p className="text-sm text-destructive">{error}</p>}
-          <p className="text-center text-xs text-[#71717A]">
-            We&apos;ll only email you when TeachItBack is ready.
-          </p>
           <Button
             type="submit"
             size="default"
-            disabled={submitting}
-            className="bg-brand font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform hover:bg-brand/90 active:scale-[0.98]"
+            disabled={submitting || oauthLoading !== null}
+            className="shine h-11 rounded-full bg-brand font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_44px_-8px_var(--color-brand)] active:scale-[0.97]"
           >
-            {submitting ? "Joining…" : "Join the Waitlist"}
+            {submitting
+              ? mode === "signup"
+                ? "Signing up…"
+                : "Logging in…"
+              : mode === "signup"
+                ? "Sign up"
+                : "Log in"}
           </Button>
+          <p className="text-center text-xs text-[#71717A]">
+            {mode === "signup" ? (
+              <>
+                Already a member?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("login")}
+                  className="font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+                >
+                  Log in
+                </button>
+              </>
+            ) : (
+              <>
+                New here?{" "}
+                <button
+                  type="button"
+                  onClick={() => switchMode("signup")}
+                  className="font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+                >
+                  Sign up
+                </button>
+              </>
+            )}
+          </p>
         </form>
       )}
 
-      {stage === "done" && (
+      {stage === "check-email" && (
         <p className="text-sm text-[#A1A1AA]">
-          You&apos;re on the list. We&apos;ll email you.
+          Check your email to confirm your account.
         </p>
       )}
     </div>
+  );
+}
+
+function GoogleIcon({ className }: { className?: string }) {
+  return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, paired with visible button label
+    <svg viewBox="0 0 24 24" className={className} aria-hidden>
+      <path
+        d="M23.49 12.27c0-.79-.07-1.54-.2-2.27H12v4.3h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.55-5.17 3.55-8.66Z"
+        fill="#4285F4"
+      />
+      <path
+        d="M12 24c3.24 0 5.95-1.07 7.94-2.9l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.1A12 12 0 0 0 12 24Z"
+        fill="#34A853"
+      />
+      <path
+        d="M5.27 14.29a7.2 7.2 0 0 1 0-4.58v-3.1H1.27a12 12 0 0 0 0 10.78l4-3.1Z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.61l4 3.1C6.22 6.86 8.87 4.75 12 4.75Z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}
+
+function AppleIcon({ className }: { className?: string }) {
+  return (
+    // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, paired with visible button label
+    <svg
+      viewBox="0 0 24 24"
+      className={className}
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M17.05 12.53c-.03-3 2.45-4.44 2.56-4.51-1.4-2.04-3.58-2.32-4.35-2.35-1.85-.19-3.63 1.09-4.57 1.09-.95 0-2.4-1.06-3.95-1.03-2.03.03-3.9 1.18-4.94 3-2.11 3.66-.54 9.06 1.51 12.03 1 1.46 2.2 3.09 3.76 3.03 1.51-.06 2.08-.97 3.9-.97 1.82 0 2.34.97 3.93.94 1.63-.03 2.66-1.47 3.65-2.94 1.15-1.68 1.62-3.31 1.64-3.39-.04-.02-3.14-1.2-3.17-4.75Z" />
+      <path d="M14.4 3.86c.83-1 1.39-2.4 1.24-3.79-1.2.05-2.66.8-3.52 1.8-.77.88-1.44 2.31-1.26 3.66 1.33.1 2.7-.68 3.54-1.67Z" />
+    </svg>
   );
 }

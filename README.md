@@ -1,6 +1,4 @@
-# teachitback
-
-Created with [create-lumos-app](https://github.com/lumos-fellows/create-lumos-app).
+# TeachItBack
 
 ## Stack
 
