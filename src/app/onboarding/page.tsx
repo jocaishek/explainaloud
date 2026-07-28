@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "~/lib/supabase/server";
-import { OnboardingForm } from "./onboarding-form";
+import { OnboardingExperience } from "./onboarding-experience";
 
 export const metadata = { title: "Finish setting up · Ropes" };
 
@@ -16,16 +16,5 @@ export default async function OnboardingPage() {
 
   if (profile) redirect("/dashboard");
 
-  return (
-    <main className="flex min-h-screen items-center justify-center bg-background px-6 py-16">
-      <div className="w-full max-w-xl">
-        <p className="mb-6 font-mono text-[11px] tracking-[0.18em] text-subtle uppercase">
-          <span className="text-brand">02</span>
-          <span className="mx-3 inline-block h-px w-6 align-middle bg-border" />
-          Finish setting up
-        </p>
-        <OnboardingForm email={user.email ?? ""} />
-      </div>
-    </main>
-  );
+  return <OnboardingExperience email={user.email ?? ""} />;
 }

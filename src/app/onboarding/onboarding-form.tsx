@@ -1,7 +1,18 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  CalendarDays,
+  Check,
+  CheckCircle2,
+  CircleUserRound,
+  Compass,
+  GraduationCap,
+  Presentation,
+  SlidersHorizontal,
+} from "lucide-react";
 import { useActionState, useId, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -18,12 +29,19 @@ import { type OnboardingState, saveProfile } from "./actions";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 const STEPS = ["Your name", "Date of birth", "How you'll use it"] as const;
+const STEP_ICONS = [CircleUserRound, CalendarDays, SlidersHorizontal] as const;
+const USE_TYPE_ICONS = {
+  school: GraduationCap,
+  teacher: Presentation,
+  personal: Compass,
+} as const;
 
 export function OnboardingForm({ email }: { email: string }) {
   const shouldReduceMotion = useReducedMotion();
   const firstNameId = useId();
   const lastNameId = useId();
   const dobId = useId();
+  const errorId = useId();
 
   const [step, setStep] = useState(0);
   // Direction drives which way the panel slides, so going Back visibly
@@ -72,6 +90,17 @@ export function OnboardingForm({ email }: { email: string }) {
     setStep((s) => Math.max(s - 1, 0));
   }
 
+  function goToCompletedStep(index: number) {
+    if (index >= step) return;
+    setLocalError(null);
+    setDirection(-1);
+    setStep(index);
+  }
+
+  function clearCurrentError() {
+    if (localError?.step === step) setLocalError(null);
+  }
+
   const slide = shouldReduceMotion
     ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
     : {
@@ -87,14 +116,29 @@ export function OnboardingForm({ email }: { email: string }) {
   return (
     <form
       action={formAction}
+      onKeyDown={(event) => {
+        if (
+          event.key === "Enter" &&
+          !isLastStep &&
+          event.target instanceof HTMLInputElement
+        ) {
+          event.preventDefault();
+          next();
+        }
+      }}
       onSubmit={(event) => {
+        if (!isLastStep) {
+          event.preventDefault();
+          next();
+          return;
+        }
         const problem = stepError(STEPS.length - 1);
         if (problem) {
           event.preventDefault();
           setLocalError({ step: STEPS.length - 1, message: problem });
         }
       }}
-      className="flex w-full flex-col gap-8"
+      className="flex w-full flex-col gap-7"
     >
       {/* Every value travels with the form even while its step is unmounted. */}
       <input type="hidden" name="firstName" value={firstName} />
@@ -102,27 +146,37 @@ export function OnboardingForm({ email }: { email: string }) {
       <input type="hidden" name="dateOfBirth" value={dateOfBirth} />
       <input type="hidden" name="useType" value={useType ?? ""} />
 
-      <StepIndicator step={step} />
+      <StepIndicator
+        step={step}
+        onStepSelect={goToCompletedStep}
+        reduceMotion={!!shouldReduceMotion}
+      />
 
-      <div className="min-h-64">
+      <div className="min-h-[19rem]">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={step}
             initial={slide.initial}
             animate={slide.animate}
             exit={slide.exit}
-            transition={{ duration: 0.35, ease: EASE }}
+            transition={{
+              duration: shouldReduceMotion ? 0.1 : 0.22,
+              ease: EASE,
+            }}
             className="flex flex-col gap-5"
           >
             <div>
-              <h2 className="text-2xl font-semibold tracking-tight text-strong">
+              <p className="mb-2 text-sm font-medium text-brand">
+                Step {step + 1} of {STEPS.length}
+              </p>
+              <h2 className="text-3xl font-semibold tracking-tight text-strong text-balance">
                 {step === 0 && "What should we call you?"}
                 {step === 1 && "When were you born?"}
                 {step === 2 && "How will you use Ropes?"}
               </h2>
-              <p className="mt-2 text-sm text-subtle">
+              <p className="mt-2 max-w-md text-sm leading-6 text-subtle">
                 {step === 0 &&
-                  `Setting up the account for ${email}. This is the name we'll greet you by.`}
+                  "This is how your dashboard and progress reports will greet you."}
                 {step === 1 &&
                   "We use this to confirm you're old enough for your own account."}
                 {step === 2 && "This shapes what we put in front of you first."}
@@ -130,50 +184,80 @@ export function OnboardingForm({ email }: { email: string }) {
             </div>
 
             {step === 0 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <Label htmlFor={firstNameId} className="sr-only">
-                    First name
-                  </Label>
-                  <Input
-                    id={firstNameId}
-                    autoFocus
-                    autoComplete="given-name"
-                    placeholder="First name"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    className="h-11 placeholder:text-subtle"
-                  />
+              <div className="flex flex-col gap-4">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <Label htmlFor={firstNameId} className="sr-only">
+                      First name
+                    </Label>
+                    <Input
+                      id={firstNameId}
+                      autoFocus
+                      autoComplete="given-name"
+                      placeholder="First name"
+                      value={firstName}
+                      aria-invalid={!!error}
+                      aria-describedby={error ? errorId : undefined}
+                      onChange={(event) => {
+                        setFirstName(event.target.value);
+                        clearCurrentError();
+                      }}
+                      className="h-12 bg-surface px-4 text-base placeholder:text-subtle"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor={lastNameId} className="sr-only">
+                      Last name
+                    </Label>
+                    <Input
+                      id={lastNameId}
+                      autoComplete="family-name"
+                      placeholder="Last name"
+                      value={lastName}
+                      aria-invalid={!!error}
+                      aria-describedby={error ? errorId : undefined}
+                      onChange={(event) => {
+                        setLastName(event.target.value);
+                        clearCurrentError();
+                      }}
+                      className="h-12 bg-surface px-4 text-base placeholder:text-subtle"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor={lastNameId} className="sr-only">
-                    Last name
-                  </Label>
-                  <Input
-                    id={lastNameId}
-                    autoComplete="family-name"
-                    placeholder="Last name"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    className="h-11 placeholder:text-subtle"
-                  />
+
+                <div className="flex items-center gap-2 text-xs text-subtle">
+                  <CheckCircle2 className="size-4 text-brand" />
+                  <span className="truncate">{email} verified</span>
                 </div>
               </div>
             )}
 
             {step === 1 && (
-              <div className="flex max-w-xs flex-col gap-2">
-                <Label htmlFor={dobId}>Date of birth</Label>
-                <Input
-                  id={dobId}
-                  type="date"
-                  autoFocus
-                  autoComplete="bday"
-                  value={dateOfBirth}
-                  max={new Date().toISOString().slice(0, 10)}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                  className="h-11"
-                />
+              <div className="flex max-w-sm flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor={dobId}>Date of birth</Label>
+                  <Input
+                    id={dobId}
+                    type="date"
+                    autoFocus
+                    autoComplete="bday"
+                    value={dateOfBirth}
+                    max={new Date().toISOString().slice(0, 10)}
+                    aria-invalid={!!error}
+                    aria-describedby={error ? errorId : undefined}
+                    onChange={(event) => {
+                      setDateOfBirth(event.target.value);
+                      clearCurrentError();
+                    }}
+                    className="h-12 bg-surface px-4 text-base"
+                  />
+                </div>
+                <div className="rounded-xl bg-surface px-4 py-3">
+                  <p className="text-xs leading-5 text-subtle">
+                    Ropes requires users to be at least 13. Your birth date is
+                    only used for account eligibility.
+                  </p>
+                </div>
               </div>
             )}
 
@@ -184,6 +268,7 @@ export function OnboardingForm({ email }: { email: string }) {
                     key={option}
                     option={option}
                     selected={useType === option}
+                    reduceMotion={!!shouldReduceMotion}
                     onSelect={() => {
                       setUseType(option);
                       setLocalError(null);
@@ -199,11 +284,15 @@ export function OnboardingForm({ email }: { email: string }) {
       <AnimatePresence>
         {error && (
           <motion.p
-            initial={{ opacity: 0, y: -6 }}
+            initial={shouldReduceMotion ? false : { opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2, ease: EASE }}
+            exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+            transition={{
+              duration: shouldReduceMotion ? 0 : 0.2,
+              ease: EASE,
+            }}
             role="alert"
+            id={errorId}
             className="text-sm text-destructive"
           >
             {error}
@@ -218,7 +307,7 @@ export function OnboardingForm({ email }: { email: string }) {
           onClick={back}
           disabled={step === 0 || pending}
           className={cn(
-            "gap-1.5 rounded-full",
+            "gap-1.5 rounded-full motion-reduce:transition-none",
             // `invisible`, not `opacity-0`: the Button variant's
             // `disabled:opacity-50` is generated after plain opacity
             // utilities and would win the moment this button is disabled.
@@ -239,7 +328,7 @@ export function OnboardingForm({ email }: { email: string }) {
             key="finish"
             type="submit"
             disabled={pending}
-            className="shine group h-11 gap-1.5 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+            className="shine group h-11 gap-1.5 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 active:scale-[0.97] motion-reduce:transition-none"
           >
             {pending ? "Setting up…" : "Finish setup"}
             {!pending && <Check className="size-4" />}
@@ -249,10 +338,10 @@ export function OnboardingForm({ email }: { email: string }) {
             key="continue"
             type="button"
             onClick={next}
-            className="shine group h-11 gap-1.5 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+            className="shine group h-11 gap-1.5 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 active:scale-[0.97] motion-reduce:transition-none"
           >
             Continue
-            <ArrowRight className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
+            <ArrowRight className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />
           </Button>
         )}
       </div>
@@ -260,29 +349,60 @@ export function OnboardingForm({ email }: { email: string }) {
   );
 }
 
-function StepIndicator({ step }: { step: number }) {
+function StepIndicator({
+  step,
+  onStepSelect,
+  reduceMotion,
+}: {
+  step: number;
+  onStepSelect: (step: number) => void;
+  reduceMotion: boolean;
+}) {
   return (
-    <ol className="flex items-center gap-3">
-      {STEPS.map((label, i) => (
-        <li key={label} className="flex flex-1 flex-col gap-2">
-          <div className="h-1 overflow-hidden rounded-full bg-surface">
-            <motion.div
-              className="h-full rounded-full bg-brand"
-              initial={false}
-              animate={{ width: i <= step ? "100%" : "0%" }}
-              transition={{ duration: 0.4, ease: EASE }}
-            />
-          </div>
-          <span
-            className={cn(
-              "font-mono text-[10px] tracking-[0.14em] uppercase transition-colors duration-300",
-              i <= step ? "text-brand" : "text-subtle",
-            )}
-          >
-            {label}
-          </span>
-        </li>
-      ))}
+    <ol className="grid grid-cols-3 gap-1 rounded-xl bg-surface p-1">
+      {STEPS.map((label, index) => {
+        const Icon = STEP_ICONS[index];
+        const complete = index < step;
+        const active = index === step;
+
+        return (
+          <li key={label}>
+            <button
+              type="button"
+              disabled={index > step}
+              aria-current={active ? "step" : undefined}
+              onClick={() => onStepSelect(index)}
+              className={cn(
+                "relative flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-left text-xs font-medium transition-colors duration-200 sm:justify-start sm:px-3 motion-reduce:transition-none",
+                active
+                  ? "text-strong"
+                  : complete
+                    ? "text-brand hover:text-strong"
+                    : "text-subtle",
+              )}
+            >
+              {active && (
+                <motion.span
+                  layoutId="onboarding-active-step"
+                  className="absolute inset-0 rounded-lg bg-card shadow-xs"
+                  transition={{ duration: reduceMotion ? 0 : 0.25, ease: EASE }}
+                />
+              )}
+              <span className="relative flex size-5 shrink-0 items-center justify-center">
+                {complete ? (
+                  <Check className="size-4" />
+                ) : Icon ? (
+                  <Icon className="size-4" />
+                ) : null}
+              </span>
+              <span className="relative hidden truncate sm:inline">
+                {label}
+              </span>
+              <span className="sr-only sm:hidden">{label}</span>
+            </button>
+          </li>
+        );
+      })}
     </ol>
   );
 }
@@ -290,13 +410,16 @@ function StepIndicator({ step }: { step: number }) {
 function UseTypeOption({
   option,
   selected,
+  reduceMotion,
   onSelect,
 }: {
   option: UseType;
   selected: boolean;
+  reduceMotion: boolean;
   onSelect: () => void;
 }) {
   const { title, description } = USE_TYPE_LABELS[option];
+  const Icon = USE_TYPE_ICONS[option];
 
   return (
     <button
@@ -305,34 +428,46 @@ function UseTypeOption({
       aria-pressed={selected}
       aria-label={`${title} — ${description}`}
       className={cn(
-        "flex items-center gap-4 rounded-xl border p-4 text-left transition-[border-color,background-color,transform] duration-200 ease-out active:scale-[0.99]",
+        "group flex items-center gap-4 rounded-xl border p-4 text-left transition-[border-color,background-color,transform] duration-200 ease-out active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100",
         selected
           ? "border-brand bg-brand/10"
-          : "border-border bg-surface hover:border-brand/40",
+          : "border-border bg-surface hover:border-brand/40 hover:bg-brand/[0.04]",
       )}
     >
       <span
         className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-200",
+          "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 motion-reduce:transition-none",
+          selected
+            ? "bg-brand text-white"
+            : "bg-card text-subtle group-hover:text-brand",
+        )}
+      >
+        <Icon className="size-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium text-strong">{title}</span>
+        <span className="mt-0.5 block text-sm leading-5 text-subtle">
+          {description}
+        </span>
+      </span>
+      <span
+        className={cn(
+          "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 motion-reduce:transition-none",
           selected ? "border-brand bg-brand" : "border-border",
         )}
       >
         <AnimatePresence>
           {selected && (
             <motion.span
-              initial={{ scale: 0.5, opacity: 0 }}
+              initial={reduceMotion ? false : { scale: 0.5, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.5, opacity: 0 }}
-              transition={{ duration: 0.18, ease: EASE }}
+              exit={reduceMotion ? undefined : { scale: 0.5, opacity: 0 }}
+              transition={{ duration: reduceMotion ? 0 : 0.18, ease: EASE }}
             >
-              <Check className="size-3 text-strong" />
+              <Check className="size-3 text-white" />
             </motion.span>
           )}
         </AnimatePresence>
-      </span>
-      <span>
-        <span className="block font-medium text-strong">{title}</span>
-        <span className="mt-0.5 block text-sm text-subtle">{description}</span>
       </span>
     </button>
   );
