@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Geist_Mono, Instrument_Serif, Poppins } from "next/font/google";
+import { env } from "~/env";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 
@@ -28,6 +29,14 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
+  // Turns relative Open Graph / Twitter image paths into absolute URLs. Tied to
+  // Vercel's own production hostname rather than a literal, so it can't go
+  // stale when the domain changes; falls back to the dev server locally.
+  metadataBase: new URL(
+    env.VERCEL_PROJECT_PRODUCTION_URL
+      ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`
+      : "http://localhost:3000",
+  ),
   title: "Ropes",
   description:
     "Explain it back out loud and know exactly when you actually understand it.",

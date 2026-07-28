@@ -31,13 +31,36 @@ export async function GET(request: NextRequest) {
   const destination =
     next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      return NextResponse.redirect(`${browserOrigin}${destination}`);
-    }
+  if (!code) {
+    console.error("[auth/callback] no code in query", {
+      host,
+      url: request.url,
+    });
+    return NextResponse.redirect(`${browserOrigin}/?auth_error=no_code`);
   }
 
-  return NextResponse.redirect(`${browserOrigin}/?auth_error=1`);
+  const supabase = await createClient();
+  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (!error) {
+    return NextResponse.redirect(`${browserOrigin}${destination}`);
+  }
+
+  // The exchange needs the PKCE code verifier that was written as a cookie when
+  // sign-in started. If the flow began on one hostname and Supabase sent the
+  // callback to another — which it does whenever the requested redirect is
+  // missing from the project's allow-list and it falls back to the Site URL —
+  // that cookie isn't readable here and the exchange fails. Distinguish that
+  // from a genuinely bad or reused code so the log names a cause.
+  const verifierMissing = /code verifier|code_verifier|pkce/i.test(
+    error.message,
+  );
+  console.error("[auth/callback] code exchange failed", {
+    reason: error.message,
+    host,
+    verifierMissing,
+  });
+
+  return NextResponse.redirect(
+    `${browserOrigin}/?auth_error=${verifierMissing ? "origin_mismatch" : "exchange_failed"}`,
+  );
 }

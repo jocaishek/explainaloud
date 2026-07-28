@@ -12,6 +12,9 @@ export const env = createEnv({
     GEMINI_API_KEY: z.string().min(1).optional(),
     GROQ_API_KEY: z.string().min(1).optional(),
     TAVILY_API_KEY: z.string().min(1).optional(),
+    // Set by Vercel to the project's stable production hostname, without a
+    // protocol. Absent locally, which is why it's optional.
+    VERCEL_PROJECT_PRODUCTION_URL: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -22,6 +25,7 @@ export const env = createEnv({
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     TAVILY_API_KEY: process.env.TAVILY_API_KEY,
+    VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     // Supabase renamed the browser-safe key: new projects hand out a
     // `PUBLISHABLE_KEY`, older ones an `ANON_KEY`. They are interchangeable

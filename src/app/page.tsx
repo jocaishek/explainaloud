@@ -1191,6 +1191,21 @@ function verificationRedirect(): string {
   return `${window.location.origin}/auth/callback?next=/onboarding`;
 }
 
+/**
+ * Messages for a failed `/auth/callback`. The origin-mismatch case is worth
+ * calling out separately: it is a project configuration problem, not something
+ * the visitor can fix by trying again, and the generic "try again" wording
+ * sends people into a loop.
+ */
+const AUTH_CALLBACK_ERRORS: Record<string, string> = {
+  origin_mismatch:
+    "Sign-in started on a different address than it finished on, so the session couldn't be completed. If you're an admin, add this exact site URL to the Supabase redirect allow-list.",
+  exchange_failed:
+    "That sign-in link has already been used or has expired. Start again.",
+  no_code: "The sign-in link was incomplete. Start again.",
+  default: "We couldn't finish signing you in. Please try again.",
+};
+
 function authErrorMessage(mode: AuthMode, message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("email not confirmed")) {
@@ -1233,9 +1248,10 @@ function AuthCard() {
       return;
     }
 
-    if (params.get("auth_error") === "1") {
+    const authError = params.get("auth_error");
+    if (authError) {
       setMode("login");
-      setError("We couldn't finish signing you in. Please try again.");
+      setError(AUTH_CALLBACK_ERRORS[authError] ?? AUTH_CALLBACK_ERRORS.default);
       window.history.replaceState({}, "", `${window.location.pathname}#signup`);
     }
   }, []);
