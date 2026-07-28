@@ -27,4 +27,15 @@ export const env = createEnv({
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
+  // The default failure is a bare "Invalid environment variables" thrown from
+  // a minified chunk, which tells a deploy log nothing. Name the variables so
+  // a failed build says which ones are missing from the host's settings.
+  onValidationError: (issues) => {
+    const names = issues
+      .map((issue) => issue.path?.join(".") ?? "(unknown)")
+      .join(", ");
+    throw new Error(
+      `Invalid or missing environment variables: ${names}. Set them in your hosting provider's environment settings and redeploy.`,
+    );
+  },
 });
