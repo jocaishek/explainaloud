@@ -333,3 +333,88 @@ export async function transcribeAudio(file: File, topic: string) {
 export function aiConfigured() {
   return !!(env.GEMINI_API_KEY || env.GROQ_API_KEY);
 }
+
+export type ProviderProbe = {
+  provider: "gemini" | "groq";
+  configured: boolean;
+  ok: boolean;
+  status: number | null;
+  reason: string;
+};
+
+function describeProbeStatus(status: number): { ok: boolean; reason: string } {
+  if (status === 200) return { ok: true, reason: "reachable" };
+  if (status === 401 || status === 403) {
+    return {
+      ok: false,
+      reason: `unauthorized (${status}) — key invalid or revoked`,
+    };
+  }
+  if (status === 429) {
+    return { ok: false, reason: "rate limited (429) — wait a minute" };
+  }
+  return { ok: false, reason: `unexpected status ${status}` };
+}
+
+/**
+ * Cheapest possible liveness check per provider: list models, which costs no
+ * tokens. Returns status codes and our own wording only — never a key, a key
+ * fragment, or a provider response body.
+ */
+export async function probeProviders(): Promise<ProviderProbe[]> {
+  const checks: Array<{
+    provider: "gemini" | "groq";
+    key: string | undefined;
+    run: (key: string) => Promise<Response>;
+  }> = [
+    {
+      provider: "gemini",
+      key: env.GEMINI_API_KEY,
+      run: (key) =>
+        fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
+        ),
+    },
+    {
+      provider: "groq",
+      key: env.GROQ_API_KEY,
+      run: (key) =>
+        fetch("https://api.groq.com/openai/v1/models", {
+          headers: { authorization: `Bearer ${key}` },
+        }),
+    },
+  ];
+
+  return Promise.all(
+    checks.map(async ({ provider, key, run }): Promise<ProviderProbe> => {
+      if (!key) {
+        return {
+          provider,
+          configured: false,
+          ok: false,
+          status: null,
+          reason: "no API key configured in this environment",
+        };
+      }
+      try {
+        const response = await run(key);
+        const { ok, reason } = describeProbeStatus(response.status);
+        return {
+          provider,
+          configured: true,
+          ok,
+          status: response.status,
+          reason,
+        };
+      } catch {
+        return {
+          provider,
+          configured: true,
+          ok: false,
+          status: null,
+          reason: "network error reaching the provider",
+        };
+      }
+    }),
+  );
+}
