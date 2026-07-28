@@ -396,8 +396,7 @@ export async function transcribeAudio(file: File, topic: string) {
   const normalized = normalizedTranscript(transcript);
   const promptEcho =
     normalized === normalizedTranscript(prompt) ||
-    (normalized.startsWith("a student is explaining") &&
-      normalized.includes("preserve course terminology"));
+    normalized.startsWith("a student is explaining");
   if (
     !transcript ||
     promptEcho ||
