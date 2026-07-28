@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Geist_Mono, Instrument_Serif, Poppins } from "next/font/google";
 import { ThemeProvider } from "./theme-provider";
@@ -43,6 +44,7 @@ export default function RootLayout({
         className={`${poppins.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans`}
       >
         <ThemeProvider>{children}</ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );
