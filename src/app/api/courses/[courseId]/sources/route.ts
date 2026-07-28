@@ -40,7 +40,7 @@ export async function POST(
 
   // Admins are exempt. The check is here rather than only in the picker because
   // the client limit is a courtesy — this is the one that actually holds.
-  const { data: isAdmin } = await supabase.rpc("is_ropes_admin");
+  const { data: isAdmin } = await supabase.rpc("is_explainaloud_admin");
   const limit = sourceLimitFor(isAdmin === true);
 
   if ((count ?? 0) >= limit) {

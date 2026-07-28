@@ -86,7 +86,7 @@ export async function requireUser() {
  */
 export async function requireAdmin() {
   const { supabase, user } = await requireUser();
-  const { data, error } = await supabase.rpc("is_ropes_admin");
+  const { data, error } = await supabase.rpc("is_explainaloud_admin");
 
   if (error || data !== true) {
     notFound();
