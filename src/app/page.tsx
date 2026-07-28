@@ -1213,6 +1213,17 @@ function AuthCard() {
   const [submitting, setSubmitting] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
 
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("authError") !== "session-expired") return;
+
+    setMode("login");
+    setError(
+      "That sign-in is no longer valid. Sign in again, or create the account again if it was removed.",
+    );
+    window.history.replaceState({}, "", `${window.location.pathname}#signup`);
+  }, []);
+
   function switchMode(next: AuthMode) {
     setMode(next);
     setError(null);

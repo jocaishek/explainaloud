@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { dateOfBirthError, isUseType, nameError } from "~/lib/profile";
-import { requireUser } from "~/lib/supabase/server";
+import { createClient } from "~/lib/supabase/server";
 
 export type OnboardingState = { error: string | null };
 
@@ -14,7 +14,17 @@ export async function saveProfile(
   _prev: OnboardingState,
   formData: FormData,
 ): Promise<OnboardingState> {
-  const { supabase, user } = await requireUser();
+  const supabase = await createClient();
+  // This write references auth.users, so verify the account still exists
+  // rather than trusting a locally valid JWT from a deleted/stale session.
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    await supabase.auth.signOut({ scope: "local" });
+    redirect("/?authError=session-expired#signup");
+  }
 
   const firstName = String(formData.get("firstName") ?? "").trim();
   const lastName = String(formData.get("lastName") ?? "").trim();
@@ -46,6 +56,10 @@ export async function saveProfile(
   );
 
   if (error) {
+    console.error("Failed to save onboarding profile", {
+      code: error.code,
+      message: error.message,
+    });
     return { error: "We couldn't save that. Try again." };
   }
 

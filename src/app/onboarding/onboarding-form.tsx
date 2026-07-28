@@ -85,7 +85,17 @@ export function OnboardingForm({ email }: { email: string }) {
   const isLastStep = step === STEPS.length - 1;
 
   return (
-    <form action={formAction} className="flex w-full flex-col gap-8">
+    <form
+      action={formAction}
+      onSubmit={(event) => {
+        const problem = stepError(STEPS.length - 1);
+        if (problem) {
+          event.preventDefault();
+          setLocalError({ step: STEPS.length - 1, message: problem });
+        }
+      }}
+      className="flex w-full flex-col gap-8"
+    >
       {/* Every value travels with the form even while its step is unmounted. */}
       <input type="hidden" name="firstName" value={firstName} />
       <input type="hidden" name="lastName" value={lastName} />
@@ -121,25 +131,31 @@ export function OnboardingForm({ email }: { email: string }) {
 
             {step === 0 && (
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor={firstNameId}>First name</Label>
+                <div>
+                  <Label htmlFor={firstNameId} className="sr-only">
+                    First name
+                  </Label>
                   <Input
                     id={firstNameId}
                     autoFocus
                     autoComplete="given-name"
+                    placeholder="First name"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
-                    className="h-11"
+                    className="h-11 placeholder:text-subtle"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor={lastNameId}>Last name</Label>
+                <div>
+                  <Label htmlFor={lastNameId} className="sr-only">
+                    Last name
+                  </Label>
                   <Input
                     id={lastNameId}
                     autoComplete="family-name"
+                    placeholder="Last name"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
-                    className="h-11"
+                    className="h-11 placeholder:text-subtle"
                   />
                 </div>
               </div>
