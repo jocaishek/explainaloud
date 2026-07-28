@@ -4,6 +4,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AgentOrchestration } from "~/components/agent-orchestration";
 import { type SourceItem, SourceUploader } from "~/components/source-uploader";
 import { Button } from "~/components/ui/button";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
@@ -117,6 +118,8 @@ export function CourseBuilder({
           {error}
         </p>
       )}
+
+      <AgentOrchestration run={course?.orchestration} running={generating} />
 
       <AnimatePresence>
         {course && (

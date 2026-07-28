@@ -100,7 +100,10 @@ async function withTimeout<T>(fn: (signal: AbortSignal) => Promise<T>) {
   }
 }
 
-async function callGemini(prompt: string): Promise<string> {
+async function callGemini(
+  prompt: string,
+  maxOutputTokens: number,
+): Promise<string> {
   if (!env.GEMINI_API_KEY) throw new Error("GEMINI_API_KEY not set");
 
   const response = await withTimeout((signal) =>
@@ -118,7 +121,7 @@ async function callGemini(prompt: string): Promise<string> {
           // creative writing. Variance here shows up as wrong feedback.
           temperature: 0,
           topP: 0.1,
-          maxOutputTokens: MAX_OUTPUT_TOKENS,
+          maxOutputTokens,
           responseMimeType: "application/json",
         },
       }),
@@ -145,7 +148,10 @@ async function callGemini(prompt: string): Promise<string> {
   return text;
 }
 
-async function callGroq(prompt: string): Promise<string> {
+async function callGroq(
+  prompt: string,
+  maxOutputTokens: number,
+): Promise<string> {
   if (!env.GROQ_API_KEY) throw new Error("GROQ_API_KEY not set");
 
   const response = await withTimeout((signal) =>
@@ -160,7 +166,7 @@ async function callGroq(prompt: string): Promise<string> {
         model: GROQ_MODEL,
         temperature: 0,
         top_p: 0.1,
-        max_tokens: MAX_OUTPUT_TOKENS,
+        max_tokens: maxOutputTokens,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content: prompt }],
       }),
@@ -191,10 +197,15 @@ async function callGroq(prompt: string): Promise<string> {
 export async function completeJson<T>(
   prompt: string,
   validate: (value: unknown) => T,
+  options: { maxOutputTokens?: number } = {},
 ): Promise<AiResult<T>> {
+  const maxOutputTokens = Math.max(
+    128,
+    Math.min(options.maxOutputTokens ?? MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
+  );
   const attempts: Array<{
     provider: "gemini" | "groq";
-    call: (p: string) => Promise<string>;
+    call: (p: string, maxTokens: number) => Promise<string>;
     configured: boolean;
   }> = [
     { provider: "gemini", call: callGemini, configured: !!env.GEMINI_API_KEY },
@@ -210,7 +221,7 @@ export async function completeJson<T>(
     }
     for (let tries = 0; tries <= RATE_LIMIT_RETRIES; tries++) {
       try {
-        const raw = await attempt.call(prompt);
+        const raw = await attempt.call(prompt, maxOutputTokens);
         return { data: validate(extractJson(raw)), provider: attempt.provider };
       } catch (error) {
         // A rate limit is a "wait", not a "this provider is broken" — the

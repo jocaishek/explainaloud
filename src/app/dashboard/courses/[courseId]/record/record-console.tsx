@@ -3,7 +3,9 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Mic, Square } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AgentOrchestration } from "~/components/agent-orchestration";
 import { Button } from "~/components/ui/button";
+import type { AgentRun } from "~/lib/ai/schemas";
 import { DAILY_LIMITS, localDay } from "~/lib/limits";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
@@ -97,6 +99,7 @@ export function RecordConsole({
   const [remainingMs, setRemainingMs] = useState(MAX_RECORDING_MS);
   const [sessions, setSessions] = useState(initialSessions);
   const [used, setUsed] = useState(recordingsUsed);
+  const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -161,6 +164,7 @@ export function RecordConsole({
         const json = await response.json();
         if (seq !== liveSeqRef.current) return; // superseded
         if (Array.isArray(json.spans)) setSpans(json.spans);
+        if (json.orchestration) setAgentRun(json.orchestration);
       } catch {
         // Live colouring is an enhancement; a failed pass must never
         // interrupt the recording.
@@ -290,6 +294,7 @@ export function RecordConsole({
         setError(json.error ?? "Couldn't analyse that session.");
       } else {
         if (Array.isArray(json.spans)) setSpans(json.spans);
+        if (json.orchestration) setAgentRun(json.orchestration);
         if (json.report) {
           setReport(json.report);
           setSessions((prev) =>
@@ -386,6 +391,7 @@ export function RecordConsole({
     setInterim("");
     setSpans([]);
     setReport(null);
+    setAgentRun(null);
     setNotice(null);
     transcriptRef.current = "";
     startedAtRef.current = new Date().toISOString();
@@ -651,6 +657,12 @@ export function RecordConsole({
           </p>
         )}
       </div>
+
+      <AgentOrchestration
+        run={agentRun}
+        running={status === "analyzing"}
+        className="w-full max-w-2xl"
+      />
 
       {(status === "recording" || transcript) && (
         <div className="w-full max-w-2xl rounded-xl border border-border bg-surface p-4">

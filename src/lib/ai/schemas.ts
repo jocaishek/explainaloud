@@ -1,5 +1,48 @@
 import { z } from "zod";
 
+export const agentStepSchema = z.object({
+  id: z.string().min(1),
+  role: z.string().min(1),
+  task: z.string().min(1),
+  status: z.enum(["completed", "revised", "degraded"]),
+  summary: z.string().min(1),
+  provider: z.enum(["gemini", "groq", "local"]).optional(),
+});
+export type AgentStep = z.infer<typeof agentStepSchema>;
+
+export const agentRunSchema = z.object({
+  run_id: z.string().min(1),
+  strategy: z.string().min(1),
+  started_at: z.string().min(1),
+  completed_at: z.string().min(1),
+  agents: z.array(agentStepSchema).min(1),
+});
+export type AgentRun = z.infer<typeof agentRunSchema>;
+
+export const courseReviewSchema = z.object({
+  approved: z.boolean(),
+  summary: z.string().min(1),
+  checks: z
+    .array(
+      z.object({
+        name: z.enum(["grounding", "coverage", "pedagogy", "assessment"]),
+        passed: z.boolean(),
+        detail: z.string().min(1),
+      }),
+    )
+    .min(1),
+  issues: z.array(z.string()).default([]),
+});
+export type CourseReview = z.infer<typeof courseReviewSchema>;
+
+const modelText = z.preprocess(
+  (value) =>
+    Array.isArray(value)
+      ? value.filter((item) => typeof item === "string").join(" ")
+      : value,
+  z.string().min(1),
+);
+
 /**
  * Schemas for every model response. `completeJson` treats a validation
  * failure as a provider failure, so these double as the failover trigger —
@@ -8,16 +51,16 @@ import { z } from "zod";
  */
 
 const courseResponseSchema = z.object({
-  summary: z.string().min(1),
+  summary: modelText,
   sections: z
     .array(
       z.object({
-        title: z.string().min(1),
-        intuition: z.string().min(1),
-        analogy: z.string().min(1),
-        technical: z.string().min(1),
-        example: z.string().min(1),
-        quiz: z.string().min(1),
+        title: modelText,
+        intuition: modelText,
+        analogy: modelText,
+        technical: modelText,
+        example: modelText,
+        quiz: modelText,
         key_points: z.array(z.string().min(1)).default([]),
       }),
     )
@@ -35,6 +78,7 @@ const courseResponseSchema = z.object({
     .array(z.object({ label: z.string().min(1), why: z.string().default("") }))
     .default([]),
   uncovered: z.array(z.string()).default([]),
+  orchestration: agentRunSchema.optional(),
 });
 
 /**

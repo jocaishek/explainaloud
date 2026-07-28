@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { courseGenerationPrompt } from "~/lib/ai/prompts";
-import { AiUnavailableError, completeJson } from "~/lib/ai/provider";
-import { courseSchema } from "~/lib/ai/schemas";
-import { renderSources, type SourceRow } from "~/lib/ai/sources";
+import { orchestrateCourse } from "~/lib/ai/orchestrator";
+import { AiUnavailableError } from "~/lib/ai/provider";
+import type { SourceRow } from "~/lib/ai/sources";
 import { createClient } from "~/lib/supabase/server";
 
 export const maxDuration = 120;
@@ -42,26 +41,20 @@ export async function POST(
     .order("created_at", { ascending: true })
     .returns<SourceRow[]>();
 
-  // Sources are optional. With them, the model is locked to them; without,
-  // it teaches from its own knowledge and the course is marked ungrounded so
-  // the UI can say where the material came from.
-  const grounded = (sources?.length ?? 0) > 0;
-  const prompt = `${courseGenerationPrompt(course.topic, course.input_notes, grounded)}
-
-${renderSources(sources ?? [])}`;
-
   try {
-    const { data, provider } = await completeJson(prompt, (value) =>
-      courseSchema.parse(value),
-    );
+    const result = await orchestrateCourse({
+      topic: course.topic,
+      notes: course.input_notes,
+      sources: sources ?? [],
+    });
 
     const { error: saveError } = await supabase
       .from("courses")
       .update({
-        generated: data,
+        generated: result.course,
         generated_at: new Date().toISOString(),
-        generated_by: provider,
-        grounded,
+        generated_by: result.primaryProvider,
+        grounded: result.grounded,
         status: "ready",
         updated_at: new Date().toISOString(),
       })
@@ -78,7 +71,13 @@ ${renderSources(sources ?? [])}`;
       );
     }
 
-    return NextResponse.json({ course: data, provider, grounded });
+    return NextResponse.json({
+      course: result.course,
+      provider: result.primaryProvider,
+      grounded: result.grounded,
+      review: result.review,
+      orchestration: result.course.orchestration,
+    });
   } catch (error) {
     console.error("Course generation failed:", error);
     if (error instanceof AiUnavailableError) {

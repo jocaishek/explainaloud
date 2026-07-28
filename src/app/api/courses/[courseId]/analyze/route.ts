@@ -1,13 +1,8 @@
 import { NextResponse } from "next/server";
-import { gapDetectionPrompt, gapReportPrompt } from "~/lib/ai/prompts";
-import { AiUnavailableError, completeJson } from "~/lib/ai/provider";
-import {
-  type GeneratedCourse,
-  reconcileSpans,
-  reportSchema,
-  spansSchema,
-} from "~/lib/ai/schemas";
-import { renderSources, type SourceRow } from "~/lib/ai/sources";
+import { orchestrateExplanation } from "~/lib/ai/orchestrator";
+import { AiUnavailableError } from "~/lib/ai/provider";
+import type { GeneratedCourse } from "~/lib/ai/schemas";
+import type { SourceRow } from "~/lib/ai/sources";
 import { createClient } from "~/lib/supabase/server";
 
 export const maxDuration = 120;
@@ -87,55 +82,46 @@ export async function POST(
     .returns<SourceRow[]>();
 
   const grounded = (sources?.length ?? 0) > 0;
-  const sourceBlock = renderSources(sources ?? []);
-
   try {
-    const detection = await completeJson(
-      `${gapDetectionPrompt({ topic: course.topic, keyPoints, transcript, grounded })}\n\n${sourceBlock}`,
-      (value) => spansSchema.parse(value),
-    );
-
-    // Guarantees every character of what the student said is rendered, even
-    // if the model's spans were incomplete.
-    const spans = reconcileSpans(transcript, detection.data.spans);
+    const result = await orchestrateExplanation({
+      topic: course.topic,
+      keyPoints,
+      transcript,
+      grounded,
+      sources: sources ?? [],
+      mode,
+    });
 
     if (mode === "live") {
       return NextResponse.json({
-        spans,
-        covered: detection.data.covered_key_points,
-        provider: detection.provider,
+        spans: result.spans,
+        covered: result.covered,
+        provider: result.provider,
+        orchestration: result.orchestration,
       });
     }
 
-    const report = await completeJson(
-      `${gapReportPrompt({
-        topic: course.topic,
-        keyPoints,
-        transcript,
-        gaps: spans
-          .filter((s) => s.status === "gap")
-          .map((s) => ({ text: s.text, issue: s.issue })),
-        grounded,
-      })}\n\n${sourceBlock}`,
-      (value) => reportSchema.parse(value),
-    );
+    const report = result.report;
+    if (!report) {
+      throw new AiUnavailableError("Gap Coach returned no final report.");
+    }
 
     if (sessionId) {
       await supabase
         .from("course_sessions")
         .update({
-          spans,
-          report: report.data,
-          score: Math.round(report.data.score),
+          spans: result.spans,
+          report,
+          score: Math.round(report.score),
           analyzed_at: new Date().toISOString(),
         })
         .eq("id", sessionId)
         .eq("user_id", user.id);
 
       // Persist each gap so the Gap Report screen has real rows to show.
-      if (report.data.gaps.length) {
+      if (report.gaps.length) {
         await supabase.from("gaps").insert(
-          report.data.gaps.map((gap) => ({
+          report.gaps.map((gap) => ({
             session_id: sessionId,
             user_id: user.id,
             phrase: gap.phrase,
@@ -148,10 +134,11 @@ export async function POST(
     }
 
     return NextResponse.json({
-      spans,
-      covered: detection.data.covered_key_points,
-      report: report.data,
-      provider: report.provider,
+      spans: result.spans,
+      covered: result.covered,
+      report,
+      provider: result.provider,
+      orchestration: result.orchestration,
     });
   } catch (error) {
     if (error instanceof AiUnavailableError) {
