@@ -228,6 +228,12 @@ export function gapDetectionPrompt(params: {
   keyPoints: string[];
   transcript: string;
   grounded: boolean;
+  /**
+   * What the student already said before this excerpt, for judging claims that
+   * only make sense in context ("that means it doubles"). Read-only: it is not
+   * segmented and no span may come from it. Absent on a full-transcript pass.
+   */
+  context?: string;
 }) {
   return `ROLE: You are the Transcript Evaluator agent in a multi-agent teaching system.
 You are grading a student's spoken explanation. You are NOT teaching yet.
@@ -240,8 +246,18 @@ TOPIC: ${params.topic}
 
 KEY POINTS a correct explanation must contain:
 ${params.keyPoints.map((p, i) => `[${i}] ${p}`).join("\n")}
-
-The student said (verbatim transcript):
+${
+  params.context
+    ? `
+EARLIER IN THIS EXPLANATION (context only — already graded, do NOT segment it
+and do NOT return any span from it):
+"""
+${params.context}
+"""
+`
+    : ""
+}
+The student said (verbatim transcript${params.context ? ", the part you must grade" : ""}):
 """
 ${params.transcript}
 """
@@ -264,7 +280,13 @@ Rules:
   brief is not wrong.
 - Check every numbered key point before returning. Add an index to
   "covered_key_points" only when the transcript states that point correctly;
-  partial, vague, incorrect, and omitted points are not covered.
+  partial, vague, incorrect, and omitted points are not covered.${
+    params.context
+      ? `
+- Judge the transcript in light of the context, but every returned span must be
+  an exact substring of the transcript above, never of the context.`
+      : ""
+  }
 
 Return JSON:
 {

@@ -29,13 +29,15 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  // Turns relative Open Graph / Twitter image paths into absolute URLs. Tied to
-  // Vercel's own production hostname rather than a literal, so it can't go
-  // stale when the domain changes; falls back to the dev server locally.
+  // Turns relative Open Graph / Twitter image paths into absolute URLs.
+  // NEXT_PUBLIC_SITE_URL first, because once a custom domain is attached that
+  // is the only hostname anyone sees; Vercel's own production hostname is the
+  // fallback for preview and pre-domain deploys, and the dev server locally.
   metadataBase: new URL(
-    env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : "http://localhost:3000",
+    env.NEXT_PUBLIC_SITE_URL ??
+      (env.VERCEL_PROJECT_PRODUCTION_URL
+        ? `https://${env.VERCEL_PROJECT_PRODUCTION_URL}`
+        : "http://localhost:3000"),
   ),
   title: "Ropes",
   description:

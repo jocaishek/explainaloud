@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { orchestrateExplanation } from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
@@ -6,6 +7,27 @@ import type { SourceRow } from "~/lib/ai/sources";
 import { createClient } from "~/lib/supabase/server";
 
 export const maxDuration = 120;
+
+/**
+ * Ceilings on what one request may carry.
+ *
+ * A three-minute explanation is a few thousand characters, so these are far
+ * above any honest recording. They exist because the transcript is caller-
+ * supplied text that goes straight into a paid model prompt: without a cap, a
+ * single crafted POST spends the token budget for every other student.
+ */
+const MAX_TRANSCRIPT_CHARS = 20_000;
+const MAX_CONTEXT_CHARS = 2_000;
+
+const requestSchema = z.object({
+  transcript: z.string().max(MAX_TRANSCRIPT_CHARS),
+  mode: z.enum(["live", "final"]).default("live"),
+  // Preceding, already-graded speech. Live passes send only the newest slice
+  // of the transcript so that latency stays flat as the recording grows; this
+  // is the context that makes that slice judgeable on its own.
+  context: z.string().max(MAX_CONTEXT_CHARS).optional(),
+  sessionId: z.uuid().optional(),
+});
 
 /**
  * Grades a spoken explanation.
@@ -31,17 +53,25 @@ export async function POST(
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  let body: { transcript?: unknown; mode?: unknown; sessionId?: unknown };
+  let raw: unknown;
   try {
-    body = await request.json();
+    raw = await request.json();
   } catch {
     return NextResponse.json({ error: "Bad request." }, { status: 400 });
   }
 
-  const transcript = String(body.transcript ?? "").trim();
-  const mode = body.mode === "final" ? "final" : "live";
-  const sessionId =
-    typeof body.sessionId === "string" ? body.sessionId : undefined;
+  const parsedBody = requestSchema.safeParse(raw);
+  if (!parsedBody.success) {
+    return NextResponse.json({ error: "Bad request." }, { status: 400 });
+  }
+
+  const transcript = parsedBody.data.transcript.trim();
+  const mode = parsedBody.data.mode;
+  const sessionId = parsedBody.data.sessionId;
+  // Context only narrows a live pass. On a final pass the whole transcript is
+  // already in hand, so accepting one would just pay for duplicated tokens.
+  const context =
+    mode === "live" ? parsedBody.data.context?.trim() || undefined : undefined;
 
   if (transcript.length < 12) {
     return NextResponse.json({ spans: [], covered: [], tooShort: true });
@@ -90,6 +120,7 @@ export async function POST(
       grounded,
       sources: sources ?? [],
       mode,
+      context,
     });
 
     if (mode === "live") {

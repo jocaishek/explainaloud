@@ -560,6 +560,16 @@ type ExplanationParams = {
   grounded: boolean;
   sources: SourceRow[];
   mode: "live" | "final";
+  /**
+   * Speech that came before `transcript` and has already been graded.
+   *
+   * Live passes grade only the newest slice of the explanation, so that the
+   * prompt and the span JSON stay the same size at three minutes as they were
+   * at three seconds. This carries just enough of what came before for a
+   * back-referencing sentence to still be judgeable. Never set on a `final`
+   * pass, which grades the whole transcript at once.
+   */
+  context?: string;
 };
 
 type EvaluatedTranscriptSpan = {
