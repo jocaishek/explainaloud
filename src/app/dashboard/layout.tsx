@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import Link from "next/link";
+import { RopesMark } from "~/components/ropes-mark";
 import { SignOutButton } from "~/components/sign-out-button";
 import { Button } from "~/components/ui/button";
 import { isAdminEmail } from "~/lib/admin";
@@ -20,8 +21,9 @@ export default async function DashboardLayout({
         <div className="flex min-w-0 items-center gap-2 lg:gap-8">
           <Link
             href="/dashboard"
-            className="text-base font-semibold tracking-tight text-strong"
+            className="flex items-center gap-2 text-base font-semibold tracking-tight text-strong"
           >
+            <RopesMark className="size-6 shrink-0 text-brand" />
             Ropes
           </Link>
           <DashboardNav showAdmin={isAdminEmail(user.email)} />
