@@ -229,22 +229,18 @@ export default async function GapReportPage({
                 tabIndex={-1}
                 className="flex scroll-mt-24 flex-col gap-2 py-4 outline-none target:bg-red-500/[0.04]"
               >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-red-600 capitalize dark:text-red-400">
-                      {weakness.category.replace(/_/g, " ")}
-                    </p>
-                    <h3 className="mt-1 text-sm font-semibold text-strong">
-                      {weakness.phrase}
-                    </h3>
-                  </div>
-                  <Link
-                    href={`/dashboard/courses/${courseId}/re-teach#gap-${weakness.id}`}
-                    className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  >
-                    Re-teach this
-                  </Link>
-                </div>
+                <p className="text-xs font-medium text-red-600 capitalize dark:text-red-400">
+                  {weakness.category.replace(/_/g, " ")}
+                </p>
+                <h3 className="text-sm font-semibold text-strong">
+                  {weakness.phrase}
+                </h3>
+                <Link
+                  href={`/dashboard/courses/${courseId}/re-teach#gap-${weakness.id}`}
+                  className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  Re-teach this
+                </Link>
                 {weakness.explanation && (
                   <p className="max-w-2xl text-sm leading-6 text-foreground">
                     {conciseTeachingText(weakness.explanation)}
