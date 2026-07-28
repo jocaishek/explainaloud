@@ -440,10 +440,6 @@ export function RecordConsole({
         }
       }
 
-      if (!text) {
-        return;
-      }
-
       const supabase = createClient();
       const {
         data: { user },
@@ -468,12 +464,32 @@ export function RecordConsole({
         .single<Session>();
 
       if (insertError || !data) {
-        setError("Couldn't save that session. Try again.");
+        // Name the database's own reason. "Couldn't save that session" is
+        // indistinguishable from a missing policy, a missing column, or an
+        // expired session, and the recording is gone by the time anyone looks.
+        console.error("Session insert failed:", insertError);
+        setError(
+          insertError?.message
+            ? `Couldn't save that session: ${insertError.message}`
+            : "Couldn't save that session. Try again.",
+        );
         return;
       }
 
       setSessions((prev) => [data, ...prev]);
       setDisplayedSessionId(data.id);
+
+      // An empty transcript is still worth keeping — the row is what makes the
+      // attempt visible and re-gradeable later. There is just nothing to grade
+      // yet, so say why rather than returning silently.
+      if (!text) {
+        setError(
+          (current) =>
+            current ??
+            "No speech was captured, so there's nothing to grade. The attempt was saved.",
+        );
+        return;
+      }
 
       // Only now — after the student has stopped — do we ask for teaching.
       if (!courseReady || text.length < 24) {
