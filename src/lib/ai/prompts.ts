@@ -57,6 +57,8 @@ export const PRECISION_RULE = `PRECISION:
  */
 export const OPEN_KNOWLEDGE_RULE = `NO SOURCES PROVIDED:
 - Teach this topic from well-established, textbook-level knowledge.
+- Treat the student's exact topic as authoritative. Never substitute a
+  different subject merely because it shares a word or name with the topic.
 - Stick to what is genuinely settled. Do not present contested or niche
   claims as fact.
 - If part of the topic is ambiguous or depends on context the student has not
@@ -78,11 +80,14 @@ ${grounded ? GROUNDING_RULE : OPEN_KNOWLEDGE_RULE}
 ${PRECISION_RULE}
 
 Build a short course for the topic: "${topic}".
+TOPIC IDENTITY: Teach exactly "${topic}". Do not silently reinterpret it as a
+similarly named person, theory, product, event, or field. If the supplied
+evidence is about a different subject, mark that material uncovered.
 ${notes ? `\nThe student added these notes:\n${notes}\n` : ""}
 Return JSON with this exact shape:
 {
   "summary": "2-3 sentence overview${grounded ? " grounded in the sources" : ""}",
-  "citations": [{ "source": "exact uploaded filename", "quote": "exact supporting sentence" }],
+  "citations": [{ "source": "exact source label", "quote": "exact supporting sentence" }],
   "sections": [
     {
       "title": "string",
@@ -92,7 +97,7 @@ Return JSON with this exact shape:
       "example": "string",
       "quiz": "string",
       "key_points": ["the specific checkable claims a correct explanation must contain"],
-      "citations": [{ "source": "exact uploaded filename", "quote": "exact supporting sentence" }]
+      "citations": [{ "source": "exact source label", "quote": "exact supporting sentence" }]
     }
   ],
   "notes": ["condensed revision notes, one fact per line${grounded ? ", drawn from the sources" : ""}"],
@@ -112,7 +117,7 @@ ${
     ? `CITATIONS:
 - Add citations for the summary/revision notes in the top-level "citations".
 - Add the evidence for each lesson section in that section's "citations".
-- Every citation must use an exact filename from SOURCES and an exact,
+- Every citation must use an exact source label from SOURCES and an exact,
   verbatim supporting sentence from that file.
 - Include only the shortest excerpt needed to support the claim.
 - Do not use a citation merely because it is related; it must directly support
@@ -139,8 +144,8 @@ The Course Architect has produced a draft. Audit it independently; do not
 rewrite it and do not approve it merely because it is well formatted.
 
 TOPIC: ${params.topic}
-GROUNDING MODE: ${params.grounded ? "Use only uploaded sources" : "Established textbook knowledge"}
-SOURCE FILES: ${params.sourceNames.join(", ") || "none"}
+GROUNDING MODE: ${params.grounded ? "Use only the supplied evidence" : "Established textbook knowledge"}
+SOURCE LABELS: ${params.sourceNames.join(", ") || "none"}
 
 SOURCE EVIDENCE SAMPLE:
 ${params.sourceEvidence || "No sources were supplied."}
@@ -152,9 +157,11 @@ COURSE ARCHITECT DRAFT:
 ${JSON.stringify(params.draft)}
 
 Check:
+- topic identity: every section teaches the student's exact topic rather than
+  a similarly named person, product, theory, event, or field
 - grounding: factual claims stay inside the supplied evidence when grounded
-- citations: when grounded, every lesson section cites an exact uploaded
-  filename and a verbatim excerpt that directly supports its claims
+- citations: when grounded, every lesson section cites an exact source label
+  and a verbatim excerpt that directly supports its claims
 - coverage: the course honestly identifies material the sources do not cover
 - pedagogy: explanations move from intuition to technical detail
 - assessment: every section has concrete key points and a useful quiz

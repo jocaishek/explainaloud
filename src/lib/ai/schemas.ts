@@ -46,6 +46,7 @@ const modelText = z.preprocess(
 export const courseCitationSchema = z.object({
   source: z.string().min(1),
   quote: z.string().min(1),
+  url: z.string().url().optional(),
 });
 export type CourseCitation = z.infer<typeof courseCitationSchema>;
 

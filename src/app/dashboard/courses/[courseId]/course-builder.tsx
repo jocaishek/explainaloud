@@ -131,7 +131,9 @@ export function CourseBuilder({
           <p className="mt-1.5 text-sm text-subtle">
             {sources.length > 0
               ? "The course is grounded in these sources."
-              : "Sources are optional. Without them, the course uses established textbook knowledge."}
+              : course?.citations.length
+                ? "Ropes researched direct sources and cites them throughout this course."
+                : "Sources are optional. Without them, the course uses established textbook knowledge."}
           </p>
         </div>
         <SourceUploader
@@ -471,8 +473,8 @@ function CitationList({ citations }: { citations: CourseCitation[] }) {
           Sources & citations
         </h2>
         <p className="mt-1.5 text-sm text-subtle">
-          Each excerpt was verified against the uploaded source before being
-          shown.
+          Each excerpt was verified against its uploaded or researched source
+          before being shown.
         </p>
       </div>
       <ol className="flex flex-col gap-2">
@@ -486,9 +488,20 @@ function CitationList({ citations }: { citations: CourseCitation[] }) {
               <span className="font-mono text-[10px] font-semibold text-brand">
                 [{index + 1}]
               </span>
-              <span className="break-all text-sm font-semibold text-strong">
-                {citation.source}
-              </span>
+              {citation.url ? (
+                <a
+                  href={citation.url}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="break-all text-sm font-semibold text-strong transition-colors hover:text-brand"
+                >
+                  {citation.source} ↗
+                </a>
+              ) : (
+                <span className="break-all text-sm font-semibold text-strong">
+                  {citation.source}
+                </span>
+              )}
             </div>
             <blockquote className="mt-2 border-l-2 border-brand/30 pl-3 text-sm leading-relaxed text-foreground">
               “{citation.quote}”

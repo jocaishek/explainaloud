@@ -1,6 +1,7 @@
 import "server-only";
 
 import { env } from "~/env";
+import type { SourceRow } from "~/lib/ai/sources";
 import {
   directLearningWebsite,
   looksLikeEnglishText,
@@ -27,6 +28,10 @@ export type VideoDiscovery = {
 export type ResourceDiscovery = {
   resources: CourseResource[];
   searched: boolean;
+};
+
+export type CourseEvidenceDiscovery = ResourceDiscovery & {
+  sources: SourceRow[];
 };
 
 const SEARCH_WORDS = new Set([
@@ -201,6 +206,113 @@ function conciseReason(value: unknown, fallback: string) {
     ?.trim();
   if (!sentence) return fallback;
   return sentence.length > 180 ? `${sentence.slice(0, 177).trim()}…` : sentence;
+}
+
+/**
+ * One basic search grounds courses that have no uploads. The same results are
+ * reused as the course's reading resources, so research does not add another
+ * Tavily call or switch to advanced/deep search.
+ */
+export async function discoverCourseEvidence(
+  topic: string,
+): Promise<CourseEvidenceDiscovery> {
+  if (!env.TAVILY_API_KEY) {
+    return { sources: [], resources: [], searched: false };
+  }
+
+  try {
+    const topicPhrase = topic.trim().slice(0, 160);
+    const response = await fetch(TAVILY_SEARCH_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(15_000),
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${env.TAVILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query: `"${topicPhrase}" official documentation educational overview`,
+        topic: "general",
+        country: "united states",
+        search_depth: "basic",
+        auto_parameters: false,
+        include_answer: false,
+        include_raw_content: false,
+        exclude_domains: [
+          "bing.com",
+          "duckduckgo.com",
+          "facebook.com",
+          "google.com",
+          "instagram.com",
+          "reddit.com",
+          "tiktok.com",
+          "x.com",
+          "youtube.com",
+          "youtu.be",
+        ],
+        max_results: 8,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`Course evidence search failed: Tavily ${response.status}`);
+      return { sources: [], resources: [], searched: true };
+    }
+
+    const payload = (await response.json()) as {
+      results?: Array<{
+        title?: unknown;
+        url?: unknown;
+        content?: unknown;
+        score?: unknown;
+      }>;
+    };
+    const seen = new Set<string>();
+    const sources: SourceRow[] = [];
+    const resources: CourseResource[] = [];
+
+    for (const result of payload.results ?? []) {
+      if (
+        typeof result.url !== "string" ||
+        typeof result.title !== "string" ||
+        typeof result.content !== "string" ||
+        (typeof result.score === "number" && result.score < 0.2)
+      ) {
+        continue;
+      }
+
+      const url = directLearningWebsite(result.url);
+      const title = result.title.trim();
+      const content = result.content
+        .trim()
+        .replace(/\s+/gu, " ")
+        .slice(0, 1800);
+      const evidence = `${title} ${content}`;
+      if (
+        !url ||
+        !title ||
+        content.length < 40 ||
+        seen.has(url) ||
+        !looksLikeEnglishText(evidence) ||
+        !titleMatchesTopic(evidence, topicPhrase)
+      ) {
+        continue;
+      }
+
+      seen.add(url);
+      sources.push({ filename: title, content, url });
+      resources.push({
+        label: title,
+        why: conciseReason(content, `A direct source for ${topicPhrase}.`),
+        url,
+      });
+      if (sources.length === 5) break;
+    }
+
+    return { sources, resources, searched: true };
+  } catch (error) {
+    console.error("Course evidence search failed:", error);
+    return { sources: [], resources: [], searched: true };
+  }
 }
 
 /**

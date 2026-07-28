@@ -28,6 +28,7 @@ import {
 } from "~/lib/ai/schemas";
 import { renderSources, type SourceRow } from "~/lib/ai/sources";
 import {
+  discoverCourseEvidence,
   discoverCourseResources,
   discoverCourseVideos,
 } from "~/lib/video-search";
@@ -120,7 +121,7 @@ function verifiedCitations(
     const key = `${source.filename}\u0000${normalizeEvidence(quote)}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    verified.push({ source: source.filename, quote });
+    verified.push({ source: source.filename, quote, url: source.url });
   }
 
   return verified;
@@ -204,25 +205,40 @@ export async function orchestrateCourse(params: {
   const startedAt = new Date().toISOString();
   const runId = crypto.randomUUID();
   const grounded = params.sources.length > 0;
+  const research = grounded
+    ? { sources: [], resources: [], searched: false }
+    : await discoverCourseEvidence(params.topic);
+  const evidenceSources =
+    params.sources.length > 0 ? params.sources : research.sources;
+  const evidenceGrounded = evidenceSources.length > 0;
   const agents: AgentStep[] = [
     agentStep(
       "source-scout",
       "Source Scout",
-      "Index the available evidence and choose the grounding mode.",
+      "Index uploads or research direct evidence before generation.",
       grounded
         ? `Indexed ${params.sources.length} source${params.sources.length === 1 ? "" : "s"} for grounded generation.`
-        : "Confirmed that no sources were supplied; using established textbook knowledge.",
-      { status: "completed", provider: "local" },
+        : research.sources.length > 0
+          ? `Researched ${research.sources.length} direct source${research.sources.length === 1 ? "" : "s"} with one basic search.`
+          : "No uploads or reliable research results were available; using established textbook knowledge.",
+      {
+        status:
+          grounded || research.sources.length > 0 ? "completed" : "degraded",
+        provider: "local",
+      },
     ),
   ];
 
   const architect = await completeJson(
-    `${courseGenerationPrompt(params.topic, params.notes, grounded)}
+    `${courseGenerationPrompt(params.topic, params.notes, evidenceGrounded)}
 
-${renderSources(params.sources)}`,
+${renderSources(evidenceSources)}`,
     (value) => courseSchema.parse(value),
   );
-  const architectCourse = verifyCourseCitations(architect.data, params.sources);
+  const architectCourse = verifyCourseCitations(
+    architect.data,
+    evidenceSources,
+  );
   const keyPointCount = architectCourse.sections.reduce(
     (total, section) => total + section.key_points.length,
     0,
@@ -246,9 +262,9 @@ ${renderSources(params.sources)}`,
     const reviewer = await completeJson(
       courseReviewPrompt({
         topic: params.topic,
-        grounded,
-        sourceNames: params.sources.map((source) => source.filename),
-        sourceEvidence: sourceEvidence(params.sources),
+        grounded: evidenceGrounded,
+        sourceNames: evidenceSources.map((source) => source.filename),
+        sourceEvidence: sourceEvidence(evidenceSources),
         draft: auditView(architectCourse),
       }),
       (value) => courseReviewSchema.parse(value),
@@ -258,11 +274,11 @@ ${renderSources(params.sources)}`,
     reviewerProvider = reviewer.provider;
   } catch (error) {
     if (!(error instanceof AiUnavailableError)) throw error;
-    review = localCourseReview(architectCourse, grounded);
+    review = localCourseReview(architectCourse, evidenceGrounded);
     reviewerStatus = "degraded";
   }
 
-  if (!hasCitationCoverage(architectCourse, grounded)) {
+  if (!hasCitationCoverage(architectCourse, evidenceGrounded)) {
     review = {
       ...review,
       approved: false,
@@ -301,14 +317,14 @@ ${renderSources(params.sources)}`,
       const revision = await completeJson(
         courseRevisionPrompt({
           topic: params.topic,
-          grounded,
+          grounded: evidenceGrounded,
           draft: course,
           issues: review.issues,
-          sourceBlock: renderSources(params.sources),
+          sourceBlock: renderSources(evidenceSources),
         }),
         (value) => courseSchema.parse(value),
       );
-      course = verifyCourseCitations(revision.data, params.sources);
+      course = verifyCourseCitations(revision.data, evidenceSources);
       agents.push(
         agentStep(
           "revision-specialist",
@@ -332,16 +348,18 @@ ${renderSources(params.sources)}`,
     }
   }
 
-  if (!hasCitationCoverage(course, grounded)) {
+  if (!hasCitationCoverage(course, evidenceGrounded)) {
     throw new CourseCitationError();
   }
 
   const [videoDiscovery, resourceDiscovery] = await Promise.all([
     discoverCourseVideos(params.topic, course.video_searches),
-    discoverCourseResources(
-      params.topic,
-      course.sections.flatMap((section) => section.key_points),
-    ),
+    grounded
+      ? discoverCourseResources(
+          params.topic,
+          course.sections.flatMap((section) => section.key_points),
+        )
+      : Promise.resolve(research),
   ]);
   course = {
     ...course,
@@ -381,7 +399,8 @@ ${renderSources(params.sources)}`,
 
   const orchestration: AgentRun = {
     run_id: runId,
-    strategy: "source → architect → independent review → conditional revision",
+    strategy:
+      "source research → architect → independent review → conditional revision",
     started_at: startedAt,
     completed_at: new Date().toISOString(),
     agents,

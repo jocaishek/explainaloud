@@ -5,7 +5,12 @@ export { ACCEPT_ATTRIBUTE, ACCEPTED_EXTENSIONS } from "~/lib/uploads";
 /** Hard ceiling on how much source text we hand a model in one request. */
 const MAX_SOURCE_CHARS = 8_000;
 
-export type SourceRow = { filename: string; content: string };
+export type SourceRow = {
+  filename: string;
+  content: string;
+  /** Present for web-researched evidence; uploads intentionally omit it. */
+  url?: string;
+};
 
 /**
  * Renders the uploaded sources into the prompt.
@@ -34,8 +39,9 @@ explicit in "uncovered" about anything you are not confident in.`;
     const body = source.content.slice(0, budget);
     if (body.length < source.content.length) truncated = true;
     budget -= body.length;
+    const urlAttribute = source.url ? ` url="${escapeAttr(source.url)}"` : "";
     blocks.push(
-      `<source filename="${escapeAttr(source.filename)}">\n${body}\n</source>`,
+      `<source filename="${escapeAttr(source.filename)}"${urlAttribute}>\n${body}\n</source>`,
     );
   }
 
