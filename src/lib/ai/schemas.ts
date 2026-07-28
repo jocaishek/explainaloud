@@ -43,6 +43,12 @@ const modelText = z.preprocess(
   z.string().min(1),
 );
 
+export const courseCitationSchema = z.object({
+  source: z.string().min(1),
+  quote: z.string().min(1),
+});
+export type CourseCitation = z.infer<typeof courseCitationSchema>;
+
 /**
  * Schemas for every model response. `completeJson` treats a validation
  * failure as a provider failure, so these double as the failover trigger —
@@ -52,6 +58,8 @@ const modelText = z.preprocess(
 
 const courseResponseSchema = z.object({
   summary: modelText,
+  /** Evidence supporting the overview and condensed revision notes. */
+  citations: z.array(courseCitationSchema).default([]),
   sections: z
     .array(
       z.object({
@@ -62,6 +70,8 @@ const courseResponseSchema = z.object({
         example: modelText,
         quiz: modelText,
         key_points: z.array(z.string().min(1)).default([]),
+        /** Exact source excerpts supporting the claims in this section. */
+        citations: z.array(courseCitationSchema).default([]),
       }),
     )
     .min(1),

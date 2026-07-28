@@ -37,7 +37,9 @@ export const GROUNDING_RULE = `SOURCE GROUNDING — this overrides every other i
   the gap from general knowledge. Write "not covered in your sources".
 - Never speculate. Never approximate a citation. If you are unsure whether a
   claim is in the SOURCES, treat it as not in the SOURCES.
-- Quote the exact supporting sentence from the SOURCES for each claim you make.`;
+- Cite the exact filename and quote the exact supporting sentence from the
+  SOURCES for each claim you make. Never cite a filename that is not present
+  in SOURCES.`;
 
 /** Accuracy guardrails shared by every call. */
 export const PRECISION_RULE = `PRECISION:
@@ -80,6 +82,7 @@ ${notes ? `\nThe student added these notes:\n${notes}\n` : ""}
 Return JSON with this exact shape:
 {
   "summary": "2-3 sentence overview${grounded ? " grounded in the sources" : ""}",
+  "citations": [{ "source": "exact uploaded filename", "quote": "exact supporting sentence" }],
   "sections": [
     {
       "title": "string",
@@ -88,7 +91,8 @@ Return JSON with this exact shape:
       "technical": "string",
       "example": "string",
       "quiz": "string",
-      "key_points": ["the specific checkable claims a correct explanation must contain"]
+      "key_points": ["the specific checkable claims a correct explanation must contain"],
+      "citations": [{ "source": "exact uploaded filename", "quote": "exact supporting sentence" }]
     }
   ],
   "notes": ["condensed revision notes, one fact per line${grounded ? ", drawn from the sources" : ""}"],
@@ -102,6 +106,19 @@ Produce 3-5 sections, 6-12 notes, 3-5 video searches and 2-4 resources.
 Every section must contain at least one "key_points" entry. Each entry must be
 a single, concrete, checkable claim — these are what the student's spoken
 explanation is graded against later, so they must be specific enough to verify.
+
+${
+  grounded
+    ? `CITATIONS:
+- Add citations for the summary/revision notes in the top-level "citations".
+- Add the evidence for each lesson section in that section's "citations".
+- Every citation must use an exact filename from SOURCES and an exact,
+  verbatim supporting sentence from that file.
+- Include only the shortest excerpt needed to support the claim.
+- Do not use a citation merely because it is related; it must directly support
+  the claim.`
+    : `No uploaded sources exist. Return empty "citations" arrays at the top level and in every section. Never invent a source.`
+}
 
 IMPORTANT about links: never output a URL. You cannot know whether a specific
 video or page exists, and a fabricated link is worse than no link. Output
@@ -136,6 +153,8 @@ ${JSON.stringify(params.draft)}
 
 Check:
 - grounding: factual claims stay inside the supplied evidence when grounded
+- citations: when grounded, every lesson section cites an exact uploaded
+  filename and a verbatim excerpt that directly supports its claims
 - coverage: the course honestly identifies material the sources do not cover
 - pedagogy: explanations move from intuition to technical detail
 - assessment: every section has concrete key points and a useful quiz

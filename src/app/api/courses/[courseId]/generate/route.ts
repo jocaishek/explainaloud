@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { orchestrateCourse } from "~/lib/ai/orchestrator";
+import { CourseCitationError, orchestrateCourse } from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
 import type { SourceRow } from "~/lib/ai/sources";
 import { createClient } from "~/lib/supabase/server";
@@ -88,6 +88,15 @@ export async function POST(
           error: "This service can't be used at the moment. Try again shortly.",
         },
         { status: 503 },
+      );
+    }
+    if (error instanceof CourseCitationError) {
+      return NextResponse.json(
+        {
+          error:
+            "Ropes couldn't verify every citation against your sources. Try rebuilding the course.",
+        },
+        { status: 422 },
       );
     }
     return NextResponse.json(

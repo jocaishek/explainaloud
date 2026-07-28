@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { AgentOrchestration } from "~/components/agent-orchestration";
 import { type SourceItem, SourceUploader } from "~/components/source-uploader";
 import { Button } from "~/components/ui/button";
-import type { GeneratedCourse } from "~/lib/ai/schemas";
+import type { CourseCitation, GeneratedCourse } from "~/lib/ai/schemas";
 import { courseSectionId } from "~/lib/course-sections";
 import {
   directLearningWebsite,
@@ -106,6 +106,13 @@ export function CourseBuilder({
     course?.resources.filter(
       (resource) => resource.url && directLearningWebsite(resource.url),
     ) ?? [];
+  const citationEntries = course ? collectCitations(course) : [];
+  const citationNumbers = new Map(
+    citationEntries.map((citation, index) => [
+      citationKey(citation),
+      index + 1,
+    ]),
+  );
 
   return (
     <div className="flex flex-col gap-8">
@@ -170,7 +177,14 @@ export function CourseBuilder({
             transition={{ duration: 0.4, ease: EASE }}
             className="flex flex-col gap-8"
           >
-            <p className="text-foreground">{course.summary}</p>
+            <div className="text-foreground">
+              <p>{course.summary}</p>
+              <CitationMarks
+                citations={course.citations}
+                numbers={citationNumbers}
+                label="Sources for the course overview"
+              />
+            </div>
 
             {course.notes.length > 0 && (
               <section className="flex flex-col gap-3">
@@ -190,6 +204,11 @@ export function CourseBuilder({
                     </li>
                   ))}
                 </ul>
+                <CitationMarks
+                  citations={course.citations}
+                  numbers={citationNumbers}
+                  label="Sources for the revision notes"
+                />
               </section>
             )}
 
@@ -213,6 +232,11 @@ export function CourseBuilder({
                 <p className="rounded-lg border border-brand/20 bg-brand/[0.06] px-3 py-2 text-sm font-medium text-strong">
                   {section.quiz}
                 </p>
+                <CitationMarks
+                  citations={section.citations}
+                  numbers={citationNumbers}
+                  label={`Sources for ${section.title}`}
+                />
               </section>
             ))}
 
@@ -344,10 +368,128 @@ export function CourseBuilder({
                 </ul>
               </section>
             )}
+
+            {citationEntries.length > 0 && (
+              <CitationList citations={citationEntries} />
+            )}
+
+            {sources.length > 0 && citationEntries.length === 0 && (
+              <section className="rounded-xl border border-border bg-surface p-4">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                  Citations
+                </h2>
+                <p className="mt-2 text-sm text-subtle">
+                  This course predates claim-level citations. Rebuild it to
+                  attach verified excerpts from your uploaded sources.
+                </p>
+              </section>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function citationKey(citation: CourseCitation) {
+  return `${citation.source}\u0000${citation.quote}`;
+}
+
+function collectCitations(course: GeneratedCourse) {
+  const seen = new Set<string>();
+  const citations: CourseCitation[] = [];
+
+  for (const citation of [
+    ...course.citations,
+    ...course.sections.flatMap((section) => section.citations),
+  ]) {
+    const key = citationKey(citation);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    citations.push(citation);
+  }
+
+  return citations;
+}
+
+function CitationMarks({
+  citations,
+  numbers,
+  label,
+}: {
+  citations: CourseCitation[];
+  numbers: Map<string, number>;
+  label: string;
+}) {
+  if (citations.length === 0) return null;
+
+  return (
+    <nav
+      aria-label={label}
+      className="mt-2 flex flex-wrap items-center gap-1.5"
+    >
+      <span className="mr-1 font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+        Cited
+      </span>
+      {citations.map((citation) => {
+        const number = numbers.get(citationKey(citation));
+        if (!number) return null;
+
+        return (
+          <a
+            key={citationKey(citation)}
+            href={`#course-source-${number}`}
+            title={`${citation.source}: ${citation.quote}`}
+            className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-brand/25 bg-brand/[0.07] px-1.5 font-mono text-[10px] font-semibold text-brand transition-colors hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+          >
+            [{number}]
+          </a>
+        );
+      })}
+    </nav>
+  );
+}
+
+function CitationList({ citations }: { citations: CourseCitation[] }) {
+  return (
+    <section
+      aria-labelledby="course-citations-heading"
+      className="flex flex-col gap-3 border-t border-border pt-6"
+    >
+      <div>
+        <h2
+          id="course-citations-heading"
+          className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase"
+        >
+          Sources & citations
+        </h2>
+        <p className="mt-1.5 text-sm text-subtle">
+          Each excerpt was verified against the uploaded source before being
+          shown.
+        </p>
+      </div>
+      <ol className="flex flex-col gap-2">
+        {citations.map((citation, index) => (
+          <li
+            id={`course-source-${index + 1}`}
+            key={citationKey(citation)}
+            className="scroll-mt-24 rounded-xl border border-border bg-surface p-4 target:border-brand/50 target:bg-brand/[0.04]"
+          >
+            <div className="flex items-baseline gap-2">
+              <span className="font-mono text-[10px] font-semibold text-brand">
+                [{index + 1}]
+              </span>
+              <span className="break-all text-sm font-semibold text-strong">
+                {citation.source}
+              </span>
+            </div>
+            <blockquote className="mt-2 border-l-2 border-brand/30 pl-3 text-sm leading-relaxed text-foreground">
+              “{citation.quote}”
+            </blockquote>
+          </li>
+        ))}
+      </ol>
+    </section>
   );
 }
 

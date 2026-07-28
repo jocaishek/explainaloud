@@ -15,6 +15,7 @@ import { AiUnavailableError, completeJson } from "~/lib/ai/provider";
 import {
   type AgentRun,
   type AgentStep,
+  type CourseCitation,
   type CourseReview,
   courseReviewSchema,
   courseSchema,
@@ -33,6 +34,15 @@ import {
 
 const REVIEW_OUTPUT_TOKENS = 900;
 const REVIEW_EVIDENCE_CHARS = 6_000;
+
+export class CourseCitationError extends Error {
+  constructor() {
+    super(
+      "The course could not be matched to verified excerpts from its sources.",
+    );
+    this.name = "CourseCitationError";
+  }
+}
 
 function agentStep(
   id: string,
@@ -61,34 +71,106 @@ function sourceEvidence(sources: SourceRow[]) {
 function auditView(course: GeneratedCourse) {
   return {
     summary: course.summary,
+    citations: course.citations,
     sections: course.sections.map((section) => ({
       title: section.title,
       technical: section.technical,
       quiz: section.quiz,
       key_points: section.key_points,
+      citations: section.citations,
     })),
     notes: course.notes,
     uncovered: course.uncovered,
   };
 }
 
-function localCourseReview(course: GeneratedCourse): CourseReview {
+function normalizeEvidence(value: string) {
+  return value.replace(/\s+/gu, " ").trim().toLocaleLowerCase();
+}
+
+/**
+ * Model citations are untrusted output. Keep only citations whose filename
+ * resolves to an uploaded source and whose quoted text appears in that file.
+ * This prevents a plausible-looking citation from reaching the student.
+ */
+function verifiedCitations(
+  citations: CourseCitation[],
+  sources: SourceRow[],
+): CourseCitation[] {
+  const sourceByName = new Map(
+    sources.map((source) => [
+      source.filename.trim().toLocaleLowerCase(),
+      source,
+    ]),
+  );
+  const seen = new Set<string>();
+  const verified: CourseCitation[] = [];
+
+  for (const citation of citations) {
+    const source = sourceByName.get(citation.source.trim().toLocaleLowerCase());
+    const quote = citation.quote.trim();
+    if (
+      !source ||
+      quote.length < 8 ||
+      !normalizeEvidence(source.content).includes(normalizeEvidence(quote))
+    ) {
+      continue;
+    }
+
+    const key = `${source.filename}\u0000${normalizeEvidence(quote)}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    verified.push({ source: source.filename, quote });
+  }
+
+  return verified;
+}
+
+function verifyCourseCitations(
+  course: GeneratedCourse,
+  sources: SourceRow[],
+): GeneratedCourse {
+  return {
+    ...course,
+    citations: verifiedCitations(course.citations, sources),
+    sections: course.sections.map((section) => ({
+      ...section,
+      citations: verifiedCitations(section.citations, sources),
+    })),
+  };
+}
+
+function hasCitationCoverage(course: GeneratedCourse, grounded: boolean) {
+  return (
+    !grounded ||
+    (course.citations.length > 0 &&
+      course.sections.every((section) => section.citations.length > 0))
+  );
+}
+
+function localCourseReview(
+  course: GeneratedCourse,
+  grounded: boolean,
+): CourseReview {
   const hasKeyPoints = course.sections.every(
     (section) => section.key_points.length > 0,
   );
   const hasLearningChecks = course.sections.every(
     (section) => section.quiz.trim().length > 0,
   );
+  const hasCitations = hasCitationCoverage(course, grounded);
 
   return {
-    approved: hasKeyPoints && hasLearningChecks,
+    approved: hasKeyPoints && hasLearningChecks && hasCitations,
     summary:
       "The model reviewer was unavailable, so the orchestrator completed structural safety checks locally.",
     checks: [
       {
         name: "grounding",
-        passed: true,
-        detail: "Grounding rules remain enforced in the architect prompt.",
+        passed: hasCitations,
+        detail: hasCitations
+          ? "Grounding rules are enforced and every grounded section retains verified source evidence."
+          : "One or more grounded sections are missing a verified source citation.",
       },
       {
         name: "coverage",
@@ -140,7 +222,8 @@ export async function orchestrateCourse(params: {
 ${renderSources(params.sources)}`,
     (value) => courseSchema.parse(value),
   );
-  const keyPointCount = architect.data.sections.reduce(
+  const architectCourse = verifyCourseCitations(architect.data, params.sources);
+  const keyPointCount = architectCourse.sections.reduce(
     (total, section) => total + section.key_points.length,
     0,
   );
@@ -150,7 +233,7 @@ ${renderSources(params.sources)}`,
       "course-architect",
       "Course Architect",
       "Build the lesson, revision notes, checks, and follow-up resources.",
-      `Created ${architect.data.sections.length} lesson section${architect.data.sections.length === 1 ? "" : "s"} with ${keyPointCount} checkable key point${keyPointCount === 1 ? "" : "s"}.`,
+      `Created ${architectCourse.sections.length} lesson section${architectCourse.sections.length === 1 ? "" : "s"} with ${keyPointCount} checkable key point${keyPointCount === 1 ? "" : "s"}.`,
       { status: "completed", provider: architect.provider },
     ),
   );
@@ -166,7 +249,7 @@ ${renderSources(params.sources)}`,
         grounded,
         sourceNames: params.sources.map((source) => source.filename),
         sourceEvidence: sourceEvidence(params.sources),
-        draft: auditView(architect.data),
+        draft: auditView(architectCourse),
       }),
       (value) => courseReviewSchema.parse(value),
       { maxOutputTokens: REVIEW_OUTPUT_TOKENS },
@@ -175,8 +258,31 @@ ${renderSources(params.sources)}`,
     reviewerProvider = reviewer.provider;
   } catch (error) {
     if (!(error instanceof AiUnavailableError)) throw error;
-    review = localCourseReview(architect.data);
+    review = localCourseReview(architectCourse, grounded);
     reviewerStatus = "degraded";
+  }
+
+  if (!hasCitationCoverage(architectCourse, grounded)) {
+    review = {
+      ...review,
+      approved: false,
+      summary:
+        "The draft needs revision because one or more claims lack verified source evidence.",
+      checks: review.checks.map((check) =>
+        check.name === "grounding"
+          ? {
+              ...check,
+              passed: false,
+              detail:
+                "Every grounded section and the course overview must retain an exact, verified source excerpt.",
+            }
+          : check,
+      ),
+      issues: [
+        ...review.issues,
+        "Add a verified citation to the overview and every lesson section. Use an exact source filename and a verbatim excerpt from that source.",
+      ],
+    };
   }
 
   agents.push(
@@ -189,7 +295,7 @@ ${renderSources(params.sources)}`,
     ),
   );
 
-  let course = architect.data;
+  let course = architectCourse;
   if (!review.approved && review.issues.length > 0) {
     try {
       const revision = await completeJson(
@@ -202,7 +308,7 @@ ${renderSources(params.sources)}`,
         }),
         (value) => courseSchema.parse(value),
       );
-      course = revision.data;
+      course = verifyCourseCitations(revision.data, params.sources);
       agents.push(
         agentStep(
           "revision-specialist",
@@ -224,6 +330,10 @@ ${renderSources(params.sources)}`,
         ),
       );
     }
+  }
+
+  if (!hasCitationCoverage(course, grounded)) {
+    throw new CourseCitationError();
   }
 
   const [videoDiscovery, resourceDiscovery] = await Promise.all([
