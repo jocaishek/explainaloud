@@ -373,7 +373,7 @@ export function RecordConsole({
         // collected so far remain usable.
       }
     }
-    const audio = audioReady
+    let audio = audioReady
       ? await Promise.race([
           audioReady,
           new Promise<null>((resolve) =>
@@ -381,6 +381,17 @@ export function RecordConsole({
           ),
         ])
       : null;
+
+    // A slow or missing `onstop` used to cost the student the entire recording:
+    // the race resolved null and the chunks already collected were dropped on
+    // the floor. They are a complete recording of everything up to the stop, so
+    // assemble them rather than discarding minutes of speech.
+    if (!audio && audioChunksRef.current.length > 0) {
+      audio = new Blob([...audioChunksRef.current], {
+        type: recorder?.mimeType || "audio/webm",
+      });
+    }
+
     for (const track of mediaStreamRef.current?.getTracks() ?? []) track.stop();
     mediaRecorderRef.current = null;
     mediaStreamRef.current = null;
