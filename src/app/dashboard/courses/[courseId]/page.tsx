@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { SourceItem } from "~/components/source-uploader";
+import { isAdminEmail } from "~/lib/admin";
 import { courseSchema } from "~/lib/ai/schemas";
 import { requireUser } from "~/lib/supabase/server";
 import { CourseBuilder } from "./course-builder";
@@ -56,6 +57,7 @@ export default async function CoursePage({
         courseId={courseId}
         initialSources={sources ?? []}
         initialCourse={parsedCourse?.success ? parsedCourse.data : null}
+        unlimited={isAdminEmail(user.email)}
       />
     </div>
   );

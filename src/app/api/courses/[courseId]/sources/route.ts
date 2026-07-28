@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { extractText } from "~/lib/ai/sources";
 import { createClient } from "~/lib/supabase/server";
-import { MAX_SOURCE_BYTES, MAX_SOURCES_PER_COURSE } from "~/lib/uploads";
+import {
+  FREE_SOURCES_PER_COURSE,
+  MAX_SOURCE_BYTES,
+  sourceLimitFor,
+} from "~/lib/uploads";
 
 export async function POST(
   request: Request,
@@ -34,9 +38,16 @@ export async function POST(
     .eq("course_id", courseId)
     .eq("user_id", user.id);
 
-  if ((count ?? 0) >= MAX_SOURCES_PER_COURSE) {
+  // Admins are exempt. The check is here rather than only in the picker because
+  // the client limit is a courtesy — this is the one that actually holds.
+  const { data: isAdmin } = await supabase.rpc("is_ropes_admin");
+  const limit = sourceLimitFor(isAdmin === true);
+
+  if ((count ?? 0) >= limit) {
     return NextResponse.json(
-      { error: `A topic can hold ${MAX_SOURCES_PER_COURSE} sources.` },
+      {
+        error: `A topic can hold ${FREE_SOURCES_PER_COURSE} sources. Delete one to add another.`,
+      },
       { status: 422 },
     );
   }
