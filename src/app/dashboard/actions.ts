@@ -1,12 +1,20 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { folderNameError, isFolderColor, topicNameError } from "~/lib/folders";
 import { claimQuota, localDay } from "~/lib/limits";
 import { requireUser } from "~/lib/supabase/server";
 
-export async function createCourse(formData: FormData) {
+export type CreateCourseResult =
+  | { ok: true; courseId: string }
+  | {
+      ok: false;
+      error: "missing_topic" | "topic_limit" | "create_failed";
+    };
+
+export async function createCourse(
+  formData: FormData,
+): Promise<CreateCourseResult> {
   const { supabase, user } = await requireUser();
   const topic = String(formData.get("topic") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
@@ -16,12 +24,12 @@ export async function createCourse(formData: FormData) {
   const day = String(formData.get("day") ?? "") || localDay();
 
   if (!topic) {
-    redirect("/dashboard/new?error=missing_topic");
+    return { ok: false, error: "missing_topic" };
   }
 
   const quota = await claimQuota(supabase, "topic", day);
   if (!quota.ok) {
-    redirect("/dashboard/new?error=topic_limit");
+    return { ok: false, error: "topic_limit" };
   }
 
   const { data, error } = await supabase
@@ -36,10 +44,11 @@ export async function createCourse(formData: FormData) {
     .single();
 
   if (error || !data) {
-    redirect("/dashboard/new?error=create_failed");
+    return { ok: false, error: "create_failed" };
   }
 
-  redirect(`/dashboard/courses/${data.id}`);
+  revalidatePath("/dashboard");
+  return { ok: true, courseId: data.id };
 }
 
 export type MutationState = { error: string | null };
