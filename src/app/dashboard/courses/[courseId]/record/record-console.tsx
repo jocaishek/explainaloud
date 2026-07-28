@@ -6,7 +6,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentOrchestration } from "~/components/agent-orchestration";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { Button } from "~/components/ui/button";
-import { conciseTeachingText } from "~/lib/ai/presentation";
 import type { AgentRun } from "~/lib/ai/schemas";
 import { DAILY_LIMITS, localDay } from "~/lib/limits";
 import { createClient } from "~/lib/supabase/client";
@@ -212,10 +211,7 @@ export function RecordConsole({
   );
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [failedAnalysis, setFailedAnalysis] = useState<{
-    sessionId: string;
-    transcript: string;
-  } | null>(null);
+  const [loadingCheckId, setLoadingCheckId] = useState<string | null>(null);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -699,11 +695,9 @@ export function RecordConsole({
       );
       if (!response.ok) {
         setError(json.error ?? "Couldn't analyse that session.");
-        setFailedAnalysis({ sessionId, transcript: text });
         return;
       }
 
-      setFailedAnalysis(null);
       if (Array.isArray(json.spans)) setSpans(json.spans);
       if (json.orchestration) setAgentRun(json.orchestration);
       if (json.report) {
@@ -724,25 +718,52 @@ export function RecordConsole({
           ? "Gap Coach took too long. The session is saved — retry when you're ready."
           : "Couldn't reach Gap Coach. The session is saved.",
       );
-      setFailedAnalysis({ sessionId, transcript: text });
     }
   }
 
-  async function retryAnalysis(session: Session) {
-    const text = session.transcript?.trim();
-    if (!text || text.length < 24) return;
+  /**
+   * Reopens the check a session already has, rather than grading it again.
+   *
+   * Re-running the agents on the same words costs a model call to answer a
+   * question that was already answered, and it invites treating the score as
+   * something to farm. The way to find out whether you have learned more is to
+   * explain it again, which is a new recording.
+   */
+  async function viewSession(session: Session) {
     setError(null);
-    setStatus("analyzing");
-    await analyzeSession(text, session.id);
-    setStatus("idle");
-  }
+    setLoadingCheckId(session.id);
 
-  async function retryGapCoach() {
-    if (!failedAnalysis) return;
-    setError(null);
-    setStatus("analyzing");
-    await analyzeSession(failedAnalysis.transcript, failedAnalysis.sessionId);
-    setStatus("idle");
+    const supabase = createClient();
+    const { data, error: loadError } = await supabase
+      .from("course_sessions")
+      .select("id, transcript, spans, report")
+      .eq("id", session.id)
+      .maybeSingle<{
+        id: string;
+        transcript: string | null;
+        spans: Span[] | null;
+        report: Report | null;
+      }>();
+
+    setLoadingCheckId(null);
+
+    if (loadError || !data) {
+      setError("Couldn't load that session.");
+      return;
+    }
+
+    setDisplayedSessionId(data.id);
+    setTranscript(data.transcript ?? "");
+    transcriptRef.current = data.transcript ?? "";
+    setInterim("");
+    setSpans(Array.isArray(data.spans) ? data.spans : []);
+    setReport(data.report ?? null);
+    setAgentRun(null);
+    if (!data.report) {
+      setError(
+        "This session was saved without a check. Record it again to have it graded.",
+      );
+    }
   }
 
   async function deleteSession(sessionId: string) {
@@ -768,7 +789,6 @@ export function RecordConsole({
     );
     setConfirmDeleteId(null);
     setDeletingId(null);
-    if (failedAnalysis?.sessionId === sessionId) setFailedAnalysis(null);
 
     if (displayedSessionId === sessionId) {
       setDisplayedSessionId(null);
@@ -801,7 +821,6 @@ export function RecordConsole({
 
     setError(null);
     setNotice(null);
-    setFailedAnalysis(null);
 
     // Ask for the microphone FIRST and wait for the user to answer the
     // browser prompt. A denied prompt must not burn one of the day's five
@@ -1145,18 +1164,6 @@ export function RecordConsole({
             className="flex max-w-sm flex-col items-center gap-2"
           >
             <p className="text-sm text-destructive">{error}</p>
-            {failedAnalysis && (
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={status !== "idle"}
-                onClick={() => void retryGapCoach()}
-                className="rounded-full"
-              >
-                {status === "analyzing" ? "Retrying…" : "Retry Gap Coach"}
-              </Button>
-            )}
           </div>
         )}
       </div>
@@ -1207,10 +1214,10 @@ export function RecordConsole({
             transition={{ duration: 0.4, ease: [0.23, 1, 0.32, 1] }}
             className="flex w-full max-w-2xl flex-col gap-4"
           >
-            <div className="flex items-center gap-4 rounded-xl border border-border bg-surface p-4">
-              <span className="font-mono text-3xl font-semibold text-brand tabular-nums">
-                {Math.round(report.score)}
-              </span>
+            {/* No score here. A number attached to the thing you just said
+                invites judging the take rather than reading what was missed —
+                the score belongs on the gap report, once. */}
+            <div className="rounded-xl border border-border bg-surface p-4">
               <p className="text-sm text-foreground">{report.verdict}</p>
             </div>
 
@@ -1224,14 +1231,11 @@ export function RecordConsole({
                 <p className="font-mono text-[10px] tracking-[0.14em] text-red-500 uppercase">
                   {gap.category.replace("_", " ")}
                 </p>
+                {/* The phrase only. Teaching lives in Re-Teach: putting the
+                    explanation here hands over the answer at the moment the
+                    student should be noticing the gap themselves. */}
                 <p className="mt-2 text-sm text-strong">
                   &ldquo;{gap.phrase}&rdquo;
-                </p>
-                <p className="mt-2 text-sm whitespace-pre-wrap text-foreground">
-                  <span className="font-semibold text-strong">
-                    Explanation:{" "}
-                  </span>
-                  {conciseTeachingText(gap.explanation)}
                 </p>
               </div>
             ))}
@@ -1262,21 +1266,16 @@ export function RecordConsole({
                   {session.transcript || "No speech captured."}
                 </p>
               </div>
-              {session.score !== null && (
-                <span className="font-mono text-sm font-medium text-brand tabular-nums">
-                  {session.score}
-                </span>
-              )}
-              {session.transcript && session.transcript.trim().length >= 24 && (
+              {session.transcript && (
                 <Button
                   type="button"
                   size="xs"
                   variant="outline"
-                  disabled={status !== "idle"}
-                  onClick={() => void retryAnalysis(session)}
+                  disabled={status !== "idle" || loadingCheckId === session.id}
+                  onClick={() => void viewSession(session)}
                   className="shrink-0 rounded-full"
                 >
-                  {session.score === null ? "Build gap report" : "Recheck"}
+                  {loadingCheckId === session.id ? "Opening…" : "View check"}
                 </Button>
               )}
               {confirmDeleteId === session.id ? (
