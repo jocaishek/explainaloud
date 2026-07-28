@@ -117,27 +117,57 @@ export const spansSchema = z.object({
 });
 export type TranscriptSpans = z.infer<typeof spansSchema>;
 
-export const reportSchema = z.object({
-  score: z.number().min(0).max(100),
-  verdict: z.string().min(1),
-  gaps: z
-    .array(
-      z.object({
-        phrase: z.string().min(1),
-        category: z.enum([
-          "missing_step",
-          "misconception",
-          "vague",
-          "contradicted",
-        ]),
-        explanation: z.string().min(1),
-        quiz: z.string().min(1),
-      }),
-    )
-    .default([]),
-  strengths: z.array(z.string()).default([]),
-  next_focus: z.string().default(""),
-});
+function flattenModelText(value: unknown): unknown {
+  if (typeof value === "string") return value;
+  if (Array.isArray(value)) {
+    return value
+      .map(flattenModelText)
+      .filter((item): item is string => typeof item === "string")
+      .join(" ");
+  }
+  if (value && typeof value === "object") {
+    return Object.values(value)
+      .map(flattenModelText)
+      .filter((item): item is string => typeof item === "string")
+      .join(" ");
+  }
+  return value;
+}
+
+const reportText = z.preprocess(flattenModelText, z.string().min(1));
+
+export const reportSchema = z
+  .object({
+    score: z.number().min(0).max(100),
+    verdict: reportText,
+    gaps: z
+      .array(
+        z.object({
+          phrase: reportText,
+          category: z.enum([
+            "missing_step",
+            "misconception",
+            "vague",
+            "contradicted",
+          ]),
+          explanation: reportText,
+          quiz: reportText.optional(),
+        }),
+      )
+      .default([]),
+    strengths: z.array(reportText).default([]),
+    next_focus: reportText.optional(),
+  })
+  .transform((report) => ({
+    ...report,
+    gaps: report.gaps.map((gap) => ({
+      ...gap,
+      quiz:
+        gap.quiz ??
+        "How would you explain the corrected idea in your own words?",
+    })),
+    next_focus: report.next_focus ?? "",
+  }));
 export type GapReport = z.infer<typeof reportSchema>;
 
 /**

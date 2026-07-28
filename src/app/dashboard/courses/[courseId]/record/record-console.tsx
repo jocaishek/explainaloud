@@ -48,6 +48,8 @@ type Status =
 
 /** How long the student must pause before we re-grade what they've said. */
 const LIVE_DEBOUNCE_MS = 2200;
+/** Server caption fallback cadence; stays below the transcription RPM limit. */
+const LIVE_TRANSCRIBE_MS = 8000;
 
 /**
  * Hard cap on one explanation. Five minutes is well past the point where a
@@ -111,11 +113,17 @@ export function RecordConsole({
   const manualStopRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const liveTranscribeTimerRef = useRef<ReturnType<typeof setInterval> | null>(
+    null,
+  );
+  const liveTranscribeBusyRef = useRef(false);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const deadlineRef = useRef<number>(0);
   const restartsRef = useRef(0);
   const liveCaptionsDisabledRef = useRef(false);
   const finishingRef = useRef(false);
+  const browserTranscriptRef = useRef("");
+  const serverTranscriptRef = useRef("");
   // Guards against a slow live grade landing after a newer one and painting
   // stale colours over fresher speech.
   const liveSeqRef = useRef(0);
@@ -132,6 +140,9 @@ export function RecordConsole({
     () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+      if (liveTranscribeTimerRef.current) {
+        clearInterval(liveTranscribeTimerRef.current);
+      }
       if (tickRef.current) clearInterval(tickRef.current);
       manualStopRef.current = true;
       recognitionRef.current?.abort();
@@ -173,6 +184,66 @@ export function RecordConsole({
     [courseId],
   );
 
+  /**
+   * Browser speech recognition depends on a remote browser service and often
+   * fails with `network`. When it does, periodically transcribe the complete
+   * recording so far and replace the on-screen draft with that newer result.
+   */
+  const transcribeLiveAudio = useCallback(async () => {
+    if (
+      liveTranscribeBusyRef.current ||
+      manualStopRef.current ||
+      audioChunksRef.current.length === 0
+    ) {
+      return;
+    }
+
+    const recorder = mediaRecorderRef.current;
+    const type = recorder?.mimeType || "audio/webm";
+    const audio = new Blob([...audioChunksRef.current], { type });
+    if (!audio.size) return;
+
+    liveTranscribeBusyRef.current = true;
+    try {
+      const body = new FormData();
+      body.set(
+        "audio",
+        new File([audio], `live.${audioExtension(type)}`, { type }),
+      );
+      const response = await fetch(`/api/courses/${courseId}/transcribe`, {
+        method: "POST",
+        body,
+      });
+      const json = await response.json();
+      if (
+        response.ok &&
+        typeof json.transcript === "string" &&
+        json.transcript.trim() &&
+        !manualStopRef.current
+      ) {
+        const text = json.transcript.trim();
+        serverTranscriptRef.current = text;
+        transcriptRef.current = text;
+        setTranscript(text);
+        setInterim("");
+      }
+    } catch {
+      // The final full-audio transcription remains the source of truth.
+    } finally {
+      liveTranscribeBusyRef.current = false;
+    }
+  }, [courseId]);
+
+  function startServerCaptions() {
+    if (liveTranscribeTimerRef.current) return;
+    setNotice(
+      "Live captions are using the secure audio fallback and will update every few seconds.",
+    );
+    liveTranscribeTimerRef.current = setInterval(() => {
+      void transcribeLiveAudio();
+    }, LIVE_TRANSCRIBE_MS);
+  }
+
   function scheduleLiveGrade() {
     if (!courseReady) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -198,6 +269,10 @@ export function RecordConsole({
     finishingRef.current = true;
     if (tickRef.current) clearInterval(tickRef.current);
     if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    if (liveTranscribeTimerRef.current) {
+      clearInterval(liveTranscribeTimerRef.current);
+      liveTranscribeTimerRef.current = null;
+    }
     recognitionRef.current = null;
     setStatus("saving");
 
@@ -279,6 +354,12 @@ export function RecordConsole({
     }
 
     setStatus("analyzing");
+    await analyzeSession(text, data.id);
+    setStatus("idle");
+    finishingRef.current = false;
+  }
+
+  async function analyzeSession(text: string, sessionId: string) {
     try {
       const response = await fetch(`/api/courses/${courseId}/analyze`, {
         method: "POST",
@@ -286,31 +367,39 @@ export function RecordConsole({
         body: JSON.stringify({
           transcript: text,
           mode: "final",
-          sessionId: data.id,
+          sessionId,
         }),
       });
       const json = await response.json();
       if (!response.ok) {
         setError(json.error ?? "Couldn't analyse that session.");
-      } else {
-        if (Array.isArray(json.spans)) setSpans(json.spans);
-        if (json.orchestration) setAgentRun(json.orchestration);
-        if (json.report) {
-          setReport(json.report);
-          setSessions((prev) =>
-            prev.map((s) =>
-              s.id === data.id
-                ? { ...s, score: Math.round(json.report.score) }
-                : s,
-            ),
-          );
-        }
+        return;
+      }
+
+      if (Array.isArray(json.spans)) setSpans(json.spans);
+      if (json.orchestration) setAgentRun(json.orchestration);
+      if (json.report) {
+        setReport(json.report);
+        setSessions((prev) =>
+          prev.map((session) =>
+            session.id === sessionId
+              ? { ...session, score: Math.round(json.report.score) }
+              : session,
+          ),
+        );
       }
     } catch {
       setError("Couldn't reach the analyser.");
     }
+  }
+
+  async function retryAnalysis(session: Session) {
+    const text = session.transcript?.trim();
+    if (!text || text.length < 24) return;
+    setError(null);
+    setStatus("analyzing");
+    await analyzeSession(text, session.id);
     setStatus("idle");
-    finishingRef.current = false;
   }
 
   async function startRecording() {
@@ -394,6 +483,8 @@ export function RecordConsole({
     setAgentRun(null);
     setNotice(null);
     transcriptRef.current = "";
+    browserTranscriptRef.current = "";
+    serverTranscriptRef.current = "";
     startedAtRef.current = new Date().toISOString();
     manualStopRef.current = false;
     restartsRef.current = 0;
@@ -440,9 +531,7 @@ export function RecordConsole({
     }, 250);
 
     if (!Ctor) {
-      setNotice(
-        "Live captions aren't available here. Your recording will be transcribed when you finish.",
-      );
+      startServerCaptions();
       setStatus("recording");
       return;
     }
@@ -472,8 +561,12 @@ export function RecordConsole({
         }
       }
       if (finalChunk) {
-        transcriptRef.current = `${transcriptRef.current} ${finalChunk}`.trim();
-        setTranscript(transcriptRef.current);
+        browserTranscriptRef.current =
+          `${browserTranscriptRef.current} ${finalChunk}`.trim();
+        if (!serverTranscriptRef.current) {
+          transcriptRef.current = browserTranscriptRef.current;
+          setTranscript(transcriptRef.current);
+        }
         scheduleLiveGrade();
       }
       setInterim(interimChunk);
@@ -487,16 +580,12 @@ export function RecordConsole({
         event.error === "service-not-allowed"
       ) {
         liveCaptionsDisabledRef.current = true;
-        setNotice(
-          "Live captions aren't available. Your recording is still being captured.",
-        );
+        startServerCaptions();
         recognition.abort();
         return;
       }
       if (event.error === "network") {
-        setNotice(
-          "Live captions are reconnecting. Your recording is still being captured.",
-        );
+        startServerCaptions();
       }
     };
 
@@ -519,9 +608,7 @@ export function RecordConsole({
       if (restartsRef.current >= MAX_RESTARTS) {
         liveCaptionsDisabledRef.current = true;
         recognitionRef.current = null;
-        setNotice(
-          "Live captions aren't available. Your recording is still being captured.",
-        );
+        startServerCaptions();
         return;
       }
       restartsRef.current += 1;
@@ -533,9 +620,7 @@ export function RecordConsole({
         } catch {
           liveCaptionsDisabledRef.current = true;
           recognitionRef.current = null;
-          setNotice(
-            "Live captions aren't available. Your recording is still being captured.",
-          );
+          startServerCaptions();
         }
       }, 300);
     };
@@ -546,9 +631,7 @@ export function RecordConsole({
     } catch {
       liveCaptionsDisabledRef.current = true;
       recognitionRef.current = null;
-      setNotice(
-        "Live captions aren't available. Your recording is still being captured.",
-      );
+      startServerCaptions();
     }
     setStatus("recording");
   }
@@ -758,6 +841,20 @@ export function RecordConsole({
                   {session.score}
                 </span>
               )}
+              {session.score === null &&
+                session.transcript &&
+                session.transcript.trim().length >= 24 && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={status !== "idle"}
+                    onClick={() => void retryAnalysis(session)}
+                    className="shrink-0 rounded-full"
+                  >
+                    Build gap report
+                  </Button>
+                )}
             </div>
           ))}
         </div>

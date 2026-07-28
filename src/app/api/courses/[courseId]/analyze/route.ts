@@ -107,7 +107,7 @@ export async function POST(
     }
 
     if (sessionId) {
-      await supabase
+      const { error: sessionError } = await supabase
         .from("course_sessions")
         .update({
           spans: result.spans,
@@ -118,9 +118,30 @@ export async function POST(
         .eq("id", sessionId)
         .eq("user_id", user.id);
 
+      if (sessionError) {
+        return NextResponse.json(
+          { error: "The gap report was built but couldn't be saved." },
+          { status: 500 },
+        );
+      }
+
+      // A retry replaces an earlier partial result instead of duplicating it.
+      const { error: clearError } = await supabase
+        .from("gaps")
+        .delete()
+        .eq("session_id", sessionId)
+        .eq("user_id", user.id);
+
+      if (clearError) {
+        return NextResponse.json(
+          { error: "The gap report was built but couldn't be saved." },
+          { status: 500 },
+        );
+      }
+
       // Persist each gap so the Gap Report screen has real rows to show.
       if (report.gaps.length) {
-        await supabase.from("gaps").insert(
+        const { error: gapsError } = await supabase.from("gaps").insert(
           report.gaps.map((gap) => ({
             session_id: sessionId,
             user_id: user.id,
@@ -130,6 +151,13 @@ export async function POST(
             quiz: gap.quiz,
           })),
         );
+
+        if (gapsError) {
+          return NextResponse.json(
+            { error: "The gap report was built but couldn't be saved." },
+            { status: 500 },
+          );
+        }
       }
     }
 
@@ -141,6 +169,7 @@ export async function POST(
       orchestration: result.orchestration,
     });
   } catch (error) {
+    console.error("Explanation analysis failed:", error);
     if (error instanceof AiUnavailableError) {
       return NextResponse.json(
         // The provider breakdown is diagnostic, not something to put in
