@@ -661,6 +661,7 @@ export function RecordConsole({
       <AgentOrchestration
         run={agentRun}
         running={status === "analyzing"}
+        pipeline="recording"
         className="w-full max-w-2xl"
       />
 

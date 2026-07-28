@@ -154,9 +154,9 @@ export default function Home() {
           </h1>
           <Reveal delay={100}>
             <p className="max-w-2xl text-lg text-[#A1A1AA]">
-              TeachItBack listens to you explain your course material out loud,
-              transcribes it live, and fills in the steps you skipped — so you
-              study smarter, not harder.
+              A team of specialist AI agents builds from your sources, listens
+              to you explain the material, and independently checks the steps
+              you skipped.
             </p>
           </Reveal>
           <Reveal delay={140}>
@@ -225,6 +225,36 @@ export default function Home() {
         <Marquee items={MARQUEE_ITEMS} />
       </div>
 
+      {/* ── Section 2: Multi-agent orchestration ──────────────────── */}
+      <section className="relative w-full px-6 py-24">
+        <GlowOrb className="top-10 left-[12%] h-80 w-80 opacity-[0.12]" />
+        <div className="relative mx-auto grid max-w-5xl gap-12 md:grid-cols-[0.8fr_1.2fr] md:items-center md:gap-16">
+          <div>
+            <Eyebrow
+              index="03"
+              label="Multi-agent by design"
+              className="mb-4"
+            />
+            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+              <WordReveal
+                text="One lesson. Several specialists."
+                accent={["specialists"]}
+              />
+            </h2>
+            <Reveal delay={120} className="mt-5">
+              <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
+                TeachItBack does not ask one model to do everything. Each agent
+                owns a specific job, passes its work forward, and leaves a
+                visible trace so you can see how the result was made.
+              </p>
+            </Reveal>
+          </div>
+          <Reveal delay={160}>
+            <LandingAgentPipeline />
+          </Reveal>
+        </div>
+      </section>
+
       {/* Sections 2 → 5 share one scroll-drawn squiggle that winds from
           "The illusion of competence" all the way down to the sign-up form. */}
       <div ref={journeyRef} className="relative w-full">
@@ -234,7 +264,7 @@ export default function Home() {
         <section className="w-full px-6 py-24">
           <div className="mx-auto grid max-w-4xl gap-10 md:grid-cols-[1fr_1.2fr] md:gap-16">
             <div>
-              <Eyebrow index="03" label="Why it works" className="mb-4" />
+              <Eyebrow index="04" label="Why it works" className="mb-4" />
               <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
                 <WordReveal
                   text="The illusion of competence"
@@ -265,7 +295,7 @@ export default function Home() {
           <GlowOrb className="bottom-16 right-[18%] h-96 w-96" />
 
           <Eyebrow
-            index="04"
+            index="05"
             label="What you get"
             className="mx-auto mb-4 max-w-6xl"
           />
@@ -366,7 +396,7 @@ export default function Home() {
         {/* ── Section 4: How it works, in detail ──────────────────────── */}
         <section className="relative w-full px-6 py-24">
           <div className="mx-auto mb-20 flex max-w-2xl flex-col items-center text-center">
-            <Eyebrow index="05" label="The flow" className="mb-4" />
+            <Eyebrow index="06" label="The flow" className="mb-4" />
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               <WordReveal text="How it works" accent={["works"]} />
             </h2>
@@ -409,7 +439,7 @@ export default function Home() {
           <GlowOrb className="top-0 left-1/2 h-80 w-[40rem] -translate-x-1/2" />
 
           <div className="relative flex flex-col items-center text-center">
-            <Eyebrow index="06" label="Get started" className="mb-4" />
+            <Eyebrow index="07" label="Get started" className="mb-4" />
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               <WordReveal text="Create your account" accent={["account"]} />
             </h2>
@@ -437,12 +467,112 @@ export default function Home() {
 }
 
 const MARQUEE_ITEMS = [
+  "Specialist agents, visible handoffs",
   "Explain it out loud",
   "Recognition isn't recall",
   "Gaps filled, not just flagged",
   "Built from your own sources",
   "Teach it back",
 ];
+
+const LANDING_AGENTS = [
+  {
+    role: "Source Scout",
+    task: "Finds the evidence your lesson should trust.",
+  },
+  {
+    role: "Course Architect",
+    task: "Turns that evidence into a teachable course.",
+  },
+  {
+    role: "Accuracy Reviewer",
+    task: "Checks the draft before it reaches you.",
+  },
+];
+
+function LandingAgentPipeline() {
+  const shouldReduceMotion = useReducedMotion();
+  const [activeAgent, setActiveAgent] = useState(0);
+
+  useEffect(() => {
+    if (shouldReduceMotion) return;
+    const timer = window.setInterval(() => {
+      setActiveAgent((current) => (current + 1) % LANDING_AGENTS.length);
+    }, 1800);
+    return () => window.clearInterval(timer);
+  }, [shouldReduceMotion]);
+
+  return (
+    <div className="glass overflow-hidden rounded-2xl">
+      <div className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-[#A1A1AA] uppercase">
+          Orchestration trace
+        </span>
+        <span className="flex items-center gap-2 text-xs text-[#8FBCEC]">
+          <span className="relative flex size-2">
+            <span className="absolute inline-flex size-full animate-ping rounded-full bg-brand opacity-60 motion-reduce:hidden" />
+            <span className="relative inline-flex size-2 rounded-full bg-brand" />
+          </span>
+          Agents working
+        </span>
+      </div>
+      <ol>
+        {LANDING_AGENTS.map((agent, index) => {
+          const isActive = index === activeAgent;
+          const isComplete = index < activeAgent;
+          return (
+            <li
+              key={agent.role}
+              className={cn(
+                "flex gap-4 px-5 py-4 transition-colors duration-200",
+                index > 0 && "border-t border-white/10",
+                isActive && "bg-brand/[0.08]",
+              )}
+            >
+              <div className="flex flex-col items-center">
+                <span
+                  className={cn(
+                    "mt-1 size-2.5 shrink-0 rounded-full",
+                    isActive &&
+                      "animate-pulse bg-brand motion-reduce:animate-none",
+                    isComplete && "bg-emerald-400",
+                    !isActive && !isComplete && "bg-white/20",
+                  )}
+                />
+                {index < LANDING_AGENTS.length - 1 && (
+                  <span className="mt-2 h-full w-px bg-white/10" />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center justify-between gap-3">
+                  <h3 className="text-sm font-semibold text-white">
+                    {agent.role}
+                  </h3>
+                  <span
+                    className={cn(
+                      "font-mono text-[9px] tracking-[0.1em] uppercase",
+                      isActive ? "text-brand" : "text-[#71717A]",
+                    )}
+                  >
+                    {isActive
+                      ? "Working"
+                      : isComplete
+                        ? "Handed off"
+                        : "Queued"}
+                  </span>
+                </div>
+                <p className="mt-1 text-sm text-[#A1A1AA]">{agent.task}</p>
+              </div>
+            </li>
+          );
+        })}
+      </ol>
+      <div className="border-t border-white/10 px-5 py-3 text-xs text-[#71717A]">
+        Every completed run is saved with its agent trace.
+      </div>
+    </div>
+  );
+}
 
 /* Illustrative sessions, not real user data — nothing has shipped yet. The
    copy is written so it reads as "here's what a session looks like" rather
