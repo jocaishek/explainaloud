@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# Exception: the public Supabase identifiers. Browser-safe by definition —
+# NEXT_PUBLIC_* values are inlined into the client bundle either way. Secrets
+# stay out of git; see the header in that file.
+!.env.production
 
 # vercel
 .vercel
