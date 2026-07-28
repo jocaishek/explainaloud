@@ -1,5 +1,7 @@
 import "server-only";
 
+export { ACCEPT_ATTRIBUTE, ACCEPTED_EXTENSIONS } from "~/lib/uploads";
+
 /** Hard ceiling on how much source text we hand a model in one request. */
 const MAX_SOURCE_CHARS = 120_000;
 
@@ -46,31 +48,83 @@ function escapeAttr(value: string) {
 }
 
 /**
+ * Text extracted from a scanned PDF is often a handful of stray ligatures.
+ * Below this, treat the file as image-only rather than handing the model a
+ * fragment and letting it fill the rest in from general knowledge.
+ */
+const MIN_USEFUL_CHARS = 40;
+
+/**
  * Pulls plain text out of an upload.
  *
- * Deliberately limited to formats we can extract *reliably* without a parsing
- * dependency. A PDF or DOCX read as raw bytes yields binary noise, and
- * feeding that to a grounded model is worse than refusing the file — it
- * produces confident nonsense sourced from garbage.
+ * PDFs go through unpdf (a serverless-safe pdf.js build) and .docx through
+ * mammoth. Anything binary that yields no real text is refused outright —
+ * feeding a grounded model garbage is worse than refusing the file, because
+ * it produces confident nonsense with a citation attached.
  */
 export async function extractText(
   file: File,
 ): Promise<{ ok: true; text: string } | { ok: false; reason: string }> {
   const name = file.name.toLowerCase();
-  const isPlain =
-    file.type.startsWith("text/") ||
-    /\.(txt|md|markdown|csv|tsv|json|rtf|tex|html?|xml)$/.test(name);
+  const bytes = new Uint8Array(await file.arrayBuffer());
 
-  if (!isPlain) {
+  let text: string;
+
+  try {
+    if (name.endsWith(".pdf") || file.type === "application/pdf") {
+      const { extractText: extractPdf, getDocumentProxy } = await import(
+        "unpdf"
+      );
+      const pdf = await getDocumentProxy(bytes);
+      const { text: pages } = await extractPdf(pdf, { mergePages: true });
+      text = (Array.isArray(pages) ? pages.join("\n\n") : pages).trim();
+
+      if (text.length < MIN_USEFUL_CHARS) {
+        return {
+          ok: false,
+          reason:
+            "That PDF has no selectable text — it looks like a scan or images. Export a text PDF, or paste the text in as notes.",
+        };
+      }
+    } else if (name.endsWith(".docx")) {
+      const mammoth = await import("mammoth");
+      const result = await mammoth.extractRawText({
+        buffer: Buffer.from(bytes),
+      });
+      text = result.value.trim();
+    } else if (name.endsWith(".doc")) {
+      return {
+        ok: false,
+        reason:
+          "Old .doc files aren't supported. Save it as .docx or PDF and try again.",
+      };
+    } else {
+      const isPlain =
+        file.type.startsWith("text/") ||
+        /\.(txt|md|markdown|csv|tsv|json|rtf|tex|html?|xml)$/.test(name);
+
+      if (!isPlain) {
+        return {
+          ok: false,
+          reason:
+            "Unsupported file type. Upload a PDF, Word document, or text file.",
+        };
+      }
+      text = new TextDecoder().decode(bytes).trim();
+    }
+  } catch {
     return {
       ok: false,
-      reason:
-        "Only text files work right now (.txt, .md, .csv, .html). PDF, Word and slide decks need a parser that isn't wired up yet.",
+      reason: "Couldn't read that file — it may be corrupt or password-locked.",
     };
   }
 
-  const text = (await file.text()).trim();
-  if (!text) return { ok: false, reason: "That file is empty." };
+  if (text.length < MIN_USEFUL_CHARS) {
+    return {
+      ok: false,
+      reason: "That file has almost no readable text in it.",
+    };
+  }
 
   return { ok: true, text };
 }

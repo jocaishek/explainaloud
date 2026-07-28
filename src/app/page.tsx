@@ -1081,16 +1081,14 @@ function AuthCard() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(
-    null,
-  );
+  const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
 
   function switchMode(next: AuthMode) {
     setMode(next);
     setError(null);
   }
 
-  async function handleOAuth(provider: "google" | "apple") {
+  async function handleOAuth(provider: "google") {
     setError(null);
     setOauthLoading(provider);
 
@@ -1262,18 +1260,6 @@ function AuthCard() {
                 ? "Redirecting…"
                 : "Continue with Google"}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={oauthLoading !== null}
-              onClick={() => handleOAuth("apple")}
-              className="h-11 gap-2 rounded-full border-[#333333] bg-[#1E1E1E] font-medium text-white transition-transform duration-200 ease-out hover:bg-[#262626] active:scale-[0.98]"
-            >
-              <AppleIcon className="size-4" />
-              {oauthLoading === "apple"
-                ? "Redirecting…"
-                : "Continue with Apple"}
-            </Button>
           </div>
 
           <div className="flex items-center gap-3 text-xs text-[#71717A]">
@@ -1386,21 +1372,6 @@ function GoogleIcon({ className }: { className?: string }) {
         d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.94 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.61l4 3.1C6.22 6.86 8.87 4.75 12 4.75Z"
         fill="#EA4335"
       />
-    </svg>
-  );
-}
-
-function AppleIcon({ className }: { className?: string }) {
-  return (
-    // biome-ignore lint/a11y/noSvgWithoutTitle: decorative, paired with visible button label
-    <svg
-      viewBox="0 0 24 24"
-      className={className}
-      fill="currentColor"
-      aria-hidden
-    >
-      <path d="M17.05 12.53c-.03-3 2.45-4.44 2.56-4.51-1.4-2.04-3.58-2.32-4.35-2.35-1.85-.19-3.63 1.09-4.57 1.09-.95 0-2.4-1.06-3.95-1.03-2.03.03-3.9 1.18-4.94 3-2.11 3.66-.54 9.06 1.51 12.03 1 1.46 2.2 3.09 3.76 3.03 1.51-.06 2.08-.97 3.9-.97 1.82 0 2.34.97 3.93.94 1.63-.03 2.66-1.47 3.65-2.94 1.15-1.68 1.62-3.31 1.64-3.39-.04-.02-3.14-1.2-3.17-4.75Z" />
-      <path d="M14.4 3.86c.83-1 1.39-2.4 1.24-3.79-1.2.05-2.66.8-3.52 1.8-.77.88-1.44 2.31-1.26 3.66 1.33.1 2.7-.68 3.54-1.67Z" />
     </svg>
   );
 }

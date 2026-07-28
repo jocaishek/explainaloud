@@ -46,6 +46,27 @@ type Status =
 /** How long the student must pause before we re-grade what they've said. */
 const LIVE_DEBOUNCE_MS = 2200;
 
+/**
+ * Hard cap on one explanation. Five minutes is well past the point where a
+ * teach-back stops being recall and starts being reading aloud, and it keeps
+ * a single transcript inside one model context comfortably.
+ */
+const MAX_RECORDING_MS = 5 * 60_000;
+
+/** Warn when this much time is left, so the ending isn't a surprise. */
+const WARN_AT_MS = 30_000;
+
+/**
+ * Only these end a session. Every other SpeechRecognition error is transient
+ * and must be recovered from, not surfaced as a failure.
+ */
+const FATAL_SPEECH_ERRORS = new Set(["not-allowed", "service-not-allowed"]);
+
+function formatClock(ms: number) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
 export function RecordConsole({
   courseId,
   initialSessions,
@@ -63,6 +84,8 @@ export function RecordConsole({
   const [spans, setSpans] = useState<Span[]>([]);
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [remainingMs, setRemainingMs] = useState(MAX_RECORDING_MS);
   const [sessions, setSessions] = useState(initialSessions);
   const [used, setUsed] = useState(recordingsUsed);
 
@@ -71,6 +94,9 @@ export function RecordConsole({
   const startedAtRef = useRef<string | null>(null);
   const manualStopRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const deadlineRef = useRef<number>(0);
   // Guards against a slow live grade landing after a newer one and painting
   // stale colours over fresher speech.
   const liveSeqRef = useRef(0);
@@ -80,9 +106,14 @@ export function RecordConsole({
     setStatus(Ctor ? "idle" : "unsupported");
   }, []);
 
+  // Unmounting mid-recording must not leave the mic open or timers running.
   useEffect(
     () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+      if (tickRef.current) clearInterval(tickRef.current);
+      manualStopRef.current = true;
+      recognitionRef.current?.abort();
     },
     [],
   );
@@ -230,9 +261,26 @@ export function RecordConsole({
     setInterim("");
     setSpans([]);
     setReport(null);
+    setNotice(null);
     transcriptRef.current = "";
     startedAtRef.current = new Date().toISOString();
     manualStopRef.current = false;
+
+    // Hard stop at the cap. The interval only drives the readout; the
+    // deadline itself is a timestamp, so a throttled background tab can't
+    // let a recording run past five minutes.
+    deadlineRef.current = Date.now() + MAX_RECORDING_MS;
+    setRemainingMs(MAX_RECORDING_MS);
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = setInterval(() => {
+      const left = deadlineRef.current - Date.now();
+      setRemainingMs(left);
+      if (left <= 0) {
+        if (tickRef.current) clearInterval(tickRef.current);
+        setNotice("Five-minute limit reached — wrapping up.");
+        stopRecording();
+      }
+    }, 250);
 
     const recognition = new Ctor();
     recognition.continuous = true;
@@ -261,29 +309,49 @@ export function RecordConsole({
     };
 
     recognition.onerror = (event) => {
-      if (event.error === "no-speech") return;
-      manualStopRef.current = true;
-      setError(
-        event.error === "not-allowed"
-          ? "Microphone access was blocked. Allow it and try again."
-          : "Something interrupted the recording. Try again.",
-      );
-      recognition.stop();
+      // Only permission failures are fatal. Chrome fires "network",
+      // "aborted", "audio-capture" and "no-speech" routinely in the middle of
+      // a healthy session — treating those as fatal was what made recordings
+      // stop halfway and save themselves without the student asking.
+      if (FATAL_SPEECH_ERRORS.has(event.error)) {
+        manualStopRef.current = true;
+        setError(
+          "Microphone access was blocked. Allow it in your browser and try again.",
+        );
+        recognition.stop();
+        return;
+      }
+      // Everything else: let onend restart us. Surface it quietly so a
+      // genuinely broken mic isn't completely silent.
+      if (event.error !== "no-speech") {
+        setNotice("Reconnecting the mic…");
+      }
     };
 
     recognition.onend = () => {
       setInterim("");
+
       if (manualStopRef.current) {
         void finish();
-      } else {
-        // Recognition stopped itself (e.g. long silence). Restart so the
-        // student doesn't have to notice and re-tap start mid-explanation.
+        return;
+      }
+
+      // Recognition ended on its own — Chrome caps a continuous session at
+      // roughly a minute, and any transient error lands here too. Restart on
+      // a fresh tick: calling start() synchronously inside onend throws
+      // InvalidStateError because the engine hasn't released yet.
+      restartTimerRef.current = setTimeout(() => {
+        if (manualStopRef.current) return;
         try {
           recognition.start();
+          setNotice(null);
         } catch {
-          setStatus("idle");
+          // Genuinely wedged — stop cleanly rather than leaving a dead UI
+          // that still says "recording".
+          manualStopRef.current = true;
+          void finish();
         }
-      }
+      }, 250);
     };
 
     recognitionRef.current = recognition;
@@ -293,6 +361,8 @@ export function RecordConsole({
 
   function stopRecording() {
     manualStopRef.current = true;
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    if (tickRef.current) clearInterval(tickRef.current);
     recognitionRef.current?.stop();
   }
 
@@ -352,9 +422,23 @@ export function RecordConsole({
                 : "Start explaining"}
         </Button>
 
+        {status === "recording" && (
+          <p
+            className={cn(
+              "font-mono text-sm tabular-nums transition-colors duration-300",
+              remainingMs <= WARN_AT_MS ? "text-destructive" : "text-subtle",
+            )}
+          >
+            {formatClock(remainingMs)} left
+          </p>
+        )}
+
         <p className="font-mono text-[11px] tracking-[0.14em] text-subtle uppercase">
-          {remaining} of {DAILY_LIMITS.recording} recordings left today
+          {remaining} of {DAILY_LIMITS.recording} recordings left today · resets
+          at midnight
         </p>
+
+        {notice && <p className="text-xs text-subtle">{notice}</p>}
 
         {!courseReady && (
           <p className="max-w-sm text-xs text-subtle">

@@ -1,10 +1,13 @@
 import { createCourse } from "~/app/dashboard/actions";
+import { LocalDayField } from "~/components/local-day-field";
 import { SubmitButton } from "~/components/submit-button";
 import { Input } from "~/components/ui/input";
 
 const ERROR_MESSAGES: Record<string, string> = {
   missing_topic: "Enter a topic before continuing.",
   create_failed: "Something went wrong creating that course. Try again.",
+  topic_limit:
+    "You\u2019ve hit today\u2019s limit of 2 new topics. It resets at midnight your time.",
 };
 
 export default async function NewTopicPage({
@@ -34,6 +37,7 @@ export default async function NewTopicPage({
             lands in the folder the user started from. RLS rejects a folder id
             belonging to anyone else. */}
         {folder && <input type="hidden" name="folderId" value={folder} />}
+        <LocalDayField />
         <Input
           type="text"
           name="topic"

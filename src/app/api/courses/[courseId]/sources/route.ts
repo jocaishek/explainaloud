@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractText } from "~/lib/ai/sources";
 import { createClient } from "~/lib/supabase/server";
-
-const MAX_BYTES = 5 * 1024 * 1024;
-const MAX_SOURCES_PER_COURSE = 10;
+import { MAX_SOURCE_BYTES, MAX_SOURCES_PER_COURSE } from "~/lib/uploads";
 
 export async function POST(
   request: Request,
@@ -49,7 +47,7 @@ export async function POST(
   if (!(file instanceof File)) {
     return NextResponse.json({ error: "No file received." }, { status: 400 });
   }
-  if (file.size > MAX_BYTES) {
+  if (file.size > MAX_SOURCE_BYTES) {
     return NextResponse.json(
       { error: "That file is over the 5 MB limit." },
       { status: 413 },

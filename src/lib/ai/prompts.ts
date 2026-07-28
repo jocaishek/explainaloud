@@ -70,12 +70,26 @@ Return JSON with this exact shape:
       "key_points": ["the specific checkable claims a correct explanation must contain"]
     }
   ],
+  "notes": ["condensed revision notes, one fact per line, drawn from the sources"],
+  "video_searches": ["YouTube SEARCH QUERIES, not URLs — e.g. 'Calvin cycle explained 3Blue1Brown'"],
+  "resources": [{ "label": "what to look up next", "why": "one line on why it helps" }],
   "uncovered": ["parts of the topic the sources do not cover, if any"]
 }
 
-Produce 3-5 sections. Every "key_points" entry must be a single, concrete,
-checkable claim — these are what the student's spoken explanation is graded
-against later, so they must be specific enough to verify.`;
+Produce 3-5 sections, 6-12 notes, 3-5 video searches and 2-4 resources.
+
+Every "key_points" entry must be a single, concrete, checkable claim — these
+are what the student's spoken explanation is graded against later, so they
+must be specific enough to verify.
+
+IMPORTANT about links: never output a URL. You cannot know whether a specific
+video or page exists, and a fabricated link is worse than no link. Output
+search phrases only; the app turns them into working searches.
+
+"notes" must come from the SOURCES. "video_searches" and "resources" are the
+one exception to source grounding — they are pointers to material the student
+might go find, so they may name well-known topics or channels, but they must
+stay on the topic at hand and must not assert facts.`;
 }
 
 /**

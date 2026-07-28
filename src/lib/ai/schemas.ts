@@ -22,6 +22,18 @@ export const courseSchema = z.object({
       }),
     )
     .min(1),
+  /** Condensed revision notes — the thing a student actually re-reads. */
+  notes: z.array(z.string().min(1)).default([]),
+  /**
+   * Search queries, never URLs. A model asked for a YouTube link invents
+   * plausible video IDs that 404; asked for a query it produces something
+   * that always resolves. The UI turns these into real search links.
+   */
+  video_searches: z.array(z.string().min(1)).default([]),
+  /** Further-reading suggestions, also expressed as searchable phrases. */
+  resources: z
+    .array(z.object({ label: z.string().min(1), why: z.string().default("") }))
+    .default([]),
   uncovered: z.array(z.string()).default([]),
 });
 export type GeneratedCourse = z.infer<typeof courseSchema>;
