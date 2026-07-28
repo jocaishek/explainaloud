@@ -3,7 +3,7 @@ import "server-only";
 export { ACCEPT_ATTRIBUTE, ACCEPTED_EXTENSIONS } from "~/lib/uploads";
 
 /** Hard ceiling on how much source text we hand a model in one request. */
-const MAX_SOURCE_CHARS = 120_000;
+const MAX_SOURCE_CHARS = 8_000;
 
 export type SourceRow = { filename: string; content: string };
 
@@ -24,17 +24,20 @@ explicit in "uncovered" about anything you are not confident in.`;
 
   let budget = MAX_SOURCE_CHARS;
   const blocks: string[] = [];
+  let truncated = false;
 
   for (const source of sources) {
-    if (budget <= 0) break;
+    if (budget <= 0) {
+      truncated = true;
+      break;
+    }
     const body = source.content.slice(0, budget);
+    if (body.length < source.content.length) truncated = true;
     budget -= body.length;
     blocks.push(
       `<source filename="${escapeAttr(source.filename)}">\n${body}\n</source>`,
     );
   }
-
-  const truncated = sources.length > blocks.length;
 
   return `SOURCES (${blocks.length} document${blocks.length === 1 ? "" : "s"}):
 

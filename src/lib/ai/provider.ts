@@ -11,7 +11,8 @@ import { env } from "~/env";
  */
 
 const GEMINI_MODEL = "gemini-2.0-flash";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_PRIMARY_MODEL = "llama-3.3-70b-versatile";
+const GROQ_FALLBACK_MODEL = "llama-3.1-8b-instant";
 
 const GEMINI_URL = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -32,6 +33,8 @@ const MAX_OUTPUT_TOKENS = 3000;
 
 /** One retry against a rate limit before giving up on a provider. */
 const RATE_LIMIT_RETRIES = 1;
+/** Longer limits (for example a daily quota) should fall through immediately. */
+const MAX_RATE_LIMIT_WAIT_MS = 60_000;
 
 class RateLimitedError extends Error {
   constructor(
@@ -44,10 +47,24 @@ class RateLimitedError extends Error {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** Pulls Groq's "try again in 155ms" / "in 1.2s" hint out of its error body. */
-function parseRetryAfter(body: string): number {
+/** Parses the standard Retry-After header before falling back to body text. */
+function parseRetryAfter(body: string, header: string | null): number {
+  if (header) {
+    const seconds = Number(header);
+    if (Number.isFinite(seconds) && seconds >= 0) {
+      return Math.ceil(seconds * 1000);
+    }
+
+    const date = Date.parse(header);
+    if (Number.isFinite(date)) return Math.max(0, date - Date.now());
+  }
+
   const ms = /try again in ([\d.]+)ms/i.exec(body);
   if (ms?.[1]) return Math.ceil(Number(ms[1]));
+  const minAndSec = /try again in ([\d.]+)m([\d.]+)s/i.exec(body);
+  if (minAndSec?.[1] && minAndSec[2]) {
+    return Math.ceil((Number(minAndSec[1]) * 60 + Number(minAndSec[2])) * 1000);
+  }
   const s = /try again in ([\d.]+)s/i.exec(body);
   if (s?.[1]) return Math.ceil(Number(s[1]) * 1000);
   return 1500;
@@ -133,7 +150,7 @@ async function callGemini(
     if (response.status === 429) {
       // A project with a hard zero quota cannot recover by sleeping.
       throw new RateLimitedError(
-        parseRetryAfter(body),
+        parseRetryAfter(body, response.headers.get("retry-after")),
         !/limit:\s*0(?:\D|$)/i.test(body),
       );
     }
@@ -151,6 +168,7 @@ async function callGemini(
 async function callGroq(
   prompt: string,
   maxOutputTokens: number,
+  model: string,
 ): Promise<string> {
   if (!env.GROQ_API_KEY) throw new Error("GROQ_API_KEY not set");
 
@@ -163,7 +181,7 @@ async function callGroq(
         authorization: `Bearer ${env.GROQ_API_KEY}`,
       },
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model,
         temperature: 0,
         top_p: 0.1,
         max_tokens: maxOutputTokens,
@@ -176,7 +194,9 @@ async function callGroq(
   if (!response.ok) {
     const body = await response.text();
     if (response.status === 429)
-      throw new RateLimitedError(parseRetryAfter(body));
+      throw new RateLimitedError(
+        parseRetryAfter(body, response.headers.get("retry-after")),
+      );
     throw new Error(`Groq ${response.status}: ${body}`);
   }
 
@@ -205,18 +225,38 @@ export async function completeJson<T>(
   );
   const attempts: Array<{
     provider: "gemini" | "groq";
+    label: string;
     call: (p: string, maxTokens: number) => Promise<string>;
     configured: boolean;
   }> = [
-    { provider: "gemini", call: callGemini, configured: !!env.GEMINI_API_KEY },
-    { provider: "groq", call: callGroq, configured: !!env.GROQ_API_KEY },
+    {
+      provider: "gemini",
+      label: "gemini",
+      call: callGemini,
+      configured: !!env.GEMINI_API_KEY,
+    },
+    {
+      provider: "groq",
+      label: "groq-70b",
+      call: (value, tokens) => callGroq(value, tokens, GROQ_PRIMARY_MODEL),
+      configured: !!env.GROQ_API_KEY,
+    },
+    {
+      provider: "groq",
+      label: "groq-8b",
+      // The fallback model has a 6K TPM window. Its validated course JSON
+      // comfortably fits in 2.4K output tokens, leaving room for sources.
+      call: (value, tokens) =>
+        callGroq(value, Math.min(tokens, 2400), GROQ_FALLBACK_MODEL),
+      configured: !!env.GROQ_API_KEY,
+    },
   ];
 
   const failures: string[] = [];
 
   for (const attempt of attempts) {
     if (!attempt.configured) {
-      failures.push(`${attempt.provider}: no API key configured`);
+      failures.push(`${attempt.label}: no API key configured`);
       continue;
     }
     for (let tries = 0; tries <= RATE_LIMIT_RETRIES; tries++) {
@@ -230,13 +270,14 @@ export async function completeJson<T>(
         if (
           error instanceof RateLimitedError &&
           error.retryable &&
+          error.retryAfterMs <= MAX_RATE_LIMIT_WAIT_MS &&
           tries < RATE_LIMIT_RETRIES
         ) {
           await sleep(error.retryAfterMs + 250);
           continue;
         }
         failures.push(
-          `${attempt.provider}: ${error instanceof Error ? error.message : String(error)}`,
+          `${attempt.label}: ${error instanceof Error ? error.message : String(error)}`,
         );
         break;
       }
