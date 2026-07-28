@@ -15,11 +15,10 @@ export default async function CoursePage({
   const [{ data: course }, { data: sources }] = await Promise.all([
     supabase
       .from("courses")
-      .select("topic, input_notes, status, generated")
+      .select("input_notes, status, generated")
       .eq("id", courseId)
       .eq("user_id", user.id)
       .maybeSingle<{
-        topic: string;
         input_notes: string | null;
         status: string;
         generated: unknown;
@@ -55,7 +54,6 @@ export default async function CoursePage({
 
       <CourseBuilder
         courseId={courseId}
-        topic={course.topic}
         initialSources={sources ?? []}
         initialCourse={parsedCourse?.success ? parsedCourse.data : null}
       />

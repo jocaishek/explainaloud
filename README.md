@@ -13,7 +13,7 @@ features that are actually implemented.
 - **Linter/Formatter**: Biome
 - **Data and auth**: Supabase
 - **AI**: Gemini with Groq failover; local validated fallbacks for grading
-- **Research**: Tavily basic search, restricted to direct YouTube video pages
+- **Research**: Tavily basic search for direct English videos and websites
 
 ## Getting Started
 

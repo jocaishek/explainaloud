@@ -81,9 +81,15 @@ const courseResponseSchema = z.object({
       }),
     )
     .default([]),
-  /** Further-reading suggestions, also expressed as searchable phrases. */
+  /** Further-reading suggestions; Tavily resolves them to direct pages. */
   resources: z
-    .array(z.object({ label: z.string().min(1), why: z.string().default("") }))
+    .array(
+      z.object({
+        label: z.string().min(1),
+        why: z.string().default(""),
+        url: z.string().url().optional(),
+      }),
+    )
     .default([]),
   uncovered: z.array(z.string()).default([]),
   orchestration: agentRunSchema.optional(),

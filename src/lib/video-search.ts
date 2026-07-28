@@ -1,6 +1,10 @@
 import "server-only";
 
 import { env } from "~/env";
+import {
+  directLearningWebsite,
+  looksLikeEnglishText,
+} from "~/lib/link-quality";
 
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
 
@@ -9,8 +13,19 @@ export type CourseVideo = {
   url: string;
 };
 
+export type CourseResource = {
+  label: string;
+  why: string;
+  url: string;
+};
+
 export type VideoDiscovery = {
   videos: CourseVideo[];
+  searched: boolean;
+};
+
+export type ResourceDiscovery = {
+  resources: CourseResource[];
   searched: boolean;
 };
 
@@ -26,6 +41,26 @@ const SEARCH_WORDS = new Set([
   "this",
   "video",
   "what",
+]);
+
+const RESOURCE_SEARCH_WORDS = new Set([
+  ...SEARCH_WORDS,
+  "also",
+  "cause",
+  "course",
+  "decisive",
+  "immediate",
+  "marked",
+  "point",
+  "significant",
+  "student",
+  "that",
+  "their",
+  "these",
+  "this",
+  "victory",
+  "was",
+  "were",
 ]);
 
 function topicWords(value: string) {
@@ -95,11 +130,13 @@ export async function discoverCourseVideos(
       },
       body: JSON.stringify({
         query: [
-          `Best educational YouTube videos about "${topic}".`,
+          `Best English-language educational YouTube videos about "${topic}".`,
           `Cover these ideas: ${queries.join("; ")}.`,
+          "Every video must be spoken in English and have an English title.",
           "Return direct video watch pages, not search, channel, or playlist pages.",
         ].join(" "),
         topic: "general",
+        country: "united states",
         search_depth: "basic",
         auto_parameters: false,
         include_answer: false,
@@ -115,7 +152,12 @@ export async function discoverCourseVideos(
     }
 
     const payload = (await response.json()) as {
-      results?: Array<{ title?: unknown; url?: unknown; score?: unknown }>;
+      results?: Array<{
+        title?: unknown;
+        url?: unknown;
+        content?: unknown;
+        score?: unknown;
+      }>;
     };
     const seen = new Set<string>();
     const videos: CourseVideo[] = [];
@@ -128,7 +170,15 @@ export async function discoverCourseVideos(
         typeof result.title === "string" && result.title.trim()
           ? result.title.trim()
           : `${topic} explained`;
-      if (!titleMatchesTopic(title, topic)) continue;
+      const searchEvidence = `${title} ${
+        typeof result.content === "string" ? result.content : ""
+      }`;
+      if (
+        !looksLikeEnglishText(searchEvidence) ||
+        !titleMatchesTopic(title, topic)
+      ) {
+        continue;
+      }
       seen.add(url);
       videos.push({ title, url });
       if (videos.length === 5) break;
@@ -138,5 +188,147 @@ export async function discoverCourseVideos(
   } catch (error) {
     console.error("Video search failed:", error);
     return { videos: [], searched: true };
+  }
+}
+
+function conciseReason(value: unknown, fallback: string) {
+  if (typeof value !== "string") return fallback;
+  const sentence = value
+    .trim()
+    .replace(/[#*_`[\]]+/gu, "")
+    .replace(/\s+/gu, " ")
+    .split(/(?<=[.!?])\s+/u)[0]
+    ?.trim();
+  if (!sentence) return fallback;
+  return sentence.length > 180 ? `${sentence.slice(0, 177).trim()}…` : sentence;
+}
+
+/**
+ * A separate one-credit basic search resolves model-suggested reading topics
+ * to real article/course pages. Search pages, homepages, social networks, and
+ * video sites are rejected before anything reaches the UI.
+ */
+export async function discoverCourseResources(
+  topic: string,
+  concepts: string[],
+): Promise<ResourceDiscovery> {
+  if (!env.TAVILY_API_KEY || concepts.length === 0) {
+    return { resources: [], searched: false };
+  }
+
+  try {
+    const topicPhrase = topic
+      .trim()
+      .replace(/\b(?:yr|yrs)\b/giu, "years")
+      .slice(0, 120);
+    const topicTerms = topicWords(topicPhrase);
+    const conceptKeywords = [
+      ...new Set(
+        concepts
+          .slice(0, 2)
+          .join(" ")
+          .toLowerCase()
+          .replace(/[^\p{L}\p{N}]+/gu, " ")
+          .split(/\s+/)
+          .map((word) => (word === "yr" || word === "yrs" ? "years" : word))
+          .filter(
+            (word) =>
+              word.length >= 3 &&
+              !RESOURCE_SEARCH_WORDS.has(word) &&
+              !topicTerms.has(word),
+          ),
+      ),
+    ].slice(0, 3);
+    const query =
+      `English educational websites ${topicPhrase} ${conceptKeywords.join(" ")}`.trim();
+    const response = await fetch(TAVILY_SEARCH_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(15_000),
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${env.TAVILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query,
+        topic: "general",
+        country: "united states",
+        search_depth: "basic",
+        auto_parameters: false,
+        include_answer: false,
+        include_raw_content: false,
+        exclude_domains: [
+          "bing.com",
+          "dokumen.pub",
+          "duckduckgo.com",
+          "facebook.com",
+          "google.com",
+          "instagram.com",
+          "reddit.com",
+          "studocu.com",
+          "study.com",
+          "tiktok.com",
+          "x.com",
+          "youtube.com",
+          "youtu.be",
+        ],
+        max_results: 8,
+      }),
+    });
+
+    if (!response.ok) {
+      console.error(`Resource search failed: Tavily ${response.status}`);
+      return { resources: [], searched: true };
+    }
+
+    const payload = (await response.json()) as {
+      results?: Array<{
+        title?: unknown;
+        url?: unknown;
+        content?: unknown;
+        score?: unknown;
+      }>;
+    };
+    const seen = new Set<string>();
+    const resources: CourseResource[] = [];
+
+    for (const result of payload.results ?? []) {
+      if (
+        typeof result.url !== "string" ||
+        typeof result.title !== "string" ||
+        (typeof result.score === "number" && result.score < 0.2)
+      ) {
+        continue;
+      }
+      const url = directLearningWebsite(result.url);
+      const label = result.title.trim();
+      const evidence = `${label} ${
+        typeof result.content === "string" ? result.content : ""
+      }`;
+      if (
+        !url ||
+        !label ||
+        seen.has(url) ||
+        !looksLikeEnglishText(label) ||
+        !titleMatchesTopic(evidence, topic)
+      ) {
+        continue;
+      }
+
+      seen.add(url);
+      resources.push({
+        label,
+        why: conciseReason(
+          result.content,
+          `A direct resource for studying ${topic}.`,
+        ),
+        url,
+      });
+      if (resources.length === 4) break;
+    }
+
+    return { resources, searched: true };
+  } catch (error) {
+    console.error("Resource search failed:", error);
+    return { resources: [], searched: true };
   }
 }

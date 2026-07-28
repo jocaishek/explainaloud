@@ -21,7 +21,7 @@ flowchart TD
   sources --> db
   orchestrator --> db
   transcription --> groq["Groq Whisper"]
-  video --> tavily["Tavily basic search<br/>YouTube domains only"]
+  video --> tavily["Tavily basic search<br/>direct English videos + websites"]
 
   orchestrator --> gemini["Gemini primary"]
   orchestrator --> groqText["Groq failover"]
@@ -40,8 +40,10 @@ flowchart TD
 6. Accuracy Reviewer independently checks grounding, coverage, pedagogy, and
    assessment. A Revision Specialist runs only when the review finds issues.
 7. Video Researcher makes one Tavily `basic` search and accepts only direct,
-   topic-matching YouTube watch URLs.
-8. The validated course and its agent trace are saved in `courses.generated`.
+   topic-matching English YouTube watch URLs.
+8. Resource Researcher makes one parallel Tavily `basic` search and accepts
+   only direct English educational pages, never search-result URLs.
+9. The validated course and its agent trace are saved in `courses.generated`.
 
 ## Teach-back and gap report
 
@@ -67,7 +69,7 @@ flowchart TD
 | `/auth/callback` | Supabase OAuth/email callback and onboarding routing |
 | `/api/courses/[courseId]/generate` | Course agent orchestration and save |
 | `/api/courses/[courseId]/sources` | Owned source upload, preview, and removal |
-| `/api/courses/[courseId]/videos` | Direct educational video refresh |
+| `/api/courses/[courseId]/videos` | Direct English video and website refresh |
 | `/api/courses/[courseId]/transcribe` | Recorded-audio transcription |
 | `/api/courses/[courseId]/analyze` | Live transcript evaluation and final report |
 

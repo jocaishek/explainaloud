@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { courseSchema } from "~/lib/ai/schemas";
 import { createClient } from "~/lib/supabase/server";
-import { discoverCourseVideos } from "~/lib/video-search";
+import {
+  discoverCourseResources,
+  discoverCourseVideos,
+} from "~/lib/video-search";
 
 export const maxDuration = 30;
 
@@ -37,28 +40,49 @@ export async function POST(
   }
   const generated = parsed.data;
   const refresh = new URL(request.url).searchParams.get("refresh") === "1";
-  if (generated.videos.length > 0 && !refresh) {
-    return NextResponse.json({ videos: generated.videos, cached: true });
+  const directResources = generated.resources.filter(
+    (resource) => resource.url,
+  );
+  const resourceConcepts = generated.sections.flatMap(
+    (section) => section.key_points,
+  );
+  if (generated.videos.length > 0 && directResources.length > 0 && !refresh) {
+    return NextResponse.json({
+      videos: generated.videos,
+      resources: directResources,
+      cached: true,
+    });
   }
 
-  const discovery = await discoverCourseVideos(
-    course.topic,
-    generated.video_searches,
-  );
-  if (!discovery.searched) {
+  const [videoDiscovery, resourceDiscovery] = await Promise.all([
+    discoverCourseVideos(course.topic, generated.video_searches),
+    discoverCourseResources(course.topic, resourceConcepts),
+  ]);
+  if (!videoDiscovery.searched && !resourceDiscovery.searched) {
     return NextResponse.json(
-      { error: "Direct video search is not configured." },
+      { error: "Direct learning-link search is not configured." },
       { status: 503 },
     );
   }
-  if (discovery.videos.length === 0) {
+  const videos =
+    videoDiscovery.videos.length > 0 ? videoDiscovery.videos : generated.videos;
+  const resources =
+    resourceDiscovery.resources.length > 0
+      ? resourceDiscovery.resources
+      : generated.resources.length > 0
+        ? generated.resources
+        : resourceConcepts.slice(0, 4).map((label) => ({
+            label,
+            why: `A direct resource for studying ${course.topic}.`,
+          }));
+  if (videos.length === 0 && resources.length === 0) {
     return NextResponse.json(
-      { error: "No reliable direct videos were found." },
+      { error: "No reliable direct learning links were found." },
       { status: 404 },
     );
   }
 
-  const enriched = { ...generated, videos: discovery.videos };
+  const enriched = { ...generated, videos, resources };
   const { error: saveError } = await supabase
     .from("courses")
     .update({ generated: enriched, updated_at: new Date().toISOString() })
@@ -67,10 +91,10 @@ export async function POST(
 
   if (saveError) {
     return NextResponse.json(
-      { error: "Found videos but couldn't save them." },
+      { error: "Found learning links but couldn't save them." },
       { status: 500 },
     );
   }
 
-  return NextResponse.json({ videos: discovery.videos, cached: false });
+  return NextResponse.json({ videos, resources, cached: false });
 }

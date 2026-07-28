@@ -26,7 +26,10 @@ import {
   spansSchema,
 } from "~/lib/ai/schemas";
 import { renderSources, type SourceRow } from "~/lib/ai/sources";
-import { discoverCourseVideos } from "~/lib/video-search";
+import {
+  discoverCourseResources,
+  discoverCourseVideos,
+} from "~/lib/video-search";
 
 const REVIEW_OUTPUT_TOKENS = 900;
 const REVIEW_EVIDENCE_CHARS = 6_000;
@@ -223,11 +226,21 @@ ${renderSources(params.sources)}`,
     }
   }
 
-  const videoDiscovery = await discoverCourseVideos(
-    params.topic,
-    course.video_searches,
-  );
-  course = { ...course, videos: videoDiscovery.videos };
+  const [videoDiscovery, resourceDiscovery] = await Promise.all([
+    discoverCourseVideos(params.topic, course.video_searches),
+    discoverCourseResources(
+      params.topic,
+      course.sections.flatMap((section) => section.key_points),
+    ),
+  ]);
+  course = {
+    ...course,
+    videos: videoDiscovery.videos,
+    resources:
+      resourceDiscovery.resources.length > 0
+        ? resourceDiscovery.resources
+        : course.resources,
+  };
   agents.push(
     agentStep(
       "video-researcher",
@@ -238,6 +251,20 @@ ${renderSources(params.sources)}`,
         : "No reliable direct videos were found, so no search-page links were added.",
       {
         status: videoDiscovery.videos.length > 0 ? "completed" : "degraded",
+      },
+    ),
+  );
+  agents.push(
+    agentStep(
+      "resource-researcher",
+      "Resource Researcher",
+      "Resolve follow-up topics to direct English educational websites.",
+      resourceDiscovery.resources.length > 0
+        ? `Found ${resourceDiscovery.resources.length} direct English reading resource${resourceDiscovery.resources.length === 1 ? "" : "s"}.`
+        : "No reliable direct reading pages were found, so no search-page links were added.",
+      {
+        status:
+          resourceDiscovery.resources.length > 0 ? "completed" : "degraded",
       },
     ),
   );

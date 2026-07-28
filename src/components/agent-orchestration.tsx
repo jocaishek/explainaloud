@@ -30,7 +30,11 @@ const PIPELINES: Record<Pipeline, Array<{ role: string; task: string }>> = {
     },
     {
       role: "Video Researcher",
-      task: "Finds direct educational videos matched to the finished lesson.",
+      task: "Finds direct English videos matched to the finished lesson.",
+    },
+    {
+      role: "Resource Researcher",
+      task: "Finds direct English websites for deeper study.",
     },
   ],
   recording: [

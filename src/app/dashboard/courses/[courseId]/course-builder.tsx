@@ -9,21 +9,19 @@ import { type SourceItem, SourceUploader } from "~/components/source-uploader";
 import { Button } from "~/components/ui/button";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import { courseSectionId } from "~/lib/course-sections";
+import {
+  directLearningWebsite,
+  looksLikeEnglishText,
+} from "~/lib/link-quality";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 
-function webSearch(query: string) {
-  return `https://www.google.com/search?q=${encodeURIComponent(query)}`;
-}
-
 export function CourseBuilder({
   courseId,
-  topic,
   initialSources,
   initialCourse,
 }: {
   courseId: string;
-  topic: string;
   initialSources: SourceItem[];
   initialCourse: GeneratedCourse | null;
 }) {
@@ -31,7 +29,7 @@ export function CourseBuilder({
   const [sources, setSources] = useState(initialSources);
   const [course, setCourse] = useState(initialCourse);
   const [generating, setGenerating] = useState(false);
-  const [findingVideos, setFindingVideos] = useState(false);
+  const [findingLinks, setFindingLinks] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Course sections render inside an entrance animation. A browser hash jump
@@ -69,8 +67,8 @@ export function CourseBuilder({
     setGenerating(false);
   }
 
-  async function findVideos(refresh = false) {
-    setFindingVideos(true);
+  async function findLearningLinks(refresh = false) {
+    setFindingLinks(true);
     setError(null);
     try {
       const response = await fetch(
@@ -79,18 +77,35 @@ export function CourseBuilder({
       );
       const json = await response.json();
       if (!response.ok) {
-        setError(json.error ?? "Couldn't find direct videos.");
-      } else if (Array.isArray(json.videos)) {
+        setError(json.error ?? "Couldn't find direct learning links.");
+      } else {
         setCourse((current) =>
-          current ? { ...current, videos: json.videos } : current,
+          current
+            ? {
+                ...current,
+                videos: Array.isArray(json.videos)
+                  ? json.videos
+                  : current.videos,
+                resources: Array.isArray(json.resources)
+                  ? json.resources
+                  : current.resources,
+              }
+            : current,
         );
         router.refresh();
       }
     } catch {
-      setError("Couldn't reach the video search.");
+      setError("Couldn't reach learning-link search.");
     }
-    setFindingVideos(false);
+    setFindingLinks(false);
   }
+
+  const englishVideos =
+    course?.videos.filter((video) => looksLikeEnglishText(video.title)) ?? [];
+  const directResources =
+    course?.resources.filter(
+      (resource) => resource.url && directLearningWebsite(resource.url),
+    ) ?? [];
 
   return (
     <div className="flex flex-col gap-8">
@@ -201,13 +216,13 @@ export function CourseBuilder({
               </section>
             ))}
 
-            {course.videos.length > 0 ? (
+            {englishVideos.length > 0 ? (
               <section className="flex flex-col gap-3">
                 <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
                   Watch
                 </h2>
                 <div className="flex flex-col gap-2">
-                  {course.videos.map((video) => (
+                  {englishVideos.map((video) => (
                     <a
                       key={video.url}
                       href={video.url}
@@ -229,11 +244,13 @@ export function CourseBuilder({
                   type="button"
                   size="sm"
                   variant="ghost"
-                  disabled={findingVideos}
-                  onClick={() => findVideos(true)}
+                  disabled={findingLinks}
+                  onClick={() => findLearningLinks(true)}
                   className="w-fit rounded-full text-subtle"
                 >
-                  {findingVideos ? "Checking videos…" : "Refresh direct videos"}
+                  {findingLinks
+                    ? "Checking links…"
+                    : "Refresh videos & websites"}
                 </Button>
               </section>
             ) : course.video_searches.length > 0 ? (
@@ -249,25 +266,25 @@ export function CourseBuilder({
                   type="button"
                   size="sm"
                   variant="outline"
-                  disabled={findingVideos}
-                  onClick={() => findVideos()}
+                  disabled={findingLinks}
+                  onClick={() => findLearningLinks()}
                   className="rounded-full"
                 >
-                  {findingVideos ? "Finding videos…" : "Find direct videos"}
+                  {findingLinks ? "Finding links…" : "Find videos & websites"}
                 </Button>
               </section>
             ) : null}
 
-            {course.resources.length > 0 && (
+            {directResources.length > 0 ? (
               <section className="flex flex-col gap-3">
                 <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
                   Go deeper
                 </h2>
                 <div className="flex flex-col gap-2">
-                  {course.resources.map((resource) => (
+                  {directResources.map((resource) => (
                     <a
-                      key={resource.label}
-                      href={webSearch(`${topic} ${resource.label}`)}
+                      key={resource.url}
+                      href={resource.url}
                       target="_blank"
                       rel="noreferrer noopener"
                       className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3 py-2 transition-colors hover:border-brand/40"
@@ -286,13 +303,34 @@ export function CourseBuilder({
                         aria-hidden
                         className="mt-0.5 shrink-0 font-mono text-[10px] text-subtle"
                       >
-                        SEARCH →
+                        WEBSITE ↗
                       </span>
                     </a>
                   ))}
                 </div>
               </section>
-            )}
+            ) : course.resources.length > 0 ? (
+              <section className="flex flex-col items-start gap-2">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                  Go deeper
+                </h2>
+                <p className="text-sm text-subtle">
+                  Find direct English websites matched to this course. This uses
+                  one basic search credit and never sends you to a search
+                  results page.
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={findingLinks}
+                  onClick={() => findLearningLinks()}
+                  className="rounded-full"
+                >
+                  {findingLinks ? "Finding links…" : "Find direct websites"}
+                </Button>
+              </section>
+            ) : null}
 
             {course.uncovered.length > 0 && (
               <section className="rounded-lg border border-border bg-surface p-3">
