@@ -51,6 +51,13 @@ type Status =
 const LIVE_DEBOUNCE_MS = 2200;
 /** Server caption fallback cadence; stays below the transcription RPM limit. */
 const LIVE_TRANSCRIBE_MS = 8000;
+
+/**
+ * How often to write the transcript so far into the session row. Frequent enough
+ * that an abandoned tab keeps nearly everything, infrequent enough not to be a
+ * write every keystroke of speech.
+ */
+const AUTOSAVE_MS = 10_000;
 const LIVE_REQUEST_TIMEOUT_MS = 20_000;
 const TRANSCRIBE_TIMEOUT_MS = 45_000;
 const ANALYZE_TIMEOUT_MS = 60_000;
@@ -206,6 +213,12 @@ export function RecordConsole({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The row for the recording in progress. Created up front so that closing the
+  // tab, a crash, or any failure in the stop path still leaves the attempt in
+  // the database rather than losing it entirely.
+  const sessionRowIdRef = useRef<string | null>(null);
+  const autosaveTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastSavedTranscriptRef = useRef("");
   const liveTranscribeTimerRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
   );
@@ -235,6 +248,7 @@ export function RecordConsole({
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
       if (stopWatchdogRef.current) clearTimeout(stopWatchdogRef.current);
+      if (autosaveTimerRef.current) clearInterval(autosaveTimerRef.current);
       if (liveTranscribeTimerRef.current) {
         clearInterval(liveTranscribeTimerRef.current);
       }
@@ -375,6 +389,72 @@ export function RecordConsole({
     }, LIVE_DEBOUNCE_MS);
   }
 
+  /**
+   * Claims the database row for this attempt before a single word is spoken.
+   *
+   * Everything that saves a recording used to happen after the student stopped,
+   * which made the whole attempt contingent on the stop path completing. With the
+   * row already present, a closed tab or a stop that never fires costs at most
+   * the last few seconds of transcript, not the session.
+   */
+  async function createSessionRow(startedAt: string) {
+    try {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      const { data, error: createError } = await supabase
+        .from("course_sessions")
+        .insert({
+          course_id: courseId,
+          user_id: user.id,
+          transcript: null,
+          started_at: startedAt,
+        })
+        .select("id")
+        .single<{ id: string }>();
+      if (createError || !data) {
+        // Not fatal: `finish()` falls back to inserting. Log so a policy or
+        // schema problem is visible rather than silently costing the backup.
+        console.error("Session pre-create failed:", createError);
+        return;
+      }
+      sessionRowIdRef.current = data.id;
+    } catch (error) {
+      console.error("Session pre-create threw:", error);
+    }
+  }
+
+  /** Best-effort periodic flush so an abandoned tab keeps most of the speech. */
+  const flushTranscript = useCallback(async () => {
+    const id = sessionRowIdRef.current;
+    const text = transcriptRef.current.trim();
+    if (!id || !text || text === lastSavedTranscriptRef.current) return;
+    lastSavedTranscriptRef.current = text;
+    try {
+      const supabase = createClient();
+      await supabase
+        .from("course_sessions")
+        .update({ transcript: text })
+        .eq("id", id);
+    } catch {
+      // The final write in `finish()` is the one that matters.
+    }
+  }, []);
+
+  // Leaving the page mid-recording: write whatever has been transcribed so far.
+  // `pagehide` fires on tab close, navigation and mobile backgrounding, where
+  // `beforeunload` is unreliable. Best effort by design — the row already exists,
+  // so the worst case is losing the last few seconds, not the attempt.
+  useEffect(() => {
+    const onHide = () => {
+      if (sessionRowIdRef.current) void flushTranscript();
+    };
+    window.addEventListener("pagehide", onHide);
+    return () => window.removeEventListener("pagehide", onHide);
+  }, [flushTranscript]);
+
   async function stopAudioCapture() {
     const recorder = mediaRecorderRef.current;
     const audioReady = audioReadyRef.current;
@@ -421,6 +501,10 @@ export function RecordConsole({
     if (stopWatchdogRef.current) {
       clearTimeout(stopWatchdogRef.current);
       stopWatchdogRef.current = null;
+    }
+    if (autosaveTimerRef.current) {
+      clearInterval(autosaveTimerRef.current);
+      autosaveTimerRef.current = null;
     }
     if (liveTranscribeTimerRef.current) {
       clearInterval(liveTranscribeTimerRef.current);
@@ -480,17 +564,32 @@ export function RecordConsole({
         return;
       }
 
-      const { data, error: insertError } = await supabase
-        .from("course_sessions")
-        .insert({
-          course_id: courseId,
-          user_id: user.id,
-          transcript: text || null,
-          started_at: startedAtRef.current ?? new Date().toISOString(),
-          ended_at: new Date().toISOString(),
-        })
-        .select("id, transcript, started_at, ended_at, score")
-        .single<Session>();
+      // The row usually already exists — it is created when recording starts so
+      // that leaving the page cannot lose the attempt. Update it when it does,
+      // insert when the up-front create didn't get through.
+      const existingId = sessionRowIdRef.current;
+      const { data, error: insertError } = existingId
+        ? await supabase
+            .from("course_sessions")
+            .update({
+              transcript: text || null,
+              ended_at: new Date().toISOString(),
+            })
+            .eq("id", existingId)
+            .eq("user_id", user.id)
+            .select("id, transcript, started_at, ended_at, score")
+            .single<Session>()
+        : await supabase
+            .from("course_sessions")
+            .insert({
+              course_id: courseId,
+              user_id: user.id,
+              transcript: text || null,
+              started_at: startedAtRef.current ?? new Date().toISOString(),
+              ended_at: new Date().toISOString(),
+            })
+            .select("id, transcript, started_at, ended_at, score")
+            .single<Session>();
 
       if (insertError || !data) {
         // Name the database's own reason. "Couldn't save that session" is
@@ -505,7 +604,12 @@ export function RecordConsole({
         return;
       }
 
-      setSessions((prev) => [data, ...prev]);
+      // Filter by id first: the row may already be in the list if it was
+      // pre-created and the page has since been reloaded.
+      setSessions((prev) => [
+        data,
+        ...prev.filter((session) => session.id !== data.id),
+      ]);
       setDisplayedSessionId(data.id);
 
       // An empty transcript is still worth keeping — the row is what makes the
@@ -730,6 +834,17 @@ export function RecordConsole({
     liveCaptionsDisabledRef.current = false;
     liveTranscribeFailuresRef.current = 0;
     finishingRef.current = false;
+    sessionRowIdRef.current = null;
+    lastSavedTranscriptRef.current = "";
+
+    // Claim the row now and keep flushing the transcript into it. Not awaited:
+    // the student should start talking immediately, and `finish()` falls back to
+    // an insert if this hasn't landed by then.
+    void createSessionRow(startedAtRef.current);
+    if (autosaveTimerRef.current) clearInterval(autosaveTimerRef.current);
+    autosaveTimerRef.current = setInterval(() => {
+      void flushTranscript();
+    }, AUTOSAVE_MS);
 
     // Capture audio locally for the entire session. Browser speech
     // recognition can still colour words live, but this recording is what
