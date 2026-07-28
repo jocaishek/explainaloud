@@ -144,7 +144,7 @@ export default function Home() {
         <GlowOrb className="-top-32 left-1/2 h-[34rem] w-[52rem] -translate-x-1/2 opacity-[0.16]" />
 
         <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
-          <Eyebrow index="01" label="Teach it back" />
+          <Eyebrow index="01" label="Ropes" />
           <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight text-balance text-white sm:text-6xl">
             <WordReveal
               text="Know when you actually understand it."
@@ -416,7 +416,7 @@ export default function Home() {
             <DeepDiveRow
               reversed
               step="Step 2"
-              title="Teach it back, out loud"
+              title="Say it back, out loud"
               body="Hit record and explain the concept like you're teaching a friend. Shaky steps get flagged as you say them."
               mockup={<ExplainPanel />}
             />
@@ -471,7 +471,7 @@ const MARQUEE_ITEMS = [
   "Recognition isn't recall",
   "Gaps filled, not just flagged",
   "Built from your own sources",
-  "Teach it back",
+  "Learn the ropes",
 ];
 
 const LANDING_AGENTS = [

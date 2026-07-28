@@ -15,7 +15,7 @@ export default async function NewTopicPage({
         </h1>
         <p className="mt-2 text-foreground">
           Type a topic or paste your notes. Ropes builds a short course from
-          real sources, then listens while you teach it back.
+          real sources, then listens while you explain it back.
         </p>
       </div>
 
