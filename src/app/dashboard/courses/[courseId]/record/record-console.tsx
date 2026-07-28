@@ -8,7 +8,7 @@ import { AgentOrchestration } from "~/components/agent-orchestration";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { Button } from "~/components/ui/button";
 import type { AgentRun } from "~/lib/ai/schemas";
-import { DAILY_LIMITS, localDay } from "~/lib/limits";
+import { localDay } from "~/lib/limits";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 
@@ -122,11 +122,16 @@ const AUDIO_STOP_TIMEOUT_MS = 5_000;
 const STOP_WATCHDOG_MS = 2_500;
 
 /**
- * Hard cap on one explanation. Three minutes is past the point where a
- * teach-back stops being recall and starts being reading aloud, and it keeps
- * a single transcript inside one model context comfortably.
+ * Hard cap on one explanation, supplied per plan — three minutes on Free, five
+ * on Pro. Three is past the point where a teach-back stops being recall and
+ * starts being reading aloud; five gives a subscriber room for a dense topic
+ * without changing that character. Either keeps one transcript inside a single
+ * model context comfortably.
+ *
+ * The value arrives as a prop rather than being read here, so the plan is
+ * resolved once on the server from the subscription rather than trusted from
+ * the browser.
  */
-const MAX_RECORDING_MS = 3 * 60_000;
 
 /** Warn when this much time is left, so the ending isn't a surprise. */
 const WARN_AT_MS = 30_000;
@@ -259,12 +264,17 @@ export function RecordConsole({
   courseReady,
   recordingsUsed,
   unlimited,
+  dailyLimit,
+  maxRecordingMs,
 }: {
   courseId: string;
   initialSessions: Session[];
   courseReady: boolean;
   recordingsUsed: number;
   unlimited: boolean;
+  /** Recordings a day for this plan; `null` when there is no cap. */
+  dailyLimit: number | null;
+  maxRecordingMs: number;
 }) {
   const [status, setStatus] = useState<Status>("checking");
   const [transcript, setTranscript] = useState("");
@@ -278,7 +288,7 @@ export function RecordConsole({
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [remainingMs, setRemainingMs] = useState(MAX_RECORDING_MS);
+  const [remainingMs, setRemainingMs] = useState(maxRecordingMs);
   const [sessions, setSessions] = useState(initialSessions);
   const [used, setUsed] = useState(recordingsUsed);
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
@@ -383,7 +393,7 @@ export function RecordConsole({
 
   const remaining = unlimited
     ? Number.POSITIVE_INFINITY
-    : Math.max(0, DAILY_LIMITS.recording - used);
+    : Math.max(0, (dailyLimit ?? 0) - used);
 
   /** Forget the frozen head, so the next pass grades the transcript afresh. */
   const resetGradedHead = useCallback(() => {
@@ -1176,7 +1186,7 @@ export function RecordConsole({
       {
         p_kind: "recording",
         p_day: localDay(),
-        p_limit: DAILY_LIMITS.recording,
+        p_limit: dailyLimit ?? 0,
       },
     );
 
@@ -1190,9 +1200,9 @@ export function RecordConsole({
       for (const track of stream.getTracks()) track.stop();
       setStatus("idle");
       setError(
-        `You've used all ${DAILY_LIMITS.recording} recordings for today. It resets at midnight your time.`,
+        `You've used all ${dailyLimit ?? 0} recordings for today. It resets at midnight your time.`,
       );
-      setUsed(DAILY_LIMITS.recording);
+      setUsed(dailyLimit ?? 0);
       return;
     }
     if (!unlimited) setUsed((u) => u + 1);
@@ -1264,15 +1274,17 @@ export function RecordConsole({
     // Hard stop at the cap. The interval only drives the readout; the
     // deadline itself is a timestamp, so a throttled background tab can't
     // let a recording run past three minutes.
-    deadlineRef.current = Date.now() + MAX_RECORDING_MS;
-    setRemainingMs(MAX_RECORDING_MS);
+    deadlineRef.current = Date.now() + maxRecordingMs;
+    setRemainingMs(maxRecordingMs);
     if (tickRef.current) clearInterval(tickRef.current);
     tickRef.current = setInterval(() => {
       const left = deadlineRef.current - Date.now();
       setRemainingMs(left);
       if (left <= 0) {
         if (tickRef.current) clearInterval(tickRef.current);
-        setNotice("Three-minute limit reached — wrapping up.");
+        setNotice(
+          `${Math.round(maxRecordingMs / 60_000)}-minute limit reached — wrapping up.`,
+        );
         stopRecording();
       }
     }, 250);
@@ -1508,8 +1520,8 @@ export function RecordConsole({
 
         <p className="font-mono text-[11px] tracking-[0.14em] text-subtle uppercase">
           {unlimited
-            ? "Admin account · unlimited recordings"
-            : `${remaining} of ${DAILY_LIMITS.recording} recordings left today · resets at midnight`}
+            ? "Unlimited recordings"
+            : `${remaining} of ${dailyLimit ?? 0} recordings left today · resets at midnight`}
         </p>
 
         {notice && <p className="text-xs text-subtle">{notice}</p>}
