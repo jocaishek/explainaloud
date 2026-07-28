@@ -116,6 +116,7 @@ export async function POST(
           analyzed_at: new Date().toISOString(),
         })
         .eq("id", sessionId)
+        .eq("course_id", courseId)
         .eq("user_id", user.id);
 
       if (sessionError) {

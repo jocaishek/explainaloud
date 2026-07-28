@@ -22,6 +22,7 @@ import {
   type GeneratedCourse,
   reconcileSpans,
   reportSchema,
+  type SpanStatus,
   spansSchema,
 } from "~/lib/ai/schemas";
 import { renderSources, type SourceRow } from "~/lib/ai/sources";
@@ -266,21 +267,162 @@ type ExplanationParams = {
   mode: "live" | "final";
 };
 
+type EvaluatedTranscriptSpan = {
+  text: string;
+  status: SpanStatus;
+  issue: string | null;
+};
+
+const FALLBACK_STOP_WORDS = new Set([
+  "about",
+  "after",
+  "also",
+  "and",
+  "are",
+  "because",
+  "been",
+  "before",
+  "being",
+  "between",
+  "but",
+  "can",
+  "did",
+  "does",
+  "during",
+  "for",
+  "from",
+  "has",
+  "have",
+  "into",
+  "its",
+  "more",
+  "not",
+  "that",
+  "the",
+  "their",
+  "then",
+  "there",
+  "these",
+  "they",
+  "this",
+  "through",
+  "was",
+  "were",
+  "which",
+  "with",
+  "would",
+]);
+
+function meaningfulTerms(value: string) {
+  return new Set(
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .split(/\s+/)
+      .filter((term) => term.length >= 3 && !FALLBACK_STOP_WORDS.has(term))
+      .map((term) => term.replace(/(ing|ed|es|s)$/u, "")),
+  );
+}
+
+/**
+ * Last-resort evaluator for provider outages. It is intentionally
+ * conservative: only a strong vocabulary match counts as covered. That can
+ * under-credit a creative paraphrase, but it cannot award a high score for a
+ * one-line explanation that omits most of the course.
+ */
+function localTranscriptEvaluation(params: ExplanationParams) {
+  const transcriptTerms = meaningfulTerms(params.transcript);
+  const covered = new Set<number>();
+
+  params.keyPoints.forEach((keyPoint, index) => {
+    const terms = [...meaningfulTerms(keyPoint)];
+    if (terms.length === 0) return;
+    const matches = terms.filter((term) => transcriptTerms.has(term)).length;
+    const required =
+      terms.length <= 3 ? terms.length : Math.ceil(terms.length * 0.6);
+    if (matches >= required) covered.add(index);
+  });
+
+  const status: SpanStatus =
+    covered.size > 0 ? "correct" : params.mode === "live" ? "neutral" : "gap";
+  const spans: EvaluatedTranscriptSpan[] = [
+    {
+      text: params.transcript,
+      status,
+      issue:
+        status === "gap"
+          ? "The explanation did not clearly cover a course key point."
+          : null,
+    },
+  ];
+
+  return { spans, covered };
+}
+
+function localGapReport({
+  keyPoints,
+  covered,
+  spans,
+}: {
+  keyPoints: string[];
+  covered: Set<number>;
+  spans: EvaluatedTranscriptSpan[];
+}): GapReport {
+  const correctClaims = spans.filter((span) => span.status === "correct");
+  return completeCoverageReport({
+    draft: {
+      score: 0,
+      verdict: "",
+      gaps: spans
+        .filter((span) => span.status === "gap" && span.issue)
+        .map((span) => ({
+          phrase: span.text.slice(0, 120),
+          category: "vague" as const,
+          explanation:
+            span.issue ?? "This point needs a more specific explanation.",
+        })),
+      strengths:
+        correctClaims.length > 0
+          ? ["Your explanation included course-relevant details."]
+          : [],
+      next_focus: "",
+    },
+    keyPoints,
+    covered,
+    spans,
+  });
+}
+
 export async function orchestrateExplanation(params: ExplanationParams) {
   const startedAt = new Date().toISOString();
   const runId = crypto.randomUUID();
   const sourceBlock = renderSources(params.sources);
   const agents: AgentStep[] = [];
 
-  const detection = await completeJson(
-    `${gapDetectionPrompt(params)}\n\n${sourceBlock}`,
-    (value) => spansSchema.parse(value),
-  );
-  const spans = reconcileSpans(params.transcript, detection.data.spans);
-  const covered = coveredKeyPointIndices(
-    detection.data.covered_key_points,
-    params.keyPoints.length,
-  );
+  let spans: EvaluatedTranscriptSpan[];
+  let covered: Set<number>;
+  let detectionProvider: "gemini" | "groq" | "local";
+  let detectionStatus: AgentStep["status"] = "completed";
+
+  try {
+    const detection = await completeJson(
+      `${gapDetectionPrompt(params)}\n\n${sourceBlock}`,
+      (value) => spansSchema.parse(value),
+    );
+    spans = reconcileSpans(params.transcript, detection.data.spans);
+    covered = coveredKeyPointIndices(
+      detection.data.covered_key_points,
+      params.keyPoints.length,
+    );
+    detectionProvider = detection.provider;
+  } catch (error) {
+    if (!(error instanceof AiUnavailableError)) throw error;
+    const fallback = localTranscriptEvaluation(params);
+    spans = fallback.spans;
+    covered = fallback.covered;
+    detectionProvider = "local";
+    detectionStatus = "degraded";
+  }
   const missingKeyPoints = params.keyPoints.filter(
     (_, index) => !covered.has(index),
   );
@@ -290,39 +432,52 @@ export async function orchestrateExplanation(params: ExplanationParams) {
       "transcript-evaluator",
       "Transcript Evaluator",
       "Classify the student's claims against the course key points.",
-      `Evaluated the explanation and identified ${spans.filter((span) => span.status === "gap").length} gap span${spans.filter((span) => span.status === "gap").length === 1 ? "" : "s"}.`,
-      { status: "completed", provider: detection.provider },
+      detectionStatus === "degraded"
+        ? "AI evaluation was unavailable, so a conservative local course-coverage check kept the recording usable."
+        : `Evaluated the explanation and identified ${spans.filter((span) => span.status === "gap").length} gap span${spans.filter((span) => span.status === "gap").length === 1 ? "" : "s"}.`,
+      { status: detectionStatus, provider: detectionProvider },
     ),
   );
 
   let report: GapReport | null = null;
-  let finalProvider = detection.provider;
+  let finalProvider = detectionProvider;
 
   if (params.mode === "final") {
-    const coaching = await completeJson(
-      `${gapReportPrompt({
-        ...params,
-        gaps: spans
-          .filter((span) => span.status === "gap")
-          .map((span) => ({ text: span.text, issue: span.issue })),
-        missingKeyPoints,
-      })}\n\n${sourceBlock}`,
-      (value) => reportSchema.parse(value),
-    );
-    report = completeCoverageReport({
-      draft: coaching.data,
-      keyPoints: params.keyPoints,
-      covered,
-      spans,
-    });
-    finalProvider = coaching.provider;
+    let coachStatus: AgentStep["status"] = "completed";
+    try {
+      const coaching = await completeJson(
+        `${gapReportPrompt({
+          ...params,
+          gaps: spans
+            .filter((span) => span.status === "gap")
+            .map((span) => ({ text: span.text, issue: span.issue })),
+          missingKeyPoints,
+        })}\n\n${sourceBlock}`,
+        (value) => reportSchema.parse(value),
+      );
+      report = completeCoverageReport({
+        draft: coaching.data,
+        keyPoints: params.keyPoints,
+        covered,
+        spans,
+      });
+      finalProvider = coaching.provider;
+    } catch (error) {
+      if (!(error instanceof AiUnavailableError)) throw error;
+      report = localGapReport({ keyPoints: params.keyPoints, covered, spans });
+      finalProvider = "local";
+      coachStatus = "degraded";
+    }
+
     agents.push(
       agentStep(
         "gap-coach",
         "Gap Coach",
         "Teach the detected gaps only after the student finishes speaking.",
-        `Produced a ${Math.round(report.score)}% understanding score and ${report.gaps.length} targeted coaching item${report.gaps.length === 1 ? "" : "s"}.`,
-        { status: "completed", provider: coaching.provider },
+        coachStatus === "degraded"
+          ? `AI coaching was unavailable, so the course rubric produced a complete ${Math.round(report.score)}% coverage report with ${report.gaps.length} review item${report.gaps.length === 1 ? "" : "s"}.`
+          : `Produced a ${Math.round(report.score)}% understanding score and ${report.gaps.length} targeted coaching item${report.gaps.length === 1 ? "" : "s"}.`,
+        { status: coachStatus, provider: finalProvider },
       ),
     );
   }

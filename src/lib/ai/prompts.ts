@@ -295,11 +295,17 @@ ${params.transcript}
 Spans already flagged as gaps:
 ${params.gaps.map((g) => `- "${g.text}" — ${g.issue ?? "unclear"}`).join("\n") || "- none"}
 
-Course key points the student did not cover:
-${params.missingKeyPoints.map((point) => `- ${point}`).join("\n") || "- none"}
+Highest-priority course points the student did not cover:
+${
+  params.missingKeyPoints
+    .slice(0, 4)
+    .map((point) => `- ${point}`)
+    .join("\n") || "- none"
+}
 
-Include one "missing_step" coaching item for every uncovered course key point.
-Do not collapse separate key points into one item.
+Coach the flagged claims and at most four highest-priority omissions. The
+orchestrator deterministically checks every remaining course key point and
+adds any uncovered items after this response, so do not repeat the full rubric.
 
 Return JSON:
 {

@@ -149,6 +149,33 @@ function flattenModelText(value: unknown): unknown {
 
 const reportText = z.preprocess(flattenModelText, z.string().min(1));
 
+const gapCategory = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value;
+    const normalized = value.toLowerCase().replace(/[\s-]+/g, "_");
+    if (
+      normalized === "missing_step" ||
+      normalized === "misconception" ||
+      normalized === "vague" ||
+      normalized === "contradicted"
+    ) {
+      return normalized;
+    }
+    if (normalized.includes("missing") || normalized.includes("omission")) {
+      return "missing_step";
+    }
+    if (normalized.includes("vague") || normalized.includes("unclear")) {
+      return "vague";
+    }
+    if (normalized.includes("contradict")) return "contradicted";
+    // Models commonly return labels such as "incorrect" or "error". They are
+    // still valid coaching data, so normalize them instead of failing the
+    // entire report after every provider has already done the expensive work.
+    return "misconception";
+  },
+  z.enum(["missing_step", "misconception", "vague", "contradicted"]),
+);
+
 export const reportSchema = z
   .object({
     score: z.number().min(0).max(100),
@@ -157,12 +184,7 @@ export const reportSchema = z
       .array(
         z.object({
           phrase: reportText,
-          category: z.enum([
-            "missing_step",
-            "misconception",
-            "vague",
-            "contradicted",
-          ]),
+          category: gapCategory,
           explanation: reportText,
         }),
       )

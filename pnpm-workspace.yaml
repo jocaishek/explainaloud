@@ -2,3 +2,6 @@ allowBuilds:
   sharp: false
   supabase: true
   unrs-resolver: false
+overrides:
+  postcss: 8.5.19
+  sharp: 0.35.0

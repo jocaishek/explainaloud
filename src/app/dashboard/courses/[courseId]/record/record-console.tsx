@@ -51,6 +51,10 @@ type Status =
 const LIVE_DEBOUNCE_MS = 2200;
 /** Server caption fallback cadence; stays below the transcription RPM limit. */
 const LIVE_TRANSCRIBE_MS = 8000;
+const LIVE_REQUEST_TIMEOUT_MS = 20_000;
+const TRANSCRIBE_TIMEOUT_MS = 45_000;
+const ANALYZE_TIMEOUT_MS = 60_000;
+const AUDIO_STOP_TIMEOUT_MS = 5_000;
 
 /**
  * Hard cap on one explanation. Five minutes is well past the point where a
@@ -68,6 +72,46 @@ const WARN_AT_MS = 30_000;
  * several — but an endless run means the mic is never producing audio.
  */
 const MAX_RESTARTS = 8;
+
+type ApiPayload = {
+  error?: string;
+  transcript?: string;
+  spans?: Span[];
+  report?: Report;
+  orchestration?: AgentRun;
+};
+
+async function fetchJson(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(input, { ...init, signal: controller.signal });
+    const body = await response.text();
+    let json: ApiPayload = {};
+    if (body) {
+      try {
+        json = JSON.parse(body) as ApiPayload;
+      } catch {
+        json = {
+          error: response.ok
+            ? "The server returned an unreadable response."
+            : `The request failed (${response.status}).`,
+        };
+      }
+    }
+    return { response, json };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function requestTimedOut(error: unknown) {
+  return error instanceof DOMException && error.name === "AbortError";
+}
 
 function formatClock(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000));
@@ -176,13 +220,16 @@ export function RecordConsole({
     async (text: string) => {
       const seq = ++liveSeqRef.current;
       try {
-        const response = await fetch(`/api/courses/${courseId}/analyze`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ transcript: text, mode: "live" }),
-        });
+        const { response, json } = await fetchJson(
+          `/api/courses/${courseId}/analyze`,
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ transcript: text, mode: "live" }),
+          },
+          LIVE_REQUEST_TIMEOUT_MS,
+        );
         if (!response.ok) return;
-        const json = await response.json();
         if (seq !== liveSeqRef.current) return; // superseded
         if (Array.isArray(json.spans)) setSpans(json.spans);
         if (json.orchestration) setAgentRun(json.orchestration);
@@ -220,11 +267,11 @@ export function RecordConsole({
         "audio",
         new File([audio], `live.${audioExtension(type)}`, { type }),
       );
-      const response = await fetch(`/api/courses/${courseId}/transcribe`, {
-        method: "POST",
-        body,
-      });
-      const json = await response.json();
+      const { response, json } = await fetchJson(
+        `/api/courses/${courseId}/transcribe`,
+        { method: "POST", body },
+        TRANSCRIBE_TIMEOUT_MS,
+      );
       if (
         response.ok &&
         typeof json.transcript === "string" &&
@@ -266,8 +313,24 @@ export function RecordConsole({
   async function stopAudioCapture() {
     const recorder = mediaRecorderRef.current;
     const audioReady = audioReadyRef.current;
-    if (recorder && recorder.state !== "inactive") recorder.stop();
-    const audio = audioReady ? await audioReady : null;
+    if (recorder && recorder.state !== "inactive") {
+      try {
+        recorder.requestData();
+        recorder.stop();
+      } catch {
+        // The browser may already have stopped the recorder. The chunks
+        // collected so far remain usable.
+      }
+    }
+    const audio = audioReady
+      ? await Promise.race([
+          audioReady,
+          new Promise<null>((resolve) =>
+            setTimeout(() => resolve(null), AUDIO_STOP_TIMEOUT_MS),
+          ),
+        ])
+      : null;
+    for (const track of mediaStreamRef.current?.getTracks() ?? []) track.stop();
     mediaRecorderRef.current = null;
     mediaStreamRef.current = null;
     audioReadyRef.current = null;
@@ -286,102 +349,114 @@ export function RecordConsole({
     recognitionRef.current = null;
     setStatus("saving");
 
-    let text = transcriptRef.current.trim();
-    const audio = await stopAudioCapture();
+    try {
+      let text = transcriptRef.current.trim();
+      const audio = await stopAudioCapture();
 
-    // Browser speech recognition is useful for live colour, but it depends on
-    // a remote browser service that is frequently unavailable. The recorded
-    // audio is the source of truth once the student finishes.
-    if (audio?.size) {
-      try {
-        const body = new FormData();
-        body.set(
-          "audio",
-          new File([audio], `recording.${audioExtension(audio.type)}`, {
-            type: audio.type || "audio/webm",
-          }),
-        );
-        const response = await fetch(`/api/courses/${courseId}/transcribe`, {
-          method: "POST",
-          body,
-        });
-        const json = await response.json();
-        if (response.ok && typeof json.transcript === "string") {
-          text = json.transcript.trim();
-          transcriptRef.current = text;
-          setTranscript(text);
-          setInterim("");
-        } else if (!text) {
-          setError(json.error ?? "Couldn't transcribe that recording.");
+      // Browser speech recognition is useful for live colour, but it depends on
+      // a remote browser service that is frequently unavailable. The recorded
+      // audio is the source of truth once the student finishes.
+      if (audio?.size) {
+        try {
+          const body = new FormData();
+          body.set(
+            "audio",
+            new File([audio], `recording.${audioExtension(audio.type)}`, {
+              type: audio.type || "audio/webm",
+            }),
+          );
+          const { response, json } = await fetchJson(
+            `/api/courses/${courseId}/transcribe`,
+            { method: "POST", body },
+            TRANSCRIBE_TIMEOUT_MS,
+          );
+          if (response.ok && typeof json.transcript === "string") {
+            text = json.transcript.trim();
+            transcriptRef.current = text;
+            setTranscript(text);
+            setInterim("");
+          } else if (!text) {
+            setError(json.error ?? "Couldn't transcribe that recording.");
+          }
+        } catch (transcribeError) {
+          if (!text) {
+            setError(
+              requestTimedOut(transcribeError)
+                ? "Transcription took too long. Your recording is safe; try again."
+                : "Couldn't reach the transcription service.",
+            );
+          }
         }
-      } catch {
-        if (!text) setError("Couldn't reach the transcription service.");
       }
-    }
 
-    if (!text) {
+      if (!text) {
+        return;
+      }
+
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setError(
+          "Your sign-in expired. Sign in again; the transcript is still on screen.",
+        );
+        return;
+      }
+
+      const { data, error: insertError } = await supabase
+        .from("course_sessions")
+        .insert({
+          course_id: courseId,
+          user_id: user.id,
+          transcript: text || null,
+          started_at: startedAtRef.current ?? new Date().toISOString(),
+          ended_at: new Date().toISOString(),
+        })
+        .select("id, transcript, started_at, ended_at, score")
+        .single<Session>();
+
+      if (insertError || !data) {
+        setError("Couldn't save that session. Try again.");
+        return;
+      }
+
+      setSessions((prev) => [data, ...prev]);
+      setDisplayedSessionId(data.id);
+
+      // Only now — after the student has stopped — do we ask for teaching.
+      if (!courseReady || text.length < 24) {
+        return;
+      }
+
+      setStatus("analyzing");
+      await analyzeSession(text, data.id);
+    } catch (finishError) {
+      console.error("Recording finalization failed:", finishError);
+      setError(
+        "The recording stopped safely, but finishing it failed. Your transcript is still on screen.",
+      );
+    } finally {
       setStatus("idle");
       finishingRef.current = false;
-      return;
     }
-
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setStatus("idle");
-      finishingRef.current = false;
-      return;
-    }
-
-    const { data, error: insertError } = await supabase
-      .from("course_sessions")
-      .insert({
-        course_id: courseId,
-        user_id: user.id,
-        transcript: text || null,
-        started_at: startedAtRef.current ?? new Date().toISOString(),
-        ended_at: new Date().toISOString(),
-      })
-      .select("id, transcript, started_at, ended_at, score")
-      .single<Session>();
-
-    if (insertError || !data) {
-      setStatus("idle");
-      setError("Couldn't save that session. Try again.");
-      finishingRef.current = false;
-      return;
-    }
-
-    setSessions((prev) => [data, ...prev]);
-    setDisplayedSessionId(data.id);
-
-    // Only now — after the student has stopped — do we ask for teaching.
-    if (!courseReady || text.length < 24) {
-      setStatus("idle");
-      finishingRef.current = false;
-      return;
-    }
-
-    setStatus("analyzing");
-    await analyzeSession(text, data.id);
-    setStatus("idle");
-    finishingRef.current = false;
   }
 
   async function analyzeSession(text: string, sessionId: string) {
     try {
-      const response = await fetch(`/api/courses/${courseId}/analyze`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          transcript: text,
-          mode: "final",
-          sessionId,
-        }),
-      });
-      const json = await response.json();
+      const { response, json } = await fetchJson(
+        `/api/courses/${courseId}/analyze`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            transcript: text,
+            mode: "final",
+            sessionId,
+          }),
+        },
+        ANALYZE_TIMEOUT_MS,
+      );
       if (!response.ok) {
         setError(json.error ?? "Couldn't analyse that session.");
         setFailedAnalysis({ sessionId, transcript: text });
@@ -392,18 +467,23 @@ export function RecordConsole({
       if (Array.isArray(json.spans)) setSpans(json.spans);
       if (json.orchestration) setAgentRun(json.orchestration);
       if (json.report) {
-        setReport(json.report);
+        const completedReport = json.report;
+        setReport(completedReport);
         setDisplayedSessionId(sessionId);
         setSessions((prev) =>
           prev.map((session) =>
             session.id === sessionId
-              ? { ...session, score: Math.round(json.report.score) }
+              ? { ...session, score: Math.round(completedReport.score) }
               : session,
           ),
         );
       }
-    } catch {
-      setError("Couldn't reach the analyser.");
+    } catch (analysisError) {
+      setError(
+        requestTimedOut(analysisError)
+          ? "Gap Coach took too long. The session is saved — retry when you're ready."
+          : "Couldn't reach Gap Coach. The session is saved.",
+      );
       setFailedAnalysis({ sessionId, transcript: text });
     }
   }
