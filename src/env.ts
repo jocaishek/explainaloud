@@ -23,7 +23,14 @@ export const env = createEnv({
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     TAVILY_API_KEY: process.env.TAVILY_API_KEY,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    // Supabase renamed the browser-safe key: new projects hand out a
+    // `PUBLISHABLE_KEY`, older ones an `ANON_KEY`. They are interchangeable
+    // for supabase-js, so accept whichever name the host has set rather than
+    // failing the build over the spelling. Both are referenced statically so
+    // Next can inline either one into the client bundle.
+    NEXT_PUBLIC_SUPABASE_ANON_KEY:
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   },
   skipValidation: !!process.env.SKIP_ENV_VALIDATION,
   emptyStringAsUndefined: true,
@@ -32,7 +39,12 @@ export const env = createEnv({
   // a failed build says which ones are missing from the host's settings.
   onValidationError: (issues) => {
     const names = issues
-      .map((issue) => issue.path?.join(".") ?? "(unknown)")
+      .map((issue) => {
+        const name = issue.path?.join(".") ?? "(unknown)";
+        return name === "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+          ? `${name} (or NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)`
+          : name;
+      })
       .join(", ");
     throw new Error(
       `Invalid or missing environment variables: ${names}. Set them in your hosting provider's environment settings and redeploy.`,
