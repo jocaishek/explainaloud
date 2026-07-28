@@ -1,3 +1,4 @@
+import { isAdminEmail } from "~/lib/admin";
 import { localDay, usageToday } from "~/lib/limits";
 import { requireUser } from "~/lib/supabase/server";
 import { RecordConsole } from "./record-console";
@@ -34,6 +35,7 @@ export default async function RecordPage({
       initialSessions={sessions ?? []}
       courseReady={!!course?.generated}
       recordingsUsed={usage.recordings_started}
+      unlimited={isAdminEmail(user.email)}
     />
   );
 }

@@ -130,11 +130,13 @@ export function RecordConsole({
   initialSessions,
   courseReady,
   recordingsUsed,
+  unlimited,
 }: {
   courseId: string;
   initialSessions: Session[];
   courseReady: boolean;
   recordingsUsed: number;
+  unlimited: boolean;
 }) {
   const [status, setStatus] = useState<Status>("checking");
   const [transcript, setTranscript] = useState("");
@@ -210,7 +212,9 @@ export function RecordConsole({
     [],
   );
 
-  const remaining = Math.max(0, DAILY_LIMITS.recording - used);
+  const remaining = unlimited
+    ? Number.POSITIVE_INFINITY
+    : Math.max(0, DAILY_LIMITS.recording - used);
 
   /**
    * Live grading pass. Colours the transcript only — it never produces
@@ -614,7 +618,7 @@ export function RecordConsole({
       setUsed(DAILY_LIMITS.recording);
       return;
     }
-    setUsed((u) => u + 1);
+    if (!unlimited) setUsed((u) => u + 1);
 
     setTranscript("");
     setInterim("");
@@ -810,7 +814,7 @@ export function RecordConsole({
 
   const busy =
     status === "saving" || status === "analyzing" || status === "awaiting-mic";
-  const outOfQuota = remaining === 0 && status !== "recording";
+  const outOfQuota = !unlimited && remaining === 0 && status !== "recording";
 
   return (
     <div className="flex flex-col items-center gap-8">
@@ -863,8 +867,9 @@ export function RecordConsole({
         )}
 
         <p className="font-mono text-[11px] tracking-[0.14em] text-subtle uppercase">
-          {remaining} of {DAILY_LIMITS.recording} recordings left today · resets
-          at midnight
+          {unlimited
+            ? "Admin account · unlimited recordings"
+            : `${remaining} of ${DAILY_LIMITS.recording} recordings left today · resets at midnight`}
         </p>
 
         {notice && <p className="text-xs text-subtle">{notice}</p>}

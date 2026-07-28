@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { House, Mic, Settings } from "lucide-react";
+import { House, Mic, Settings, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId } from "react";
@@ -13,13 +13,23 @@ const ITEMS = [
   { href: "/dashboard/settings", label: "Settings", icon: Settings },
 ];
 
-export function DashboardNav() {
+export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
   const pathname = usePathname();
   const layoutId = useId();
+  const items = showAdmin
+    ? [
+        ...ITEMS,
+        {
+          href: "/dashboard/admin",
+          label: "Admin",
+          icon: ShieldCheck,
+        },
+      ]
+    : ITEMS;
 
   return (
     <nav className="flex items-center gap-1">
-      {ITEMS.map((item) => {
+      {items.map((item) => {
         const active =
           item.href === "/dashboard"
             ? pathname === "/dashboard"
@@ -32,7 +42,7 @@ export function DashboardNav() {
             aria-label={item.label}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "relative flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-200",
+              "relative flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors duration-200 lg:px-3",
               active ? "text-strong" : "text-subtle hover:text-strong",
             )}
           >
@@ -46,7 +56,7 @@ export function DashboardNav() {
               />
             )}
             <Icon className="relative size-4" />
-            <span className="relative">{item.label}</span>
+            <span className="relative hidden xl:inline">{item.label}</span>
           </Link>
         );
       })}

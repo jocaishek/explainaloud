@@ -68,6 +68,7 @@ flowchart TD
 | Route | Responsibility |
 |---|---|
 | `/auth/callback` | Supabase OAuth/email callback and onboarding routing |
+| `/dashboard/admin` | Read-only user and topic aggregates for the verified admin |
 | `/api/courses/[courseId]/generate` | Course agent orchestration and save |
 | `/api/courses/[courseId]/sources` | Owned source upload, preview, and removal |
 | `/api/courses/[courseId]/videos` | Direct English video and website refresh |
@@ -77,6 +78,13 @@ flowchart TD
 Authentication, profiles, folders, topic creation, renaming, movement, and
 deletion use authenticated Server Actions or Supabase SSR rather than duplicate
 REST routes.
+
+The admin dashboard is protected twice: the server route requires the verified
+administrator, and a security-definer database RPC repeats that identity check
+before returning limited aggregate fields. It never returns source content,
+notes, generated lessons, transcripts, or gaps. The same database check bypasses
+daily topic and recording counts for the administrator; ordinary account limits
+remain fixed inside the quota function.
 
 ## Current database
 

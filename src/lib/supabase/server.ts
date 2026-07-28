@@ -1,6 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { env } from "~/env";
 
@@ -74,6 +74,21 @@ export async function requireUser() {
 
   if (!user) {
     redirect("/");
+  }
+
+  return { supabase, user };
+}
+
+/**
+ * Requires both the expected verified identity and the database's admin check.
+ * A hidden navigation item is not authorization; this protects direct URLs too.
+ */
+export async function requireAdmin() {
+  const { supabase, user } = await requireUser();
+  const { data, error } = await supabase.rpc("is_ropes_admin");
+
+  if (error || data !== true) {
+    notFound();
   }
 
   return { supabase, user };
