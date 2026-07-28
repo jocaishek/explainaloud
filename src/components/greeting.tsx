@@ -14,6 +14,16 @@ const TEMPLATES = [
   "Lovely {day}, isn't it {name}?",
   "{day} again, {name}",
   "Make it a good {day}, {name}",
+  "Happy {day}, {name}",
+  "Welcome back, {name}",
+  "Good to see you, {name}",
+  "Ready when you are, {name}",
+  "Hey {name} — {day} treating you well?",
+  "Let's get into it, {name}",
+  "{name}, what are we learning this {day}?",
+  "Back at it, {name}",
+  "Morning or not, {name}, it's {day}",
+  "Hope your {day}'s going well, {name}",
 ] as const;
 
 /**
@@ -31,13 +41,12 @@ export function Greeting({ name }: { name: string }) {
   useEffect(() => {
     const now = new Date();
     const day = now.toLocaleDateString(undefined, { weekday: "long" });
-    // Same greeting for the whole calendar day, different across days —
-    // rather than re-rolling on every navigation.
-    const index =
-      Math.floor(now.getTime() / 86_400_000 - now.getTimezoneOffset() / 1440) %
-      TEMPLATES.length;
-    const template = TEMPLATES[Math.abs(index)];
-    setGreeting(template.replace("{day}", day).replace("{name}", name));
+    // Re-rolled on every visit. Runs in an effect rather than during render,
+    // so the server and the first client pass agree and there's no hydration
+    // mismatch from the randomness.
+    const template =
+      TEMPLATES[Math.floor(Math.random() * TEMPLATES.length)] ?? TEMPLATES[0];
+    setGreeting(template.replaceAll("{day}", day).replaceAll("{name}", name));
   }, [name]);
 
   return (

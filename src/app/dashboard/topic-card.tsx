@@ -1,14 +1,19 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Pencil } from "lucide-react";
+
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { type Course, courseTitle, type Folder } from "~/lib/folders";
 import { cn } from "~/lib/utils";
-import { type MutationState, moveCourse, renameCourse } from "./actions";
+import {
+  deleteCourse,
+  type MutationState,
+  moveCourse,
+  renameCourse,
+} from "./actions";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 
@@ -85,12 +90,12 @@ export function TopicCard({
             aria-label={`Rename ${title}`}
             onClick={() => setEditing(true)}
             className={cn(
-              "absolute top-2 right-2 flex size-7 items-center justify-center rounded-md text-subtle",
+              "absolute top-2 right-2 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase",
               "opacity-0 transition-[opacity,color,background-color] duration-200 group-hover:opacity-100 focus-visible:opacity-100",
               "hover:bg-surface hover:text-strong",
             )}
           >
-            <Pencil className="size-3.5" />
+            Edit
           </button>
         </>
       )}
@@ -127,7 +132,7 @@ function RenameCard({
   useEffect(() => inputRef.current?.select(), []);
 
   return (
-    <div className="glass flex h-36 flex-col gap-2 rounded-xl p-3">
+    <div className="glass flex min-h-36 flex-col gap-2 rounded-xl p-3">
       <form action={formAction} className="flex flex-col gap-2">
         <input type="hidden" name="id" value={course.id} />
         <Input
@@ -160,6 +165,8 @@ function RenameCard({
       </form>
 
       <MoveSelect course={course} folders={folders} />
+
+      <DeleteTopic course={course} />
 
       {state.error && (
         <p role="alert" className="text-[11px] text-destructive">
@@ -214,6 +221,55 @@ function MoveSelect({
           </motion.p>
         )}
       </AnimatePresence>
+    </form>
+  );
+}
+
+/**
+ * Two-step delete. This cascades to the topic's sources, recordings and gap
+ * reports, so a single mis-click must not be enough to trigger it.
+ */
+function DeleteTopic({ course }: { course: Course }) {
+  const [armed, setArmed] = useState(false);
+  const [state, formAction, pending] = useActionState<MutationState, FormData>(
+    deleteCourse,
+    { error: null },
+  );
+
+  if (!armed) {
+    return (
+      <button
+        type="button"
+        onClick={() => setArmed(true)}
+        className="self-start font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors hover:text-destructive"
+      >
+        Delete
+      </button>
+    );
+  }
+
+  return (
+    <form action={formAction} className="flex items-center gap-2">
+      <input type="hidden" name="id" value={course.id} />
+      <button
+        type="submit"
+        disabled={pending}
+        className="rounded-md bg-destructive px-2 py-1 text-[11px] font-semibold text-white"
+      >
+        {pending ? "Deleting…" : "Delete for good"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setArmed(false)}
+        className="text-[11px] text-subtle hover:text-strong"
+      >
+        Keep
+      </button>
+      {state.error && (
+        <span role="alert" className="text-[11px] text-destructive">
+          {state.error}
+        </span>
+      )}
     </form>
   );
 }

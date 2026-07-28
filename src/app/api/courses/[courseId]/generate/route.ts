@@ -42,47 +42,56 @@ export async function POST(
     .order("created_at", { ascending: true })
     .returns<SourceRow[]>();
 
-  if (!sources?.length) {
-    return NextResponse.json(
-      {
-        error:
-          "Upload at least one source first — the course is built only from your material.",
-      },
-      { status: 422 },
-    );
-  }
+  // Sources are optional. With them, the model is locked to them; without,
+  // it teaches from its own knowledge and the course is marked ungrounded so
+  // the UI can say where the material came from.
+  const grounded = (sources?.length ?? 0) > 0;
+  const prompt = `${courseGenerationPrompt(course.topic, course.input_notes, grounded)}
 
-  const prompt = `${courseGenerationPrompt(course.topic, course.input_notes)}
-
-${renderSources(sources)}`;
+${renderSources(sources ?? [])}`;
 
   try {
     const { data, provider } = await completeJson(prompt, (value) =>
       courseSchema.parse(value),
     );
 
-    await supabase
+    const { error: saveError } = await supabase
       .from("courses")
       .update({
         generated: data,
         generated_at: new Date().toISOString(),
         generated_by: provider,
+        grounded,
         status: "ready",
         updated_at: new Date().toISOString(),
       })
       .eq("id", courseId)
       .eq("user_id", user.id);
 
-    return NextResponse.json({ course: data, provider });
+    // Not checking this meant a failed write still returned 200 with a course
+    // body: the student saw their course, and every later step that reads it
+    // back from the database found nothing.
+    if (saveError) {
+      return NextResponse.json(
+        { error: "Built the course but couldn't save it. Try again." },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ course: data, provider, grounded });
   } catch (error) {
     if (error instanceof AiUnavailableError) {
       return NextResponse.json(
-        { error: "Both AI providers failed.", detail: error.message },
+        // The provider breakdown is diagnostic, not something to put in
+        // front of a student — it names vendors and leaks failure detail.
+        {
+          error: "This service can't be used at the moment. Try again shortly.",
+        },
         { status: 503 },
       );
     }
     return NextResponse.json(
-      { error: "Course generation failed." },
+      { error: "This service can't be used at the moment. Try again shortly." },
       { status: 500 },
     );
   }

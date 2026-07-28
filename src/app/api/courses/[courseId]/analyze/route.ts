@@ -86,11 +86,12 @@ export async function POST(
     .eq("user_id", user.id)
     .returns<SourceRow[]>();
 
+  const grounded = (sources?.length ?? 0) > 0;
   const sourceBlock = renderSources(sources ?? []);
 
   try {
     const detection = await completeJson(
-      `${gapDetectionPrompt({ topic: course.topic, keyPoints, transcript })}\n\n${sourceBlock}`,
+      `${gapDetectionPrompt({ topic: course.topic, keyPoints, transcript, grounded })}\n\n${sourceBlock}`,
       (value) => spansSchema.parse(value),
     );
 
@@ -114,6 +115,7 @@ export async function POST(
         gaps: spans
           .filter((s) => s.status === "gap")
           .map((s) => ({ text: s.text, issue: s.issue })),
+        grounded,
       })}\n\n${sourceBlock}`,
       (value) => reportSchema.parse(value),
     );
@@ -154,10 +156,17 @@ export async function POST(
   } catch (error) {
     if (error instanceof AiUnavailableError) {
       return NextResponse.json(
-        { error: "Both AI providers failed.", detail: error.message },
+        // The provider breakdown is diagnostic, not something to put in
+        // front of a student — it names vendors and leaks failure detail.
+        {
+          error: "This service can't be used at the moment. Try again shortly.",
+        },
         { status: 503 },
       );
     }
-    return NextResponse.json({ error: "Analysis failed." }, { status: 500 });
+    return NextResponse.json(
+      { error: "This service can't be used at the moment. Try again shortly." },
+      { status: 500 },
+    );
   }
 }

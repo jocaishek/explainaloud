@@ -114,3 +114,45 @@ export async function DELETE(
 
   return NextResponse.json({ ok: true });
 }
+
+/** Returns the extracted text of one source, for the preview panel. */
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ courseId: string }> },
+) {
+  const { courseId } = await params;
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  const sourceId = new URL(request.url).searchParams.get("id");
+  if (!sourceId) {
+    return NextResponse.json({ error: "Missing id." }, { status: 400 });
+  }
+
+  const { data } = await supabase
+    .from("course_sources")
+    .select("filename, content")
+    .eq("id", sourceId)
+    .eq("course_id", courseId)
+    .eq("user_id", user.id)
+    .maybeSingle<{ filename: string; content: string }>();
+
+  if (!data) {
+    return NextResponse.json({ error: "Not found." }, { status: 404 });
+  }
+
+  // Preview only — the full document can be enormous, and the point here is
+  // "did the right text come out of my file", which the opening is enough for.
+  return NextResponse.json({
+    filename: data.filename,
+    preview: data.content.slice(0, 4000),
+    truncated: data.content.length > 4000,
+    characters: data.content.length,
+  });
+}

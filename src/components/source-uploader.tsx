@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { FileText, Trash2, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import { ACCEPT_ATTRIBUTE } from "~/lib/uploads";
 import { cn } from "~/lib/utils";
@@ -41,6 +40,13 @@ export function SourceUploader({
   const [dragActive, setDragActive] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
+  const [preview, setPreview] = useState<{
+    filename: string;
+    preview: string;
+    truncated: boolean;
+    characters: number;
+  } | null>(null);
+  const [previewing, setPreviewing] = useState<string | null>(null);
   // dragenter/dragleave fire for every child element, so a plain boolean
   // flickers as the pointer crosses the icon or the text inside the zone.
   const dragDepth = useRef(0);
@@ -79,6 +85,17 @@ export function SourceUploader({
 
     setBusy(null);
     if (failures.length) setErrors(failures);
+  }
+
+  async function openPreview(id: string) {
+    setPreviewing(id);
+    try {
+      const response = await fetch(`/api/courses/${courseId}/sources?id=${id}`);
+      if (response.ok) setPreview(await response.json());
+    } catch {
+      // Preview is inspection-only; failing to open it changes nothing.
+    }
+    setPreviewing(null);
   }
 
   async function remove(id: string) {
@@ -123,12 +140,6 @@ export function SourceUploader({
             : "border-border bg-surface",
         )}
       >
-        <Upload
-          className={cn(
-            "size-6 transition-colors duration-200",
-            dragActive ? "text-brand" : "text-subtle",
-          )}
-        />
         <div>
           <p className="text-sm font-medium text-strong">
             {dragActive ? "Drop to add them" : "Drag your sources here"}
@@ -173,7 +184,6 @@ export function SourceUploader({
             transition={{ duration: 0.22, ease: EASE }}
             className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2"
           >
-            <FileText className="size-4 shrink-0 text-brand" />
             <span className="min-w-0 flex-1 truncate text-sm text-strong">
               {source.filename}
             </span>
@@ -182,14 +192,79 @@ export function SourceUploader({
             </span>
             <button
               type="button"
+              aria-label={`Preview ${source.filename}`}
+              onClick={() => void openPreview(source.id)}
+              disabled={previewing === source.id}
+              className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors hover:bg-surface hover:text-strong disabled:opacity-50"
+            >
+              {previewing === source.id ? "Opening…" : "Preview"}
+            </button>
+            <button
+              type="button"
               aria-label={`Remove ${source.filename}`}
               onClick={() => void remove(source.id)}
-              className="shrink-0 rounded-md p-1 text-subtle transition-colors hover:bg-destructive/10 hover:text-destructive"
+              className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors hover:bg-destructive/10 hover:text-destructive"
             >
-              <Trash2 className="size-3.5" />
+              Remove
             </button>
           </motion.div>
         ))}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {preview && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.18 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-6"
+            onClick={() => setPreview(null)}
+            onKeyDown={(e) => e.key === "Escape" && setPreview(null)}
+            role="presentation"
+          >
+            <motion.div
+              initial={{ scale: 0.97, y: 8 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.97, y: 8 }}
+              transition={{ duration: 0.22, ease: EASE }}
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-label={`Preview of ${preview.filename}`}
+              className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-popover"
+            >
+              <div className="flex items-center gap-3 border-b border-border px-4 py-3">
+                <span className="min-w-0 flex-1 truncate text-sm font-semibold text-strong">
+                  {preview.filename}
+                </span>
+                <span className="shrink-0 font-mono text-[10px] text-subtle">
+                  {preview.characters.toLocaleString()} chars
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPreview(null)}
+                  className="shrink-0 rounded-md px-2 py-1 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase hover:text-strong"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="overflow-y-auto p-4">
+                <p className="mb-3 text-xs text-subtle">
+                  This is the text the model will actually read.
+                </p>
+                <pre className="text-xs whitespace-pre-wrap text-foreground">
+                  {preview.preview}
+                </pre>
+                {preview.truncated && (
+                  <p className="mt-3 text-xs text-subtle">
+                    …preview truncated. The full document is still used.
+                  </p>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {errors.map((message) => (

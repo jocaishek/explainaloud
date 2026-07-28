@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronDown, FolderPlus, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -99,7 +99,6 @@ export function NewFolderButton() {
         aria-expanded={open}
         className="gap-1.5 rounded-full border-input bg-surface text-strong transition-transform duration-200 ease-out active:scale-[0.97]"
       >
-        <FolderPlus className="size-4" />
         New folder
       </Button>
 
@@ -200,9 +199,9 @@ export function FolderHeader({
         type="button"
         aria-label={`Rename ${folder.name}`}
         onClick={() => setEditing(true)}
-        className="ml-auto flex size-7 items-center justify-center rounded-md text-subtle transition-colors duration-200 hover:bg-surface hover:text-strong"
+        className="ml-auto rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors duration-200 hover:bg-surface hover:text-strong"
       >
-        <Pencil className="size-3.5" />
+        Rename
       </button>
     </div>
   );
@@ -275,7 +274,6 @@ function FolderEditRow({
           disabled={removing}
           className="h-7 gap-1.5 rounded-full px-2 text-xs text-destructive hover:bg-destructive/10"
         >
-          <Trash2 className="size-3.5" />
           {removing ? "Deleting…" : "Delete folder"}
         </Button>
         <span className="text-[11px] text-subtle">

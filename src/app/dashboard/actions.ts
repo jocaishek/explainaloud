@@ -162,3 +162,30 @@ export async function moveCourse(
   revalidatePath("/dashboard");
   return OK;
 }
+
+/**
+ * Deletes a topic and everything hanging off it.
+ *
+ * `course_sources`, `course_sessions` and (through sessions) `gaps` all
+ * cascade on the foreign key, so this one row removal takes the recordings
+ * and uploads with it. That is destructive and irreversible — the UI asks for
+ * a second click before calling this.
+ */
+export async function deleteCourse(
+  _prev: MutationState,
+  formData: FormData,
+): Promise<MutationState> {
+  const { supabase, user } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+
+  const { error } = await supabase
+    .from("courses")
+    .delete()
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) return { error: "We couldn't delete that topic. Try again." };
+
+  revalidatePath("/dashboard");
+  return OK;
+}

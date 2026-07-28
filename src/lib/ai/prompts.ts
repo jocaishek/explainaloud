@@ -47,10 +47,27 @@ export const PRECISION_RULE = `PRECISION:
 - Return ONLY valid JSON matching the requested schema. No prose, no markdown
   fences, no commentary before or after the JSON.`;
 
-export function courseGenerationPrompt(topic: string, notes: string | null) {
+/**
+ * When the student uploaded material, the model is locked to it. When they
+ * didn't, it teaches from its own knowledge — but is still told to flag
+ * anything it is unsure of rather than assert it.
+ */
+export const OPEN_KNOWLEDGE_RULE = `NO SOURCES PROVIDED:
+- Teach this topic from well-established, textbook-level knowledge.
+- Stick to what is genuinely settled. Do not present contested or niche
+  claims as fact.
+- If part of the topic is ambiguous or depends on context the student has not
+  given, say so in "uncovered" rather than guessing.
+- Never invent specific numbers, dates, citations or study results.`;
+
+export function courseGenerationPrompt(
+  topic: string,
+  notes: string | null,
+  grounded: boolean,
+) {
   return `${TUTOR_SYSTEM}
 
-${GROUNDING_RULE}
+${grounded ? GROUNDING_RULE : OPEN_KNOWLEDGE_RULE}
 
 ${PRECISION_RULE}
 
@@ -101,10 +118,11 @@ export function gapDetectionPrompt(params: {
   topic: string;
   keyPoints: string[];
   transcript: string;
+  grounded: boolean;
 }) {
   return `You are grading a student's spoken explanation. You are NOT teaching yet.
 
-${GROUNDING_RULE}
+${params.grounded ? GROUNDING_RULE : OPEN_KNOWLEDGE_RULE}
 
 ${PRECISION_RULE}
 
@@ -120,8 +138,8 @@ ${params.transcript}
 
 Segment the transcript into consecutive spans covering it end to end. Classify
 each span:
-- "correct"  — accurate and supported by the sources
-- "gap"      — wrong, or a step skipped, or a claim the sources contradict
+- "correct"  — accurate and supported by the reference material
+- "gap"      — wrong, or a step skipped, or a claim the material contradicts
 - "neutral"  — filler, false starts, or content that makes no checkable claim
 
 Rules:
@@ -157,10 +175,11 @@ export function gapReportPrompt(params: {
   keyPoints: string[];
   transcript: string;
   gaps: Array<{ text: string; issue: string | null }>;
+  grounded: boolean;
 }) {
   return `${TUTOR_SYSTEM}
 
-${GROUNDING_RULE}
+${params.grounded ? GROUNDING_RULE : OPEN_KNOWLEDGE_RULE}
 
 ${PRECISION_RULE}
 

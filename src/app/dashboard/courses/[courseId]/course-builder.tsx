@@ -1,7 +1,6 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { CirclePlay, ExternalLink, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -85,7 +84,6 @@ export function CourseBuilder({
           disabled={generating || sources.length === 0}
           className="h-11 gap-2 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97] disabled:opacity-50"
         >
-          <Sparkles className="size-4" />
           {generating
             ? "Reading your sources…"
             : course
@@ -185,9 +183,13 @@ export function CourseBuilder({
                       rel="noreferrer noopener"
                       className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:text-strong"
                     >
-                      <CirclePlay className="size-4 shrink-0 text-red-500" />
                       <span className="min-w-0 flex-1">{query}</span>
-                      <ExternalLink className="size-3.5 shrink-0 text-subtle" />
+                      <span
+                        aria-hidden
+                        className="shrink-0 font-mono text-[10px] text-subtle"
+                      >
+                        YOUTUBE →
+                      </span>
                     </a>
                   ))}
                 </div>
@@ -218,7 +220,12 @@ export function CourseBuilder({
                           </span>
                         )}
                       </span>
-                      <ExternalLink className="mt-0.5 size-3.5 shrink-0 text-subtle" />
+                      <span
+                        aria-hidden
+                        className="mt-0.5 shrink-0 font-mono text-[10px] text-subtle"
+                      >
+                        SEARCH →
+                      </span>
                     </a>
                   ))}
                 </div>

@@ -38,6 +38,7 @@ type Report = {
 type Status =
   | "checking"
   | "unsupported"
+  | "awaiting-mic"
   | "idle"
   | "recording"
   | "saving"
@@ -61,6 +62,13 @@ const WARN_AT_MS = 30_000;
  * and must be recovered from, not surfaced as a failure.
  */
 const FATAL_SPEECH_ERRORS = new Set(["not-allowed", "service-not-allowed"]);
+
+/**
+ * How many silent restarts to tolerate before giving up. Chrome ends a
+ * continuous session about once a minute, so a five-minute recording needs
+ * several — but an endless run means the mic is never producing audio.
+ */
+const MAX_RESTARTS = 8;
 
 function formatClock(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000));
@@ -97,6 +105,7 @@ export function RecordConsole({
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const deadlineRef = useRef<number>(0);
+  const restartsRef = useRef(0);
   // Guards against a slow live grade landing after a newer one and painting
   // stale colours over fresher speech.
   const liveSeqRef = useRef(0);
@@ -231,9 +240,26 @@ export function RecordConsole({
     if (!Ctor) return;
 
     setError(null);
+    setNotice(null);
 
-    // Claim quota before the mic opens, so a blocked attempt never costs the
-    // student a slot and never starts a recording they can't finish.
+    // Ask for the microphone FIRST and wait for the user to answer the
+    // browser prompt. Two reasons: a denied prompt must not burn one of the
+    // day's five recordings, and SpeechRecognition started before the device
+    // is actually granted just errors and retries in a loop.
+    setStatus("awaiting-mic");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // We only needed the permission grant; SpeechRecognition opens its own
+      // capture. Releasing this stops a second mic indicator appearing.
+      for (const track of stream.getTracks()) track.stop();
+    } catch {
+      setStatus("idle");
+      setError(
+        "TeachItBack needs your microphone. Allow access in the browser prompt (or the padlock in the address bar) and try again.",
+      );
+      return;
+    }
+
     const supabase = createClient();
     const { data: claimed, error: quotaError } = await supabase.rpc(
       "claim_daily_quota",
@@ -265,6 +291,7 @@ export function RecordConsole({
     transcriptRef.current = "";
     startedAtRef.current = new Date().toISOString();
     manualStopRef.current = false;
+    restartsRef.current = 0;
 
     // Hard stop at the cap. The interval only drives the readout; the
     // deadline itself is a timestamp, so a throttled background tab can't
@@ -282,10 +309,20 @@ export function RecordConsole({
       }
     }, 250);
 
+    // A previous instance left alive would fight this one for the device and
+    // both would emit "aborted" forever.
+    recognitionRef.current?.abort();
+
     const recognition = new Ctor();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
+
+    // Audio actually flowing is the only reliable proof the mic is live.
+    recognition.onaudiostart = () => {
+      restartsRef.current = 0;
+      setNotice(null);
+    };
 
     recognition.onresult = (event) => {
       let finalChunk = "";
@@ -321,10 +358,10 @@ export function RecordConsole({
         recognition.stop();
         return;
       }
-      // Everything else: let onend restart us. Surface it quietly so a
-      // genuinely broken mic isn't completely silent.
-      if (event.error !== "no-speech") {
-        setNotice("Reconnecting the mic…");
+      // Everything else is transient — let onend restart us. Stay silent for
+      // the common ones; a notice on every hiccup reads as a broken app.
+      if (event.error === "network") {
+        setNotice("Speech recognition is having trouble reaching the network.");
       }
     };
 
@@ -340,18 +377,28 @@ export function RecordConsole({
       // roughly a minute, and any transient error lands here too. Restart on
       // a fresh tick: calling start() synchronously inside onend throws
       // InvalidStateError because the engine hasn't released yet.
+      // Bail out rather than loop forever. Without a budget a mic that never
+      // produces audio just cycles "reconnecting" while the student talks
+      // into nothing.
+      if (restartsRef.current >= MAX_RESTARTS) {
+        manualStopRef.current = true;
+        setError(
+          "Lost the microphone. Check that no other app or tab is using it, then try again.",
+        );
+        void finish();
+        return;
+      }
+      restartsRef.current += 1;
+
       restartTimerRef.current = setTimeout(() => {
         if (manualStopRef.current) return;
         try {
           recognition.start();
-          setNotice(null);
         } catch {
-          // Genuinely wedged — stop cleanly rather than leaving a dead UI
-          // that still says "recording".
           manualStopRef.current = true;
           void finish();
         }
-      }, 250);
+      }, 300);
     };
 
     recognitionRef.current = recognition;
@@ -382,7 +429,8 @@ export function RecordConsole({
     );
   }
 
-  const busy = status === "saving" || status === "analyzing";
+  const busy =
+    status === "saving" || status === "analyzing" || status === "awaiting-mic";
   const outOfQuota = remaining === 0 && status !== "recording";
 
   return (
@@ -413,13 +461,15 @@ export function RecordConsole({
           disabled={busy || outOfQuota}
           className="h-11 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform hover:bg-brand/90 active:scale-[0.97]"
         >
-          {status === "saving"
-            ? "Saving…"
-            : status === "analyzing"
-              ? "Reading it back…"
-              : status === "recording"
-                ? "I'm done"
-                : "Start explaining"}
+          {status === "awaiting-mic"
+            ? "Waiting for microphone…"
+            : status === "saving"
+              ? "Saving…"
+              : status === "analyzing"
+                ? "Reading it back…"
+                : status === "recording"
+                  ? "I'm done"
+                  : "Start explaining"}
         </Button>
 
         {status === "recording" && (

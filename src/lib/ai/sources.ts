@@ -16,11 +16,10 @@ export type SourceRow = { filename: string; content: string };
  */
 export function renderSources(sources: SourceRow[]): string {
   if (sources.length === 0) {
-    return `SOURCES: none provided.
-
-Because there are no sources, you must NOT generate content from general
-knowledge. Return the JSON shape requested, but with empty "sections" and a
-"summary" explaining that sources are required first.`;
+    // Sources are optional. The prompt already swapped in the open-knowledge
+    // rule, so this just states the situation rather than forcing a refusal.
+    return `SOURCES: none provided — teach from established knowledge, and be
+explicit in "uncovered" about anything you are not confident in.`;
   }
 
   let budget = MAX_SOURCE_CHARS;

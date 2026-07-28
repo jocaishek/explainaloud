@@ -20,6 +20,36 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 /** Per-attempt ceiling. Two providers, so the worst case is ~2x this. */
 const TIMEOUT_MS = 45_000;
 
+/**
+ * Output ceiling per call.
+ *
+ * Groq's free tier bills *requested* max_tokens against a 12k tokens-per-minute
+ * budget, not tokens actually produced — so asking for 8192 "just in case" made
+ * a single grading call blow the minute's allowance and 429. These responses
+ * are small JSON objects; 3000 is comfortably above the largest real one.
+ */
+const MAX_OUTPUT_TOKENS = 3000;
+
+/** One retry against a rate limit before giving up on a provider. */
+const RATE_LIMIT_RETRIES = 1;
+
+class RateLimitedError extends Error {
+  constructor(readonly retryAfterMs: number) {
+    super("rate limited");
+  }
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Pulls Groq's "try again in 155ms" / "in 1.2s" hint out of its error body. */
+function parseRetryAfter(body: string): number {
+  const ms = /try again in ([\d.]+)ms/i.exec(body);
+  if (ms?.[1]) return Math.ceil(Number(ms[1]));
+  const s = /try again in ([\d.]+)s/i.exec(body);
+  if (s?.[1]) return Math.ceil(Number(s[1]) * 1000);
+  return 1500;
+}
+
 export class AiUnavailableError extends Error {
   constructor(message: string) {
     super(message);
@@ -85,7 +115,7 @@ async function callGemini(prompt: string): Promise<string> {
           // creative writing. Variance here shows up as wrong feedback.
           temperature: 0,
           topP: 0.1,
-          maxOutputTokens: 8192,
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
           responseMimeType: "application/json",
         },
       }),
@@ -93,7 +123,10 @@ async function callGemini(prompt: string): Promise<string> {
   );
 
   if (!response.ok) {
-    throw new Error(`Gemini ${response.status}: ${await response.text()}`);
+    const body = await response.text();
+    if (response.status === 429)
+      throw new RateLimitedError(parseRetryAfter(body));
+    throw new Error(`Gemini ${response.status}: ${body}`);
   }
 
   const json = await response.json();
@@ -119,7 +152,7 @@ async function callGroq(prompt: string): Promise<string> {
         model: GROQ_MODEL,
         temperature: 0,
         top_p: 0.1,
-        max_tokens: 8192,
+        max_tokens: MAX_OUTPUT_TOKENS,
         response_format: { type: "json_object" },
         messages: [{ role: "user", content: prompt }],
       }),
@@ -127,7 +160,10 @@ async function callGroq(prompt: string): Promise<string> {
   );
 
   if (!response.ok) {
-    throw new Error(`Groq ${response.status}: ${await response.text()}`);
+    const body = await response.text();
+    if (response.status === 429)
+      throw new RateLimitedError(parseRetryAfter(body));
+    throw new Error(`Groq ${response.status}: ${body}`);
   }
 
   const json = await response.json();
@@ -164,13 +200,23 @@ export async function completeJson<T>(
       failures.push(`${attempt.provider}: no API key configured`);
       continue;
     }
-    try {
-      const raw = await attempt.call(prompt);
-      return { data: validate(extractJson(raw)), provider: attempt.provider };
-    } catch (error) {
-      failures.push(
-        `${attempt.provider}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+    for (let tries = 0; tries <= RATE_LIMIT_RETRIES; tries++) {
+      try {
+        const raw = await attempt.call(prompt);
+        return { data: validate(extractJson(raw)), provider: attempt.provider };
+      } catch (error) {
+        // A rate limit is a "wait", not a "this provider is broken" — the
+        // provider tells us how long, so honour it rather than failing over
+        // to a backup that may be no healthier.
+        if (error instanceof RateLimitedError && tries < RATE_LIMIT_RETRIES) {
+          await sleep(error.retryAfterMs + 250);
+          continue;
+        }
+        failures.push(
+          `${attempt.provider}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+        break;
+      }
     }
   }
 
