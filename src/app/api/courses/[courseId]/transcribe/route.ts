@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { transcribeAudio } from "~/lib/ai/provider";
+import { NoSpeechDetectedError, transcribeAudio } from "~/lib/ai/provider";
 import { createClient } from "~/lib/supabase/server";
 
 export const maxDuration = 120;
@@ -76,6 +76,12 @@ export async function POST(
     const transcript = await transcribeAudio(audio, course.topic);
     return NextResponse.json({ transcript });
   } catch (error) {
+    if (error instanceof NoSpeechDetectedError) {
+      return NextResponse.json(
+        { error: "No speech was detected. Try recording again." },
+        { status: 422 },
+      );
+    }
     console.error("Audio transcription failed:", error);
     return NextResponse.json(
       { error: "Couldn't transcribe that recording. Try again." },

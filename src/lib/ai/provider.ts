@@ -342,6 +342,20 @@ const GROQ_TRANSCRIPTION_URL =
   "https://api.groq.com/openai/v1/audio/transcriptions";
 const GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo";
 
+export class NoSpeechDetectedError extends Error {
+  constructor() {
+    super("No speech was detected in the recording.");
+    this.name = "NoSpeechDetectedError";
+  }
+}
+
+function normalizedTranscript(value: string) {
+  return value
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+}
+
 /**
  * Transcribes a browser-recorded audio file. This is the reliable path for
  * browsers whose built-in Web Speech service cannot reach its remote backend.
@@ -356,10 +370,10 @@ export async function transcribeAudio(file: File, topic: string) {
   body.set("model", GROQ_TRANSCRIPTION_MODEL);
   body.set("language", "en");
   body.set("response_format", "json");
-  body.set(
-    "prompt",
-    `A student is explaining ${topic}. Preserve course terminology and punctuation.`,
-  );
+  const prompt =
+    `A student is explaining ${topic}. ` +
+    "Preserve course terminology and punctuation.";
+  body.set("prompt", prompt);
 
   const response = await withTimeout((signal) =>
     fetch(GROQ_TRANSCRIPTION_URL, {
@@ -378,7 +392,21 @@ export async function transcribeAudio(file: File, topic: string) {
   if (typeof json?.text !== "string") {
     throw new AiUnavailableError("groq transcription: empty response");
   }
-  return json.text.trim();
+  const transcript = json.text.trim();
+  const normalized = normalizedTranscript(transcript);
+  const promptEcho =
+    normalized === normalizedTranscript(prompt) ||
+    (normalized.startsWith("a student is explaining") &&
+      normalized.includes("preserve course terminology"));
+  if (
+    !transcript ||
+    promptEcho ||
+    normalized === "blank audio" ||
+    normalized === "silence"
+  ) {
+    throw new NoSpeechDetectedError();
+  }
+  return transcript;
 }
 
 export function aiConfigured() {
