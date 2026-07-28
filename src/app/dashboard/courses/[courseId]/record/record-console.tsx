@@ -47,10 +47,24 @@ type Status =
   | "saving"
   | "analyzing";
 
-/** How long the student must pause before we re-grade what they've said. */
-const LIVE_DEBOUNCE_MS = 2200;
+/**
+ * How long the student must pause before we re-grade what they've said.
+ *
+ * This was the whole latency problem: a 2.2s wait before the request even left
+ * the browser, on top of a ~0.4s model call. Recognition already fires this on
+ * a finalised phrase, so the debounce only needs to coalesce the burst of
+ * results that arrive together at a sentence boundary —  * 150ms does that, and with a measured ~460ms median for the grading call it
+ * puts colour on screen roughly 600-700ms after a phrase ends. The model round
+ * trip is the floor now, not the wait.
+ */
+const LIVE_DEBOUNCE_MS = 150;
 /** Server caption fallback cadence; stays below the transcription RPM limit. */
-const LIVE_TRANSCRIBE_MS = 8000;
+const LIVE_TRANSCRIBE_MS = 4000;
+/**
+ * Shortest utterance worth grading. Below this there isn't enough of a claim to
+ * judge, and a request per syllable would burn the minute's token budget.
+ */
+const LIVE_GRADE_MIN_CHARS = 12;
 const LIVE_REQUEST_TIMEOUT_MS = 20_000;
 const TRANSCRIBE_TIMEOUT_MS = 45_000;
 const ANALYZE_TIMEOUT_MS = 60_000;
@@ -208,6 +222,11 @@ export function RecordConsole({
   // Guards against a slow live grade landing after a newer one and painting
   // stale colours over fresher speech.
   const liveSeqRef = useRef(0);
+  const liveGradeInFlightRef = useRef(false);
+  const livePendingTextRef = useRef<string | null>(null);
+  // Lets the in-flight pass re-enter itself without `gradeLive` depending on
+  // its own identity, which would make the callback un-memoisable.
+  const gradeLiveRef = useRef<((text: string) => Promise<void>) | null>(null);
 
   useEffect(() => {
     const canRecord =
@@ -247,6 +266,15 @@ export function RecordConsole({
    */
   const gradeLive = useCallback(
     async (text: string) => {
+      // At a 250ms debounce and ~400ms responses, phrases arrive faster than
+      // grades come back. Run one at a time and remember only the newest text:
+      // overlapping calls would spend the small model's per-minute budget
+      // grading transcripts that a later pass immediately supersedes anyway.
+      if (liveGradeInFlightRef.current) {
+        livePendingTextRef.current = text;
+        return;
+      }
+      liveGradeInFlightRef.current = true;
       const seq = ++liveSeqRef.current;
       try {
         const { response, json } = await fetchJson(
@@ -265,10 +293,21 @@ export function RecordConsole({
       } catch {
         // Live colouring is an enhancement; a failed pass must never
         // interrupt the recording.
+      } finally {
+        liveGradeInFlightRef.current = false;
+        const pending = livePendingTextRef.current;
+        livePendingTextRef.current = null;
+        // Whatever was said while this pass was in flight gets graded next,
+        // straight away rather than waiting for another phrase to land.
+        if (pending && !manualStopRef.current)
+          void gradeLiveRef.current?.(pending);
       }
     },
     [courseId],
   );
+
+  // Kept in a ref so the coalescing tail-call above can reach the latest one.
+  gradeLiveRef.current = gradeLive;
 
   /**
    * Browser speech recognition depends on a remote browser service and often
@@ -357,7 +396,7 @@ export function RecordConsole({
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       const text = transcriptRef.current.trim();
-      if (text.length > 24) void gradeLive(text);
+      if (text.length >= LIVE_GRADE_MIN_CHARS) void gradeLive(text);
     }, LIVE_DEBOUNCE_MS);
   }
 
