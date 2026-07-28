@@ -67,7 +67,9 @@ export function CourseBuilder({
             Your sources
           </h2>
           <p className="mt-1.5 text-sm text-subtle">
-            The course is built only from these. Nothing else gets used.
+            {sources.length > 0
+              ? "The course is grounded in these sources."
+              : "Sources are optional. Without them, the course uses established textbook knowledge."}
           </p>
         </div>
         <SourceUploader
@@ -81,7 +83,7 @@ export function CourseBuilder({
         <Button
           type="button"
           onClick={generate}
-          disabled={generating || sources.length === 0}
+          disabled={generating}
           className="h-11 gap-2 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97] disabled:opacity-50"
         >
           {generating
@@ -90,10 +92,6 @@ export function CourseBuilder({
               ? "Rebuild the course"
               : "Build my course"}
         </Button>
-
-        {sources.length === 0 && (
-          <p className="text-sm text-subtle">Add a source to get started.</p>
-        )}
 
         {course && (
           <Button

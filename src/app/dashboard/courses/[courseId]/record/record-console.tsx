@@ -58,12 +58,6 @@ const MAX_RECORDING_MS = 5 * 60_000;
 const WARN_AT_MS = 30_000;
 
 /**
- * Only these end a session. Every other SpeechRecognition error is transient
- * and must be recovered from, not surfaced as a failure.
- */
-const FATAL_SPEECH_ERRORS = new Set(["not-allowed", "service-not-allowed"]);
-
-/**
  * How many silent restarts to tolerate before giving up. Chrome ends a
  * continuous session about once a minute, so a five-minute recording needs
  * several — but an endless run means the mic is never producing audio.
@@ -73,6 +67,13 @@ const MAX_RESTARTS = 8;
 function formatClock(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+function audioExtension(type: string) {
+  if (type.includes("mp4")) return "m4a";
+  if (type.includes("ogg")) return "ogg";
+  if (type.includes("wav")) return "wav";
+  return "webm";
 }
 
 export function RecordConsole({
@@ -98,6 +99,10 @@ export function RecordConsole({
   const [used, setUsed] = useState(recordingsUsed);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const audioReadyRef = useRef<Promise<Blob | null> | null>(null);
   const transcriptRef = useRef("");
   const startedAtRef = useRef<string | null>(null);
   const manualStopRef = useRef(false);
@@ -106,13 +111,17 @@ export function RecordConsole({
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const deadlineRef = useRef<number>(0);
   const restartsRef = useRef(0);
+  const liveCaptionsDisabledRef = useRef(false);
+  const finishingRef = useRef(false);
   // Guards against a slow live grade landing after a newer one and painting
   // stale colours over fresher speech.
   const liveSeqRef = useRef(0);
 
   useEffect(() => {
-    const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    setStatus(Ctor ? "idle" : "unsupported");
+    const canRecord =
+      typeof MediaRecorder !== "undefined" &&
+      !!navigator.mediaDevices?.getUserMedia;
+    setStatus(canRecord ? "idle" : "unsupported");
   }, []);
 
   // Unmounting mid-recording must not leave the mic open or timers running.
@@ -123,6 +132,12 @@ export function RecordConsole({
       if (tickRef.current) clearInterval(tickRef.current);
       manualStopRef.current = true;
       recognitionRef.current?.abort();
+      if (mediaRecorderRef.current?.state !== "inactive") {
+        mediaRecorderRef.current?.stop();
+      }
+      for (const track of mediaStreamRef.current?.getTracks() ?? []) {
+        track.stop();
+      }
     },
     [],
   );
@@ -163,9 +178,63 @@ export function RecordConsole({
     }, LIVE_DEBOUNCE_MS);
   }
 
+  async function stopAudioCapture() {
+    const recorder = mediaRecorderRef.current;
+    const audioReady = audioReadyRef.current;
+    if (recorder && recorder.state !== "inactive") recorder.stop();
+    const audio = audioReady ? await audioReady : null;
+    mediaRecorderRef.current = null;
+    mediaStreamRef.current = null;
+    audioReadyRef.current = null;
+    return audio;
+  }
+
   async function finish() {
-    const text = transcriptRef.current.trim();
+    if (finishingRef.current) return;
+    finishingRef.current = true;
+    if (tickRef.current) clearInterval(tickRef.current);
+    if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    recognitionRef.current = null;
     setStatus("saving");
+
+    let text = transcriptRef.current.trim();
+    const audio = await stopAudioCapture();
+
+    // Browser speech recognition is useful for live colour, but it depends on
+    // a remote browser service that is frequently unavailable. The recorded
+    // audio is the source of truth once the student finishes.
+    if (audio?.size) {
+      try {
+        const body = new FormData();
+        body.set(
+          "audio",
+          new File([audio], `recording.${audioExtension(audio.type)}`, {
+            type: audio.type || "audio/webm",
+          }),
+        );
+        const response = await fetch(`/api/courses/${courseId}/transcribe`, {
+          method: "POST",
+          body,
+        });
+        const json = await response.json();
+        if (response.ok && typeof json.transcript === "string") {
+          text = json.transcript.trim();
+          transcriptRef.current = text;
+          setTranscript(text);
+          setInterim("");
+        } else if (!text) {
+          setError(json.error ?? "Couldn't transcribe that recording.");
+        }
+      } catch {
+        if (!text) setError("Couldn't reach the transcription service.");
+      }
+    }
+
+    if (!text) {
+      setStatus("idle");
+      finishingRef.current = false;
+      return;
+    }
 
     const supabase = createClient();
     const {
@@ -173,6 +242,7 @@ export function RecordConsole({
     } = await supabase.auth.getUser();
     if (!user) {
       setStatus("idle");
+      finishingRef.current = false;
       return;
     }
 
@@ -191,6 +261,7 @@ export function RecordConsole({
     if (insertError || !data) {
       setStatus("idle");
       setError("Couldn't save that session. Try again.");
+      finishingRef.current = false;
       return;
     }
 
@@ -199,6 +270,7 @@ export function RecordConsole({
     // Only now — after the student has stopped — do we ask for teaching.
     if (!courseReady || text.length < 24) {
       setStatus("idle");
+      finishingRef.current = false;
       return;
     }
 
@@ -233,30 +305,53 @@ export function RecordConsole({
       setError("Couldn't reach the analyser.");
     }
     setStatus("idle");
+    finishingRef.current = false;
   }
 
   async function startRecording() {
     const Ctor = window.SpeechRecognition ?? window.webkitSpeechRecognition;
-    if (!Ctor) return;
+
+    // Dispose of a completed engine before resetting this session's stop
+    // guard. A late `onend` from the old instance must not finish the new
+    // recording.
+    manualStopRef.current = true;
+    const previousRecognition = recognitionRef.current;
+    if (previousRecognition) {
+      previousRecognition.onend = null;
+      previousRecognition.onerror = null;
+      previousRecognition.onresult = null;
+      previousRecognition.abort();
+    }
+    recognitionRef.current = null;
 
     setError(null);
     setNotice(null);
 
     // Ask for the microphone FIRST and wait for the user to answer the
-    // browser prompt. Two reasons: a denied prompt must not burn one of the
-    // day's five recordings, and SpeechRecognition started before the device
-    // is actually granted just errors and retries in a loop.
+    // browser prompt. A denied prompt must not burn one of the day's five
+    // recordings.
     setStatus("awaiting-mic");
+    let stream: MediaStream;
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // We only needed the permission grant; SpeechRecognition opens its own
-      // capture. Releasing this stops a second mic indicator appearing.
-      for (const track of stream.getTracks()) track.stop();
+      stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       setStatus("idle");
       setError(
         "TeachItBack needs your microphone. Allow access in the browser prompt (or the padlock in the address bar) and try again.",
       );
+      return;
+    }
+
+    let recorder: MediaRecorder;
+    try {
+      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
+        ? "audio/webm;codecs=opus"
+        : "";
+      recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
+    } catch {
+      for (const track of stream.getTracks()) track.stop();
+      setStatus("idle");
+      setError("This browser couldn't start an audio recording. Try again.");
       return;
     }
 
@@ -271,10 +366,14 @@ export function RecordConsole({
     );
 
     if (quotaError) {
+      for (const track of stream.getTracks()) track.stop();
+      setStatus("idle");
       setError("Couldn't check your daily limit. Try again.");
       return;
     }
     if (claimed !== true) {
+      for (const track of stream.getTracks()) track.stop();
+      setStatus("idle");
       setError(
         `You've used all ${DAILY_LIMITS.recording} recordings for today. It resets at midnight your time.`,
       );
@@ -292,6 +391,31 @@ export function RecordConsole({
     startedAtRef.current = new Date().toISOString();
     manualStopRef.current = false;
     restartsRef.current = 0;
+    liveCaptionsDisabledRef.current = false;
+    finishingRef.current = false;
+
+    // Capture audio locally for the entire session. Browser speech
+    // recognition can still colour words live, but this recording is what
+    // makes the final transcript independent of that remote browser service.
+    audioChunksRef.current = [];
+    mediaStreamRef.current = stream;
+    mediaRecorderRef.current = recorder;
+    audioReadyRef.current = new Promise((resolve) => {
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+      recorder.onstop = () => {
+        for (const track of stream.getTracks()) track.stop();
+        resolve(
+          audioChunksRef.current.length > 0
+            ? new Blob(audioChunksRef.current, {
+                type: recorder.mimeType || "audio/webm",
+              })
+            : null,
+        );
+      };
+    });
+    recorder.start(1000);
 
     // Hard stop at the cap. The interval only drives the readout; the
     // deadline itself is a timestamp, so a throttled background tab can't
@@ -309,9 +433,13 @@ export function RecordConsole({
       }
     }, 250);
 
-    // A previous instance left alive would fight this one for the device and
-    // both would emit "aborted" forever.
-    recognitionRef.current?.abort();
+    if (!Ctor) {
+      setNotice(
+        "Live captions aren't available here. Your recording will be transcribed when you finish.",
+      );
+      setStatus("recording");
+      return;
+    }
 
     const recognition = new Ctor();
     recognition.continuous = true;
@@ -346,22 +474,23 @@ export function RecordConsole({
     };
 
     recognition.onerror = (event) => {
-      // Only permission failures are fatal. Chrome fires "network",
-      // "aborted", "audio-capture" and "no-speech" routinely in the middle of
-      // a healthy session — treating those as fatal was what made recordings
-      // stop halfway and save themselves without the student asking.
-      if (FATAL_SPEECH_ERRORS.has(event.error)) {
-        manualStopRef.current = true;
-        setError(
-          "Microphone access was blocked. Allow it in your browser and try again.",
+      // Failure of the browser's remote caption service must never stop the
+      // local MediaRecorder stream. The final server transcript still works.
+      if (
+        event.error === "not-allowed" ||
+        event.error === "service-not-allowed"
+      ) {
+        liveCaptionsDisabledRef.current = true;
+        setNotice(
+          "Live captions aren't available. Your recording is still being captured.",
         );
-        recognition.stop();
+        recognition.abort();
         return;
       }
-      // Everything else is transient — let onend restart us. Stay silent for
-      // the common ones; a notice on every hiccup reads as a broken app.
       if (event.error === "network") {
-        setNotice("Speech recognition is having trouble reaching the network.");
+        setNotice(
+          "Live captions are reconnecting. Your recording is still being captured.",
+        );
       }
     };
 
@@ -372,20 +501,21 @@ export function RecordConsole({
         void finish();
         return;
       }
+      if (liveCaptionsDisabledRef.current) return;
 
       // Recognition ended on its own — Chrome caps a continuous session at
       // roughly a minute, and any transient error lands here too. Restart on
       // a fresh tick: calling start() synchronously inside onend throws
       // InvalidStateError because the engine hasn't released yet.
       // Bail out rather than loop forever. Without a budget a mic that never
-      // produces audio just cycles "reconnecting" while the student talks
-      // into nothing.
+      // produces captions just cycles forever. The audio recorder remains
+      // healthy, so disable captions and let the student keep explaining.
       if (restartsRef.current >= MAX_RESTARTS) {
-        manualStopRef.current = true;
-        setError(
-          "Lost the microphone. Check that no other app or tab is using it, then try again.",
+        liveCaptionsDisabledRef.current = true;
+        recognitionRef.current = null;
+        setNotice(
+          "Live captions aren't available. Your recording is still being captured.",
         );
-        void finish();
         return;
       }
       restartsRef.current += 1;
@@ -395,14 +525,25 @@ export function RecordConsole({
         try {
           recognition.start();
         } catch {
-          manualStopRef.current = true;
-          void finish();
+          liveCaptionsDisabledRef.current = true;
+          recognitionRef.current = null;
+          setNotice(
+            "Live captions aren't available. Your recording is still being captured.",
+          );
         }
       }, 300);
     };
 
     recognitionRef.current = recognition;
-    recognition.start();
+    try {
+      recognition.start();
+    } catch {
+      liveCaptionsDisabledRef.current = true;
+      recognitionRef.current = null;
+      setNotice(
+        "Live captions aren't available. Your recording is still being captured.",
+      );
+    }
     setStatus("recording");
   }
 
@@ -410,7 +551,16 @@ export function RecordConsole({
     manualStopRef.current = true;
     if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
     if (tickRef.current) clearInterval(tickRef.current);
-    recognitionRef.current?.stop();
+    const recognition = recognitionRef.current;
+    if (!recognition || liveCaptionsDisabledRef.current) {
+      void finish();
+      return;
+    }
+    try {
+      recognition.stop();
+    } catch {
+      void finish();
+    }
   }
 
   if (status === "checking") return null;
@@ -419,11 +569,10 @@ export function RecordConsole({
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
         <p className="text-sm font-medium text-strong">
-          Live transcription needs Chrome or Edge
+          Recording isn&apos;t supported in this browser
         </p>
         <p className="max-w-sm text-sm text-subtle">
-          This browser doesn&apos;t support live speech recognition yet. Try
-          again in Chrome or Edge.
+          Try a current version of Chrome, Edge, Firefox, or Safari.
         </p>
       </div>
     );

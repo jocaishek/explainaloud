@@ -241,7 +241,7 @@ function DeleteTopic({ course }: { course: Course }) {
       <button
         type="button"
         onClick={() => setArmed(true)}
-        className="self-start font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors hover:text-destructive"
+        className="self-start font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:text-destructive/80"
       >
         Delete
       </button>
@@ -251,19 +251,20 @@ function DeleteTopic({ course }: { course: Course }) {
   return (
     <form action={formAction} className="flex items-center gap-2">
       <input type="hidden" name="id" value={course.id} />
+      <span className="text-[11px] text-subtle">Are you sure?</span>
       <button
         type="submit"
         disabled={pending}
         className="rounded-md bg-destructive px-2 py-1 text-[11px] font-semibold text-white"
       >
-        {pending ? "Deleting…" : "Delete for good"}
+        {pending ? "Deleting…" : "Yes"}
       </button>
       <button
         type="button"
         onClick={() => setArmed(false)}
         className="text-[11px] text-subtle hover:text-strong"
       >
-        Keep
+        No
       </button>
       {state.error && (
         <span role="alert" className="text-[11px] text-destructive">

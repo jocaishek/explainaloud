@@ -80,6 +80,7 @@ ${renderSources(sources ?? [])}`;
 
     return NextResponse.json({ course: data, provider, grounded });
   } catch (error) {
+    console.error("Course generation failed:", error);
     if (error instanceof AiUnavailableError) {
       return NextResponse.json(
         // The provider breakdown is diagnostic, not something to put in

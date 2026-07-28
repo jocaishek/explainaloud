@@ -7,7 +7,7 @@ import { z } from "zod";
  * backup rather than corrupting the database.
  */
 
-export const courseSchema = z.object({
+const courseResponseSchema = z.object({
   summary: z.string().min(1),
   sections: z
     .array(
@@ -18,7 +18,7 @@ export const courseSchema = z.object({
         technical: z.string().min(1),
         example: z.string().min(1),
         quiz: z.string().min(1),
-        key_points: z.array(z.string().min(1)).min(1),
+        key_points: z.array(z.string().min(1)).default([]),
       }),
     )
     .min(1),
@@ -36,6 +36,22 @@ export const courseSchema = z.object({
     .default([]),
   uncovered: z.array(z.string()).default([]),
 });
+
+/**
+ * A provider occasionally returns a complete section with an empty
+ * `key_points` array. Rejecting the entire lesson makes Course Builder look
+ * broken even though the section's technical explanation is itself a usable,
+ * checkable reference. Keep the strict shape, but repair that one safe
+ * omission deterministically.
+ */
+export const courseSchema = courseResponseSchema.transform((course) => ({
+  ...course,
+  sections: course.sections.map((section) => ({
+    ...section,
+    key_points:
+      section.key_points.length > 0 ? section.key_points : [section.technical],
+  })),
+}));
 export type GeneratedCourse = z.infer<typeof courseSchema>;
 
 export const spanStatus = z.enum(["correct", "gap", "neutral"]);

@@ -47,6 +47,8 @@ export function SourceUploader({
     characters: number;
   } | null>(null);
   const [previewing, setPreviewing] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   // dragenter/dragleave fire for every child element, so a plain boolean
   // flickers as the pointer crosses the icon or the text inside the zone.
   const dragDepth = useRef(0);
@@ -99,11 +101,25 @@ export function SourceUploader({
   }
 
   async function remove(id: string) {
-    const next = sources.filter((s) => s.id !== id);
-    publish(next);
-    await fetch(`/api/courses/${courseId}/sources?id=${id}`, {
-      method: "DELETE",
-    });
+    setRemovingId(id);
+    setErrors([]);
+    try {
+      const response = await fetch(
+        `/api/courses/${courseId}/sources?id=${id}`,
+        { method: "DELETE" },
+      );
+      const json = await response.json();
+      if (!response.ok) {
+        setErrors([json.error ?? "Couldn't remove that source."]);
+        return;
+      }
+      publish(sources.filter((source) => source.id !== id));
+      setConfirmRemoveId(null);
+    } catch {
+      setErrors(["Couldn't reach the server. The source was not removed."]);
+    } finally {
+      setRemovingId(null);
+    }
   }
 
   return (
@@ -199,14 +215,39 @@ export function SourceUploader({
             >
               {previewing === source.id ? "Opening…" : "Preview"}
             </button>
-            <button
-              type="button"
-              aria-label={`Remove ${source.filename}`}
-              onClick={() => void remove(source.id)}
-              className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors hover:bg-destructive/10 hover:text-destructive"
-            >
-              Remove
-            </button>
+            {confirmRemoveId === source.id ? (
+              <fieldset
+                aria-label={`Confirm removing ${source.filename}`}
+                className="flex shrink-0 items-center gap-1.5 border-0 p-0"
+              >
+                <span className="text-xs text-subtle">Are you sure?</span>
+                <button
+                  type="button"
+                  onClick={() => void remove(source.id)}
+                  disabled={removingId === source.id}
+                  className="rounded-md bg-destructive px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
+                >
+                  {removingId === source.id ? "Removing…" : "Yes"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfirmRemoveId(null)}
+                  disabled={removingId === source.id}
+                  className="rounded-md px-2 py-1 text-[11px] text-subtle transition-colors hover:bg-muted hover:text-strong disabled:opacity-50"
+                >
+                  No
+                </button>
+              </fieldset>
+            ) : (
+              <button
+                type="button"
+                aria-label={`Remove ${source.filename}`}
+                onClick={() => setConfirmRemoveId(source.id)}
+                className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:bg-destructive/10"
+              >
+                Remove
+              </button>
+            )}
           </motion.div>
         ))}
       </AnimatePresence>

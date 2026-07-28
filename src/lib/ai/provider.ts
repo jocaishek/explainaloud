@@ -34,7 +34,10 @@ const MAX_OUTPUT_TOKENS = 3000;
 const RATE_LIMIT_RETRIES = 1;
 
 class RateLimitedError extends Error {
-  constructor(readonly retryAfterMs: number) {
+  constructor(
+    readonly retryAfterMs: number,
+    readonly retryable = true,
+  ) {
     super("rate limited");
   }
 }
@@ -124,8 +127,13 @@ async function callGemini(prompt: string): Promise<string> {
 
   if (!response.ok) {
     const body = await response.text();
-    if (response.status === 429)
-      throw new RateLimitedError(parseRetryAfter(body));
+    if (response.status === 429) {
+      // A project with a hard zero quota cannot recover by sleeping.
+      throw new RateLimitedError(
+        parseRetryAfter(body),
+        !/limit:\s*0(?:\D|$)/i.test(body),
+      );
+    }
     throw new Error(`Gemini ${response.status}: ${body}`);
   }
 
@@ -208,7 +216,11 @@ export async function completeJson<T>(
         // A rate limit is a "wait", not a "this provider is broken" — the
         // provider tells us how long, so honour it rather than failing over
         // to a backup that may be no healthier.
-        if (error instanceof RateLimitedError && tries < RATE_LIMIT_RETRIES) {
+        if (
+          error instanceof RateLimitedError &&
+          error.retryable &&
+          tries < RATE_LIMIT_RETRIES
+        ) {
           await sleep(error.retryAfterMs + 250);
           continue;
         }
@@ -221,6 +233,49 @@ export async function completeJson<T>(
   }
 
   throw new AiUnavailableError(failures.join(" | "));
+}
+
+const GROQ_TRANSCRIPTION_URL =
+  "https://api.groq.com/openai/v1/audio/transcriptions";
+const GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo";
+
+/**
+ * Transcribes a browser-recorded audio file. This is the reliable path for
+ * browsers whose built-in Web Speech service cannot reach its remote backend.
+ */
+export async function transcribeAudio(file: File, topic: string) {
+  if (!env.GROQ_API_KEY) {
+    throw new AiUnavailableError("groq: no API key configured");
+  }
+
+  const body = new FormData();
+  body.set("file", file, file.name || "recording.webm");
+  body.set("model", GROQ_TRANSCRIPTION_MODEL);
+  body.set("language", "en");
+  body.set("response_format", "json");
+  body.set(
+    "prompt",
+    `A student is explaining ${topic}. Preserve course terminology and punctuation.`,
+  );
+
+  const response = await withTimeout((signal) =>
+    fetch(GROQ_TRANSCRIPTION_URL, {
+      method: "POST",
+      signal,
+      headers: { authorization: `Bearer ${env.GROQ_API_KEY}` },
+      body,
+    }),
+  );
+
+  if (!response.ok) {
+    throw new AiUnavailableError(`groq transcription: ${response.status}`);
+  }
+
+  const json = await response.json();
+  if (typeof json?.text !== "string") {
+    throw new AiUnavailableError("groq transcription: empty response");
+  }
+  return json.text.trim();
 }
 
 export function aiConfigured() {
