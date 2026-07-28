@@ -1,0 +1,349 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+import { type DragEvent, type FormEvent, useRef, useState } from "react";
+import { createCourse } from "~/app/dashboard/actions";
+import { LocalDayField } from "~/components/local-day-field";
+import { Button } from "~/components/ui/button";
+import { Input } from "~/components/ui/input";
+import { BROAD_TOPIC_MESSAGE, isTopicTooBroad } from "~/lib/topic-scope";
+import {
+  ACCEPT_ATTRIBUTE,
+  ACCEPTED_EXTENSIONS,
+  MAX_SOURCE_BYTES,
+  MAX_SOURCES_PER_COURSE,
+} from "~/lib/uploads";
+import { cn } from "~/lib/utils";
+
+const ERROR_MESSAGES: Record<string, string> = {
+  missing_topic: "Enter a topic before continuing.",
+  topic_too_broad: BROAD_TOPIC_MESSAGE,
+  create_failed: "Something went wrong creating that course. Try again.",
+  topic_limit:
+    "You\u2019ve hit today\u2019s limit of 2 new topics. It resets at midnight your time.",
+};
+
+function formatSize(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function fileKey(file: File) {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
+
+export function NewTopicForm({
+  folderId,
+  initialError,
+}: {
+  folderId?: string;
+  initialError?: string;
+}) {
+  const router = useRouter();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dragDepth = useRef(0);
+  const [files, setFiles] = useState<File[]>([]);
+  const [dragActive, setDragActive] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [status, setStatus] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    initialError ? (ERROR_MESSAGES[initialError] ?? null) : null,
+  );
+  const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
+
+  function addFiles(incoming: File[]) {
+    setError(null);
+    const existing = new Set(files.map(fileKey));
+    const next = [...files];
+    const rejected: string[] = [];
+
+    for (const file of incoming) {
+      if (existing.has(fileKey(file))) continue;
+      if (next.length >= MAX_SOURCES_PER_COURSE) {
+        rejected.push(`A topic can hold ${MAX_SOURCES_PER_COURSE} sources.`);
+        break;
+      }
+      if (file.size > MAX_SOURCE_BYTES) {
+        rejected.push(`${file.name} is over the 5 MB limit.`);
+        continue;
+      }
+      const lowerName = file.name.toLowerCase();
+      if (
+        !ACCEPTED_EXTENSIONS.some((extension) => lowerName.endsWith(extension))
+      ) {
+        rejected.push(`${file.name} is not a supported file type.`);
+        continue;
+      }
+      existing.add(fileKey(file));
+      next.push(file);
+    }
+
+    setFiles(next);
+    if (rejected.length) setError([...new Set(rejected)].join(" "));
+  }
+
+  function handleDrop(event: DragEvent<HTMLDivElement>) {
+    event.preventDefault();
+    dragDepth.current = 0;
+    setDragActive(false);
+    addFiles(Array.from(event.dataTransfer.files));
+  }
+
+  async function uploadSources(courseId: string) {
+    if (files.length === 0) return true;
+
+    const failures: File[] = [];
+    const messages: string[] = [];
+
+    for (const [index, file] of files.entries()) {
+      setStatus(`Reading source ${index + 1} of ${files.length}: ${file.name}`);
+      const body = new FormData();
+      body.set("file", file);
+
+      try {
+        const response = await fetch(`/api/courses/${courseId}/sources`, {
+          method: "POST",
+          body,
+        });
+        const json = await response.json();
+        if (!response.ok) {
+          failures.push(file);
+          messages.push(`${file.name}: ${json.error ?? "upload failed"}`);
+        }
+      } catch {
+        failures.push(file);
+        messages.push(`${file.name}: couldn't reach the server`);
+      }
+    }
+
+    setFiles(failures);
+    if (failures.length > 0) {
+      setError(
+        `Your topic was created, but ${failures.length} source${failures.length === 1 ? "" : "s"} could not be added. ${messages.join(" ")}`,
+      );
+      setStatus(null);
+      return false;
+    }
+
+    return true;
+  }
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (pending) return;
+
+    const formData = new FormData(event.currentTarget);
+    const topic = String(formData.get("topic") ?? "");
+    if (isTopicTooBroad(topic)) {
+      setError(BROAD_TOPIC_MESSAGE);
+      setStatus(null);
+      return;
+    }
+
+    setPending(true);
+    setError(null);
+
+    let courseId = createdCourseId;
+    if (!courseId) {
+      setStatus("Creating your topic…");
+      const result = await createCourse(formData);
+      if (!result.ok) {
+        setError(ERROR_MESSAGES[result.error]);
+        setStatus(null);
+        setPending(false);
+        return;
+      }
+      courseId = result.courseId;
+      setCreatedCourseId(courseId);
+    }
+
+    const uploaded = await uploadSources(courseId);
+    if (!uploaded) {
+      setPending(false);
+      return;
+    }
+
+    setStatus("Opening your course…");
+    router.push(`/dashboard/courses/${courseId}`);
+  }
+
+  function leaveDragTarget() {
+    dragDepth.current -= 1;
+    if (dragDepth.current <= 0) {
+      dragDepth.current = 0;
+      setDragActive(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-6 shadow-xl shadow-black/40"
+    >
+      {/* A folder's New topic tile carries its destination into creation.
+          Owner-scoped RLS still rejects another user's folder id. */}
+      {folderId && <input type="hidden" name="folderId" value={folderId} />}
+      <LocalDayField />
+
+      <div className="flex flex-col gap-4">
+        <Input
+          type="text"
+          name="topic"
+          required
+          disabled={!!createdCourseId}
+          placeholder="e.g. Photosynthesis, the Krebs cycle, Bayes' theorem…"
+          className="h-11 border-input bg-surface text-base text-strong placeholder:text-subtle"
+          aria-invalid={error === BROAD_TOPIC_MESSAGE}
+          aria-describedby={
+            error === BROAD_TOPIC_MESSAGE ? "new-topic-error" : undefined
+          }
+          onChange={() => {
+            if (error === BROAD_TOPIC_MESSAGE) setError(null);
+          }}
+        />
+        <textarea
+          name="notes"
+          rows={4}
+          disabled={!!createdCourseId}
+          placeholder="Paste your notes here (optional)"
+          className="resize-none rounded-md border border-input bg-surface p-3 text-sm text-strong placeholder:text-subtle focus:outline-none disabled:opacity-60"
+        />
+      </div>
+
+      <section className="flex flex-col gap-3" aria-labelledby="source-heading">
+        <div>
+          <h2 id="source-heading" className="text-sm font-semibold text-strong">
+            Add sources{" "}
+            <span className="font-normal text-subtle">(optional)</span>
+          </h2>
+          <p className="mt-1 text-xs text-subtle">
+            Ground the course in your own PDFs, Word files, or text. You can
+            also add these later.
+          </p>
+        </div>
+
+        {/* biome-ignore lint/a11y/noStaticElementInteractions: drop target; the button provides the keyboard path */}
+        <div
+          onDragEnter={(event) => {
+            event.preventDefault();
+            dragDepth.current += 1;
+            setDragActive(true);
+          }}
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = "copy";
+          }}
+          onDragLeave={leaveDragTarget}
+          onDrop={handleDrop}
+          className={cn(
+            "flex flex-col items-center gap-2 rounded-xl border border-dashed px-5 py-6 text-center transition-[border-color,background-color,transform] duration-200",
+            dragActive
+              ? "scale-[1.01] border-brand bg-brand/[0.06]"
+              : "border-border bg-surface",
+          )}
+        >
+          <p className="text-sm font-medium text-strong">
+            {dragActive ? "Drop to queue sources" : "Drag sources here"}
+          </p>
+          <p className="text-xs text-subtle">
+            Up to 5 MB each · {MAX_SOURCES_PER_COURSE} files
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={pending}
+            onClick={() => inputRef.current?.click()}
+            className="mt-1 rounded-full"
+          >
+            Choose files
+          </Button>
+          <input
+            ref={inputRef}
+            type="file"
+            multiple
+            accept={ACCEPT_ATTRIBUTE}
+            className="sr-only"
+            onChange={(event) => {
+              addFiles(Array.from(event.target.files ?? []));
+              event.target.value = "";
+            }}
+          />
+        </div>
+
+        {files.length > 0 && (
+          <ul className="flex flex-col gap-2">
+            {files.map((file) => (
+              <li
+                key={fileKey(file)}
+                className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+              >
+                <span className="min-w-0 flex-1 truncate text-sm text-strong">
+                  {file.name}
+                </span>
+                <span className="shrink-0 font-mono text-[11px] text-subtle">
+                  {formatSize(file.size)}
+                </span>
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() =>
+                    setFiles((current) =>
+                      current.filter((item) => fileKey(item) !== fileKey(file)),
+                    )
+                  }
+                  className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                >
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      {status && (
+        <p role="status" className="text-sm text-subtle">
+          {status}
+        </p>
+      )}
+      {error && (
+        <p
+          id="new-topic-error"
+          role="alert"
+          className="max-w-[65ch] text-sm leading-6 text-destructive"
+        >
+          {error}
+        </p>
+      )}
+
+      <div className="flex flex-wrap gap-3">
+        <Button
+          type="submit"
+          disabled={pending}
+          className="bg-brand font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform hover:bg-brand/90 active:scale-[0.98]"
+        >
+          {pending
+            ? status || "Building course…"
+            : createdCourseId
+              ? "Retry sources"
+              : files.length > 0
+                ? `Build with ${files.length} source${files.length === 1 ? "" : "s"}`
+                : "Build my course"}
+        </Button>
+
+        {createdCourseId && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pending}
+            onClick={() => router.push(`/dashboard/courses/${createdCourseId}`)}
+          >
+            Continue without failed sources
+          </Button>
+        )}
+      </div>
+    </form>
+  );
+}
