@@ -20,10 +20,13 @@ export function CourseBuilder({
   courseId,
   initialSources,
   initialCourse,
+  unlimited = false,
 }: {
   courseId: string;
   initialSources: SourceItem[];
   initialCourse: GeneratedCourse | null;
+  /** Admins bypass the per-topic source cap. */
+  unlimited?: boolean;
 }) {
   const router = useRouter();
   const [sources, setSources] = useState(initialSources);
@@ -140,6 +143,7 @@ export function CourseBuilder({
           courseId={courseId}
           initialSources={sources}
           onChange={setSources}
+          unlimited={unlimited}
         />
       </section>
 

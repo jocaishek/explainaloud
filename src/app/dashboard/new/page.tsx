@@ -1,3 +1,5 @@
+import { isAdminEmail } from "~/lib/admin";
+import { requireUser } from "~/lib/supabase/server";
 import { NewTopicForm } from "./new-topic-form";
 
 export default async function NewTopicPage({
@@ -6,6 +8,7 @@ export default async function NewTopicPage({
   searchParams: Promise<{ error?: string; folder?: string }>;
 }) {
   const { error, folder } = await searchParams;
+  const { user } = await requireUser();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-6 py-16">
@@ -19,7 +22,11 @@ export default async function NewTopicPage({
         </p>
       </div>
 
-      <NewTopicForm folderId={folder} initialError={error} />
+      <NewTopicForm
+        folderId={folder}
+        initialError={error}
+        unlimited={isAdminEmail(user.email)}
+      />
     </div>
   );
 }
