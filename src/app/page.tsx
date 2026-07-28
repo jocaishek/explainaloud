@@ -1185,6 +1185,15 @@ function oauthErrorMessage(): string {
   return "That sign-in method isn't set up yet. Try email instead.";
 }
 
+/**
+ * Where the emailed confirmation link lands. Sending it to `/onboarding`
+ * rather than the callback default skips a bounce through `/dashboard`, whose
+ * profile guard would only redirect a freshly verified account right back.
+ */
+function verificationRedirect(): string {
+  return `${window.location.origin}/auth/callback?next=/onboarding`;
+}
+
 function authErrorMessage(mode: AuthMode, message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("email not confirmed")) {
@@ -1284,7 +1293,7 @@ function AuthCard() {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: { emailRedirectTo: verificationRedirect() },
       });
 
       setSubmitting(false);
@@ -1351,7 +1360,7 @@ function AuthCard() {
       type: "signup",
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: verificationRedirect(),
       },
     });
 
