@@ -443,11 +443,6 @@ export default function Home() {
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               <WordReveal text="Create your account" accent={["account"]} />
             </h2>
-            <Reveal delay={120} className="mt-4">
-              <p className="max-w-md text-lg text-[#A1A1AA]">
-                Sign up free and we&apos;ll email you when Ropes is ready.
-              </p>
-            </Reveal>
           </div>
 
           <Reveal delay={120} className="relative mt-10 w-full max-w-md">
