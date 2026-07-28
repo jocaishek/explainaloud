@@ -13,6 +13,7 @@ import { type Example, ExampleCarousel } from "~/components/example-carousel";
 import { Magnetic } from "~/components/magnetic";
 import { Marquee } from "~/components/marquee";
 import { PasswordField } from "~/components/password-field";
+import { RopesMark } from "~/components/ropes-mark";
 import { ScrollProgress } from "~/components/scroll-progress";
 import { SmoothScroll } from "~/components/smooth-scroll";
 import { Spotlight } from "~/components/spotlight";
@@ -656,7 +657,8 @@ function Nav() {
           scrolled ? "capsule max-w-2xl" : "max-w-4xl bg-transparent",
         )}
       >
-        <span className="text-base font-semibold tracking-tight text-white">
+        <span className="flex items-center gap-2 text-base font-semibold tracking-tight text-white">
+          <RopesMark className="size-6 shrink-0" />
           Ropes
         </span>
         <Magnetic strength={16}>
