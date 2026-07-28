@@ -168,11 +168,15 @@ enabled = true
 # Set SUPABASE_AUTH_SITE_URL in a root `.env` for local work (the CLI reads it
 # from there or from the shell). See `.env.example`.
 #
-# Note the failure mode if this CLI version does not interpolate `env()` here:
-# the value stays the literal string, which is not a URL, so `supabase start`
-# and `config push` both reject it outright. That is the point — every branch
-# fails loudly, and none of them silently writes a localhost URL over
-# production's the way a pinned literal did.
+# This removes the localhost literal that a push would have written over
+# production. It is NOT a guarantee that a push is safe: whether this CLI
+# version interpolates `env()` for this particular key is unverified — it could
+# not be tested here without Docker, and `config push` contacts the API before
+# it validates config, so there is no offline way to observe the resolved value.
+#
+# The hosted project's Site URL and redirect allow-list are therefore managed in
+# the Supabase dashboard, and `supabase config push` is not part of this
+# project's workflow. See `.claude/rules/supabase.md`.
 site_url = "env(SUPABASE_AUTH_SITE_URL)"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""

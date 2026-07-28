@@ -214,6 +214,45 @@ function audioExtension(type: string) {
   return "webm";
 }
 
+function indexOfSequence(bytes: Uint8Array, needle: number[]) {
+  outer: for (let i = 0; i + needle.length <= bytes.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (bytes[i + j] !== needle[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
+
+/**
+ * Where the container's initialisation segment ends in the first recorded chunk.
+ *
+ * Incremental captions prepend this to the newest chunks so they decode without
+ * the rest of the recording. It has to be the header *alone*: the first chunk a
+ * MediaRecorder emits is the header followed by a full timeslice of audio —
+ * measured at 146 bytes of header against 15.6KB of speech — so prepending the
+ * whole chunk silently re-sends the opening second of the explanation on every
+ * pass, and appending each result would stutter those words back into the
+ * transcript dozens of times over a recording.
+ *
+ * Returns null for a container we can't split, which turns incremental passes
+ * off rather than guessing at an offset.
+ */
+function initSegmentEnd(bytes: Uint8Array, mimeType: string) {
+  if (mimeType.includes("webm") || mimeType.includes("ogg")) {
+    // Everything before the first WebM Cluster: EBML header, Segment, Tracks.
+    const cluster = indexOfSequence(bytes, [0x1f, 0x43, 0xb6, 0x75]);
+    return cluster > 0 ? cluster : null;
+  }
+  if (mimeType.includes("mp4")) {
+    // Fragmented MP4: ftyp + moov, up to the first moof. The four-byte box size
+    // precedes the type, so the box itself starts four bytes earlier.
+    const moof = indexOfSequence(bytes, [0x6d, 0x6f, 0x6f, 0x66]);
+    return moof > 4 ? moof - 4 : null;
+  }
+  return null;
+}
+
 export function RecordConsole({
   courseId,
   initialSessions,
@@ -280,6 +319,9 @@ export function RecordConsole({
   // three minutes as at three seconds.
   const liveChunkCursorRef = useRef(0);
   const liveIncrementalRef = useRef(true);
+  // The container header on its own, carved out of the first chunk once and
+  // reused to make every later window decodable by itself.
+  const liveInitSegmentRef = useRef<Blob | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const deadlineRef = useRef<number>(0);
   const restartsRef = useRef(0);
@@ -540,26 +582,47 @@ export function RecordConsole({
       return;
     }
 
-    const recorder = mediaRecorderRef.current;
-    const type = recorder?.mimeType || "audio/webm";
-    const chunks = audioChunksRef.current;
-    // Send only the seconds recorded since the last pass. Re-uploading the
-    // whole recording every few seconds was the reason captions crawled: at
-    // one minute in, each pass was posting a minute of audio and waiting for a
-    // minute of audio to be transcribed, and it got worse every pass. The first
-    // chunk carries the container header, so later chunks need it prepended to
-    // decode on their own.
-    const sentThrough = chunks.length;
-    const cursor = liveChunkCursorRef.current;
-    const header = chunks[0];
-    const incremental = liveIncrementalRef.current && cursor > 0 && !!header;
-    if (incremental && sentThrough <= cursor) return;
-    const parts = incremental ? [header, ...chunks.slice(cursor)] : [...chunks];
-    const audio = new Blob(parts, { type });
-    if (!audio.size) return;
-
+    // Claimed before the first `await` below, not after: reading the header out
+    // of a Blob suspends, and a tick arriving in that window would otherwise
+    // sail past the busy check above and start a second pass.
     liveTranscribeBusyRef.current = true;
     try {
+      const recorder = mediaRecorderRef.current;
+      const type = recorder?.mimeType || "audio/webm";
+      const chunks = audioChunksRef.current;
+      // Send only the seconds recorded since the last pass. Re-uploading the
+      // whole recording every few seconds was the reason captions crawled: at
+      // one minute in, each pass was posting a minute of audio and waiting for
+      // a minute of audio to be transcribed, and it got worse every pass.
+      const sentThrough = chunks.length;
+      const cursor = liveChunkCursorRef.current;
+      const first = chunks[0];
+      let incremental = liveIncrementalRef.current && cursor > 0 && !!first;
+      if (incremental && sentThrough <= cursor) return;
+
+      // Carve the header out of the first chunk once, and give up on
+      // incremental passes if this container can't be split — a whole-recording
+      // pass is slower but correct, which a mis-sliced one would not be.
+      if (incremental && first && !liveInitSegmentRef.current) {
+        const bytes = new Uint8Array(await first.arrayBuffer());
+        const end = initSegmentEnd(bytes, type);
+        if (end === null) liveIncrementalRef.current = false;
+        else liveInitSegmentRef.current = first.slice(0, end);
+      }
+
+      // Re-derived rather than assumed: `incremental` decides both what is sent
+      // and whether the reply is appended or replaces the transcript, so a pass
+      // that falls back to whole-recording here must also fall back to
+      // replacing — appending a full transcript to itself would duplicate it.
+      const initSegment = liveInitSegmentRef.current;
+      incremental = incremental && !!initSegment;
+      const parts =
+        incremental && initSegment
+          ? [initSegment, ...chunks.slice(cursor)]
+          : [...chunks];
+      const audio = new Blob(parts, { type });
+      if (!audio.size) return;
+
       const body = new FormData();
       body.set(
         "audio",
@@ -1128,6 +1191,7 @@ export function RecordConsole({
     liveTranscribeFailuresRef.current = 0;
     liveChunkCursorRef.current = 0;
     liveIncrementalRef.current = true;
+    liveInitSegmentRef.current = null;
     finishingRef.current = false;
     sessionRowIdRef.current = null;
     lastSavedTranscriptRef.current = "";
