@@ -13,6 +13,7 @@ import { type Example, ExampleCarousel } from "~/components/example-carousel";
 import { Magnetic } from "~/components/magnetic";
 import { Marquee } from "~/components/marquee";
 import { PasswordField } from "~/components/password-field";
+import { RopesMark } from "~/components/ropes-mark";
 import { ScrollProgress } from "~/components/scroll-progress";
 import { SmoothScroll } from "~/components/smooth-scroll";
 import { Spotlight } from "~/components/spotlight";
@@ -144,7 +145,7 @@ export default function Home() {
         <GlowOrb className="-top-32 left-1/2 h-[34rem] w-[52rem] -translate-x-1/2 opacity-[0.16]" />
 
         <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
-          <Eyebrow index="01" label="Teach it back" />
+          <Eyebrow index="01" label="Ropes" />
           <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight text-balance text-white sm:text-6xl">
             <WordReveal
               text="Know when you actually understand it."
@@ -165,7 +166,7 @@ export default function Home() {
             </p>
           </Reveal>
           <Reveal delay={180} className="mt-2">
-            <Magnetic>
+            <Magnetic strength={16}>
               <Button
                 asChild
                 size="lg"
@@ -416,7 +417,7 @@ export default function Home() {
             <DeepDiveRow
               reversed
               step="Step 2"
-              title="Teach it back, out loud"
+              title="Say it back, out loud"
               body="Hit record and explain the concept like you're teaching a friend. Shaky steps get flagged as you say them."
               mockup={<ExplainPanel />}
             />
@@ -442,11 +443,6 @@ export default function Home() {
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               <WordReveal text="Create your account" accent={["account"]} />
             </h2>
-            <Reveal delay={120} className="mt-4">
-              <p className="max-w-md text-lg text-[#A1A1AA]">
-                Sign up free and we&apos;ll email you when Ropes is ready.
-              </p>
-            </Reveal>
           </div>
 
           <Reveal delay={120} className="relative mt-10 w-full max-w-md">
@@ -471,7 +467,7 @@ const MARQUEE_ITEMS = [
   "Recognition isn't recall",
   "Gaps filled, not just flagged",
   "Built from your own sources",
-  "Teach it back",
+  "Learn the ropes",
 ];
 
 const LANDING_AGENTS = [
@@ -656,7 +652,8 @@ function Nav() {
           scrolled ? "capsule max-w-2xl" : "max-w-4xl bg-transparent",
         )}
       >
-        <span className="text-base font-semibold tracking-tight text-white">
+        <span className="flex items-center gap-2 text-base font-semibold tracking-tight text-white">
+          <RopesMark className="size-6 shrink-0" />
           Ropes
         </span>
         <Magnetic strength={16}>
@@ -1185,6 +1182,15 @@ function oauthErrorMessage(): string {
   return "That sign-in method isn't set up yet. Try email instead.";
 }
 
+/**
+ * Where the emailed confirmation link lands. Sending it to `/onboarding`
+ * rather than the callback default skips a bounce through `/dashboard`, whose
+ * profile guard would only redirect a freshly verified account right back.
+ */
+function verificationRedirect(): string {
+  return `${window.location.origin}/auth/callback?next=/onboarding`;
+}
+
 function authErrorMessage(mode: AuthMode, message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("email not confirmed")) {
@@ -1284,7 +1290,7 @@ function AuthCard() {
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+        options: { emailRedirectTo: verificationRedirect() },
       });
 
       setSubmitting(false);
@@ -1351,7 +1357,7 @@ function AuthCard() {
       type: "signup",
       email: email.trim().toLowerCase(),
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
+        emailRedirectTo: verificationRedirect(),
       },
     });
 
