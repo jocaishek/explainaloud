@@ -170,6 +170,16 @@ function bestExactCitation(
   return best?.citation ?? null;
 }
 
+function uniqueCitations(citations: CourseCitation[]) {
+  const seen = new Set<string>();
+  return citations.filter((citation) => {
+    const key = `${citation.source}\u0000${normalizeEvidence(citation.quote)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 /**
  * Model citations are untrusted output. Keep only citations whose filename
  * resolves to an uploaded source and whose quoted text appears in that file.
@@ -213,18 +223,33 @@ function verifyCourseCitations(
   sources: SourceRow[],
 ): GeneratedCourse {
   const courseCitations = verifiedCitations(course.citations, sources);
+  const researchedNoteCitations = sources.some((source) => source.url)
+    ? uniqueCitations(
+        course.notes
+          .map((note) => bestExactCitation(note, sources))
+          .filter((citation): citation is CourseCitation => !!citation),
+      ).slice(0, 8)
+    : [];
+  const overviewCitation =
+    courseCitations.length > 0
+      ? courseCitations
+      : [
+          bestExactCitation(
+            `${course.summary} ${course.notes.join(" ")}`,
+            sources,
+          ),
+        ].filter((citation): citation is CourseCitation => !!citation);
 
   return {
     ...course,
-    citations:
-      courseCitations.length > 0
-        ? courseCitations
-        : [
-            bestExactCitation(
-              `${course.summary} ${course.notes.join(" ")}`,
-              sources,
-            ),
-          ].filter((citation): citation is CourseCitation => !!citation),
+    notes:
+      researchedNoteCitations.length > 0
+        ? researchedNoteCitations.map((citation) => citation.quote)
+        : course.notes,
+    citations: uniqueCitations([
+      ...overviewCitation,
+      ...researchedNoteCitations,
+    ]),
     sections: course.sections.map((section) => {
       const citations = verifiedCitations(section.citations, sources);
       return {
