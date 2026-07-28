@@ -47,6 +47,40 @@ class RateLimitedError extends Error {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
+/**
+ * How long to stop trying a provider that reported an exhausted quota.
+ *
+ * A key whose quota is spent doesn't recover in the seconds a retry waits, and
+ * trying it first on every request costs a full round trip before the working
+ * provider is even attempted — then leaves less of the next provider's
+ * per-minute budget for the call that matters. Best-effort and per-instance:
+ * serverless instances don't share this, which is fine, since the worst case is
+ * simply the old behaviour.
+ */
+const QUOTA_COOLDOWN_MS = 10 * 60_000;
+const quotaExhaustedUntil = new Map<string, number>();
+
+function inCooldown(label: string): boolean {
+  const until = quotaExhaustedUntil.get(label);
+  if (until === undefined) return false;
+  if (Date.now() >= until) {
+    quotaExhaustedUntil.delete(label);
+    return false;
+  }
+  return true;
+}
+
+/** A spent daily/project quota, as opposed to a momentary burst limit. */
+function isQuotaExhausted(error: unknown): boolean {
+  if (error instanceof RateLimitedError) return !error.retryable;
+  return (
+    error instanceof Error &&
+    /exceeded your current quota|quota exceeded|insufficient_quota/i.test(
+      error.message,
+    )
+  );
+}
+
 /** Parses the standard Retry-After header before falling back to body text. */
 function parseRetryAfter(body: string, header: string | null): number {
   if (header) {
@@ -148,10 +182,15 @@ async function callGemini(
   if (!response.ok) {
     const body = await response.text();
     if (response.status === 429) {
-      // A project with a hard zero quota cannot recover by sleeping.
+      // A hard zero quota, or a plan whose allowance is spent, cannot recover
+      // by sleeping — those must fall through to the next provider instead of
+      // burning a retry. Only a momentary burst limit is worth waiting on.
+      const unrecoverable =
+        /limit:\s*0(?:\D|$)/i.test(body) ||
+        /exceeded your current quota|check your plan and billing/i.test(body);
       throw new RateLimitedError(
         parseRetryAfter(body, response.headers.get("retry-after")),
-        !/limit:\s*0(?:\D|$)/i.test(body),
+        !unrecoverable,
       );
     }
     throw new Error(`Gemini ${response.status}: ${body}`);
@@ -259,11 +298,23 @@ export async function completeJson<T>(
       failures.push(`${attempt.label}: no API key configured`);
       continue;
     }
+    if (inCooldown(attempt.label)) {
+      failures.push(`${attempt.label}: skipped, quota exhausted recently`);
+      continue;
+    }
     for (let tries = 0; tries <= RATE_LIMIT_RETRIES; tries++) {
       try {
         const raw = await attempt.call(prompt, maxOutputTokens);
         return { data: validate(extractJson(raw)), provider: attempt.provider };
       } catch (error) {
+        if (isQuotaExhausted(error)) {
+          quotaExhaustedUntil.set(
+            attempt.label,
+            Date.now() + QUOTA_COOLDOWN_MS,
+          );
+          failures.push(`${attempt.label}: quota exhausted`);
+          break;
+        }
         // A rate limit is a "wait", not a "this provider is broken" — the
         // provider tells us how long, so honour it rather than failing over
         // to a backup that may be no healthier.

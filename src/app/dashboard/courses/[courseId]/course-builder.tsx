@@ -56,7 +56,14 @@ export function CourseBuilder({
       });
       const json = await response.json();
       if (!response.ok) {
-        setError(json.error ?? "Course generation failed.");
+        // `detail` is only present for admins — the server decides that, not
+        // the client. Appending it here means a failed build is diagnosable
+        // from the screen instead of the hosting provider's log viewer.
+        setError(
+          [json.error ?? "Course generation failed.", json.detail]
+            .filter(Boolean)
+            .join(" — "),
+        );
       } else {
         setCourse(json.course);
         router.refresh();

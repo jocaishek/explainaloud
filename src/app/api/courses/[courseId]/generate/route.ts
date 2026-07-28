@@ -80,12 +80,23 @@ export async function POST(
     });
   } catch (error) {
     console.error("Course generation failed:", error);
+    // The provider breakdown names vendors and leaks failure detail, so it
+    // never goes to a student — but an operator staring at "try again shortly"
+    // has nothing to act on. Admins get the real reason inline instead of
+    // having to dig through hosting logs.
+    const { data: isAdmin } = await supabase.rpc("is_ropes_admin");
+    const detail =
+      isAdmin === true
+        ? error instanceof Error
+          ? error.message
+          : String(error)
+        : undefined;
+
     if (error instanceof AiUnavailableError) {
       return NextResponse.json(
-        // The provider breakdown is diagnostic, not something to put in
-        // front of a student — it names vendors and leaks failure detail.
         {
           error: "This service can't be used at the moment. Try again shortly.",
+          detail,
         },
         { status: 503 },
       );
@@ -95,12 +106,16 @@ export async function POST(
         {
           error:
             "Ropes couldn't verify every citation against your sources. Try rebuilding the course.",
+          detail,
         },
         { status: 422 },
       );
     }
     return NextResponse.json(
-      { error: "This service can't be used at the moment. Try again shortly." },
+      {
+        error: "This service can't be used at the moment. Try again shortly.",
+        detail,
+      },
       { status: 500 },
     );
   }
