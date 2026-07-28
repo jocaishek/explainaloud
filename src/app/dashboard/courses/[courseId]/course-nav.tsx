@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "~/lib/utils";
 
 const STEPS = [
@@ -14,6 +14,7 @@ const STEPS = [
 
 export function CourseNav({ courseId }: { courseId: string }) {
   const pathname = usePathname();
+  const router = useRouter();
   const base = `/dashboard/courses/${courseId}`;
 
   return (
@@ -25,6 +26,9 @@ export function CourseNav({ courseId }: { courseId: string }) {
           <Link
             key={step.label}
             href={href}
+            onFocus={() => router.prefetch(href)}
+            onPointerEnter={() => router.prefetch(href)}
+            onTouchStart={() => router.prefetch(href)}
             className={cn(
               "whitespace-nowrap border-b-2 px-3 py-3 text-sm font-medium transition-colors",
               active

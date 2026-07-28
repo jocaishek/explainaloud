@@ -1,6 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
+import { usePathname } from "next/navigation";
 
 /**
  * App-wide cross-fade between top-level routes — landing → onboarding →
@@ -17,8 +18,13 @@ export default function RootTemplate({
   children: React.ReactNode;
 }) {
   const shouldReduceMotion = useReducedMotion();
+  const pathname = usePathname();
 
-  if (shouldReduceMotion) return <>{children}</>;
+  // The authenticated app optimizes for repeated task navigation. Marketing
+  // routes keep the entrance fade, but dashboard clicks render immediately.
+  if (shouldReduceMotion || pathname.startsWith("/dashboard")) {
+    return <>{children}</>;
+  }
 
   return (
     <motion.div

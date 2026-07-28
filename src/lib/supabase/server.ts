@@ -36,21 +36,31 @@ export const createClient = cache(async () => {
   );
 });
 
+type AuthenticatedUser = {
+  id: string;
+  email?: string;
+};
+
 /**
- * The authenticated user, fetched at most once per request.
+ * The authenticated identity, verified at most once per render pass.
  *
- * `getUser()` is a network round-trip to Supabase's auth server — it verifies
- * the JWT rather than trusting the cookie. That's the correct security
- * posture, but it made navigation crawl: the proxy, the dashboard layout and
- * the page each called it independently, so one click cost three sequential
- * verifications plus two duplicate profile queries. `cache()` collapses every
- * call inside a render pass into one.
+ * `getClaims()` verifies the JWT signature and normally does that locally
+ * against Supabase's cached public key. Unlike `getUser()`, it does not add an
+ * Auth-server round trip to every tab click. Course data remains protected by
+ * both this verified subject and owner-scoped RLS queries.
  */
 const getCachedUser = cache(async () => {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data, error } = await supabase.auth.getClaims();
+  const subject = error ? null : data?.claims.sub;
+  const email = data?.claims.email;
+  const user: AuthenticatedUser | null =
+    typeof subject === "string"
+      ? {
+          id: subject,
+          ...(typeof email === "string" ? { email } : {}),
+        }
+      : null;
   return { supabase, user };
 });
 

@@ -5,12 +5,11 @@ import { env } from "~/env";
 /**
  * Session refresh + route protection.
  *
- * `getUser()` is a network call to Supabase's auth server, so it runs only
- * where it changes the outcome: on protected routes and on `/`, which needs a
- * fresh session cookie so a returning visitor's "Sign up" turns into a
- * working dashboard link. Everything else — API routes that check auth
- * themselves, static assets, prefetches — skips it entirely. Doing this on
- * every matched request was costing a round-trip per navigation.
+ * `getClaims()` verifies the signed access token and refreshes it when needed.
+ * With asymmetric signing keys, verification is local after the project's
+ * public key is cached, avoiding an Auth-server round trip on every tab click.
+ * Everything else — API routes that check auth themselves, static assets and
+ * prefetches — skips this middleware work entirely.
  */
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -46,11 +45,10 @@ export async function proxy(request: NextRequest) {
     },
   );
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data } = await supabase.auth.getClaims();
+  const authenticated = typeof data?.claims.sub === "string";
 
-  if (!user && isProtected) {
+  if (!authenticated && isProtected) {
     return NextResponse.redirect(new URL("/", request.url));
   }
 
