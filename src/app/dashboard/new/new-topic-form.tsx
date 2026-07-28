@@ -6,6 +6,7 @@ import { createCourse } from "~/app/dashboard/actions";
 import { LocalDayField } from "~/components/local-day-field";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { HOMEWORK_MESSAGE, looksLikeHomework } from "~/lib/homework";
 import { BROAD_TOPIC_MESSAGE, isTopicTooBroad } from "~/lib/topic-scope";
 import {
   ACCEPT_ATTRIBUTE,
@@ -19,6 +20,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   missing_topic: "Enter a topic before continuing.",
   topic_too_broad: BROAD_TOPIC_MESSAGE,
   create_failed: "Something went wrong creating that course. Try again.",
+  topic_is_homework: HOMEWORK_MESSAGE,
   topic_limit:
     "You\u2019ve hit today\u2019s limit of 2 new topics. It resets at midnight your time.",
 };
@@ -141,6 +143,12 @@ export function NewTopicForm({
     const topic = String(formData.get("topic") ?? "");
     if (isTopicTooBroad(topic)) {
       setError(BROAD_TOPIC_MESSAGE);
+      setStatus(null);
+      return;
+    }
+    const notes = String(formData.get("notes") ?? "");
+    if (looksLikeHomework(topic) || looksLikeHomework(notes)) {
+      setError(HOMEWORK_MESSAGE);
       setStatus(null);
       return;
     }

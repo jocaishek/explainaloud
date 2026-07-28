@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { folderNameError, isFolderColor, topicNameError } from "~/lib/folders";
+import { looksLikeHomework } from "~/lib/homework";
 import { claimQuota, localDay } from "~/lib/limits";
 import { requireUser } from "~/lib/supabase/server";
 import { isTopicTooBroad } from "~/lib/topic-scope";
@@ -13,6 +14,7 @@ export type CreateCourseResult =
       error:
         | "missing_topic"
         | "topic_too_broad"
+        | "topic_is_homework"
         | "topic_limit"
         | "create_failed";
     };
@@ -34,6 +36,12 @@ export async function createCourse(
 
   if (isTopicTooBroad(topic)) {
     return { ok: false, error: "topic_too_broad" };
+  }
+
+  // Checked against the notes too: the topic can read innocently while the
+  // pasted notes are the actual problem set.
+  if (looksLikeHomework(topic) || looksLikeHomework(notes)) {
+    return { ok: false, error: "topic_is_homework" };
   }
 
   const quota = await claimQuota(supabase, "topic", day);
