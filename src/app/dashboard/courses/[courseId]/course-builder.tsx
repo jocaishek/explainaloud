@@ -3,11 +3,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AgentOrchestration } from "~/components/agent-orchestration";
 import { type SourceItem, SourceUploader } from "~/components/source-uploader";
 import { Button } from "~/components/ui/button";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
+import { courseSectionId } from "~/lib/course-sections";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 
@@ -38,6 +39,21 @@ export function CourseBuilder({
   const [provider, setProvider] = useState(generatedBy);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Course sections render inside an entrance animation. A browser hash jump
+  // can fire before that content settles, so repeat it once the section is in
+  // its final position.
+  useEffect(() => {
+    const targetId = decodeURIComponent(window.location.hash.slice(1));
+    if (!targetId.startsWith("course-section-") || !course) return;
+
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(targetId);
+      target?.scrollIntoView({ behavior: "instant", block: "start" });
+      target?.focus({ preventScroll: true });
+    }, 450);
+    return () => window.clearTimeout(timer);
+  }, [course]);
 
   async function generate() {
     setGenerating(true);
@@ -153,7 +169,12 @@ export function CourseBuilder({
             )}
 
             {course.sections.map((section, i) => (
-              <section key={section.title} className="flex flex-col gap-3">
+              <section
+                id={courseSectionId(i)}
+                key={section.title}
+                tabIndex={-1}
+                className="flex scroll-mt-24 flex-col gap-3"
+              >
                 <h3 className="flex items-baseline gap-3 text-lg font-semibold text-strong">
                   <span className="font-mono text-[11px] text-brand">
                     {String(i + 1).padStart(2, "0")}

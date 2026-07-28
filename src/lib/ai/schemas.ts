@@ -151,7 +151,6 @@ export const reportSchema = z
             "contradicted",
           ]),
           explanation: reportText,
-          quiz: reportText.optional(),
         }),
       )
       .default([]),
@@ -160,12 +159,6 @@ export const reportSchema = z
   })
   .transform((report) => ({
     ...report,
-    gaps: report.gaps.map((gap) => ({
-      ...gap,
-      quiz:
-        gap.quiz ??
-        "How would you explain the corrected idea in your own words?",
-    })),
     next_focus: report.next_focus ?? "",
   }));
 export type GapReport = z.infer<typeof reportSchema>;

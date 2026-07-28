@@ -4,7 +4,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Mic, Square } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentOrchestration } from "~/components/agent-orchestration";
+import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { Button } from "~/components/ui/button";
+import { conciseTeachingText } from "~/lib/ai/presentation";
 import type { AgentRun } from "~/lib/ai/schemas";
 import { DAILY_LIMITS, localDay } from "~/lib/limits";
 import { createClient } from "~/lib/supabase/client";
@@ -31,7 +33,6 @@ type Report = {
     phrase: string;
     category: string;
     explanation: string;
-    quiz: string;
   }>;
   strengths: string[];
   next_focus: string;
@@ -808,7 +809,11 @@ export function RecordConsole({
           </div>
 
           <p className="min-h-16 text-sm leading-relaxed">
-            <ColouredTranscript spans={spans} fallback={transcript} />
+            <ColouredTranscript
+              spans={spans}
+              fallback={transcript}
+              gaps={report?.gaps ?? []}
+            />
             {interim && <span className="text-subtle"> {interim}</span>}
             {status === "recording" && !transcript && !interim && (
               <span className="text-subtle">Listening…</span>
@@ -833,10 +838,12 @@ export function RecordConsole({
               <p className="text-sm text-foreground">{report.verdict}</p>
             </div>
 
-            {report.gaps.map((gap) => (
+            {report.gaps.map((gap, index) => (
               <div
                 key={gap.phrase}
-                className="rounded-xl border border-red-500/30 bg-red-500/[0.06] p-4"
+                id={`record-gap-${index}`}
+                tabIndex={-1}
+                className="scroll-mt-24 rounded-xl border border-red-500/30 bg-red-500/[0.06] p-4"
               >
                 <p className="font-mono text-[10px] tracking-[0.14em] text-red-500 uppercase">
                   {gap.category.replace("_", " ")}
@@ -845,10 +852,7 @@ export function RecordConsole({
                   &ldquo;{gap.phrase}&rdquo;
                 </p>
                 <p className="mt-2 text-sm whitespace-pre-wrap text-foreground">
-                  {gap.explanation}
-                </p>
-                <p className="mt-3 text-sm font-medium text-brand">
-                  {gap.quiz}
+                  {conciseTeachingText(gap.explanation)}
                 </p>
               </div>
             ))}
@@ -951,9 +955,11 @@ export function RecordConsole({
 function ColouredTranscript({
   spans,
   fallback,
+  gaps,
 }: {
   spans: Span[];
   fallback: string;
+  gaps: Report["gaps"];
 }) {
   if (spans.length === 0) {
     return <span className="text-foreground">{fallback}</span>;
@@ -961,22 +967,57 @@ function ColouredTranscript({
 
   return (
     <>
-      {spans.map((span, i) => (
-        <span
-          // biome-ignore lint/suspicious/noArrayIndexKey: spans are positional
-          key={`${i}-${span.text.slice(0, 12)}`}
-          title={span.issue ?? undefined}
-          className={cn(
-            "transition-colors duration-500",
-            span.status === "correct" && "text-green-500",
-            span.status === "gap" &&
-              "rounded bg-red-500/10 font-medium text-red-500 underline decoration-red-500/40 decoration-wavy underline-offset-4",
-            span.status === "neutral" && "text-subtle",
-          )}
-        >
-          {span.text}
-        </span>
-      ))}
+      {spans.map((span, i) => {
+        const normalizedSpan = span.text.toLowerCase().replace(/\W+/g, " ");
+        const matchingGap =
+          span.status === "gap"
+            ? gaps.findIndex((gap) => {
+                const phrase = gap.phrase.toLowerCase().replace(/\W+/g, " ");
+                return (
+                  phrase.length > 0 &&
+                  (normalizedSpan.includes(phrase) ||
+                    phrase.includes(normalizedSpan))
+                );
+              })
+            : -1;
+        const linkedGap =
+          matchingGap >= 0
+            ? matchingGap
+            : gaps.length > 0
+              ? i % gaps.length
+              : -1;
+        const className = cn(
+          "transition-colors duration-500",
+          span.status === "correct" && "text-green-500",
+          span.status === "gap" &&
+            "rounded bg-red-500/10 font-medium text-red-500 underline decoration-red-500/40 decoration-wavy underline-offset-4",
+          span.status === "neutral" && "text-subtle",
+        );
+
+        return span.status === "gap" && linkedGap >= 0 ? (
+          <ScrollToTargetLink
+            // biome-ignore lint/suspicious/noArrayIndexKey: spans are positional
+            key={`${i}-${span.text.slice(0, 12)}`}
+            targetId={`record-gap-${linkedGap}`}
+            title={span.issue ?? "Jump to this explanation"}
+            className={cn(
+              className,
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50",
+            )}
+          >
+            {span.text}
+          </ScrollToTargetLink>
+        ) : (
+          <span
+            // biome-ignore lint/suspicious/noArrayIndexKey: spans are positional
+            key={`${i}-${span.text.slice(0, 12)}`}
+            title={span.issue ?? undefined}
+            className={className}
+          >
+            {span.text}
+          </span>
+        );
+      })}
     </>
   );
 }

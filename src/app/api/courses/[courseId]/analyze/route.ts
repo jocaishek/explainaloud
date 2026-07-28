@@ -148,7 +148,6 @@ export async function POST(
             phrase: gap.phrase,
             category: gap.category,
             explanation: gap.explanation,
-            quiz: gap.quiz,
           })),
         );
 

@@ -225,7 +225,10 @@ Rules:
 - Spans must be exact verbatim substrings of the transcript, in order, with no
   overlap. Concatenating every span's text must reproduce the transcript.
 - Only mark "gap" when you can name the specific key point that was missed or
-  contradicted. If you cannot name it, the span is "neutral", not "gap".
+  contradicted. A checkable claim unrelated to the assigned topic is also a
+  "gap"; say that it does not address the topic.
+- Use "neutral" only for filler, false starts, or connective words. Do not mark
+  an entire off-topic explanation neutral.
 - Be strict about correctness but do not invent gaps. A student who is simply
   brief is not wrong.
 
@@ -260,13 +263,22 @@ export function gapReportPrompt(params: {
 You receive the Transcript Evaluator agent's findings only after the student
 has finished speaking.
 
-${TUTOR_SYSTEM}
-
 ${params.grounded ? GROUNDING_RULE : OPEN_KNOWLEDGE_RULE}
 
 ${PRECISION_RULE}
 
 The student has FINISHED explaining "${params.topic}". Now teach the gaps.
+
+COACHING RULES:
+- State the correction directly. Each explanation must be 1-2 short sentences
+  and no more than 45 words.
+- Do not add a question, exercise, or request to explain it back.
+- Vary the teaching approach. Across the entire response, use the word
+  "imagine" at most once, and only when a concrete analogy genuinely helps.
+- Avoid repeated openings, filler, and generic encouragement.
+- For a wrong claim, use the student's exact words as "phrase". For a concept
+  they skipped entirely, use a short concept label instead.
+- Strengths must be short, specific claims the student actually got right.
 
 KEY POINTS:
 ${params.keyPoints.map((p, i) => `[${i}] ${p}`).join("\n")}
@@ -285,10 +297,9 @@ Return JSON:
   "verdict": "one sentence on where they actually stand",
   "gaps": [
     {
-      "phrase": "the student's own words, verbatim",
+      "phrase": "the student's exact words for a wrong claim, or a short concept label for an omitted step",
       "category": "missing_step" | "misconception" | "vague" | "contradicted",
-      "explanation": "teach the correction step-by-step per the teaching rules, grounded in the sources",
-      "quiz": "one question that checks they now have it"
+      "explanation": "the direct correction in 1-2 short sentences"
     }
   ],
   "strengths": ["what they genuinely got right, quoting them"],

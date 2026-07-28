@@ -1,4 +1,53 @@
+import Link from "next/link";
+import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
+import { conciseTeachingText } from "~/lib/ai/presentation";
+import type { GapReport, SpanStatus } from "~/lib/ai/schemas";
 import { requireUser } from "~/lib/supabase/server";
+import { cn } from "~/lib/utils";
+
+type GapRow = {
+  id: string;
+  phrase: string;
+  category: string;
+  explanation: string | null;
+  resolved: boolean;
+  created_at: string;
+};
+
+type StoredSpan = {
+  text: string;
+  status: SpanStatus;
+  issue: string | null;
+};
+
+type SessionReport = {
+  id: string;
+  transcript: string | null;
+  score: number | null;
+  spans: StoredSpan[] | null;
+  report: GapReport | null;
+  gaps: GapRow[];
+};
+
+function normalized(text: string) {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function relatedWeakness(text: string, index: number, weaknesses: GapRow[]) {
+  if (weaknesses.length === 0) return null;
+  const spanText = normalized(text);
+  const exact = weaknesses.find((weakness) => {
+    const phrase = normalized(weakness.phrase);
+    return (
+      phrase.length > 0 &&
+      (spanText.includes(phrase) || phrase.includes(spanText))
+    );
+  });
+  return exact ?? weaknesses[index % weaknesses.length] ?? null;
+}
 
 export default async function GapReportPage({
   params,
@@ -8,42 +57,243 @@ export default async function GapReportPage({
   const { courseId } = await params;
   const { supabase, user } = await requireUser();
 
-  const { data: sessions } = await supabase
+  const { data: session } = await supabase
     .from("course_sessions")
     .select(
-      "id, gaps ( id, phrase, category, explanation, resolved, created_at )",
+      "id, transcript, score, spans, report, gaps ( id, phrase, category, explanation, resolved, created_at )",
     )
     .eq("course_id", courseId)
     .eq("user_id", user.id)
-    .order("started_at", { ascending: false });
+    .not("report", "is", null)
+    .order("started_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<SessionReport>();
 
-  const gaps = sessions?.flatMap((session) => session.gaps) ?? [];
-
-  if (gaps.length === 0) {
+  if (!session?.report) {
     return (
-      <p className="text-sm text-subtle">
-        No flagged moments yet — this fills in the moment you explain the topic
-        out loud and something doesn&apos;t hold together.
-      </p>
+      <div className="flex flex-col gap-3">
+        <p className="text-sm text-subtle">
+          No gap report yet. Explain the topic once and your score, transcript,
+          strengths, and weaknesses will appear here.
+        </p>
+        <Link
+          href={`/dashboard/courses/${courseId}/record`}
+          className="w-fit rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        >
+          Start explaining
+        </Link>
+      </div>
     );
   }
 
+  const score = Math.round(session.score ?? session.report.score);
+  const spans = session.spans ?? [];
+  const weaknesses = (session.gaps ?? []) as GapRow[];
+  const hasClassifiedClaim = spans.some(
+    (span) => span.status === "correct" || span.status === "gap",
+  );
+  const markSubstantiveNeutralAsGap =
+    score < 50 && weaknesses.length > 0 && !hasClassifiedClaim;
+
   return (
-    <div className="flex flex-col gap-3">
-      {gaps.map((gap) => (
-        <div
-          key={gap.id}
-          className="rounded-lg border border-border bg-surface p-4"
-        >
-          <p className="text-xs font-medium text-brand capitalize">
-            {gap.category}
+    <div className="flex flex-col gap-8">
+      <section aria-labelledby="score-heading" className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-baseline justify-between gap-3">
+          <h2
+            id="score-heading"
+            className="text-base font-semibold text-strong"
+          >
+            Knowledge score
+          </h2>
+          <p className="font-mono text-2xl font-semibold text-strong tabular-nums">
+            {score}
+            <span className="text-sm font-normal text-subtle"> / 100</span>
           </p>
-          <p className="mt-1 text-sm text-strong">&ldquo;{gap.phrase}&rdquo;</p>
-          {gap.explanation && (
-            <p className="mt-2 text-sm text-foreground">{gap.explanation}</p>
-          )}
         </div>
-      ))}
+        <div
+          role="progressbar"
+          aria-label={`Knowledge score: ${score} out of 100`}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={score}
+          className="h-2 overflow-hidden rounded-full bg-muted"
+        >
+          <div
+            className={cn(
+              "h-full rounded-full",
+              score >= 75
+                ? "bg-green-500"
+                : score >= 50
+                  ? "bg-amber-500"
+                  : "bg-red-500",
+            )}
+            style={{ width: `${score}%` }}
+          />
+        </div>
+        <p className="max-w-2xl text-sm text-foreground">
+          {session.report.verdict}
+        </p>
+      </section>
+
+      {session.transcript && spans.length > 0 && (
+        <section
+          aria-labelledby="transcript-heading"
+          className="flex flex-col gap-3"
+        >
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2
+              id="transcript-heading"
+              className="text-base font-semibold text-strong"
+            >
+              Your transcript
+            </h2>
+            <div className="flex items-center gap-3 text-xs text-subtle">
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-green-500" />
+                Accurate
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="size-2 rounded-full bg-red-500" />
+                Needs work
+              </span>
+            </div>
+          </div>
+          <p className="max-w-3xl rounded-xl bg-surface p-4 text-sm leading-7 text-foreground">
+            {spans.map((span, index) => {
+              const substantive = span.text.trim().length > 0;
+              const status =
+                span.status === "neutral" &&
+                substantive &&
+                markSubstantiveNeutralAsGap
+                  ? "gap"
+                  : span.status;
+              const weakness =
+                status === "gap"
+                  ? relatedWeakness(span.text, index, weaknesses)
+                  : null;
+
+              if (status === "gap" && weakness) {
+                return (
+                  <ScrollToTargetLink
+                    // biome-ignore lint/suspicious/noArrayIndexKey: transcript spans are positional
+                    key={`${index}-${span.text.slice(0, 16)}`}
+                    targetId={`weakness-${weakness.id}`}
+                    title={span.issue ?? "Jump to this weakness"}
+                    className="rounded bg-red-500/10 text-red-600 underline decoration-red-500/50 decoration-wavy underline-offset-4 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-red-400"
+                  >
+                    {span.text}
+                  </ScrollToTargetLink>
+                );
+              }
+
+              return (
+                <span
+                  // biome-ignore lint/suspicious/noArrayIndexKey: transcript spans are positional
+                  key={`${index}-${span.text.slice(0, 16)}`}
+                  className={cn(
+                    status === "correct" &&
+                      "text-green-600 dark:text-green-400",
+                    status === "neutral" && "text-subtle",
+                  )}
+                >
+                  {span.text}
+                </span>
+              );
+            })}
+          </p>
+          <p className="text-xs text-subtle">
+            Select any red text to jump to the matching explanation.
+          </p>
+        </section>
+      )}
+
+      <section
+        aria-labelledby="strengths-heading"
+        className="flex flex-col gap-3"
+      >
+        <h2
+          id="strengths-heading"
+          className="text-base font-semibold text-strong"
+        >
+          Knowledge strengths
+        </h2>
+        {session.report.strengths.length > 0 ? (
+          <ul className="flex max-w-3xl flex-col gap-2">
+            {session.report.strengths.map((strength) => (
+              <li
+                key={strength}
+                className="flex gap-2 text-sm leading-6 text-foreground"
+              >
+                <span
+                  aria-hidden
+                  className="mt-2 size-2 shrink-0 rounded-full bg-green-500"
+                />
+                {strength}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-subtle">
+            No clear strengths were demonstrated in this explanation yet.
+          </p>
+        )}
+      </section>
+
+      <section
+        aria-labelledby="weaknesses-heading"
+        className="flex flex-col gap-3"
+      >
+        <div>
+          <h2
+            id="weaknesses-heading"
+            className="text-base font-semibold text-strong"
+          >
+            Knowledge weaknesses
+          </h2>
+          <p className="mt-1 text-sm text-subtle">
+            Review one concept at a time.
+          </p>
+        </div>
+
+        {weaknesses.length > 0 ? (
+          <div className="divide-y divide-border border-y border-border">
+            {weaknesses.map((weakness) => (
+              <article
+                id={`weakness-${weakness.id}`}
+                key={weakness.id}
+                tabIndex={-1}
+                className="flex scroll-mt-24 flex-col gap-2 py-4 outline-none target:bg-red-500/[0.04]"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-red-600 capitalize dark:text-red-400">
+                      {weakness.category.replace(/_/g, " ")}
+                    </p>
+                    <h3 className="mt-1 text-sm font-semibold text-strong">
+                      {weakness.phrase}
+                    </h3>
+                  </div>
+                  <Link
+                    href={`/dashboard/courses/${courseId}/re-teach#gap-${weakness.id}`}
+                    className="shrink-0 rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    Re-teach this
+                  </Link>
+                </div>
+                {weakness.explanation && (
+                  <p className="max-w-2xl text-sm leading-6 text-foreground">
+                    {conciseTeachingText(weakness.explanation)}
+                  </p>
+                )}
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-subtle">
+            No weaknesses were flagged in this explanation.
+          </p>
+        )}
+      </section>
     </div>
   );
 }

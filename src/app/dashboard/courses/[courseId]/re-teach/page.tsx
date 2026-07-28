@@ -1,5 +1,10 @@
 import Link from "next/link";
+import { conciseTeachingText } from "~/lib/ai/presentation";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
+import {
+  courseSectionId,
+  findRelatedSectionIndex,
+} from "~/lib/course-sections";
 import { requireUser } from "~/lib/supabase/server";
 
 type GapRow = {
@@ -7,7 +12,6 @@ type GapRow = {
   phrase: string;
   category: string;
   explanation: string | null;
-  quiz: string | null;
   resolved: boolean;
 };
 
@@ -25,13 +29,16 @@ export default async function ReTeachPage({
   const { courseId } = await params;
   const { supabase, user } = await requireUser();
 
-  const [{ data: sessions }, { data: course }] = await Promise.all([
+  const [{ data: session }, { data: course }] = await Promise.all([
     supabase
       .from("course_sessions")
-      .select("id, gaps ( id, phrase, category, explanation, quiz, resolved )")
+      .select("id, gaps ( id, phrase, category, explanation, resolved )")
       .eq("course_id", courseId)
       .eq("user_id", user.id)
-      .order("started_at", { ascending: false }),
+      .not("report", "is", null)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{ id: string; gaps: GapRow[] }>(),
     supabase
       .from("courses")
       .select("generated")
@@ -40,8 +47,7 @@ export default async function ReTeachPage({
       .maybeSingle<{ generated: GeneratedCourse | null }>(),
   ]);
 
-  const gaps: GapRow[] =
-    sessions?.flatMap((s) => (s.gaps ?? []) as unknown as GapRow[]) ?? [];
+  const gaps = session?.gaps ?? [];
 
   if (gaps.length === 0) {
     return (
@@ -60,20 +66,7 @@ export default async function ReTeachPage({
     );
   }
 
-  // Match a gap to the course section that covers it, so the mini lesson can
-  // put the original teaching next to the correction.
   const sections = course?.generated?.sections ?? [];
-  function relatedSection(phrase: string) {
-    const words = phrase
-      .toLowerCase()
-      .split(/\W+/)
-      .filter((w) => w.length > 4);
-    return sections.find((section) =>
-      section.key_points.some((point) =>
-        words.some((word) => point.toLowerCase().includes(word)),
-      ),
-    );
-  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -83,42 +76,42 @@ export default async function ReTeachPage({
       </p>
 
       {gaps.map((gap) => {
-        const section = relatedSection(gap.phrase);
+        const sectionIndex = findRelatedSectionIndex(
+          sections,
+          `${gap.phrase} ${gap.explanation ?? ""}`,
+        );
+        const section = sectionIndex >= 0 ? sections[sectionIndex] : null;
         return (
           <article
+            id={`gap-${gap.id}`}
             key={gap.id}
-            className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4"
+            tabIndex={-1}
+            className="flex scroll-mt-24 flex-col gap-3 rounded-xl border border-border bg-surface p-4"
           >
             <p className="font-mono text-[10px] tracking-[0.14em] text-brand uppercase">
               {gap.category.replace(/_/g, " ")}
             </p>
 
             <p className="text-sm text-subtle">
-              You said: &ldquo;{gap.phrase}&rdquo;
+              {gap.category === "missing_step"
+                ? "Missing concept: "
+                : "You said: "}
+              &ldquo;{gap.phrase}&rdquo;
             </p>
 
             {gap.explanation && (
-              <p className="text-sm whitespace-pre-wrap text-foreground">
-                {gap.explanation}
+              <p className="max-w-2xl text-sm leading-6 text-foreground">
+                {conciseTeachingText(gap.explanation)}
               </p>
             )}
 
             {section && (
-              <div className="rounded-lg border border-border bg-background p-3">
-                <p className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-                  From your course · {section.title}
-                </p>
-                <p className="mt-2 text-sm text-foreground">
-                  {section.intuition}
-                </p>
-                <p className="mt-2 text-sm text-subtle">{section.analogy}</p>
-              </div>
-            )}
-
-            {gap.quiz && (
-              <p className="rounded-lg border border-brand/20 bg-brand/[0.06] px-3 py-2 text-sm font-medium text-strong">
-                {gap.quiz}
-              </p>
+              <Link
+                href={`/dashboard/courses/${courseId}#${courseSectionId(sectionIndex)}`}
+                className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Review “{section.title}” in your course →
+              </Link>
             )}
           </article>
         );
