@@ -19,8 +19,16 @@ export const env = createEnv({
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+    // The domain this app is actually served on, with protocol — for example
+    // `https://ropes.app`. Vercel's own variable names the project's
+    // `*.vercel.app` host, which is not where anyone visits once a custom
+    // domain is attached, so share links and Open Graph images would keep
+    // pointing at the wrong hostname. Optional: unset, the Vercel host is
+    // still a working fallback.
+    NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
   },
   runtimeEnv: {
+    NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
     NODE_ENV: process.env.NODE_ENV,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
