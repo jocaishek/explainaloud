@@ -36,7 +36,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
     // The domain this app is actually served on, with protocol — for example
-    // `https://ropes.app`. Vercel's own variable names the project's
+    // `https://explainaloud.com`. Vercel's own variable names the project's
     // `*.vercel.app` host, which is not where anyone visits once a custom
     // domain is attached, so share links and Open Graph images would keep
     // pointing at the wrong hostname. Optional: unset, the Vercel host is

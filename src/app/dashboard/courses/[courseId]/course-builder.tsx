@@ -135,7 +135,7 @@ export function CourseBuilder({
             {sources.length > 0
               ? "The course is grounded in these sources."
               : course?.citations.length
-                ? "Ropes researched direct sources and cites them throughout this course."
+                ? "Explainaloud researched direct sources and cites them throughout this course."
                 : "Sources are optional. Without them, the course uses established textbook knowledge."}
           </p>
         </div>

@@ -18,6 +18,20 @@ export function billingConfigured() {
   );
 }
 
+/**
+ * Pinned rather than left to the SDK default, so a dependency bump cannot
+ * silently change response shapes underneath the webhook.
+ */
+const STRIPE_API_VERSION = "2026-06-24.dahlia";
+
+/**
+ * Labels checkout sessions in the Stripe Dashboard so this flow can be compared
+ * against any future one. Constant, not per-request: it identifies the flow,
+ * not the session. The random suffix is what keeps it distinct from another
+ * integration that also called itself "pro".
+ */
+export const CHECKOUT_INTEGRATION_ID = "explainaloud-pro-qvbtmrkd";
+
 let cached: Stripe | null = null;
 
 export function stripeClient(): Stripe {
@@ -26,7 +40,9 @@ export function stripeClient(): Stripe {
   }
   // Reused across requests on a warm instance; Stripe's client is just an HTTP
   // wrapper and constructing one per call adds latency for nothing.
-  cached ??= new Stripe(env.STRIPE_SECRET_KEY);
+  cached ??= new Stripe(env.STRIPE_SECRET_KEY, {
+    apiVersion: STRIPE_API_VERSION as Stripe.LatestApiVersion,
+  });
   return cached;
 }
 

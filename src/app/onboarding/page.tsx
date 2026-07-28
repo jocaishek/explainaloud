@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { requireUser } from "~/lib/supabase/server";
 import { OnboardingExperience } from "./onboarding-experience";
 
-export const metadata = { title: "Finish setting up · Ropes" };
+export const metadata = { title: "Finish setting up · Explainaloud" };
 
 export default async function OnboardingPage() {
   const { supabase, user } = await requireUser();

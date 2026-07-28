@@ -1162,7 +1162,7 @@ export function RecordConsole({
     } catch {
       setStatus("idle");
       setError(
-        "Ropes needs your microphone. Allow access in the browser prompt (or the padlock in the address bar) and try again.",
+        "Explainaloud needs your microphone. Allow access in the browser prompt (or the padlock in the address bar) and try again.",
       );
       return;
     }

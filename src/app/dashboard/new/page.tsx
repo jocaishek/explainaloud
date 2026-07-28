@@ -17,8 +17,8 @@ export default async function NewTopicPage({
           Start a topic
         </h1>
         <p className="mt-2 text-foreground">
-          Type a topic or paste your notes. Ropes builds a short course from
-          real sources, then listens while you explain it back.
+          Type a topic or paste your notes. Explainaloud builds a short course
+          from real sources, then listens while you explain it back.
         </p>
       </div>
 

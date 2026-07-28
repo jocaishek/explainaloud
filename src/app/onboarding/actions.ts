@@ -38,7 +38,7 @@ export async function saveProfile(
 
   if (problem) return { error: problem };
   if (!isUseType(useType)) {
-    return { error: "Pick how you'll be using Ropes." };
+    return { error: "Pick how you'll be using Explainaloud." };
   }
 
   // Upsert rather than insert: a half-finished onboarding that got interrupted

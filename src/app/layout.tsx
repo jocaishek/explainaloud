@@ -28,7 +28,7 @@ const instrumentSerif = Instrument_Serif({
   variable: "--font-display",
 });
 
-const TITLE = "Ropes";
+const TITLE = "Explainaloud";
 const DESCRIPTION =
   "Explain it back out loud and know exactly when you actually understand it.";
 

@@ -402,7 +402,7 @@ export function AuthCard({
               <span className="font-medium text-white">
                 {email.trim().toLowerCase()}
               </span>
-              . Open it to continue to Ropes.
+              . Open it to continue to Explainaloud.
             </p>
           </div>
 

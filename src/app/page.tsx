@@ -11,9 +11,9 @@ import { ArrowRight, Check, X } from "lucide-react";
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { type Example, ExampleCarousel } from "~/components/example-carousel";
+import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { Magnetic } from "~/components/magnetic";
 import { Marquee } from "~/components/marquee";
-import { RopesMark } from "~/components/ropes-mark";
 import { ScrollProgress } from "~/components/scroll-progress";
 import { SmoothScroll } from "~/components/smooth-scroll";
 import { Spotlight } from "~/components/spotlight";
@@ -139,7 +139,7 @@ export default function Home() {
         <GlowOrb className="-top-32 left-1/2 h-[34rem] w-[52rem] -translate-x-1/2 opacity-[0.16]" />
 
         <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
-          <Eyebrow index="01" label="Ropes" />
+          <Eyebrow index="01" label="Explainaloud" />
           <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight text-balance text-white sm:text-6xl">
             <WordReveal
               text="Know when you actually understand it."
@@ -237,9 +237,9 @@ export default function Home() {
             </h2>
             <Reveal delay={120} className="mt-5">
               <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
-                Ropes does not ask one model to do everything. Each agent owns a
-                specific job, passes its work forward, and leaves a visible
-                trace so you can see how the result was made.
+                Explainaloud does not ask one model to do everything. Each agent
+                owns a specific job, passes its work forward, and leaves a
+                visible trace so you can see how the result was made.
               </p>
             </Reveal>
           </div>
@@ -275,7 +275,7 @@ export default function Home() {
                 </p>
                 <p>
                   The gaps stay hidden until you explain the idea in your own
-                  words. Ropes is built around that moment.
+                  words. Explainaloud is built around that moment.
                 </p>
               </div>
             </Reveal>
@@ -439,8 +439,9 @@ export default function Home() {
               />
             </h2>
             <p className="mt-4 max-w-lg text-[#A1A1AA]">
-              Everything that makes Ropes work — live gap colouring, the full
-              report, Re-Teach — is on the free plan. Pro raises the ceiling.
+              Everything that makes Explainaloud work — live gap colouring, the
+              full report, Re-Teach — is on the free plan. Pro raises the
+              ceiling.
             </p>
           </div>
 
@@ -491,8 +492,8 @@ export default function Home() {
 
       <footer className="w-full border-t border-white/10 px-6 py-8">
         <div className="mx-auto flex max-w-4xl items-center justify-between text-sm text-[#71717A]">
-          <span className="font-medium text-[#A1A1AA]">Ropes</span>
-          <span>© 2026 Ropes</span>
+          <span className="font-medium text-[#A1A1AA]">Explainaloud</span>
+          <span>© 2026 Explainaloud</span>
         </div>
       </footer>
     </main>
@@ -505,7 +506,7 @@ const MARQUEE_ITEMS = [
   "Recognition isn't recall",
   "Gaps filled, not just flagged",
   "Built from your own sources",
-  "Learn the ropes",
+  "Say it before you're sure",
 ];
 
 const LANDING_AGENTS = [
@@ -691,8 +692,8 @@ function Nav() {
         )}
       >
         <span className="flex items-center gap-2 text-base font-semibold tracking-tight text-white">
-          <RopesMark className="size-6 shrink-0" />
-          Ropes
+          <ExplainaloudMark className="size-6 shrink-0" />
+          Explainaloud
         </span>
         <Magnetic strength={16}>
           <Button

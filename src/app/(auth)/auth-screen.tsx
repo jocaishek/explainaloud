@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AuthCard, type AuthMode } from "~/components/auth-card";
-import { RopesMark } from "~/components/ropes-mark";
+import { ExplainaloudMark } from "~/components/explainaloud-mark";
 
 /**
  * The shell around the sign-in form: a way back to the landing page, the
@@ -19,8 +19,8 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         href="/"
         className="flex items-center gap-2 text-base font-semibold tracking-tight text-white transition-opacity hover:opacity-80"
       >
-        <RopesMark className="size-6 shrink-0 text-brand" />
-        Ropes
+        <ExplainaloudMark className="size-6 shrink-0 text-brand" />
+        Explainaloud
       </Link>
 
       <div className="mt-10 flex w-full max-w-md flex-col items-center text-center">

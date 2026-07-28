@@ -105,7 +105,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Ropes couldn't verify every citation against your sources. Try rebuilding the course.",
+            "Explainaloud couldn't verify every citation against your sources. Try rebuilding the course.",
           detail,
         },
         { status: 422 },

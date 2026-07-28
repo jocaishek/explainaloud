@@ -1,7 +1,7 @@
 /**
  * Rejects "do my homework" inputs.
  *
- * Ropes exists to make a student explain a concept and find out what they don't
+ * Explainaloud exists to make a student explain a concept and find out what they don't
  * understand. A specific problem with a specific answer is the opposite use: the
  * student gets the answer and learns nothing, and the tool becomes a homework
  * service.
@@ -51,7 +51,7 @@ const ANSWER_IMPERATIVE =
   /\b(?:solve|evaluate|compute|calculate|simplify|factor(?:ise|ize)?|integrate|differentiate|derive|prove|graph|plot|convert|round|estimate|find)\b/i;
 
 export const HOMEWORK_MESSAGE =
-  "Ropes is for explaining ideas, not for answering set problems. Try the concept behind the question instead — for example, “how integration by parts works” rather than a specific integral to evaluate.";
+  "Explainaloud is for explaining ideas, not for answering set problems. Try the concept behind the question instead — for example, “how integration by parts works” rather than a specific integral to evaluate.";
 
 export function looksLikeHomework(value: string) {
   const text = value.trim();

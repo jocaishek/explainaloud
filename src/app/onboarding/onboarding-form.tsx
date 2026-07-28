@@ -70,7 +70,7 @@ export function OnboardingForm({ email }: { email: string }) {
       );
     }
     if (index === 1) return dateOfBirthError(dateOfBirth);
-    return useType ? null : "Pick how you'll be using Ropes.";
+    return useType ? null : "Pick how you'll be using Explainaloud.";
   }
 
   function next() {
@@ -172,7 +172,7 @@ export function OnboardingForm({ email }: { email: string }) {
               <h2 className="text-3xl font-semibold tracking-tight text-strong text-balance">
                 {step === 0 && "What should we call you?"}
                 {step === 1 && "When were you born?"}
-                {step === 2 && "How will you use Ropes?"}
+                {step === 2 && "How will you use Explainaloud?"}
               </h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-subtle">
                 {step === 0 &&
@@ -254,8 +254,8 @@ export function OnboardingForm({ email }: { email: string }) {
                 </div>
                 <div className="rounded-xl bg-surface px-4 py-3">
                   <p className="text-xs leading-5 text-subtle">
-                    Ropes requires users to be at least 13. Your birth date is
-                    only used for account eligibility.
+                    Explainaloud requires users to be at least 13. Your birth
+                    date is only used for account eligibility.
                   </p>
                 </div>
               </div>

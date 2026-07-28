@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { env } from "~/env";
-import { billingConfigured, stripeClient } from "~/lib/billing";
+import {
+  billingConfigured,
+  CHECKOUT_INTEGRATION_ID,
+  stripeClient,
+} from "~/lib/billing";
 import { siteUrl } from "~/lib/site";
 import { createClient } from "~/lib/supabase/server";
 
@@ -47,6 +51,11 @@ export async function POST() {
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
+      // Note there is no `payment_method_types` here, deliberately. Naming it
+      // would pin checkout to whatever is listed and lock out every other
+      // eligible method; omitted, Stripe picks from the Dashboard settings per
+      // customer, which is what dynamic payment methods are for.
+      integration_identifier: CHECKOUT_INTEGRATION_ID,
       // Reuse the customer when there is one, so a resubscribe lands on the
       // same Stripe record instead of creating a duplicate with the same email.
       ...(profile?.stripe_customer_id

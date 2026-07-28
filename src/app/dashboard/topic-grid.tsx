@@ -18,7 +18,7 @@ const GRID =
   "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
 
 /** Custom MIME type so the grid ignores files and text dragged in from outside. */
-const DRAG_TYPE = "application/x-ropes-course";
+const DRAG_TYPE = "application/x-explainaloud-course";
 
 export function TopicGrid({
   folders,

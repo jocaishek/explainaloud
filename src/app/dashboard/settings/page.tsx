@@ -5,7 +5,7 @@ import { requireProfile } from "~/lib/supabase/server";
 import { PlanPanel } from "./plan-panel";
 import { ProfileForm } from "./profile-form";
 
-export const metadata = { title: "Settings · Ropes" };
+export const metadata = { title: "Settings · Explainaloud" };
 
 export default async function SettingsPage() {
   const { user, profile } = await requireProfile();
@@ -17,7 +17,7 @@ export default async function SettingsPage() {
           Settings
         </h1>
         <p className="mt-2 text-subtle">
-          Your account details and how Ropes looks.
+          Your account details and how Explainaloud looks.
         </p>
       </div>
 
