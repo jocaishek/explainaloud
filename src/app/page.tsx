@@ -165,7 +165,7 @@ export default function Home() {
             </p>
           </Reveal>
           <Reveal delay={180} className="mt-2">
-            <Magnetic>
+            <Magnetic strength={16}>
               <Button
                 asChild
                 size="lg"
