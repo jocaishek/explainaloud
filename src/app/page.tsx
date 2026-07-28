@@ -8,7 +8,6 @@ import {
   useTransform,
 } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { type Example, ExampleCarousel } from "~/components/example-carousel";
 import { Magnetic } from "~/components/magnetic";
@@ -1204,7 +1203,6 @@ function authErrorMessage(mode: AuthMode, message: string): string {
 }
 
 function AuthCard() {
-  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("signup");
   const [stage, setStage] = useState<Stage>("form");
   const [email, setEmail] = useState("");
@@ -1215,13 +1213,20 @@ function AuthCard() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("authError") !== "session-expired") return;
+    if (params.get("authError") === "session-expired") {
+      setMode("login");
+      setError(
+        "That sign-in is no longer valid. Sign in again, or create the account again if it was removed.",
+      );
+      window.history.replaceState({}, "", `${window.location.pathname}#signup`);
+      return;
+    }
 
-    setMode("login");
-    setError(
-      "That sign-in is no longer valid. Sign in again, or create the account again if it was removed.",
-    );
-    window.history.replaceState({}, "", `${window.location.pathname}#signup`);
+    if (params.get("auth_error") === "1") {
+      setMode("login");
+      setError("We couldn't finish signing you in. Please try again.");
+      window.history.replaceState({}, "", `${window.location.pathname}#signup`);
+    }
   }, []);
 
   function switchMode(next: AuthMode) {
@@ -1286,7 +1291,7 @@ function AuthCard() {
 
       if (data.session) {
         // New account — collect the profile before the dashboard.
-        router.push("/onboarding");
+        window.location.assign("/onboarding");
       } else {
         setStage("check-email");
       }
@@ -1304,7 +1309,9 @@ function AuthCard() {
       return;
     }
 
-    router.push("/dashboard");
+    // A full navigation guarantees the newly written auth cookies are present
+    // before server-side dashboard and onboarding guards run.
+    window.location.assign("/dashboard");
   }
 
   async function handleForgotPassword(e: React.FormEvent) {

@@ -14,6 +14,16 @@ import { env } from "~/env";
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Supabase falls back to the configured Site URL when a requested OAuth
+  // callback is missing from the hosted redirect allow-list. Recover that
+  // valid PKCE callback here so Google sign-in cannot strand the user on `/`
+  // with an unexchanged `?code=...`.
+  if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
+    const callbackUrl = request.nextUrl.clone();
+    callbackUrl.pathname = "/auth/callback";
+    return NextResponse.redirect(callbackUrl);
+  }
+
   const isProtected =
     pathname.startsWith("/dashboard") || pathname.startsWith("/onboarding");
   const needsSession = isProtected || pathname === "/";
