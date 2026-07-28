@@ -703,6 +703,12 @@ export async function orchestrateExplanation(params: ExplanationParams) {
     const detection = await completeJson(
       `${gapDetectionPrompt(params)}\n\n${sourceBlock}`,
       (value) => spansSchema.parse(value),
+      // Live colouring is on the student's critical path — every millisecond
+      // here is a millisecond of grey text while they're still talking. The
+      // span JSON for one explanation fits well inside 900 tokens, and asking
+      // for less is also what keeps the small model's 6K-per-minute window from
+      // rate-limiting a run of quick phrases.
+      params.mode === "live" ? { fast: true, maxOutputTokens: 900 } : {},
     );
     spans = reconcileSpans(params.transcript, detection.data.spans);
     covered = coveredKeyPointIndices(
