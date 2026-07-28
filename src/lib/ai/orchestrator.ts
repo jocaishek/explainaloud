@@ -1,6 +1,10 @@
 import "server-only";
 
 import {
+  completeCoverageReport,
+  coveredKeyPointIndices,
+} from "~/lib/ai/coverage-report";
+import {
   courseGenerationPrompt,
   courseReviewPrompt,
   courseRevisionPrompt,
@@ -273,6 +277,13 @@ export async function orchestrateExplanation(params: ExplanationParams) {
     (value) => spansSchema.parse(value),
   );
   const spans = reconcileSpans(params.transcript, detection.data.spans);
+  const covered = coveredKeyPointIndices(
+    detection.data.covered_key_points,
+    params.keyPoints.length,
+  );
+  const missingKeyPoints = params.keyPoints.filter(
+    (_, index) => !covered.has(index),
+  );
 
   agents.push(
     agentStep(
@@ -294,10 +305,16 @@ export async function orchestrateExplanation(params: ExplanationParams) {
         gaps: spans
           .filter((span) => span.status === "gap")
           .map((span) => ({ text: span.text, issue: span.issue })),
+        missingKeyPoints,
       })}\n\n${sourceBlock}`,
       (value) => reportSchema.parse(value),
     );
-    report = coaching.data;
+    report = completeCoverageReport({
+      draft: coaching.data,
+      keyPoints: params.keyPoints,
+      covered,
+      spans,
+    });
     finalProvider = coaching.provider;
     agents.push(
       agentStep(
@@ -312,7 +329,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
 
   return {
     spans,
-    covered: detection.data.covered_key_points,
+    covered: [...covered],
     report,
     provider: finalProvider,
     orchestration: {

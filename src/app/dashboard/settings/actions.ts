@@ -25,7 +25,7 @@ export async function updateProfile(
 
   if (problem) return { error: problem, saved: false };
   if (!isUseType(useType)) {
-    return { error: "Pick how you'll be using TeachItBack.", saved: false };
+    return { error: "Pick how you'll be using Ropes.", saved: false };
   }
 
   const { error } = await supabase

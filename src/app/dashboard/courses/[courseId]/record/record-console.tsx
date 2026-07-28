@@ -491,7 +491,7 @@ export function RecordConsole({
     } catch {
       setStatus("idle");
       setError(
-        "TeachItBack needs your microphone. Allow access in the browser prompt (or the padlock in the address bar) and try again.",
+        "Ropes needs your microphone. Allow access in the browser prompt (or the padlock in the address bar) and try again.",
       );
       return;
     }
@@ -923,20 +923,18 @@ export function RecordConsole({
                   {session.score}
                 </span>
               )}
-              {session.score === null &&
-                session.transcript &&
-                session.transcript.trim().length >= 24 && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={status !== "idle"}
-                    onClick={() => void retryAnalysis(session)}
-                    className="shrink-0 rounded-full"
-                  >
-                    Build gap report
-                  </Button>
-                )}
+              {session.transcript && session.transcript.trim().length >= 24 && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={status !== "idle"}
+                  onClick={() => void retryAnalysis(session)}
+                  className="shrink-0 rounded-full"
+                >
+                  {session.score === null ? "Build gap report" : "Recheck"}
+                </Button>
+              )}
               {confirmDeleteId === session.id ? (
                 <fieldset
                   aria-label={`Confirm deleting session from ${new Date(session.started_at).toLocaleString()}`}

@@ -52,7 +52,7 @@ export function OnboardingForm({ email }: { email: string }) {
       );
     }
     if (index === 1) return dateOfBirthError(dateOfBirth);
-    return useType ? null : "Pick how you'll be using TeachItBack.";
+    return useType ? null : "Pick how you'll be using Ropes.";
   }
 
   function next() {
@@ -118,7 +118,7 @@ export function OnboardingForm({ email }: { email: string }) {
               <h2 className="text-2xl font-semibold tracking-tight text-strong">
                 {step === 0 && "What should we call you?"}
                 {step === 1 && "When were you born?"}
-                {step === 2 && "How will you use TeachItBack?"}
+                {step === 2 && "How will you use Ropes?"}
               </h2>
               <p className="mt-2 text-sm text-subtle">
                 {step === 0 &&

@@ -1,4 +1,4 @@
--- Waitlist signups for the TeachItBack landing page.
+-- Waitlist signups for the Ropes landing page.
 -- Captures an email and a short answer to "what are you trying to learn?".
 -- Public (anon) visitors may insert their own signup but can never read,
 -- update, or delete any row — only trusted roles behind the dashboard can.

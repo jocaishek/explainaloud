@@ -242,9 +242,9 @@ export default function Home() {
             </h2>
             <Reveal delay={120} className="mt-5">
               <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
-                TeachItBack does not ask one model to do everything. Each agent
-                owns a specific job, passes its work forward, and leaves a
-                visible trace so you can see how the result was made.
+                Ropes does not ask one model to do everything. Each agent owns a
+                specific job, passes its work forward, and leaves a visible
+                trace so you can see how the result was made.
               </p>
             </Reveal>
           </div>
@@ -280,7 +280,7 @@ export default function Home() {
                 </p>
                 <p>
                   The gaps stay hidden until you explain the idea in your own
-                  words. TeachItBack is built around that moment.
+                  words. Ropes is built around that moment.
                 </p>
               </div>
             </Reveal>
@@ -444,7 +444,7 @@ export default function Home() {
             </h2>
             <Reveal delay={120} className="mt-4">
               <p className="max-w-md text-lg text-[#A1A1AA]">
-                Sign up free and we&apos;ll email you when TeachItBack is ready.
+                Sign up free and we&apos;ll email you when Ropes is ready.
               </p>
             </Reveal>
           </div>
@@ -457,8 +457,8 @@ export default function Home() {
 
       <footer className="w-full border-t border-white/10 px-6 py-8">
         <div className="mx-auto flex max-w-4xl items-center justify-between text-sm text-[#71717A]">
-          <span className="font-medium text-[#A1A1AA]">TeachItBack</span>
-          <span>© 2026 TeachItBack</span>
+          <span className="font-medium text-[#A1A1AA]">Ropes</span>
+          <span>© 2026 Ropes</span>
         </div>
       </footer>
     </main>
@@ -657,7 +657,7 @@ function Nav() {
         )}
       >
         <span className="text-base font-semibold tracking-tight text-white">
-          TeachItBack
+          Ropes
         </span>
         <Magnetic strength={16}>
           <Button

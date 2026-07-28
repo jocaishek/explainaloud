@@ -1,5 +1,5 @@
 -- Onboarding profile captured after sign-up: the name we greet people by,
--- their date of birth, and how they intend to use TeachItBack. A row here is
+-- their date of birth, and how they intend to use Ropes. A row here is
 -- what marks an account as having finished onboarding — the dashboard
 -- redirects back to /onboarding until one exists.
 

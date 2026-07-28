@@ -14,8 +14,8 @@ export default async function NewTopicPage({
           Start a topic
         </h1>
         <p className="mt-2 text-foreground">
-          Type a topic or paste your notes. TeachItBack builds a short course
-          from real sources, then listens while you teach it back.
+          Type a topic or paste your notes. Ropes builds a short course from
+          real sources, then listens while you teach it back.
         </p>
       </div>
 

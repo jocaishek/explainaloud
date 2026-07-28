@@ -27,7 +27,7 @@ const instrumentSerif = Instrument_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "TeachItBack",
+  title: "Ropes",
   description:
     "Explain it back out loud and know exactly when you actually understand it.",
 };

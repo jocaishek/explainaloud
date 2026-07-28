@@ -231,6 +231,9 @@ Rules:
   an entire off-topic explanation neutral.
 - Be strict about correctness but do not invent gaps. A student who is simply
   brief is not wrong.
+- Check every numbered key point before returning. Add an index to
+  "covered_key_points" only when the transcript states that point correctly;
+  partial, vague, incorrect, and omitted points are not covered.
 
 Return JSON:
 {
@@ -257,6 +260,7 @@ export function gapReportPrompt(params: {
   keyPoints: string[];
   transcript: string;
   gaps: Array<{ text: string; issue: string | null }>;
+  missingKeyPoints: string[];
   grounded: boolean;
 }) {
   return `ROLE: You are the Gap Coach agent in a multi-agent teaching system.
@@ -290,6 +294,12 @@ ${params.transcript}
 
 Spans already flagged as gaps:
 ${params.gaps.map((g) => `- "${g.text}" — ${g.issue ?? "unclear"}`).join("\n") || "- none"}
+
+Course key points the student did not cover:
+${params.missingKeyPoints.map((point) => `- ${point}`).join("\n") || "- none"}
+
+Include one "missing_step" coaching item for every uncovered course key point.
+Do not collapse separate key points into one item.
 
 Return JSON:
 {

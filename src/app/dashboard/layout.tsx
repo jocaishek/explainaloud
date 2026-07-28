@@ -21,7 +21,7 @@ export default async function DashboardLayout({
             href="/dashboard"
             className="text-base font-semibold tracking-tight text-strong"
           >
-            TeachItBack
+            Ropes
           </Link>
           <DashboardNav />
         </div>
