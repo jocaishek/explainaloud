@@ -18,11 +18,15 @@ export function ScrollToTargetLink({
     if (!target) return;
 
     event.preventDefault();
+    const reduceMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    target.focus({ preventScroll: true });
     target.scrollIntoView({
-      behavior: "instant",
+      behavior: reduceMotion ? "auto" : "smooth",
       block: "start",
     });
-    target.focus({ preventScroll: true });
+    window.history.replaceState(null, "", `#${targetId}`);
   }
 
   return (
