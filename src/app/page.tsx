@@ -427,68 +427,72 @@ export default function Home() {
             <SignUpLead />
           </Reveal>
         </section>
+      </div>
 
-        {/* ── Section 5: Pricing ──────────────────────────────────────── */}
-        <section className="relative flex w-full flex-col items-center px-6 py-24">
-          <div className="relative flex flex-col items-center text-center">
-            <Eyebrow index="07" label="Pricing" className="mb-4" />
-            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-              <WordReveal
-                text="Start free. Go deeper for $9.99."
-                accent={["$9.99."]}
-              />
-            </h2>
-            <p className="mt-4 max-w-lg text-[#A1A1AA]">
-              Everything that makes Explainaloud work — live gap colouring, the
-              full report, Re-Teach — is on the free plan. Pro raises the
-              ceiling.
-            </p>
-          </div>
+      {/* ── Section 5: Pricing ──────────────────────────────────────── */}
+      <section className="relative flex w-full flex-col items-center px-6 pt-24 pb-14">
+        <div className="relative flex flex-col items-center text-center">
+          <Eyebrow index="07" label="Pricing" className="mb-4" />
+          <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+            <WordReveal
+              text="Start free. Go deeper for $9.99."
+              accent={["$9.99."]}
+            />
+          </h2>
+          <p className="mt-4 max-w-lg text-[#A1A1AA]">
+            Everything that makes Explainaloud work — live gap colouring, the
+            full report, Re-Teach — is on the free plan. Pro raises the ceiling.
+          </p>
+        </div>
 
-          <Reveal delay={120} className="relative mt-10 w-full max-w-3xl">
-            <LandingPlans />
-          </Reveal>
-        </section>
+        <Reveal delay={120} className="relative mt-10 w-full max-w-3xl">
+          <LandingPlans />
+        </Reveal>
+      </section>
 
-        {/* ── Section 6: Sign up ──────────────────────────────────────── */}
-        <section className="relative flex w-full flex-col items-center px-6 py-24">
-          <GlowOrb className="top-0 left-1/2 h-80 w-[40rem] -translate-x-1/2" />
+      {/* ── Section 6: Sign up ──────────────────────────────────────── */}
+      <section className="relative flex w-full flex-col items-center px-6 pt-4 pb-24">
+        {/* Sized to this block, not to the auth card that used to live here —
+            at the old size the glow washed out the very text it sat behind. */}
+        <GlowOrb className="top-0 left-1/2 h-56 w-[26rem] -translate-x-1/2 opacity-[0.12]" />
 
-          <div className="relative flex flex-col items-center text-center">
-            <Eyebrow index="08" label="Get started" className="mb-4" />
-            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-              <WordReveal text="Create your account" accent={["account"]} />
-            </h2>
-            <p className="mt-4 max-w-md text-[#A1A1AA]">
-              Free to start, no card needed.
-            </p>
-            {/* The form lives at /signup now rather than inline here, so it can
+        <div className="relative flex flex-col items-center text-center">
+          <Eyebrow index="08" label="Get started" className="mb-4" />
+          <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+            <WordReveal text="Create your account" accent={["account"]} />
+          </h2>
+          <p className="mt-4 max-w-md text-[#A1A1AA]">
+            Free to start, no card needed.
+          </p>
+          {/* The form lives at /signup now rather than inline here, so it can
                 be linked to, bookmarked, and returned to after an expired
                 session — none of which a page anchor could do. */}
-            <Magnetic className="mt-8">
-              <Button
-                asChild
-                size="lg"
-                className="shine group h-12 rounded-full bg-brand px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_64px_-8px_var(--color-brand)] active:scale-[0.97]"
-              >
-                <Link href="/signup">
-                  Sign up free
-                  <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-out group-hover:translate-x-1" />
-                </Link>
-              </Button>
-            </Magnetic>
-            <p className="mt-4 text-sm text-[#71717A]">
-              Already have an account?{" "}
-              <Link
-                href="/login"
-                className="font-medium text-white transition-colors hover:text-brand"
-              >
-                Log in
+          <Magnetic className="mt-8">
+            <Button
+              asChild
+              size="lg"
+              className="shine group h-12 rounded-full bg-brand px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_64px_-8px_var(--color-brand)] active:scale-[0.97]"
+            >
+              <Link href="/signup">
+                Sign up free
+                <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-out group-hover:translate-x-1" />
               </Link>
-            </p>
-          </div>
-        </section>
-      </div>
+            </Button>
+          </Magnetic>
+          {/* #71717A is the footer grey; sitting on the glow it fell under a
+              readable contrast, so this line takes the same secondary tone as
+              the rest of the section's copy. */}
+          <p className="mt-4 text-sm text-[#A1A1AA]">
+            Already have an account?{" "}
+            <Link
+              href="/login"
+              className="font-medium text-white transition-colors hover:text-brand"
+            >
+              Log in
+            </Link>
+          </p>
+        </div>
+      </section>
 
       <footer className="w-full border-t border-white/10 px-6 py-8">
         <div className="mx-auto flex max-w-4xl items-center justify-between text-sm text-[#71717A]">
@@ -834,13 +838,13 @@ function FeatureCard({
  * where the line is meant to be leading somewhere.
  */
 const SQUIGGLE_PATH = [
-  "M 150 22",
-  "C 400 55, 740 40, 810 130",
-  "S 420 200, 260 265",
-  "S 660 315, 725 415",
-  "S 300 475, 240 565",
-  "S 690 620, 735 705",
-  "S 480 880, 500 985",
+  "M 150 88",
+  "C 400 118, 740 104, 810 186",
+  "S 420 249, 260 308",
+  "S 660 353, 725 443",
+  "S 300 497, 240 579",
+  "S 690 628, 735 705",
+  "S 480 863, 500 958",
 ].join(" ");
 
 function ScrollSquiggle({
