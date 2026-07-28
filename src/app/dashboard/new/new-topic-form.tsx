@@ -11,7 +11,7 @@ import {
   ACCEPT_ATTRIBUTE,
   ACCEPTED_EXTENSIONS,
   MAX_SOURCE_BYTES,
-  MAX_SOURCES_PER_COURSE,
+  sourceLimitFor,
 } from "~/lib/uploads";
 import { cn } from "~/lib/utils";
 
@@ -36,10 +36,14 @@ function fileKey(file: File) {
 export function NewTopicForm({
   folderId,
   initialError,
+  unlimited = false,
 }: {
   folderId?: string;
   initialError?: string;
+  /** Admins bypass the per-topic source cap. */
+  unlimited?: boolean;
 }) {
+  const sourceLimit = sourceLimitFor(unlimited);
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
@@ -60,8 +64,8 @@ export function NewTopicForm({
 
     for (const file of incoming) {
       if (existing.has(fileKey(file))) continue;
-      if (next.length >= MAX_SOURCES_PER_COURSE) {
-        rejected.push(`A topic can hold ${MAX_SOURCES_PER_COURSE} sources.`);
+      if (next.length >= sourceLimit) {
+        rejected.push(`A topic can hold ${sourceLimit} sources.`);
         break;
       }
       if (file.size > MAX_SOURCE_BYTES) {
@@ -247,7 +251,7 @@ export function NewTopicForm({
             {dragActive ? "Drop to queue sources" : "Drag sources here"}
           </p>
           <p className="text-xs text-subtle">
-            Up to 5 MB each · {MAX_SOURCES_PER_COURSE} files
+            Up to 5 MB each · {unlimited ? "unlimited" : sourceLimit} files
           </p>
           <Button
             type="button"

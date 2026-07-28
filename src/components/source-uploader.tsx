@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useRef, useState } from "react";
-import { ACCEPT_ATTRIBUTE } from "~/lib/uploads";
+import { ACCEPT_ATTRIBUTE, sourceLimitFor } from "~/lib/uploads";
 import { cn } from "~/lib/utils";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -30,10 +30,13 @@ export function SourceUploader({
   courseId,
   initialSources,
   onChange,
+  unlimited = false,
 }: {
   courseId: string;
   initialSources: SourceItem[];
   onChange?: (sources: SourceItem[]) => void;
+  /** Admins bypass the per-topic source cap. */
+  unlimited?: boolean;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [sources, setSources] = useState<SourceItem[]>(initialSources);
@@ -52,6 +55,8 @@ export function SourceUploader({
   // dragenter/dragleave fire for every child element, so a plain boolean
   // flickers as the pointer crosses the icon or the text inside the zone.
   const dragDepth = useRef(0);
+  const sourceLimit = sourceLimitFor(unlimited);
+  const atLimit = sources.length >= sourceLimit;
 
   function publish(next: SourceItem[]) {
     setSources(next);
@@ -64,6 +69,15 @@ export function SourceUploader({
     let current = sources;
 
     for (const file of files) {
+      // Stop before the request rather than letting the route reject each file
+      // in turn: dropping five files at the cap would otherwise mean five round
+      // trips and five identical errors.
+      if (current.length >= sourceLimit) {
+        failures.push(
+          `A topic can hold ${sourceLimit} sources. Delete one to add another.`,
+        );
+        break;
+      }
       setBusy(file.name);
       const body = new FormData();
       body.set("file", file);
@@ -158,17 +172,25 @@ export function SourceUploader({
       >
         <div>
           <p className="text-sm font-medium text-strong">
-            {dragActive ? "Drop to add them" : "Drag your sources here"}
+            {atLimit
+              ? "Source limit reached"
+              : dragActive
+                ? "Drop to add them"
+                : "Drag your sources here"}
           </p>
           <p className="mt-1 text-xs text-subtle">
-            PDF, Word, or text — up to 5 MB each, 10 per topic
+            {atLimit
+              ? "Delete a source to add another."
+              : unlimited
+                ? "PDF, Word, or text — up to 5 MB each"
+                : `PDF, Word, or text — up to 5 MB each · ${sources.length} of ${sourceLimit} used`}
           </p>
         </div>
 
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
-          disabled={!!busy}
+          disabled={!!busy || atLimit}
           className="rounded-full border border-input bg-background px-4 py-1.5 text-xs font-medium text-strong transition-transform duration-200 ease-out hover:border-brand/40 active:scale-[0.97] disabled:opacity-50"
         >
           {busy ? `Reading ${busy}…` : "Browse your computer"}
