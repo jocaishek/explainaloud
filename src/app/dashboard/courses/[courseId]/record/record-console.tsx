@@ -57,6 +57,18 @@ const ANALYZE_TIMEOUT_MS = 60_000;
 const AUDIO_STOP_TIMEOUT_MS = 5_000;
 
 /**
+ * How long to wait for `onend` after asking recognition to stop.
+ *
+ * `stop()` is a request, not a guarantee: an engine whose remote caption service
+ * has dropped, or one that already ended while still held in the ref, never
+ * fires the event. Waiting on it alone means the session is never saved and the
+ * student sees a stopped timer and nothing else — no row, no report, no error.
+ * `finish()` guards itself with `finishingRef`, so a late `onend` after this
+ * fires is a harmless no-op.
+ */
+const STOP_WATCHDOG_MS = 2_500;
+
+/**
  * Hard cap on one explanation. Five minutes is well past the point where a
  * teach-back stops being recall and starts being reading aloud, and it keeps
  * a single transcript inside one model context comfortably.
@@ -193,6 +205,7 @@ export function RecordConsole({
   const manualStopRef = useRef(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const stopWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const liveTranscribeTimerRef = useRef<ReturnType<typeof setInterval> | null>(
     null,
   );
@@ -221,6 +234,7 @@ export function RecordConsole({
     () => () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
       if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+      if (stopWatchdogRef.current) clearTimeout(stopWatchdogRef.current);
       if (liveTranscribeTimerRef.current) {
         clearInterval(liveTranscribeTimerRef.current);
       }
@@ -404,6 +418,10 @@ export function RecordConsole({
     finishingRef.current = true;
     if (tickRef.current) clearInterval(tickRef.current);
     if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
+    if (stopWatchdogRef.current) {
+      clearTimeout(stopWatchdogRef.current);
+      stopWatchdogRef.current = null;
+    }
     if (liveTranscribeTimerRef.current) {
       clearInterval(liveTranscribeTimerRef.current);
       liveTranscribeTimerRef.current = null;
@@ -867,6 +885,15 @@ export function RecordConsole({
       void finish();
       return;
     }
+    // Acknowledge the click now rather than when `onend` arrives: the timer has
+    // already stopped, so leaving the status on "recording" for up to a couple
+    // of seconds reads as the app having frozen.
+    setStatus("saving");
+    // Finish on `onend` if it comes, on the watchdog if it doesn't.
+    if (stopWatchdogRef.current) clearTimeout(stopWatchdogRef.current);
+    stopWatchdogRef.current = setTimeout(() => {
+      void finish();
+    }, STOP_WATCHDOG_MS);
     try {
       recognition.stop();
     } catch {
