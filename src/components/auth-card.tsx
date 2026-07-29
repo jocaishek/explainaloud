@@ -32,12 +32,21 @@ const ACCEPT_TERMS_REQUIRED =
   "Please accept the Terms of Service and Privacy Policy to create an account.";
 
 /**
- * Where the emailed confirmation link lands. Sending it to `/onboarding`
- * rather than the callback default skips a bounce through `/dashboard`, whose
- * profile guard would only redirect a freshly verified account right back.
+ * Where the emailed confirmation link lands.
+ *
+ * A confirmation page rather than straight into the app, because this link is
+ * frequently opened somewhere other than where the account was created: a
+ * phone, a webmail tab in a different browser, a work laptop. Dropping someone
+ * into onboarding there is disorienting, and if the session cookie did not
+ * survive the hop they get bounced to a login screen with no indication that
+ * the thing they clicked actually worked.
+ *
+ * `/auth/confirmed` says plainly that the address is verified, then offers the
+ * way forward, and it can tell "verified and signed in here" apart from
+ * "verified, but you will need to log in on this device".
  */
 function verificationRedirect(): string {
-  return `${window.location.origin}/auth/callback?next=/onboarding`;
+  return `${window.location.origin}/auth/callback?next=/auth/confirmed`;
 }
 
 /**
