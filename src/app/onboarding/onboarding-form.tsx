@@ -204,7 +204,7 @@ export function OnboardingForm({ email }: { email: string }) {
                   "We use this to confirm you're old enough for your own account."}
                 {step === 2 && "This shapes what we put in front of you first."}
                 {step === 3 &&
-                  "Thirty seconds on something you already know, so we learn your normal speaking pace. Optional — you can skip it."}
+                  "Thirty seconds explaining something you already know. It teaches us your normal speaking pace, which is what makes the gap-finding work."}
               </p>
             </div>
 
@@ -463,7 +463,7 @@ function UseTypeOption({
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
-      aria-label={`${title} — ${description}`}
+      aria-label={`${title}: ${description}`}
       className={cn(
         "group flex items-center gap-4 rounded-xl border p-4 text-left transition-[border-color,background-color,transform] duration-200 ease-out active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100",
         selected

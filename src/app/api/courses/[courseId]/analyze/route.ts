@@ -4,6 +4,7 @@ import { orchestrateExplanation } from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import type { SourceRow } from "~/lib/ai/sources";
+import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 
 export const maxDuration = 120;
@@ -51,6 +52,12 @@ export async function POST(
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  // The highest-volume route in the app — live grading calls it roughly once a
+  // second — so its ceiling is the loosest, and still trips a loop in seconds.
+  if (!(await claimApiCall(supabase, "analyze"))) {
+    return NextResponse.json({ error: RATE_LIMITED_MESSAGE }, { status: 429 });
   }
 
   let raw: unknown;

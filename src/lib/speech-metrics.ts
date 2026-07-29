@@ -85,7 +85,7 @@ export type SpeechMetrics = {
   speakingSeconds: number;
   /** Median of the windowed speaking rates. */
   medianWpm: number;
-  /** The `CAPABLE_PACE_PERCENTILE` rate — this recording's confident pace. */
+  /** The `CAPABLE_PACE_PERCENTILE` rate, this recording's confident pace. */
   capableWpm: number;
   pauses: PauseStats;
   /** Fillers per 100 words, so it compares across recording lengths. */
