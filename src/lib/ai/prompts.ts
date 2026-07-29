@@ -45,8 +45,11 @@ export const GROUNDING_RULE = `SOURCE GROUNDING — this overrides every other i
 export const PRECISION_RULE = `PRECISION:
 - Prefer "I don't know" over a plausible guess. A wrong confident answer is
   the worst possible output.
-- Anchor every judgement to the student's literal words, quoted verbatim.
-- Do not infer intent that the words do not support.
+- Quote the student verbatim: any text you return must be their exact words.
+- Judge MEANING, not wording. The student is explaining in their own words,
+  which is the whole exercise. A correct idea in different words, in a
+  different order, or without the textbook term is still correct.
+- Do not credit a claim the words do not actually make.
 - Return ONLY valid JSON matching the requested schema. No prose, no markdown
   fences, no commentary before or after the JSON.`;
 
@@ -278,9 +281,17 @@ Rules:
   an entire off-topic explanation neutral.
 - Be strict about correctness but do not invent gaps. A student who is simply
   brief is not wrong.
-- Check every numbered key point before returning. Add an index to
-  "covered_key_points" only when the transcript states that point correctly;
-  partial, vague, incorrect, and omitted points are not covered.${
+- Check every numbered key point individually before returning, and add its
+  index to "covered_key_points" when the student conveyed that MEANING.
+  Paraphrase counts. Synonyms count. Their own phrasing counts. Saying it in a
+  different order counts. Do NOT require the key point's wording or its
+  technical term: "the Calvin cycle happens in the stroma, that's where the
+  sugar gets built" fully covers "The Calvin cycle occurs in the stroma".
+- Withhold coverage only when the meaning is genuinely absent, stated
+  incorrectly, or so vague you could not tell whether they understand it.
+  Brevity and informality are not reasons to withhold it. Marking a point
+  uncovered that the student did explain is the worst error you can make here,
+  because it tells someone who understands the material that they do not.${
     params.context
       ? `
 - Judge the transcript in light of the context, but every returned span must be
