@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { requireUser } from "~/lib/supabase/server";
 import { OnboardingExperience } from "./onboarding-experience";
+import { RecordTermsAcceptance } from "./record-terms-acceptance";
 
 export const metadata = { title: "Finish setting up · Explainaloud" };
 
@@ -16,5 +17,10 @@ export default async function OnboardingPage() {
 
   if (profile) redirect("/dashboard");
 
-  return <OnboardingExperience email={user.email ?? ""} />;
+  return (
+    <>
+      <RecordTermsAcceptance />
+      <OnboardingExperience email={user.email ?? ""} />
+    </>
+  );
 }

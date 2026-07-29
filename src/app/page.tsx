@@ -496,9 +496,20 @@ export default function Home() {
       </section>
 
       <footer className="w-full border-t border-white/10 px-6 py-8">
-        <div className="mx-auto flex max-w-4xl items-center justify-between text-sm text-[#71717A]">
+        <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-4 text-sm text-[#71717A]">
           <span className="font-medium text-[#A1A1AA]">Explainaloud</span>
-          <span>© 2026 Explainaloud</span>
+          <nav className="flex items-center gap-5">
+            <Link href="/terms" className="transition-colors hover:text-white">
+              Terms
+            </Link>
+            <Link
+              href="/privacy"
+              className="transition-colors hover:text-white"
+            >
+              Privacy
+            </Link>
+            <span>© 2026 Explainaloud</span>
+          </nav>
         </div>
       </footer>
     </main>
