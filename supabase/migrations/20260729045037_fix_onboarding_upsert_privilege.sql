@@ -1,0 +1,21 @@
+-- Let onboarding save again.
+--
+-- `20260728222940_plans_and_billing` revoked table-wide UPDATE on profiles and
+-- handed back five columns, so `plan` and the Stripe fields could only be
+-- written by the service role. It missed that onboarding saves with an upsert:
+--
+--   insert into profiles (user_id, first_name, ...) ... on conflict (user_id)
+--     do update set user_id = excluded.user_id, first_name = ...
+--
+-- Postgres checks privileges on every column of a DO UPDATE SET clause when it
+-- plans the statement, not when it runs it — so the statement was rejected over
+-- `user_id` even on a first insert, where no conflict can occur. The symptom is
+-- onboarding failing at its last step for every account, new ones included.
+--
+-- Granting UPDATE on `user_id` does not let anyone take over another row: the
+-- existing policy carries `with check ((select auth.uid()) = user_id)`, so an
+-- update that reassigned the row fails that check. `plan`,
+-- `stripe_customer_id`, `stripe_subscription_id` and `plan_renews_at` stay
+-- ungranted, which is the boundary that actually matters — those remain
+-- writable only by the service role, i.e. only by the Stripe webhook.
+grant update (user_id) on public.profiles to authenticated;
