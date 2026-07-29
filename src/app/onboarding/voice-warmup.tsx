@@ -20,7 +20,7 @@ const EASE = [0.23, 1, 0.32, 1] as const;
  */
 const MAX_MS = 30_000;
 
-/** The question. Chosen to satisfy four constraints at once — see the docs on
+/** The question. Chosen to satisfy four constraints at once; see the docs on
  * the step in `onboarding-form.tsx`. */
 export const WARMUP_QUESTION = "Why do we need to sleep?";
 
@@ -207,6 +207,37 @@ export function VoiceWarmup({
 
   return (
     <div className="flex flex-col gap-5">
+      {/* The reason comes before the ask.
+          A step that opens with "record 30 seconds" and explains itself only
+          afterwards is a step people skip, and the explanation then never gets
+          read at all. What this buys them has to be legible before they decide. */}
+      {stage !== "done" && (
+        <div className="rounded-xl border border-brand/25 bg-brand/[0.05] p-5">
+          <p className="text-sm leading-6 text-subtle">
+            <span className="font-medium text-strong">
+              Everyone talks at a different speed.
+            </span>{" "}
+            Some people are just careful, and there is no &ldquo;normal&rdquo;
+            pace we could measure you against. So we learn yours first.
+          </p>
+          <p className="mt-3 text-sm leading-6 text-subtle">
+            Once we know how you sound explaining something you genuinely know,
+            we can tell the difference between{" "}
+            <span className="font-medium text-strong">thinking carefully</span>{" "}
+            and{" "}
+            <span className="font-medium text-strong">
+              not actually knowing it yet
+            </span>
+            . That is what lets us point at the exact sentence you got shaky on,
+            instead of just handing you a score.
+          </p>
+          <p className="mt-3 text-xs leading-5 text-subtle">
+            Takes 30 seconds, once. Skip it and we work your pace out from your
+            first few real sessions instead, which takes longer to get right.
+          </p>
+        </div>
+      )}
+
       <div className="rounded-xl border border-border bg-surface p-5">
         <p className="text-xs font-medium tracking-[0.14em] text-subtle uppercase">
           Read this, then talk
@@ -215,8 +246,8 @@ export function VoiceWarmup({
           {WARMUP_QUESTION}
         </p>
         <p className="mt-2 text-sm leading-6 text-subtle">
-          Explain it like you&apos;re talking to a seven-year-old. There&apos;s
-          no right answer and nothing is graded — talk for about 30 seconds.
+          Explain it like you&apos;re talking to a seven-year-old. There is no
+          right answer and nothing here is graded. Talk for about 30 seconds.
         </p>
       </div>
 
@@ -244,7 +275,7 @@ export function VoiceWarmup({
           </div>
           <p className="text-xs text-subtle">
             {longEnough
-              ? "That's enough to work with — stop whenever you like."
+              ? "That's enough to work with. Stop whenever you like."
               : `Keep going for at least ${MIN_SPEAKING_SECONDS} seconds.`}
           </p>
         </div>
@@ -261,15 +292,13 @@ export function VoiceWarmup({
           >
             <p className="flex items-center gap-2 text-sm font-semibold text-strong">
               <Check className="size-4 text-brand" />
-              Got it — {Math.round(result.medianWpm)} words a minute
+              Got it. You speak at about {Math.round(result.medianWpm)} words a
+              minute.
             </p>
             <p className="mt-3 text-sm leading-6 text-subtle">
-              <span className="font-medium text-strong">Why this helps.</span>{" "}
-              Everyone speaks at a different speed, and there&apos;s no
-              &ldquo;normal&rdquo; — so a fixed number would be useless. Now
-              that we know how you sound explaining something you already know,
-              we can spot where you slow down or hesitate on material
-              you&apos;re still learning, and point you at exactly those parts.
+              That is your baseline. From now on, when you slow down or hesitate
+              part-way through explaining something, we can tell it apart from
+              how you normally talk, and show you the exact spot.
             </p>
             <p className="mt-3 text-sm leading-6 text-subtle">
               We kept the numbers, not the recording. Your audio was deleted the
@@ -285,7 +314,7 @@ export function VoiceWarmup({
             animate={{ opacity: 1 }}
             className="rounded-xl bg-surface px-4 py-3 text-xs leading-5 text-subtle"
           >
-            Skipped — that&apos;s fine. We&apos;ll work out your usual pace from
+            Skipped, that&apos;s fine. We&apos;ll work your usual pace out from
             your first few real sessions instead. You can do this later from
             settings.
           </motion.p>
