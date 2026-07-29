@@ -103,13 +103,17 @@ export function ExampleCarousel({
       style={{ height: `${examples.length * 34}vh` }}
       className="relative w-full"
     >
-      {/* The panel has to be a full viewport for `sticky top-0` to pin cleanly,
-          but its content was only ~560px of that, leaving ~400px of dead space
-          above and below for the entire time the section is on screen — which
-          is what made 02 read as a hole between 01 and 03. `justify-between`
-          with bounded padding spreads the header, the ring and the dots across
-          the panel instead of huddling them in the middle. */}
-      <div className="sticky top-0 flex h-screen flex-col items-center justify-between overflow-hidden py-20 sm:py-24">
+      {/* The panel is a full viewport because `sticky top-0` needs it to pin.
+          Two ways to get that wrong: centre a small block in it and the section
+          reads as a hole, or spread the parts to the edges and the holes just
+          move in between them. Neither is a spacing value — both are the same
+          block being the wrong size.
+
+          So: one centred block with a single gap between every part, and cards
+          tall enough that the block has real height. The rhythm is even by
+          construction, and what is left over sits as equal margin top and
+          bottom rather than as a gap somewhere inside the content. */}
+      <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-10 overflow-hidden py-12">
         {header}
         <div
           className="relative flex w-full items-center justify-center"
@@ -192,7 +196,7 @@ function RingCard({
         zIndex,
         transformStyle: "preserve-3d",
       }}
-      className="glass relative flex min-h-[22rem] shrink-0 flex-col rounded-2xl p-6 text-left"
+      className="glass relative flex min-h-[20rem] shrink-0 flex-col rounded-2xl p-6 text-left"
     >
       <FocusGlow offset={offset} />
       <div className="relative">
@@ -257,7 +261,7 @@ function ProgressDots({
   ids: string[];
 }) {
   return (
-    <div className="mt-12 flex items-center gap-2">
+    <div className="flex items-center gap-2">
       {ids.map((id, i) => (
         <Dot key={id} index={i} progress={progress} total={ids.length} />
       ))}
