@@ -8,7 +8,9 @@ import { AgentOrchestration } from "~/components/agent-orchestration";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { Button } from "~/components/ui/button";
 import type { AgentRun } from "~/lib/ai/schemas";
+import { audioExtension, preferredRecorderMimeType } from "~/lib/audio";
 import { localDay } from "~/lib/limits";
+import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 
@@ -173,6 +175,12 @@ type ApiPayload = {
   spans?: Span[];
   report?: Report;
   orchestration?: AgentRun;
+  /**
+   * Delivery statistics from the transcription pass. Deliberately opaque here:
+   * this component only forwards them to storage, and typing the shape in two
+   * places would mean updating both every time a statistic is added.
+   */
+  metrics?: SpeechMetrics | null;
 };
 
 async function fetchJson(
@@ -210,13 +218,6 @@ function requestTimedOut(error: unknown) {
 function formatClock(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
-}
-
-function audioExtension(type: string) {
-  if (type.includes("mp4")) return "m4a";
-  if (type.includes("ogg")) return "ogg";
-  if (type.includes("wav")) return "wav";
-  return "webm";
 }
 
 function indexOfSequence(bytes: Uint8Array, needle: number[]) {
@@ -875,6 +876,11 @@ export function RecordConsole({
 
     try {
       let text = transcriptRef.current.trim();
+      // Delivery statistics for this attempt — pace, pauses, filler rate. Only
+      // the server-side pass produces them, because only Whisper returns the
+      // word timings they are derived from; the browser's own recogniser gives
+      // text with no timing at all. Stays null when that pass didn't happen.
+      let speechMetrics: SpeechMetrics | null = null;
       const audio = await stopAudioCapture();
 
       // Browser speech recognition is useful for live colour, but it depends on
@@ -896,6 +902,9 @@ export function RecordConsole({
           );
           if (response.ok && typeof json.transcript === "string") {
             text = json.transcript.trim();
+            if (json.metrics && typeof json.metrics === "object") {
+              speechMetrics = json.metrics;
+            }
             transcriptRef.current = text;
             setTranscript(text);
             applyInterim("");
@@ -933,6 +942,7 @@ export function RecordConsole({
             .from("course_sessions")
             .update({
               transcript: text || null,
+              speech_metrics: speechMetrics,
               ended_at: new Date().toISOString(),
             })
             .eq("id", existingId)
@@ -945,6 +955,7 @@ export function RecordConsole({
               course_id: courseId,
               user_id: user.id,
               transcript: text || null,
+              speech_metrics: speechMetrics,
               started_at: startedAtRef.current ?? new Date().toISOString(),
               ended_at: new Date().toISOString(),
             })
@@ -1169,9 +1180,7 @@ export function RecordConsole({
 
     let recorder: MediaRecorder;
     try {
-      const mimeType = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? "audio/webm;codecs=opus"
-        : "";
+      const mimeType = preferredRecorderMimeType();
       recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     } catch {
       for (const track of stream.getTracks()) track.stop();
