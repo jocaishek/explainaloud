@@ -94,10 +94,13 @@ export function ExampleCarousel({
   return (
     <div
       ref={sectionRef}
-      // Pin length per card. Higher = slower sideways travel per unit of
-      // wheel; at a full viewport each the seven cards became a 6000px slog,
-      // so this is tuned down to roughly two flicks per card.
-      style={{ height: `${examples.length * 55}vh` }}
+      // Pin length per card. Higher = slower sideways travel per unit of wheel.
+      // At a viewport each, seven cards were a 6000px slog; 55vh still left the
+      // pin 5200px tall — over half the length of the entire page, so the
+      // section read as the site stalling rather than as a feature. 34vh puts
+      // it near 3200px: a little over one flick per card, enough to register
+      // each without asking for six screens of scrolling to get past them.
+      style={{ height: `${examples.length * 34}vh` }}
       className="relative w-full"
     >
       <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-10 overflow-hidden">

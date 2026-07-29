@@ -1,9 +1,11 @@
 import { ThemeSwitcher } from "~/components/theme-switcher";
+import { planLabel } from "~/lib/plans";
 import { USE_TYPE_LABELS } from "~/lib/profile";
 import { requireProfile } from "~/lib/supabase/server";
+import { PlanPanel } from "./plan-panel";
 import { ProfileForm } from "./profile-form";
 
-export const metadata = { title: "Settings · Ropes" };
+export const metadata = { title: "Settings · Explainaloud" };
 
 export default async function SettingsPage() {
   const { user, profile } = await requireProfile();
@@ -15,9 +17,20 @@ export default async function SettingsPage() {
           Settings
         </h1>
         <p className="mt-2 text-subtle">
-          Your account details and how Ropes looks.
+          Your account details and how Explainaloud looks.
         </p>
       </div>
+
+      <Section
+        title="Plan"
+        description="What your account includes, and how to change it."
+      >
+        <PlanPanel
+          plan={profile.plan}
+          renewsAt={profile.plan_renews_at}
+          hasCustomer={!!profile.stripe_customer_id}
+        />
+      </Section>
 
       <Section title="Appearance" description="Applies across your dashboard.">
         <ThemeSwitcher />
@@ -33,6 +46,7 @@ export default async function SettingsPage() {
       <Section title="Account" description="Details tied to your login.">
         <dl className="divide-y divide-border overflow-hidden rounded-xl border border-border">
           <Row label="Email" value={user.email ?? "—"} />
+          <Row label="Plan" value={`${planLabel(profile.plan)}`} />
           <Row
             label="Using it for"
             value={USE_TYPE_LABELS[profile.use_type].title}

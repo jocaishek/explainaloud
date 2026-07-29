@@ -2,7 +2,7 @@
 # https://supabase.com/docs/guides/local-development/cli/config
 # A string used to distinguish different Supabase projects on the same host. Defaults to the
 # working directory name when running `supabase init`.
-project_id = "ropes"
+project_id = "explainaloud"
 
 [api]
 enabled = true
@@ -156,11 +156,50 @@ max_indexes = 5
 enabled = true
 # The base URL of your website. Used as an allow-list for redirects and for constructing URLs used
 # in emails.
-site_url = "http://localhost:3000"
+#
+# Read from the environment rather than pinned to a literal. This file used to
+# say `http://localhost:3000`, which is correct for the local stack and quietly
+# catastrophic for the hosted one: `supabase config push` writes this file's
+# values to the linked project, so pushing it would have set production's Site
+# URL to localhost. Supabase falls back to Site URL whenever a requested
+# redirect isn't allow-listed, so every sign-in would have bounced to a machine
+# that isn't the user's — the `origin_mismatch` case `src/proxy.ts` recovers.
+#
+# Set SUPABASE_AUTH_SITE_URL in a root `.env` for local work (the CLI reads it
+# from there or from the shell). See `.env.example`.
+#
+# This removes the localhost literal that a push would have written over
+# production. It is NOT a guarantee that a push is safe: whether this CLI
+# version interpolates `env()` for this particular key is unverified — it could
+# not be tested here without Docker, and `config push` contacts the API before
+# it validates config, so there is no offline way to observe the resolved value.
+#
+# The hosted project's Site URL and redirect allow-list are therefore managed in
+# the Supabase dashboard, and `supabase config push` is not part of this
+# project's workflow. See `.claude/rules/supabase.md`.
+site_url = "env(SUPABASE_AUTH_SITE_URL)"
 # The public URL that Auth serves on. Defaults to the API external URL with `/auth/v1` appended.
 # external_url = ""
 # A list of *exact* URLs that auth providers are permitted to redirect to post authentication.
-additional_redirect_urls = ["http://localhost:3000", "http://localhost:3000/**"]
+#
+# No deployment hostname appears here — it arrives from the environment, so the
+# repo never needs editing to move the app. The two localhost entries are not a
+# deployment address but the dev server's own, the same one `next dev` binds and
+# `src/env.ts` falls back to; every auth call passes an explicit `redirectTo`
+# built from `window.location.origin`, so local work needs its own origin
+# allow-listed by whichever project it points at.
+#
+# The wildcard is a separate variable because TOML cannot concatenate: the app
+# redirects to `/auth/callback` with a `next` query, and a bare origin would not
+# match any of them. An `env()` left uninterpolated is harmless here — an
+# allow-list entry that matches nothing — which is why the array can carry the
+# risk that `site_url` above cannot.
+additional_redirect_urls = [
+  "http://localhost:3000",
+  "http://localhost:3000/**",
+  "env(SUPABASE_AUTH_SITE_URL)",
+  "env(SUPABASE_AUTH_REDIRECT_WILDCARD)",
+]
 # How long tokens are valid for, in seconds. Defaults to 3600 (1 hour), maximum 604,800 (1 week).
 jwt_expiry = 3600
 # JWT issuer URL. If not set, defaults to auth.external_url.

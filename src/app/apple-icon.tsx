@@ -12,7 +12,7 @@ export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
 const MARK =
-  "M 15.5 11 L 28.5 20 C 34.5 27 36.5 30 36.5 38 L 36.5 44 C 36.5 48.5 33.5 51 29.5 51 C 25.5 51 22.5 48.5 22.5 44 L 22.5 38 C 22.5 30 24.5 27 30.5 20 C 37.5 16 43.5 14 48.5 15";
+  "M 40.5 11.2 C 22.7 8.2, 11 22.5, 22.4 29.6 C 26.9 31.9, 33 31.8, 37.9 31 C 44.8 29.7, 47.9 30.2, 45.1 25.6 C 42.4 22, 34.9 25.4, 31.4 34.1 C 27.7 41.9, 20.2 40.2, 21.5 47.1 C 22.8 54.9, 35.4 56.8, 47.9 47.5";
 
 export default function AppleIcon() {
   return new ImageResponse(
@@ -36,13 +36,14 @@ export default function AppleIcon() {
         viewBox="0 0 64 64"
         fill="none"
         role="img"
-        aria-label="Ropes"
+        aria-label="Explainaloud"
       >
         <path
           d={MARK}
           stroke="#ffffff"
-          strokeWidth="3.6"
+          strokeWidth="5"
           strokeLinecap="round"
+          strokeLinejoin="round"
         />
       </svg>
     </div>,

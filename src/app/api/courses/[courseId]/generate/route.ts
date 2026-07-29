@@ -84,7 +84,7 @@ export async function POST(
     // never goes to a student — but an operator staring at "try again shortly"
     // has nothing to act on. Admins get the real reason inline instead of
     // having to dig through hosting logs.
-    const { data: isAdmin } = await supabase.rpc("is_ropes_admin");
+    const { data: isAdmin } = await supabase.rpc("is_explainaloud_admin");
     const detail =
       isAdmin === true
         ? error instanceof Error
@@ -105,7 +105,7 @@ export async function POST(
       return NextResponse.json(
         {
           error:
-            "Ropes couldn't verify every citation against your sources. Try rebuilding the course.",
+            "Explainaloud couldn't verify every citation against your sources. Try rebuilding the course.",
           detail,
         },
         { status: 422 },

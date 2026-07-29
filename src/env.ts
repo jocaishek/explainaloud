@@ -15,12 +15,28 @@ export const env = createEnv({
     // Set by Vercel to the project's stable production hostname, without a
     // protocol. Absent locally, which is why it's optional.
     VERCEL_PROJECT_PRODUCTION_URL: z.string().min(1).optional(),
+    // Billing. All optional so the app still boots without them: unconfigured,
+    // the upgrade button reports that billing isn't set up rather than the
+    // whole site failing to start. Every one of these is a secret — none may
+    // ever be prefixed NEXT_PUBLIC_, which would inline it into the browser.
+    STRIPE_SECRET_KEY: z.string().min(1).optional(),
+    // From the Stripe CLI or the dashboard's webhook endpoint. Without it the
+    // webhook cannot tell a real Stripe event from a forged one, so the route
+    // refuses to run rather than trusting the body.
+    STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
+    // The recurring price the Pro plan checks out against (`price_...`, not
+    // `prod_...`).
+    STRIPE_PRICE_ID: z.string().min(1).optional(),
+    // Bypasses row-level security. Used only by the Stripe webhook, which has
+    // no user session and must write the `plan` column that authenticated
+    // users are explicitly forbidden from writing.
+    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
     // The domain this app is actually served on, with protocol — for example
-    // `https://ropes.app`. Vercel's own variable names the project's
+    // `https://explainaloud.com`. Vercel's own variable names the project's
     // `*.vercel.app` host, which is not where anyone visits once a custom
     // domain is attached, so share links and Open Graph images would keep
     // pointing at the wrong hostname. Optional: unset, the Vercel host is
@@ -34,6 +50,10 @@ export const env = createEnv({
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     TAVILY_API_KEY: process.env.TAVILY_API_KEY,
     VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
+    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
+    STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID,
+    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     // Supabase renamed the browser-safe key: new projects hand out a
     // `PUBLISHABLE_KEY`, older ones an `ANON_KEY`. They are interchangeable

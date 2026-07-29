@@ -25,7 +25,7 @@ export function OnboardingExperience({ email }: { email: string }) {
       <div className="mx-auto flex w-full max-w-5xl flex-col gap-5">
         <header className="flex items-center justify-between px-1">
           <span className="text-base font-semibold tracking-tight text-strong">
-            Ropes
+            Explainaloud
           </span>
           <span className="text-sm text-subtle">Account setup</span>
         </header>
@@ -40,8 +40,8 @@ export function OnboardingExperience({ email }: { email: string }) {
                 Built around what you can explain.
               </h1>
               <p className="mt-3 max-w-sm text-sm leading-6 text-primary-foreground/70">
-                A few details help Ropes shape the learning experience around
-                you. Then you can start your first topic.
+                A few details help Explainaloud shape the learning experience
+                around you. Then you can start your first topic.
               </p>
 
               <ol className="mt-9 flex flex-col gap-5">

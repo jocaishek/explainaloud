@@ -8,7 +8,7 @@ import { AgentOrchestration } from "~/components/agent-orchestration";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { Button } from "~/components/ui/button";
 import type { AgentRun } from "~/lib/ai/schemas";
-import { DAILY_LIMITS, localDay } from "~/lib/limits";
+import { localDay } from "~/lib/limits";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 
@@ -48,17 +48,25 @@ type Status =
   | "analyzing";
 
 /**
- * How long the student must pause before we re-grade what they've said.
+ * How long between live grades.
  *
- * This was the whole latency problem: a 2.2s wait before the request even left
- * the browser, on top of a ~0.4s model call. Recognition already fires this on
- * a finalised phrase, so the debounce only needs to coalesce the burst of
- * results that arrive together at a sentence boundary. 150ms does that, and
- * with a measured ~460ms median for the grading call it puts colour on screen
- * roughly 600-700ms after a phrase ends — the model round trip is the floor
- * now, not the wait.
+ * Grading used to be triggered by the speech engine finalising a phrase, which
+ * is not a clock — Chrome finalises at a pause, so a student speaking fluently
+ * for eight seconds got no colour for eight seconds, then all of it at once. It
+ * read as the grader being slow when it had simply not been asked yet.
+ *
+ * A grade now goes out on this tick over whatever has been heard, interim words
+ * included, so colour tracks speech continuously instead of arriving in bursts
+ * at sentence boundaries. Phrase finalisation still runs alongside it, but only
+ * to settle the wording — it no longer gates when grading happens.
+ *
+ * The floor is the provider, not this number. Live passes run on Groq's 8B at
+ * ~415ms, and its free tier allows 30 requests a minute — one every 2s. At
+ * 1200ms a fast talker rides just above that and leans on the rate-limit retry
+ * and the 70B failover behind it. Lower this if the account's tier allows it;
+ * that is the only thing keeping colour from being near-instant.
  */
-const LIVE_DEBOUNCE_MS = 150;
+const LIVE_GRADE_TICK_MS = 1200;
 /** Server caption fallback cadence; stays below the transcription RPM limit. */
 const LIVE_TRANSCRIBE_MS = 4000;
 /**
@@ -114,11 +122,16 @@ const AUDIO_STOP_TIMEOUT_MS = 5_000;
 const STOP_WATCHDOG_MS = 2_500;
 
 /**
- * Hard cap on one explanation. Three minutes is past the point where a
- * teach-back stops being recall and starts being reading aloud, and it keeps
- * a single transcript inside one model context comfortably.
+ * Hard cap on one explanation, supplied per plan — three minutes on Free, five
+ * on Pro. Three is past the point where a teach-back stops being recall and
+ * starts being reading aloud; five gives a subscriber room for a dense topic
+ * without changing that character. Either keeps one transcript inside a single
+ * model context comfortably.
+ *
+ * The value arrives as a prop rather than being read here, so the plan is
+ * resolved once on the server from the subscription rather than trusted from
+ * the browser.
  */
-const MAX_RECORDING_MS = 3 * 60_000;
 
 /** Warn when this much time is left, so the ending isn't a surprise. */
 const WARN_AT_MS = 30_000;
@@ -206,27 +219,76 @@ function audioExtension(type: string) {
   return "webm";
 }
 
+function indexOfSequence(bytes: Uint8Array, needle: number[]) {
+  outer: for (let i = 0; i + needle.length <= bytes.length; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (bytes[i + j] !== needle[j]) continue outer;
+    }
+    return i;
+  }
+  return -1;
+}
+
+/**
+ * Where the container's initialisation segment ends in the first recorded chunk.
+ *
+ * Incremental captions prepend this to the newest chunks so they decode without
+ * the rest of the recording. It has to be the header *alone*: the first chunk a
+ * MediaRecorder emits is the header followed by a full timeslice of audio —
+ * measured at 146 bytes of header against 15.6KB of speech — so prepending the
+ * whole chunk silently re-sends the opening second of the explanation on every
+ * pass, and appending each result would stutter those words back into the
+ * transcript dozens of times over a recording.
+ *
+ * Returns null for a container we can't split, which turns incremental passes
+ * off rather than guessing at an offset.
+ */
+function initSegmentEnd(bytes: Uint8Array, mimeType: string) {
+  if (mimeType.includes("webm") || mimeType.includes("ogg")) {
+    // Everything before the first WebM Cluster: EBML header, Segment, Tracks.
+    const cluster = indexOfSequence(bytes, [0x1f, 0x43, 0xb6, 0x75]);
+    return cluster > 0 ? cluster : null;
+  }
+  if (mimeType.includes("mp4")) {
+    // Fragmented MP4: ftyp + moov, up to the first moof. The four-byte box size
+    // precedes the type, so the box itself starts four bytes earlier.
+    const moof = indexOfSequence(bytes, [0x6d, 0x6f, 0x6f, 0x66]);
+    return moof > 4 ? moof - 4 : null;
+  }
+  return null;
+}
+
 export function RecordConsole({
   courseId,
   initialSessions,
   courseReady,
   recordingsUsed,
   unlimited,
+  dailyLimit,
+  maxRecordingMs,
 }: {
   courseId: string;
   initialSessions: Session[];
   courseReady: boolean;
   recordingsUsed: number;
   unlimited: boolean;
+  /** Recordings a day for this plan; `null` when there is no cap. */
+  dailyLimit: number | null;
+  maxRecordingMs: number;
 }) {
   const [status, setStatus] = useState<Status>("checking");
   const [transcript, setTranscript] = useState("");
   const [interim, setInterim] = useState("");
   const [spans, setSpans] = useState<Span[]>([]);
+  // The exact text `spans` describes. Grading now runs on a clock rather than
+  // on phrase boundaries, so it is always a little behind what has been heard;
+  // this is what lets the view render the not-yet-graded remainder as plain
+  // text instead of duplicating it or dropping it.
+  const [spansCover, setSpansCover] = useState("");
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
-  const [remainingMs, setRemainingMs] = useState(MAX_RECORDING_MS);
+  const [remainingMs, setRemainingMs] = useState(maxRecordingMs);
   const [sessions, setSessions] = useState(initialSessions);
   const [used, setUsed] = useState(recordingsUsed);
   const [agentRun, setAgentRun] = useState<AgentRun | null>(null);
@@ -243,9 +305,12 @@ export function RecordConsole({
   const audioChunksRef = useRef<Blob[]>([]);
   const audioReadyRef = useRef<Promise<Blob | null> | null>(null);
   const transcriptRef = useRef("");
+  // Words the engine is still revising. Kept in a ref as well as state because
+  // the grading loop reads them on its own clock, outside any render.
+  const interimRef = useRef("");
   const startedAtRef = useRef<string | null>(null);
   const manualStopRef = useRef(false);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const gradeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const stopWatchdogRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // The row for the recording in progress. Created up front so that closing the
@@ -264,6 +329,9 @@ export function RecordConsole({
   // three minutes as at three seconds.
   const liveChunkCursorRef = useRef(0);
   const liveIncrementalRef = useRef(true);
+  // The container header on its own, carved out of the first chunk once and
+  // reused to make every later window decodable by itself.
+  const liveInitSegmentRef = useRef<Blob | null>(null);
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const deadlineRef = useRef<number>(0);
   const restartsRef = useRef(0);
@@ -275,15 +343,19 @@ export function RecordConsole({
   // stale colours over fresher speech.
   const liveSeqRef = useRef(0);
   const liveGradeInFlightRef = useRef(false);
-  const livePendingTextRef = useRef<string | null>(null);
+  // The text the last pass was sent, so a tick that lands on unchanged speech
+  // costs nothing instead of re-asking the same question.
+  const lastGradedTextRef = useRef("");
   // The already-graded head of the transcript: the spans for it, and the exact
   // text they cover. Live passes only ever grade what comes after this, and
   // these spans are re-used verbatim rather than re-requested.
   const gradedSpansRef = useRef<Span[]>([]);
   const gradedTextRef = useRef("");
-  // Lets the in-flight pass re-enter itself without `gradeLive` depending on
-  // its own identity, which would make the callback un-memoisable.
-  const gradeLiveRef = useRef<((text: string) => Promise<void>) | null>(null);
+  // Lets the caption path and the grading loop reach the latest `gradeLive`
+  // without depending on its identity, which would make them un-memoisable.
+  const gradeLiveRef = useRef<
+    ((text: string, confirmedLength: number) => Promise<void>) | null
+  >(null);
 
   useEffect(() => {
     const canRecord =
@@ -295,7 +367,10 @@ export function RecordConsole({
   // Unmounting mid-recording must not leave the mic open or timers running.
   useEffect(
     () => () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (gradeTimerRef.current) {
+        clearTimeout(gradeTimerRef.current);
+        gradeTimerRef.current = null;
+      }
       if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
       if (stopWatchdogRef.current) clearTimeout(stopWatchdogRef.current);
       if (autosaveTimerRef.current) clearInterval(autosaveTimerRef.current);
@@ -318,7 +393,7 @@ export function RecordConsole({
 
   const remaining = unlimited
     ? Number.POSITIVE_INFINITY
-    : Math.max(0, DAILY_LIMITS.recording - used);
+    : Math.max(0, (dailyLimit ?? 0) - used);
 
   /** Forget the frozen head, so the next pass grades the transcript afresh. */
   const resetGradedHead = useCallback(() => {
@@ -337,15 +412,13 @@ export function RecordConsole({
    * the student talks.
    */
   const gradeLive = useCallback(
-    async (text: string) => {
-      // At a 150ms debounce and ~400ms responses, phrases arrive faster than
-      // grades come back. Run one at a time and remember only the newest text:
+    async (text: string, confirmedLength: number) => {
+      // One pass at a time. The loop asks again on the next tick anyway, so a
+      // tick that lands mid-flight is simply skipped rather than queued —
       // overlapping calls would spend the small model's per-minute budget
-      // grading transcripts that a later pass immediately supersedes anyway.
-      if (liveGradeInFlightRef.current) {
-        livePendingTextRef.current = text;
-        return;
-      }
+      // grading text a later pass immediately supersedes.
+      if (liveGradeInFlightRef.current) return;
+      if (text === lastGradedTextRef.current) return;
 
       // The head is only re-usable while it is still a prefix of what's on
       // screen. A caption pass that rewrites earlier words instead of appending
@@ -357,6 +430,7 @@ export function RecordConsole({
       if (tail.trim().length < LIVE_GRADE_MIN_CHARS) return;
       const context = head.slice(-LIVE_CONTEXT_CHARS);
 
+      lastGradedTextRef.current = text;
       liveGradeInFlightRef.current = true;
       const seq = ++liveSeqRef.current;
       try {
@@ -373,8 +447,26 @@ export function RecordConsole({
           },
           LIVE_REQUEST_TIMEOUT_MS,
         );
-        if (!response.ok) return;
+        // Let the next tick try this text again rather than treating a hiccup
+        // as "already graded" and waiting for more speech — a student who stops
+        // talking after a failed pass would otherwise sit in front of grey text
+        // until they said something new.
+        //
+        // Except on 429. There the minute's budget is already spent, and
+        // re-sending identical text every 1.2s spends what little is left on a
+        // question we just asked. Waiting for new speech is both cheaper and
+        // likelier to succeed.
+        if (!response.ok) {
+          if (response.status !== 429) lastGradedTextRef.current = "";
+          return;
+        }
         if (seq !== liveSeqRef.current) return; // superseded
+        // Stopping does not cancel a request already in flight. `liveSeqRef`
+        // only orders live passes against each other, so without this a slow
+        // one — a rate-limit retry can take twenty seconds — could return after
+        // the final pass has painted the graded transcript and overwrite it
+        // with partial colours that no longer match the report beneath them.
+        if (manualStopRef.current) return;
         // A pass that started before a reset would splice its tail spans onto
         // a head that no longer exists, mismatching text and colour.
         if (gradedTextRef.current !== head) return;
@@ -383,6 +475,7 @@ export function RecordConsole({
 
         const tailSpans = json.spans;
         setSpans([...gradedSpansRef.current, ...tailSpans]);
+        setSpansCover(text);
 
         // Freeze the front of the tail until what's left fits the window
         // again. The server reconciles spans against the exact text it was
@@ -399,33 +492,84 @@ export function RecordConsole({
         if (tailLength !== tail.length) return;
         const excess = tailLength - LIVE_GRADE_WINDOW_CHARS;
         if (excess <= 0) return;
+        // Never freeze a span the engine might still rewrite. The tail now
+        // reaches into interim words, and those are a guess — "recursion" can
+        // become "the russian" a syllable later. Freezing one would nail its
+        // colour to text that no longer exists.
+        const freezable = Math.max(0, confirmedLength - head.length);
         let frozenChars = 0;
         const frozen: Span[] = [];
         for (const span of tailSpans) {
           if (frozenChars >= excess) break;
+          if (frozenChars + span.text.length > freezable) break;
           frozen.push(span);
           frozenChars += span.text.length;
         }
+        if (frozenChars === 0) return;
         gradedSpansRef.current = [...gradedSpansRef.current, ...frozen];
         gradedTextRef.current = head + tail.slice(0, frozenChars);
       } catch {
         // Live colouring is an enhancement; a failed pass must never
-        // interrupt the recording.
+        // interrupt the recording. Same as above: let the next tick retry.
+        lastGradedTextRef.current = "";
       } finally {
         liveGradeInFlightRef.current = false;
-        const pending = livePendingTextRef.current;
-        livePendingTextRef.current = null;
-        // Whatever was said while this pass was in flight gets graded next,
-        // straight away rather than waiting for another phrase to land.
-        if (pending && !manualStopRef.current)
-          void gradeLiveRef.current?.(pending);
       }
     },
     [courseId, resetGradedHead],
   );
 
-  // Kept in a ref so the coalescing tail-call above can reach the latest one.
+  // Kept in a ref so the grading loop and the caption path can reach the
+  // latest one without either depending on its identity.
   gradeLiveRef.current = gradeLive;
+
+  /**
+   * Everything heard so far, settled words and in-progress ones together. This
+   * is what gets graded: waiting for the engine to promote interim words to
+   * final is what made colour arrive in bursts at sentence boundaries.
+   */
+  function heardSoFar() {
+    const confirmed = transcriptRef.current;
+    const pending = interimRef.current.trim();
+    if (!pending) return { text: confirmed, confirmedLength: confirmed.length };
+    return {
+      text: confirmed ? `${confirmed} ${pending}` : pending,
+      confirmedLength: confirmed.length,
+    };
+  }
+
+  /**
+   * The grading clock.
+   *
+   * Self-scheduling rather than an interval, for the same reason as the caption
+   * loop: a tick that fires while the previous pass is still out is wasted, and
+   * on an interval it would be silently dropped. Chaining from the end of each
+   * pass means the next grade goes out `LIVE_GRADE_TICK_MS` after the last one
+   * landed — a steady rhythm the student can feel, whatever the model does.
+   */
+  const gradeLoopRef = useRef<(() => void) | null>(null);
+  gradeLoopRef.current = () => {
+    gradeTimerRef.current = setTimeout(async () => {
+      if (manualStopRef.current || !gradeTimerRef.current) return;
+      if (courseReady) {
+        const { text, confirmedLength } = heardSoFar();
+        await gradeLiveRef.current?.(text, confirmedLength);
+      }
+      if (manualStopRef.current || !gradeTimerRef.current) return;
+      gradeLoopRef.current?.();
+    }, LIVE_GRADE_TICK_MS);
+  };
+
+  function stopGradeLoop() {
+    if (gradeTimerRef.current) clearTimeout(gradeTimerRef.current);
+    gradeTimerRef.current = null;
+  }
+
+  /** Keeps the interim ref and the rendered copy from drifting apart. */
+  function applyInterim(value: string) {
+    interimRef.current = value;
+    setInterim(value);
+  }
 
   /**
    * Browser speech recognition depends on a remote browser service and often
@@ -445,6 +589,20 @@ export function RecordConsole({
       clearTimeout(liveTranscribeTimerRef.current);
       liveTranscribeTimerRef.current = null;
     }
+
+    // Hand the transcript back to browser recognition, which may well still be
+    // running: server captions start on a *transient* recognition error, and
+    // recognition restarts itself. Once a server caption had landed,
+    // `onresult` stopped writing — it defers to `serverTranscriptRef` — so
+    // giving up here used to freeze the transcript on screen for the rest of
+    // the recording even while the engine was still producing words.
+    //
+    // Carrying the server text across rather than clearing it keeps what is on
+    // screen, and keeps it a prefix of what comes next, so the graded spans
+    // survive instead of being thrown away by the next pass.
+    browserTranscriptRef.current = transcriptRef.current;
+    serverTranscriptRef.current = "";
+
     setNotice(
       "Live captions aren't available in this browser. Keep going — your full transcript arrives when you finish.",
     );
@@ -459,26 +617,47 @@ export function RecordConsole({
       return;
     }
 
-    const recorder = mediaRecorderRef.current;
-    const type = recorder?.mimeType || "audio/webm";
-    const chunks = audioChunksRef.current;
-    // Send only the seconds recorded since the last pass. Re-uploading the
-    // whole recording every few seconds was the reason captions crawled: at
-    // one minute in, each pass was posting a minute of audio and waiting for a
-    // minute of audio to be transcribed, and it got worse every pass. The first
-    // chunk carries the container header, so later chunks need it prepended to
-    // decode on their own.
-    const sentThrough = chunks.length;
-    const cursor = liveChunkCursorRef.current;
-    const header = chunks[0];
-    const incremental = liveIncrementalRef.current && cursor > 0 && !!header;
-    if (incremental && sentThrough <= cursor) return;
-    const parts = incremental ? [header, ...chunks.slice(cursor)] : [...chunks];
-    const audio = new Blob(parts, { type });
-    if (!audio.size) return;
-
+    // Claimed before the first `await` below, not after: reading the header out
+    // of a Blob suspends, and a tick arriving in that window would otherwise
+    // sail past the busy check above and start a second pass.
     liveTranscribeBusyRef.current = true;
     try {
+      const recorder = mediaRecorderRef.current;
+      const type = recorder?.mimeType || "audio/webm";
+      const chunks = audioChunksRef.current;
+      // Send only the seconds recorded since the last pass. Re-uploading the
+      // whole recording every few seconds was the reason captions crawled: at
+      // one minute in, each pass was posting a minute of audio and waiting for
+      // a minute of audio to be transcribed, and it got worse every pass.
+      const sentThrough = chunks.length;
+      const cursor = liveChunkCursorRef.current;
+      const first = chunks[0];
+      let incremental = liveIncrementalRef.current && cursor > 0 && !!first;
+      if (incremental && sentThrough <= cursor) return;
+
+      // Carve the header out of the first chunk once, and give up on
+      // incremental passes if this container can't be split — a whole-recording
+      // pass is slower but correct, which a mis-sliced one would not be.
+      if (incremental && first && !liveInitSegmentRef.current) {
+        const bytes = new Uint8Array(await first.arrayBuffer());
+        const end = initSegmentEnd(bytes, type);
+        if (end === null) liveIncrementalRef.current = false;
+        else liveInitSegmentRef.current = first.slice(0, end);
+      }
+
+      // Re-derived rather than assumed: `incremental` decides both what is sent
+      // and whether the reply is appended or replaces the transcript, so a pass
+      // that falls back to whole-recording here must also fall back to
+      // replacing — appending a full transcript to itself would duplicate it.
+      const initSegment = liveInitSegmentRef.current;
+      incremental = incremental && !!initSegment;
+      const parts =
+        incremental && initSegment
+          ? [initSegment, ...chunks.slice(cursor)]
+          : [...chunks];
+      const audio = new Blob(parts, { type });
+      if (!audio.size) return;
+
       const body = new FormData();
       body.set(
         "audio",
@@ -528,22 +707,19 @@ export function RecordConsole({
       serverTranscriptRef.current = text;
       transcriptRef.current = text;
       setTranscript(text);
+      interimRef.current = "";
       setInterim("");
-      // Grade it. Only `recognition.onresult` used to do this, so on every path
-      // that falls back to server captions — Safari and Firefox always, Chrome
-      // whenever its caption service drops — the transcript grew while staying
-      // grey until the final pass. No debounce here: these arrive on a fixed
-      // cadence already, so there is no burst to coalesce.
-      if (courseReady && text.length >= LIVE_GRADE_MIN_CHARS) {
-        void gradeLiveRef.current?.(text);
-      }
+      // No grade call here. The grading clock reads the transcript itself, so a
+      // caption landing is picked up within a tick like any other new speech —
+      // and firing one here as well would double the request rate on exactly
+      // the browsers already paying for server-side captions.
     } catch {
       // The final full-audio transcription remains the source of truth.
       noteLiveCaptionFailure();
     } finally {
       liveTranscribeBusyRef.current = false;
     }
-  }, [courseId, courseReady, noteLiveCaptionFailure]);
+  }, [courseId, noteLiveCaptionFailure]);
 
   /**
    * Caption loop.
@@ -570,15 +746,6 @@ export function RecordConsole({
       "Captions in this browser transcribe your audio server-side, so they update every few seconds instead of word by word.",
     );
     captionLoopRef.current?.();
-  }
-
-  function scheduleLiveGrade() {
-    if (!courseReady) return;
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => {
-      const text = transcriptRef.current.trim();
-      if (text.length >= LIVE_GRADE_MIN_CHARS) void gradeLive(text);
-    }, LIVE_DEBOUNCE_MS);
   }
 
   /**
@@ -689,6 +856,7 @@ export function RecordConsole({
     if (finishingRef.current) return;
     finishingRef.current = true;
     if (tickRef.current) clearInterval(tickRef.current);
+    stopGradeLoop();
     if (restartTimerRef.current) clearTimeout(restartTimerRef.current);
     if (stopWatchdogRef.current) {
       clearTimeout(stopWatchdogRef.current);
@@ -730,7 +898,7 @@ export function RecordConsole({
             text = json.transcript.trim();
             transcriptRef.current = text;
             setTranscript(text);
-            setInterim("");
+            applyInterim("");
           } else if (!text) {
             setError(json.error ?? "Couldn't transcribe that recording.");
           }
@@ -854,7 +1022,11 @@ export function RecordConsole({
         return;
       }
 
-      if (Array.isArray(json.spans)) setSpans(json.spans);
+      if (Array.isArray(json.spans)) {
+        setSpans(json.spans);
+        // The final pass graded the whole transcript, so nothing is left over.
+        setSpansCover(text);
+      }
       if (json.orchestration) setAgentRun(json.orchestration);
       if (json.report) {
         const completedReport = json.report;
@@ -911,8 +1083,9 @@ export function RecordConsole({
     setDisplayedSessionId(data.id);
     setTranscript(data.transcript ?? "");
     transcriptRef.current = data.transcript ?? "";
-    setInterim("");
+    applyInterim("");
     setSpans(Array.isArray(data.spans) ? data.spans : []);
+    setSpansCover(data.transcript ?? "");
     setReport(data.report ?? null);
     setAgentRun(null);
     if (!data.report) {
@@ -949,8 +1122,9 @@ export function RecordConsole({
     if (displayedSessionId === sessionId) {
       setDisplayedSessionId(null);
       setTranscript("");
-      setInterim("");
+      applyInterim("");
       setSpans([]);
+      setSpansCover("");
       setReport(null);
       setAgentRun(null);
       transcriptRef.current = "";
@@ -988,7 +1162,7 @@ export function RecordConsole({
     } catch {
       setStatus("idle");
       setError(
-        "Ropes needs your microphone. Allow access in the browser prompt (or the padlock in the address bar) and try again.",
+        "Explainaloud needs your microphone. Allow access in the browser prompt (or the padlock in the address bar) and try again.",
       );
       return;
     }
@@ -1012,7 +1186,7 @@ export function RecordConsole({
       {
         p_kind: "recording",
         p_day: localDay(),
-        p_limit: DAILY_LIMITS.recording,
+        p_limit: dailyLimit ?? 0,
       },
     );
 
@@ -1026,21 +1200,23 @@ export function RecordConsole({
       for (const track of stream.getTracks()) track.stop();
       setStatus("idle");
       setError(
-        `You've used all ${DAILY_LIMITS.recording} recordings for today. It resets at midnight your time.`,
+        `You've used all ${dailyLimit ?? 0} recordings for today. It resets at midnight your time.`,
       );
-      setUsed(DAILY_LIMITS.recording);
+      setUsed(dailyLimit ?? 0);
       return;
     }
     if (!unlimited) setUsed((u) => u + 1);
 
     setTranscript("");
-    setInterim("");
+    applyInterim("");
     setSpans([]);
+    setSpansCover("");
     setReport(null);
     setAgentRun(null);
     setDisplayedSessionId(null);
     setNotice(null);
     transcriptRef.current = "";
+    lastGradedTextRef.current = "";
     browserTranscriptRef.current = "";
     serverTranscriptRef.current = "";
     startedAtRef.current = new Date().toISOString();
@@ -1050,6 +1226,7 @@ export function RecordConsole({
     liveTranscribeFailuresRef.current = 0;
     liveChunkCursorRef.current = 0;
     liveIncrementalRef.current = true;
+    liveInitSegmentRef.current = null;
     finishingRef.current = false;
     sessionRowIdRef.current = null;
     lastSavedTranscriptRef.current = "";
@@ -1087,18 +1264,27 @@ export function RecordConsole({
     });
     recorder.start(1000);
 
+    // Start grading on its own clock, before a single word is in. It runs for
+    // the whole recording regardless of which caption path this browser ends up
+    // on, because it reads the transcript rather than being called by whichever
+    // component produced it.
+    stopGradeLoop();
+    gradeLoopRef.current?.();
+
     // Hard stop at the cap. The interval only drives the readout; the
     // deadline itself is a timestamp, so a throttled background tab can't
     // let a recording run past three minutes.
-    deadlineRef.current = Date.now() + MAX_RECORDING_MS;
-    setRemainingMs(MAX_RECORDING_MS);
+    deadlineRef.current = Date.now() + maxRecordingMs;
+    setRemainingMs(maxRecordingMs);
     if (tickRef.current) clearInterval(tickRef.current);
     tickRef.current = setInterval(() => {
       const left = deadlineRef.current - Date.now();
       setRemainingMs(left);
       if (left <= 0) {
         if (tickRef.current) clearInterval(tickRef.current);
-        setNotice("Three-minute limit reached — wrapping up.");
+        setNotice(
+          `${Math.round(maxRecordingMs / 60_000)}-minute limit reached — wrapping up.`,
+        );
         stopRecording();
       }
     }, 250);
@@ -1133,6 +1319,11 @@ export function RecordConsole({
           interimChunk += text;
         }
       }
+      // Finalising a phrase settles its wording; it no longer decides when
+      // grading happens. That is the clock's job, and it reads interim words
+      // too — so this handler's only remaining task is to keep the text
+      // current, and it can run as often as the engine likes without costing
+      // a request.
       if (finalChunk) {
         browserTranscriptRef.current =
           `${browserTranscriptRef.current} ${finalChunk}`.trim();
@@ -1140,9 +1331,8 @@ export function RecordConsole({
           transcriptRef.current = browserTranscriptRef.current;
           setTranscript(transcriptRef.current);
         }
-        scheduleLiveGrade();
       }
-      setInterim(interimChunk);
+      applyInterim(interimChunk);
     };
 
     recognition.onerror = (event) => {
@@ -1163,7 +1353,7 @@ export function RecordConsole({
     };
 
     recognition.onend = () => {
-      setInterim("");
+      applyInterim("");
 
       if (manualStopRef.current) {
         void finish();
@@ -1251,6 +1441,31 @@ export function RecordConsole({
 
   const busy =
     status === "saving" || status === "analyzing" || status === "awaiting-mic";
+
+  // Everything heard, settled and in-progress alike — the same text the grading
+  // clock reads.
+  const heardText = interim ? `${transcript} ${interim}`.trim() : transcript;
+  /**
+   * The words spoken since the last grade landed, rendered plain beneath the
+   * coloured ones.
+   *
+   * This can't just be `interim` any more. Grades now cover interim words too,
+   * so the last pass has usually already coloured some of what the engine is
+   * still revising, and printing the interim on top of that would show those
+   * words twice.
+   *
+   * When the engine revises rather than extends — "the russian" becoming
+   * "recursion" — the coloured text is briefly a version behind and this is
+   * empty. That resolves itself on the next tick, and is the quieter failure:
+   * a word arriving a beat late reads as latency, the same word on screen twice
+   * reads as a bug.
+   */
+  const ungraded =
+    spans.length === 0
+      ? interim
+      : heardText.startsWith(spansCover)
+        ? heardText.slice(spansCover.length)
+        : "";
   const outOfQuota = !unlimited && remaining === 0 && status !== "recording";
 
   return (
@@ -1305,8 +1520,8 @@ export function RecordConsole({
 
         <p className="font-mono text-[11px] tracking-[0.14em] text-subtle uppercase">
           {unlimited
-            ? "Admin account · unlimited recordings"
-            : `${remaining} of ${DAILY_LIMITS.recording} recordings left today · resets at midnight`}
+            ? "Unlimited recordings"
+            : `${remaining} of ${dailyLimit ?? 0} recordings left today · resets at midnight`}
         </p>
 
         {notice && <p className="text-xs text-subtle">{notice}</p>}
@@ -1356,7 +1571,7 @@ export function RecordConsole({
               fallback={transcript}
               gaps={report?.gaps ?? []}
             />
-            {interim && <span className="text-subtle"> {interim}</span>}
+            {ungraded && <span className="text-subtle"> {ungraded}</span>}
             {status === "recording" && !transcript && !interim && (
               <span className="text-subtle">Listening…</span>
             )}

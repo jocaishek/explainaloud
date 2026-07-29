@@ -36,6 +36,8 @@ yarn-error.log*
 # NEXT_PUBLIC_* values are inlined into the client bundle either way. Secrets
 # stay out of git; see the header in that file.
 !.env.production
+# Exception: variable names and instructions only, never values.
+!.env.example
 
 # vercel
 .vercel

@@ -1,6 +1,6 @@
-# Ropes
+# Explainaloud
 
-Ropes turns a topic and optional source material into a focused course, then
+Explainaloud turns a topic and optional source material into a focused course, then
 grades a spoken teach-back against every course key point. See
 [ARCHITECTURE.md](./ARCHITECTURE.md) for the production data flow and the
 features that are actually implemented.

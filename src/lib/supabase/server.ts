@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { cache } from "react";
 import { env } from "~/env";
+import { isPlan, type Plan } from "~/lib/plans";
 
 /**
  * Request-scoped Supabase client.
@@ -85,7 +86,7 @@ export async function requireUser() {
  */
 export async function requireAdmin() {
   const { supabase, user } = await requireUser();
-  const { data, error } = await supabase.rpc("is_ropes_admin");
+  const { data, error } = await supabase.rpc("is_explainaloud_admin");
 
   if (error || data !== true) {
     notFound();
@@ -101,6 +102,10 @@ export type Profile = {
   date_of_birth: string;
   use_type: "school" | "teacher" | "personal";
   created_at: string;
+  plan: Plan;
+  /** Null until a subscription exists. Present even after cancelling. */
+  plan_renews_at: string | null;
+  stripe_customer_id: string | null;
 };
 
 /** Deduped per request for the same reason as the user lookup above. */
@@ -109,11 +114,14 @@ const getCachedProfile = cache(async (userId: string) => {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "user_id, first_name, last_name, date_of_birth, use_type, created_at",
+      "user_id, first_name, last_name, date_of_birth, use_type, created_at, plan, plan_renews_at, stripe_customer_id",
     )
     .eq("user_id", userId)
     .maybeSingle<Profile>();
-  return data;
+  if (!data) return null;
+  // A row written before the plan column existed reads back null. Treat that
+  // as free rather than letting `undefined` reach a lookup keyed by plan.
+  return { ...data, plan: isPlan(data.plan) ? data.plan : "free" };
 });
 
 /**

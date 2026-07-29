@@ -1,4 +1,4 @@
-# Ropes production architecture
+# Explainaloud production architecture
 
 This document describes the code that is currently deployable. It deliberately
 does not claim future LMS features that are not implemented.

@@ -39,3 +39,20 @@ All database schema changes must go through Supabase CLI migrations — never mo
 - Never reset or revert a migration that has been deployed to production — always roll forward
 - Never modify an existing migration file after it has been applied — create a new one instead
 - Commit all migration files to version control
+
+## Never run `supabase config push`
+
+`db push` deploys migrations and is the workflow above. `config push` is a
+different command: it writes `supabase/config.toml` to the linked project,
+including the whole `[auth]` block.
+
+That block describes the **local** stack. Pushing it overwrites production's
+Site URL and redirect allow-list with values meant for a developer's machine,
+and Supabase falls back to Site URL whenever a requested redirect is not
+allow-listed — so the symptom is every sign-in bouncing to the wrong origin
+with an unexchanged `?code=`, which `src/proxy.ts` can only partly recover.
+
+Production auth URLs are managed in the Supabase dashboard, under
+Authentication → URL Configuration. `config.toml` reads its values from the
+environment (see `.env.example`) so no hostname is committed, but that is a
+safeguard against the literal, not a licence to push the file.
