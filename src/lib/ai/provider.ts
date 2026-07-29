@@ -1,6 +1,7 @@
 import "server-only";
 
 import { env } from "~/env";
+import type { TranscribedWord } from "~/lib/speech-metrics";
 
 /**
  * Two-provider JSON completion: Gemini first, Groq as failover.
@@ -358,6 +359,17 @@ const GROQ_TRANSCRIPTION_URL =
   "https://api.groq.com/openai/v1/audio/transcriptions";
 const GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo";
 
+/**
+ * A transcript plus the word timings behind it.
+ *
+ * `words` is empty when the provider returned none — callers must treat the
+ * timings as optional and never assume a non-empty array.
+ */
+export type TranscriptionResult = {
+  transcript: string;
+  words: TranscribedWord[];
+};
+
 export class NoSpeechDetectedError extends Error {
   constructor() {
     super("No speech was detected in the recording.");
@@ -376,7 +388,10 @@ function normalizedTranscript(value: string) {
  * Transcribes a browser-recorded audio file. This is the reliable path for
  * browsers whose built-in Web Speech service cannot reach its remote backend.
  */
-export async function transcribeAudio(file: File, topic: string) {
+export async function transcribeAudio(
+  file: File,
+  topic: string,
+): Promise<TranscriptionResult> {
   if (!env.GROQ_API_KEY) {
     throw new AiUnavailableError("groq: no API key configured");
   }
@@ -385,7 +400,11 @@ export async function transcribeAudio(file: File, topic: string) {
   body.set("file", file, file.name || "recording.webm");
   body.set("model", GROQ_TRANSCRIPTION_MODEL);
   body.set("language", "en");
-  body.set("response_format", "json");
+  // `verbose_json` rather than `json` so the response carries word timings.
+  // Same model, same call, same cost — the timings are simply discarded under
+  // `json`, and they are what makes pace and hesitation measurable at all.
+  body.set("response_format", "verbose_json");
+  body.set("timestamp_granularities[]", "word");
   const prompt =
     `A student is explaining ${topic}. ` +
     "Preserve course terminology and punctuation.";
@@ -422,7 +441,37 @@ export async function transcribeAudio(file: File, topic: string) {
   ) {
     throw new NoSpeechDetectedError();
   }
-  return transcript;
+  return { transcript, words: parseWords(json) };
+}
+
+/**
+ * Word timings out of a `verbose_json` body.
+ *
+ * Tolerant by design. Timings are an enhancement, not the payload: if a
+ * provider omits `words`, renames it, or returns something unparseable, the
+ * transcript is still perfectly good and callers get an empty array rather
+ * than an error. Every field is checked because one malformed entry would
+ * otherwise poison the metrics with NaN.
+ */
+function parseWords(json: unknown): TranscribedWord[] {
+  const raw = (json as { words?: unknown })?.words;
+  if (!Array.isArray(raw)) return [];
+
+  const words: TranscribedWord[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const { word, start, end } = entry as Record<string, unknown>;
+    if (
+      typeof word === "string" &&
+      typeof start === "number" &&
+      typeof end === "number" &&
+      Number.isFinite(start) &&
+      Number.isFinite(end)
+    ) {
+      words.push({ word, start, end });
+    }
+  }
+  return words;
 }
 
 export function aiConfigured() {

@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  AudioLines,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -26,10 +27,21 @@ import {
 } from "~/lib/profile";
 import { cn } from "~/lib/utils";
 import { type OnboardingState, saveProfile } from "./actions";
+import { VoiceWarmup, type WarmupResult } from "./voice-warmup";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
-const STEPS = ["Your name", "Date of birth", "How you'll use it"] as const;
-const STEP_ICONS = [CircleUserRound, CalendarDays, SlidersHorizontal] as const;
+const STEPS = [
+  "Your name",
+  "Date of birth",
+  "How you'll use it",
+  "Voice warm-up",
+] as const;
+const STEP_ICONS = [
+  CircleUserRound,
+  CalendarDays,
+  SlidersHorizontal,
+  AudioLines,
+] as const;
 const USE_TYPE_ICONS = {
   school: GraduationCap,
   teacher: Presentation,
@@ -51,6 +63,10 @@ export function OnboardingForm({ email }: { email: string }) {
   const [lastName, setLastName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [useType, setUseType] = useState<UseType | null>(null);
+  // The warm-up writes its own row server-side, so these only drive what the
+  // step shows back. Neither is submitted with the profile.
+  const [warmupResult, setWarmupResult] = useState<WarmupResult | null>(null);
+  const [warmupSkipped, setWarmupSkipped] = useState(false);
   // Tagged with the step it came from, so an error raised on one step can
   // never leak onto the next one the user hasn't attempted yet.
   const [localError, setLocalError] = useState<{
@@ -70,7 +86,13 @@ export function OnboardingForm({ email }: { email: string }) {
       );
     }
     if (index === 1) return dateOfBirthError(dateOfBirth);
-    return useType ? null : "Pick how you'll be using Explainaloud.";
+    if (index === 2) {
+      return useType ? null : "Pick how you'll be using Explainaloud.";
+    }
+    // The warm-up is optional by design — nothing downstream needs a baseline,
+    // and gating setup on microphone access would lock out anyone who declines
+    // it or has no working mic.
+    return null;
   }
 
   function next() {
@@ -173,6 +195,7 @@ export function OnboardingForm({ email }: { email: string }) {
                 {step === 0 && "What should we call you?"}
                 {step === 1 && "When were you born?"}
                 {step === 2 && "How will you use Explainaloud?"}
+                {step === 3 && "Let's hear your voice"}
               </h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-subtle">
                 {step === 0 &&
@@ -180,6 +203,8 @@ export function OnboardingForm({ email }: { email: string }) {
                 {step === 1 &&
                   "We use this to confirm you're old enough for your own account."}
                 {step === 2 && "This shapes what we put in front of you first."}
+                {step === 3 &&
+                  "Thirty seconds on something you already know, so we learn your normal speaking pace. Optional — you can skip it."}
               </p>
             </div>
 
@@ -277,6 +302,18 @@ export function OnboardingForm({ email }: { email: string }) {
                 ))}
               </div>
             )}
+
+            {step === 3 && (
+              <VoiceWarmup
+                result={warmupResult}
+                skipped={warmupSkipped}
+                onComplete={(next) => {
+                  setWarmupResult(next);
+                  setWarmupSkipped(false);
+                }}
+                onSkip={() => setWarmupSkipped(true)}
+              />
+            )}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -359,7 +396,7 @@ function StepIndicator({
   reduceMotion: boolean;
 }) {
   return (
-    <ol className="grid grid-cols-3 gap-1 rounded-xl bg-surface p-1">
+    <ol className="grid grid-cols-4 gap-1 rounded-xl bg-surface p-1">
       {STEPS.map((label, index) => {
         const Icon = STEP_ICONS[index];
         const complete = index < step;
