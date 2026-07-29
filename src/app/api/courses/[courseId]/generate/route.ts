@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { CourseCitationError, orchestrateCourse } from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
 import type { SourceRow } from "~/lib/ai/sources";
+import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 
 export const maxDuration = 120;
@@ -18,6 +19,12 @@ export async function POST(
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  // Generation is the most expensive call in the app and the rarest in normal
+  // use, which is why its ceiling is the tightest of the three.
+  if (!(await claimApiCall(supabase, "generate"))) {
+    return NextResponse.json({ error: RATE_LIMITED_MESSAGE }, { status: 429 });
   }
 
   // RLS would scope this anyway; the explicit filter turns a wrong id into a

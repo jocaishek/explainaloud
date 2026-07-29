@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { NoSpeechDetectedError, transcribeAudio } from "~/lib/ai/provider";
+import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { speechMetrics } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/server";
 
@@ -28,6 +29,13 @@ export async function POST(
 
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  // Before anything that costs money. Checked here rather than trusted from
+  // the browser: the caption loop claims the plan's quota client-side, which
+  // says nothing about a caller who simply never runs that code.
+  if (!(await claimApiCall(supabase, "transcribe"))) {
+    return NextResponse.json({ error: RATE_LIMITED_MESSAGE }, { status: 429 });
   }
 
   const { data: course } = await supabase
