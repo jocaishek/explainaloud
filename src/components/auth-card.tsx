@@ -7,6 +7,7 @@ import { Input } from "~/components/ui/input";
 import { emailError } from "~/lib/email";
 import { passwordRequirementError } from "~/lib/password";
 import { createClient } from "~/lib/supabase/client";
+import { newConsent, stashPendingConsent } from "~/lib/terms-consent";
 
 /**
  * Sign up, sign in, and password reset.
@@ -26,6 +27,9 @@ type Stage = "form" | "check-email" | "forgot-password" | "reset-sent";
 function oauthErrorMessage(): string {
   return "That sign-in method isn't set up yet. Try email instead.";
 }
+
+const ACCEPT_TERMS_REQUIRED =
+  "Please accept the Terms of Service and Privacy Policy to create an account.";
 
 /**
  * Where the emailed confirmation link lands. Sending it to `/onboarding`
@@ -87,6 +91,10 @@ export function AuthCard({
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
   const [resending, setResending] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
+  // Acceptance of the Terms and Privacy Policy. Required to create an account,
+  // by either route. The value is deliberately not remembered across a page
+  // load: consent has to be an act taken at signup, not a stale checkbox.
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -117,8 +125,18 @@ export function AuthCard({
   }
 
   async function handleOAuth(provider: "google") {
+    // The Google button leaves the page immediately, so it never passes
+    // through the form's native `required` validation. Gate it here or signing
+    // up with Google would skip the agreement entirely.
+    if (mode === "signup" && !acceptedTerms) {
+      setError(ACCEPT_TERMS_REQUIRED);
+      return;
+    }
+
     setError(null);
     setOauthLoading(provider);
+
+    if (mode === "signup") stashPendingConsent(newConsent());
 
     const supabase = createClient();
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
@@ -138,6 +156,13 @@ export function AuthCard({
     setError(null);
 
     if (mode === "signup") {
+      // Belt and braces: the checkbox carries `required`, so a normal submit
+      // cannot reach here unticked. This catches the case where the form is
+      // submitted programmatically and keeps the rule in one readable place.
+      if (!acceptedTerms) {
+        setError(ACCEPT_TERMS_REQUIRED);
+        return;
+      }
       // Reject throwaway and undeliverable domains before we ever ask
       // Supabase to create the account.
       const addressError = emailError(email);
@@ -161,7 +186,13 @@ export function AuthCard({
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: trimmedEmail,
         password,
-        options: { emailRedirectTo: verificationRedirect() },
+        options: {
+          emailRedirectTo: verificationRedirect(),
+          // Record the agreement on the account itself. A checkbox that gates
+          // the button but leaves no trace proves nothing later; this stamps
+          // when they accepted and which version they accepted.
+          data: newConsent(),
+        },
       });
 
       setSubmitting(false);
@@ -348,6 +379,15 @@ export function AuthCard({
               </button>
             )}
           </div>
+          {mode === "signup" && (
+            <AcceptTerms
+              checked={acceptedTerms}
+              onChange={(next) => {
+                setAcceptedTerms(next);
+                if (next && error === ACCEPT_TERMS_REQUIRED) setError(null);
+              }}
+            />
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
             type="submit"
@@ -440,6 +480,63 @@ export function AuthCard({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * The agreement gate.
+ *
+ * `required` on a real checkbox is doing the load-bearing work: the browser
+ * blocks submission and points at the control itself, which is both the
+ * accessible behaviour and impossible to get out of sync with the JS check.
+ *
+ * The links are plain anchors with `target="_blank"` rather than `next/link`
+ * so they open a genuine second tab — someone reading the Terms should not
+ * lose the half-filled form behind them.
+ */
+function AcceptTerms({
+  checked,
+  onChange,
+}: {
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label
+      htmlFor="accept-terms"
+      className="flex cursor-pointer items-start gap-3 text-xs leading-5 text-[#A1A1AA]"
+    >
+      <input
+        id="accept-terms"
+        name="accept-terms"
+        type="checkbox"
+        required
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-[#333333] bg-[#1E1E1E] accent-[var(--color-brand)]"
+      />
+      <span>
+        I agree to the{" "}
+        <a
+          href="/terms"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-white underline underline-offset-2 hover:text-brand"
+        >
+          Terms of Service
+        </a>{" "}
+        and{" "}
+        <a
+          href="/privacy"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="font-medium text-white underline underline-offset-2 hover:text-brand"
+        >
+          Privacy Policy
+        </a>
+        .
+      </span>
+    </label>
   );
 }
 
