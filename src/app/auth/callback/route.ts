@@ -28,8 +28,8 @@ export async function GET(request: NextRequest) {
   }
   // Only ever redirect to a relative, same-app path - never follow an
   // externally supplied `next` value as-is.
-  const destination =
-    next?.startsWith("/") && !next.startsWith("//") ? next : "/dashboard";
+  const explicitNext =
+    next?.startsWith("/") && !next.startsWith("//") ? next : null;
 
   if (!code) {
     console.error("[auth/callback] no code in query", {
@@ -40,8 +40,31 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.exchangeCodeForSession(code);
+  const { data, error } = await supabase.auth.exchangeCodeForSession(code);
   if (!error) {
+    // Where to land. An explicit `next` wins — email verification and password
+    // reset both name their destination. Otherwise decide from the account
+    // itself rather than defaulting to /dashboard.
+    //
+    // Google sign-in sends no `next`, so a first-time Google account used to be
+    // dropped at /dashboard, whose profile guard bounced it to /onboarding —
+    // and any hiccup in that bounce left the person on the landing page having
+    // to click "log in" again despite already having a session. Asking for the
+    // profile here settles it in one hop: no row means onboarding is unfinished.
+    let destination = explicitNext;
+    if (!destination) {
+      const userId = data.session?.user.id;
+      if (userId) {
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("user_id")
+          .eq("user_id", userId)
+          .maybeSingle<{ user_id: string }>();
+        destination = profile ? "/dashboard" : "/onboarding";
+      } else {
+        destination = "/dashboard";
+      }
+    }
     return NextResponse.redirect(`${browserOrigin}${destination}`);
   }
 
