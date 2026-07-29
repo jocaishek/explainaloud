@@ -134,125 +134,126 @@ export default function Home() {
       <ScrollProgress />
       <Nav />
 
-      {/* ── Section 1: Hero ─────────────────────────────────────────── */}
-      <section className="relative flex w-full flex-col items-center px-6 pt-16 pb-24 sm:pt-24 sm:pb-32">
-        <GlowOrb className="-top-32 left-1/2 h-[34rem] w-[52rem] -translate-x-1/2 opacity-[0.16]" />
+      {/* One scroll-drawn squiggle now winds from the hero all the way to the
+          sign-up cue, so the line is established at the top of the page rather
+          than appearing five sections in with no lead-in. */}
+      <div ref={journeyRef} className="relative w-full">
+        <ScrollSquiggle target={journeyRef} />
 
-        <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
-          <Eyebrow index="01" label="Explainaloud" />
-          <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight text-balance text-white sm:text-6xl">
-            <WordReveal
-              text="Know when you actually understand it."
-              accent={["understand"]}
-            />
-          </h1>
-          <Reveal delay={100}>
-            <p className="max-w-2xl text-lg text-[#A1A1AA]">
-              A team of specialist AI agents builds from your sources, listens
-              to you explain the material, and independently checks the steps
-              you skipped.
-            </p>
-          </Reveal>
-          <Reveal delay={140}>
-            <p className="font-mono text-sm text-[#71717A]">
-              Try it on{" "}
-              <TypedText phrases={HERO_TOPICS} className="text-brand" />
-            </p>
-          </Reveal>
-          <Reveal delay={180} className="mt-2">
-            <Magnetic strength={16}>
-              <Button
-                asChild
-                size="lg"
-                className="shine group h-12 rounded-full bg-brand px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_64px_-8px_var(--color-brand)] active:scale-[0.97]"
-              >
-                <Link href="/signup">
-                  Sign up free
-                  <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-out group-hover:translate-x-1" />
-                </Link>
-              </Button>
-            </Magnetic>
-          </Reveal>
-        </div>
+        {/* ── Section 1: Hero ─────────────────────────────────────────── */}
+        <section className="relative flex w-full flex-col items-center px-6 pt-16 pb-16 sm:pt-24 sm:pb-20">
+          <GlowOrb className="-top-32 left-1/2 h-[34rem] w-[52rem] -translate-x-1/2 opacity-[0.16]" />
 
-        {/* Three-step flow, set as type rather than icon tiles. */}
-        <Reveal delay={280} className="mt-20 w-full">
-          <div className="mx-auto flex max-w-3xl flex-col items-stretch gap-4 sm:flex-row">
-            <FlowStep step="01" label="Upload your sources" />
-            <FlowStep step="02" label="Explain it out loud" />
-            <FlowStep step="03" label="Get the gaps filled" />
+          <div className="flex max-w-3xl flex-col items-center gap-6 text-center">
+            <Eyebrow index="01" label="Explainaloud" />
+            <h1 className="text-5xl leading-[1.1] font-semibold tracking-tight text-balance text-white sm:text-6xl">
+              <WordReveal
+                text="Know when you actually understand it."
+                accent={["understand"]}
+              />
+            </h1>
+            <Reveal delay={100}>
+              <p className="max-w-2xl text-lg text-[#A1A1AA]">
+                A team of specialist AI agents builds from your sources, listens
+                to you explain the material, and independently checks the steps
+                you skipped.
+              </p>
+            </Reveal>
+            <Reveal delay={140}>
+              <p className="font-mono text-sm text-[#71717A]">
+                Try it on{" "}
+                <TypedText phrases={HERO_TOPICS} className="text-brand" />
+              </p>
+            </Reveal>
+            <Reveal delay={180} className="mt-2">
+              <Magnetic strength={16}>
+                <Button
+                  asChild
+                  size="lg"
+                  className="shine group h-12 rounded-full bg-brand px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_64px_-8px_var(--color-brand)] active:scale-[0.97]"
+                >
+                  <Link href="/signup">
+                    Sign up free
+                    <ArrowRight className="ml-1 size-4 transition-transform duration-200 ease-out group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+              </Magnetic>
+            </Reveal>
           </div>
-        </Reveal>
-      </section>
 
-      {/* ── Examples: what a real session looks like ─────────────────────
+          {/* Three-step flow, set as type rather than icon tiles. */}
+          <Reveal delay={280} className="mt-20 w-full">
+            <div className="mx-auto flex max-w-3xl flex-col items-stretch gap-4 sm:flex-row">
+              <FlowStep step="01" label="Upload your sources" />
+              <FlowStep step="02" label="Explain it out loud" />
+              <FlowStep step="03" label="Get the gaps filled" />
+            </div>
+          </Reveal>
+        </section>
+
+        {/* ── Examples: what a real session looks like ─────────────────────
           No `overflow-hidden` on this section: the carousel pins itself with
           `position: sticky`, which any scroll-clipping ancestor would break.
           The clipping lives on the sticky panel inside instead. */}
-      <section className="relative w-full">
-        <ExampleCarousel
-          examples={EXAMPLES}
-          header={
-            <div className="relative mx-auto flex max-w-4xl flex-col items-center px-6 text-center">
-              <GlowOrb className="-top-10 left-1/2 h-72 w-[36rem] -translate-x-1/2" />
-              <Eyebrow index="02" label="Today's board" className="mb-4" />
-              <h2 className="relative text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+        <section className="relative w-full">
+          <ExampleCarousel
+            examples={EXAMPLES}
+            header={
+              <div className="relative mx-auto flex max-w-4xl flex-col items-center px-6 text-center">
+                <GlowOrb className="-top-10 left-1/2 h-72 w-[36rem] -translate-x-1/2" />
+                <Eyebrow index="02" label="Today's board" className="mb-4" />
+                <h2 className="relative text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+                  <WordReveal
+                    text="What a session looks like"
+                    accent={["session"]}
+                  />
+                </h2>
+                <Reveal delay={120} className="mt-4">
+                  <p className="max-w-md text-[#A1A1AA]">
+                    A topic, an explanation scored on how well you actually said
+                    it, and the exact step you skipped. Keep scrolling to turn
+                    the ring.
+                  </p>
+                </Reveal>
+              </div>
+            }
+          />
+        </section>
+
+        {/* Ticker + stat band: a beat of motion between the hero and the essay. */}
+        <div className="w-full border-y border-white/10 py-4">
+          <Marquee items={MARQUEE_ITEMS} />
+        </div>
+
+        {/* ── Section 2: Multi-agent orchestration ──────────────────── */}
+        <section className="relative w-full px-6 py-24">
+          <GlowOrb className="top-10 left-[12%] h-80 w-80 opacity-[0.12]" />
+          <div className="relative mx-auto grid max-w-5xl gap-12 md:grid-cols-[0.8fr_1.2fr] md:items-center md:gap-16">
+            <div>
+              <Eyebrow
+                index="03"
+                label="Multi-agent by design"
+                className="mb-4"
+              />
+              <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
                 <WordReveal
-                  text="What a session looks like"
-                  accent={["session"]}
+                  text="One lesson. Several specialists."
+                  accent={["specialists"]}
                 />
               </h2>
-              <Reveal delay={120} className="mt-4">
-                <p className="max-w-md text-[#A1A1AA]">
-                  A topic, an explanation scored on how well you actually said
-                  it, and the exact step you skipped. Keep scrolling to turn the
-                  ring.
+              <Reveal delay={120} className="mt-5">
+                <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
+                  Explainaloud does not ask one model to do everything. Each
+                  agent owns a specific job, passes its work forward, and leaves
+                  a visible trace so you can see how the result was made.
                 </p>
               </Reveal>
             </div>
-          }
-        />
-      </section>
-
-      {/* Ticker + stat band: a beat of motion between the hero and the essay. */}
-      <div className="w-full border-y border-white/10 py-4">
-        <Marquee items={MARQUEE_ITEMS} />
-      </div>
-
-      {/* ── Section 2: Multi-agent orchestration ──────────────────── */}
-      <section className="relative w-full px-6 py-24">
-        <GlowOrb className="top-10 left-[12%] h-80 w-80 opacity-[0.12]" />
-        <div className="relative mx-auto grid max-w-5xl gap-12 md:grid-cols-[0.8fr_1.2fr] md:items-center md:gap-16">
-          <div>
-            <Eyebrow
-              index="03"
-              label="Multi-agent by design"
-              className="mb-4"
-            />
-            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-              <WordReveal
-                text="One lesson. Several specialists."
-                accent={["specialists"]}
-              />
-            </h2>
-            <Reveal delay={120} className="mt-5">
-              <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
-                Explainaloud does not ask one model to do everything. Each agent
-                owns a specific job, passes its work forward, and leaves a
-                visible trace so you can see how the result was made.
-              </p>
+            <Reveal delay={160}>
+              <LandingAgentPipeline />
             </Reveal>
           </div>
-          <Reveal delay={160}>
-            <LandingAgentPipeline />
-          </Reveal>
-        </div>
-      </section>
-
-      {/* Sections 2 → 5 share one scroll-drawn squiggle that winds from
-          "The illusion of competence" all the way down to the sign-up form. */}
-      <div ref={journeyRef} className="relative w-full">
-        <ScrollSquiggle target={journeyRef} />
+        </section>
 
         {/* ── Section 2: The Illusion of Competence ─────────────────── */}
         <section className="w-full px-6 py-24">
