@@ -265,22 +265,37 @@ The student said (verbatim transcript${params.context ? ", the part you must gra
 ${params.transcript}
 """
 
-Segment the transcript into consecutive spans covering it end to end. Classify
-each span:
-- "correct"  — accurate and supported by the reference material
-- "gap"      — wrong, or a step skipped, or a claim the material contradicts
+Segment the transcript into consecutive spans covering it end to end.
+
+Spans judge ONLY what the student actually said. Whether they left something
+out is a separate question, answered by "covered_key_points" below, and it must
+never influence how a span is classified.
+
+Classify each span:
+- "correct"  — the statement is accurate
+- "gap"      — the statement is wrong, misleading, or contradicted by the
+               reference material, or it is off-topic
 - "neutral"  — filler, false starts, or content that makes no checkable claim
 
 Rules:
 - Spans must be exact verbatim substrings of the transcript, in order, with no
   overlap. Concatenating every span's text must reproduce the transcript.
-- Only mark "gap" when you can name the specific key point that was missed or
-  contradicted. A checkable claim unrelated to the assigned topic is also a
-  "gap"; say that it does not address the topic.
+- "correct" does not require the statement to appear in the key points. A true,
+  relevant statement is correct whether or not the course material happens to
+  mention it. Students add detail of their own; that is a good sign, not an
+  error. "The plant takes in carbon dioxide through tiny holes called stomata"
+  is correct even if no key point mentions stomata.
+- NEVER mark a span "gap" because something was omitted. A gap means the words
+  in that span are wrong. If the student's sentence is accurate, it is
+  "correct", even when the surrounding explanation skipped a step. Omissions
+  are reported through "covered_key_points" and nowhere else.
+- "off-topic" means it does not address ${params.topic} at all. It does not mean
+  "absent from the key points".
 - Use "neutral" only for filler, false starts, or connective words. Do not mark
   an entire off-topic explanation neutral.
 - Be strict about correctness but do not invent gaps. A student who is simply
-  brief is not wrong.
+  brief is not wrong. If you cannot state what is factually wrong with a span,
+  it is not a gap.
 - Check every numbered key point individually before returning, and add its
   index to "covered_key_points" when the student conveyed that MEANING.
   Paraphrase counts. Synonyms count. Their own phrasing counts. Saying it in a
@@ -306,7 +321,7 @@ Return JSON:
       "text": "exact substring",
       "status": "correct" | "gap" | "neutral",
       "key_point": "the related key point text, or null (never an index)",
-      "issue": "for gaps only: one sentence naming what was missed, or null"
+      "issue": "for gaps only: one sentence naming what is factually wrong with these words, or null"
     }
   ],
   "covered_key_points": [the bracketed indices of key points the student got right],
@@ -370,6 +385,17 @@ ${
 Coach the flagged claims and at most four highest-priority omissions. The
 orchestrator deterministically checks every remaining course key point and
 adds any uncovered items after this response, so do not repeat the full rubric.
+
+Every entry in "gaps" must come from one of those two lists above. Do not
+introduce anything else. In particular:
+- Never list something the student explained correctly. If a point is not in
+  either list, they got it, and telling them otherwise is the single most
+  damaging thing this report can do.
+- Never write a "gap" whose explanation you are not certain of. An invented
+  correction is worse than a missing one.
+- If both lists say "none", return "gaps": []. An empty array is the correct
+  and expected answer for a complete explanation. Do not manufacture material
+  to fill it.
 
 Return JSON:
 {
