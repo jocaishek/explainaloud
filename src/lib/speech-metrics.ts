@@ -91,6 +91,13 @@ export type SpeechMetrics = {
   /** Fillers per 100 words, so it compares across recording lengths. */
   fillerPer100: number;
   /**
+   * The words spoken during the slowest window, and its rate.
+   *
+   * Only meaningful set against something: on its own, the slowest stretch of
+   * any recording is simply the slowest stretch, not evidence of anything.
+   */
+  slowestStretch: { text: string; wpm: number } | null;
+  /**
    * False when there was too little speech for the rates to mean anything.
    * The numbers are still returned — they are just not worth acting on.
    */
@@ -152,8 +159,21 @@ function pauseStats(words: TranscribedWord[]): PauseStats {
   };
 }
 
-/** Windowed speaking rates in words per minute, ascending. */
-function windowedRates(words: TranscribedWord[]): number[] {
+type RateWindow = {
+  wpm: number;
+  /** Indices into the word list, inclusive, that this window covers. */
+  from: number;
+  to: number;
+};
+
+/**
+ * Speaking rate over each sliding window, in document order.
+ *
+ * Positions are kept alongside the rates because a number on its own cannot be
+ * shown to anyone: "you slowed down" is only useful next to the words it
+ * happened on.
+ */
+function rateWindows(words: TranscribedWord[]): RateWindow[] {
   const first = words[0];
   const last = words.at(-1);
   if (!first || !last) return [];
@@ -161,7 +181,7 @@ function windowedRates(words: TranscribedWord[]): number[] {
   // Midpoints, so a word straddling a boundary is counted once rather than in
   // both neighbouring windows.
   const midpoints = words.map((word) => (word.start + word.end) / 2);
-  const rates: number[] = [];
+  const windows: RateWindow[] = [];
 
   for (
     let start = first.start;
@@ -171,15 +191,22 @@ function windowedRates(words: TranscribedWord[]): number[] {
   ) {
     const end = start + RATE_WINDOW_SECONDS;
     let count = 0;
-    for (const midpoint of midpoints) {
-      if (midpoint >= start && midpoint < end) count++;
+    let from = -1;
+    let to = -1;
+    for (let i = 0; i < midpoints.length; i++) {
+      const midpoint = midpoints[i] as number;
+      if (midpoint >= start && midpoint < end) {
+        if (from === -1) from = i;
+        to = i;
+        count++;
+      }
     }
     if (count >= MIN_WORDS_PER_WINDOW) {
-      rates.push((count * 60) / RATE_WINDOW_SECONDS);
+      windows.push({ wpm: (count * 60) / RATE_WINDOW_SECONDS, from, to });
     }
   }
 
-  return rates.sort((a, b) => a - b);
+  return windows;
 }
 
 /**
@@ -201,7 +228,8 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
   const last = usable.at(-1) as TranscribedWord;
   const speakingSeconds = Math.max(0, last.end - first.start);
 
-  const rates = windowedRates(usable);
+  const windows = rateWindows(usable);
+  const rates = windows.map((w) => w.wpm).sort((a, b) => a - b);
   const fillers = usable.filter((word) =>
     FILLER_PATTERN.test(word.word.replace(/[^\p{L}]/gu, "")),
   ).length;
@@ -221,8 +249,42 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
     ),
     pauses: pauseStats(usable),
     fillerPer100: Number(((fillers / usable.length) * 100).toFixed(1)),
+    slowestStretch: slowestStretch(usable, windows),
     reliable: speakingSeconds >= MIN_SPEAKING_SECONDS && rates.length > 0,
   };
+}
+
+/**
+ * The slowest window, as the words that were actually said during it.
+ *
+ * Text rather than timestamps because of what reads it: the gap report has the
+ * transcript and the grader's findings, both of which are strings. Handing it
+ * "seconds 22 to 32" would leave it re-deriving the mapping that is trivially
+ * available here.
+ *
+ * Null when there is nothing to compare — a single window cannot be slower than
+ * anything, and claiming it is would be the invented finding this whole module
+ * is written to avoid.
+ */
+function slowestStretch(
+  words: TranscribedWord[],
+  windows: RateWindow[],
+): SpeechMetrics["slowestStretch"] {
+  if (windows.length < 2) return null;
+
+  let slowest = windows[0] as RateWindow;
+  for (const window of windows) {
+    if (window.wpm < slowest.wpm) slowest = window;
+  }
+
+  const text = words
+    .slice(slowest.from, slowest.to + 1)
+    .map((word) => word.word.trim())
+    .join(" ")
+    .trim();
+  if (!text) return null;
+
+  return { text, wpm: Math.round(slowest.wpm) };
 }
 
 /**

@@ -4,11 +4,18 @@ import { USE_TYPE_LABELS } from "~/lib/profile";
 import { requireProfile } from "~/lib/supabase/server";
 import { PlanPanel } from "./plan-panel";
 import { ProfileForm } from "./profile-form";
+import { VoiceBaselinePanel } from "./voice-baseline-panel";
 
 export const metadata = { title: "Settings · Explainaloud" };
 
 export default async function SettingsPage() {
-  const { user, profile } = await requireProfile();
+  const { supabase, user, profile } = await requireProfile();
+
+  const { data: baseline } = await supabase
+    .from("speech_baselines")
+    .select("capable_wpm, median_wpm")
+    .eq("user_id", user.id)
+    .maybeSingle<{ capable_wpm: number; median_wpm: number }>();
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-6 py-16">
@@ -30,6 +37,13 @@ export default async function SettingsPage() {
           renewsAt={profile.plan_renews_at}
           hasCustomer={!!profile.stripe_customer_id}
         />
+      </Section>
+
+      <Section
+        title="Your speaking pace"
+        description="So we can tell hesitation apart from how you normally talk."
+      >
+        <VoiceBaselinePanel existingWpm={baseline?.median_wpm ?? null} />
       </Section>
 
       <Section title="Appearance" description="Applies across your dashboard.">
