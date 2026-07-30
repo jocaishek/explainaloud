@@ -35,16 +35,16 @@ const EASE_CSS = "ease-[cubic-bezier(0.23,1,0.32,1)]";
  * with six scroll-driven transforms — and it is entirely below the fold. Held
  * back from the first load and from the prerendered HTML, so a phone paints
  * and becomes usable before any of it exists. Rendering client-side only also
- * frees the component to pick a cheaper layout on small screens without a
- * hydration mismatch to correct.
+ * frees the component to drop the 3D arc on small screens without a hydration
+ * mismatch to correct.
  */
 const ExampleCarousel = dynamic(
   () => import("~/components/example-carousel").then((m) => m.ExampleCarousel),
   {
     ssr: false,
-    // Roughly a screen, so the page below does not jump up while the section
-    // is still on its way.
-    loading: () => <div className="h-screen w-full" />,
+    // Close to the height it settles at, so the page below does not jump while
+    // the section is still on its way.
+    loading: () => <div className="h-[42rem] w-full" />,
   },
 );
 
@@ -216,10 +216,7 @@ export default function Home() {
           </Reveal>
         </section>
 
-        {/* ── Examples: what a real session looks like ─────────────────────
-          No `overflow-hidden` on this section: the carousel pins itself with
-          `position: sticky`, which any scroll-clipping ancestor would break.
-          The clipping lives on the sticky panel inside instead. */}
+        {/* ── Examples: what a real session looks like ──────────────── */}
         <section className="relative w-full">
           <ExampleCarousel
             examples={EXAMPLES}
@@ -235,8 +232,8 @@ export default function Home() {
                 <Reveal delay={120} className="mt-4">
                   <p className="max-w-md text-[#A1A1AA]">
                     A topic, an explanation scored on how well you actually said
-                    it, and the exact step you skipped. Scroll down or swipe
-                    sideways to move through them.
+                    it, and the exact step you skipped. Swipe or drag sideways
+                    for the rest.
                   </p>
                 </Reveal>
               </div>

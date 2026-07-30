@@ -4,7 +4,6 @@ import { useReducedMotion } from "framer-motion";
 import type Lenis from "lenis";
 import { useEffect } from "react";
 import { useMediaQuery } from "~/hooks/use-media-query";
-import { setPageScroll } from "~/lib/page-scroll";
 
 /**
  * Buttery inertia scrolling for the marketing page only. Mounted inside a
@@ -43,10 +42,6 @@ export function SmoothScroll() {
         anchors: true,
       });
 
-      // Published so the pinned carousel can turn the page itself when someone
-      // scrolls it sideways.
-      setPageScroll(instance);
-
       function raf(time: number) {
         instance?.raf(time);
         frame = requestAnimationFrame(raf);
@@ -57,7 +52,6 @@ export function SmoothScroll() {
     return () => {
       cancelled = true;
       cancelAnimationFrame(frame);
-      setPageScroll(null);
       instance?.destroy();
     };
   }, [shouldReduceMotion, hasWheel]);

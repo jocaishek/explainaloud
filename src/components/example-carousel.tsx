@@ -3,14 +3,12 @@
 import {
   type MotionValue,
   motion,
+  useMotionValue,
   useReducedMotion,
-  useScroll,
-  useSpring,
   useTransform,
 } from "framer-motion";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMediaQuery } from "~/hooks/use-media-query";
-import { scrollPageBy } from "~/lib/page-scroll";
 import { cn } from "~/lib/utils";
 
 export type Example = {
@@ -21,246 +19,120 @@ export type Example = {
   gap: string;
 };
 
-const EASE = [0.23, 1, 0.32, 1] as const;
-
 /** Card pitch in px — must match the rendered width + gap below. */
 const CARD_W = 300;
 const GAP = 28;
 const PITCH = CARD_W + GAP;
 
-/** Below this the gesture is treated as vertical and left to the page. */
-const HORIZONTAL_BIAS = 1.2;
-
 /**
- * Page scroll per pixel of sideways gesture.
+ * Horizontal ring of example sessions.
  *
- * 1:1 was the obvious choice and the wrong one: the pin gives each card only
- * about a quarter of a viewport, so matching the gesture to page pixels meant
- * a full swipe across the trackpad advanced barely two cards. This makes a
- * sideways flick cover roughly what a downward flick does.
- */
-const HORIZONTAL_GAIN = 2.2;
-
-/**
- * Turn the ring with sideways gestures too — a trackpad two-finger swipe, a
- * tilt wheel, or a horizontal drag on a touchscreen.
+ * The row is a real scroll container — `overflow-x` on an element, nothing
+ * more. That one decision is what makes every input work without a line of
+ * code each: trackpad swipes, shift+wheel, click-and-drag on touch, arrow keys
+ * once it has focus, and the platform's own momentum and rubber-banding. It
+ * also means the browser owns the scroll position, so there is exactly one
+ * source of truth for where the ring is.
  *
- * The ring's position is a function of *vertical* scroll, and that stays true:
- * rather than driving the cards directly, a sideways gesture scrolls the page
- * by the same distance. One source of truth, so the two input directions can
- * never disagree about where the ring is, and letting go at either end
- * releases into the rest of the page exactly as a vertical scroll would.
+ * It replaced a taller thing: the section used to pin itself to the viewport
+ * and remap vertical scroll onto sideways travel. That reads well once and
+ * then costs you — it hijacks the page's scroll, it cannot be moved sideways
+ * by the gesture people actually reach for, and it makes a section that is
+ * really one screen of content two thousand pixels tall.
  *
- * Only intercepted while the section is actually pinned and still has travel
- * left in the gesture's direction. Otherwise the event is left alone, so a
- * horizontal swipe outside the ring still does whatever the browser does with
- * it — including the back-navigation gesture.
- */
-function useHorizontalTurn(ref: React.RefObject<HTMLDivElement | null>) {
-  useEffect(() => {
-    const section = ref.current;
-    if (!section) return;
-
-    /** Pixels of page scroll this sideways delta should consume, or 0. */
-    function travel(dx: number) {
-      const node = ref.current;
-      if (!node || dx === 0) return 0;
-      const rect = node.getBoundingClientRect();
-      // Pinned: the sticky panel fills the viewport.
-      if (rect.top > 1 || rect.bottom < window.innerHeight - 1) return 0;
-      // Runway in the direction asked for. Without this the last card would
-      // swallow a swipe that should have carried on down the page.
-      const remaining = dx > 0 ? rect.bottom - window.innerHeight : -rect.top;
-      if (remaining <= 1) return 0;
-      const wanted = Math.abs(dx) * HORIZONTAL_GAIN;
-      return Math.sign(dx) * Math.min(wanted, remaining);
-    }
-
-    function onWheel(event: WheelEvent) {
-      if (Math.abs(event.deltaX) < Math.abs(event.deltaY) * HORIZONTAL_BIAS) {
-        return;
-      }
-      const delta = travel(event.deltaX);
-      if (delta === 0) return;
-      // Non-passive: this also stops Safari and Chrome reading the swipe as
-      // "go back a page" while the reader is mid-ring.
-      event.preventDefault();
-      scrollPageBy(delta);
-    }
-
-    let startX = 0;
-    let startY = 0;
-    let lastX = 0;
-    let horizontal = false;
-
-    function onTouchStart(event: TouchEvent) {
-      const touch = event.touches[0];
-      if (!touch) return;
-      startX = touch.clientX;
-      startY = touch.clientY;
-      lastX = touch.clientX;
-      horizontal = false;
-    }
-
-    function onTouchMove(event: TouchEvent) {
-      const touch = event.touches[0];
-      if (!touch) return;
-      // Decide once per gesture, on the first movement big enough to have a
-      // direction. Re-deciding every frame makes a diagonal drag stutter
-      // between the two axes.
-      if (!horizontal) {
-        const dx = Math.abs(touch.clientX - startX);
-        const dy = Math.abs(touch.clientY - startY);
-        if (dx < 8 && dy < 8) return;
-        horizontal = dx > dy * HORIZONTAL_BIAS;
-        if (!horizontal) return;
-      }
-      // Dragging left (negative) walks forward, matching the direction the
-      // cards themselves move.
-      const delta = travel(lastX - touch.clientX);
-      lastX = touch.clientX;
-      if (delta === 0) return;
-      event.preventDefault();
-      scrollPageBy(delta);
-    }
-
-    section.addEventListener("wheel", onWheel, { passive: false });
-    section.addEventListener("touchstart", onTouchStart, { passive: true });
-    section.addEventListener("touchmove", onTouchMove, { passive: false });
-    return () => {
-      section.removeEventListener("wheel", onWheel);
-      section.removeEventListener("touchstart", onTouchStart);
-      section.removeEventListener("touchmove", onTouchMove);
-    };
-  }, [ref]);
-}
-
-/**
- * Scroll-driven horizontal ring of example sessions.
- *
- * The section is deliberately tall; an inner panel sticks to the viewport
- * while it scrolls past, and vertical scroll progress is remapped onto
- * horizontal travel. So a normal downward scroll walks sideways through the
- * examples and then releases into the rest of the page — just a tall element
- * and a sticky child, which means Lenis's inertia carries straight through it.
- *
- * Sideways gestures work too, via `useHorizontalTurn`: they are converted into
- * the same vertical scroll rather than moving the cards on their own.
- *
- * Cards sit on an arc: each one rotates and drops away from the centre in 3D,
- * so the row reads as the surface of a globe turning past you rather than as
- * a flat strip sliding by.
+ * Cards still sit on an arc: each rotates and drops away from the centre in
+ * 3D, driven by the container's own `scrollLeft`, so the row reads as the
+ * surface of a globe turning past you rather than as a flat strip sliding by.
  */
 export function ExampleCarousel({
   examples,
   header,
 }: {
   examples: Example[];
-  /** Rendered inside the pinned panel, so it stays put while the ring turns. */
+  /** Rendered above the row, so it stays put while the ring turns. */
   header?: React.ReactNode;
 }) {
   const shouldReduceMotion = useReducedMotion();
   const wide = useMediaQuery("(min-width: 768px)");
-  const sectionRef = useRef<HTMLDivElement>(null);
+  const railRef = useRef<HTMLDivElement>(null);
 
-  // Safe to call unconditionally: under reduced motion the ref is never
-  // attached, so the hook finds no node and binds nothing.
-  useHorizontalTurn(sectionRef);
+  /** Scroll position in card widths: 0 is the first card centred. */
+  const position = useMotionValue(0);
+  // Mirrored into state only for the dots, which are cheap and few. The cards
+  // read the motion value directly so a scroll never re-renders them.
+  const [nearest, setNearest] = useState(0);
 
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    // Start when the section's top reaches the viewport top (it is pinned
-    // from that moment) and end when its bottom does.
-    offset: ["start start", "end end"],
-  });
+  const onScroll = useCallback(() => {
+    const rail = railRef.current;
+    if (!rail) return;
+    const p = rail.scrollLeft / PITCH;
+    position.set(p);
+    setNearest(Math.round(p));
+  }, [position]);
 
-  // Spring-smoothed so the sideways travel keeps Lenis's easing feel instead
-  // of tracking the raw scrollbar 1:1.
-  const progress = useSpring(scrollYProgress, {
-    stiffness: 90,
-    damping: 28,
-    restDelta: 0.0005,
-  });
+  // A resize changes which card is centred without ever firing `scroll`.
+  useEffect(() => {
+    window.addEventListener("resize", onScroll);
+    return () => window.removeEventListener("resize", onScroll);
+  }, [onScroll]);
 
-  // The flex row is centred by its container, which puts the *middle* card
-  // under the viewport centre at x=0. Offset by half the travel so the run
-  // starts on the first card and ends on the last.
-  const halfTravel = ((examples.length - 1) * PITCH) / 2;
-  const x = useTransform(progress, [0, 1], [halfTravel, -halfTravel]);
-
-  // Phones and reduced motion both get the plain, user-driven scroller.
-  //
-  // On a phone the 3D ring is the wrong trade twice over: it costs seven
-  // blurred, transformed panels animating against every scroll frame, and it
-  // buys a gesture — pin, then walk sideways — that a thumb already does
-  // better by just swiping the row. This component only renders on the client,
-  // so choosing here costs nothing at hydration.
-  if (shouldReduceMotion || !wide) {
-    return (
-      <div className="py-16">
-        {header}
-        <div className="no-scrollbar mt-10 flex snap-x snap-mandatory gap-7 overflow-x-auto px-6 py-6">
-          {examples.map((example) => (
-            <article
-              key={example.topic}
-              className="glass w-[300px] shrink-0 snap-center rounded-2xl p-6"
-            >
-              <ExampleBody example={example} />
-            </article>
-          ))}
-        </div>
-      </div>
-    );
-  }
+  // The arc is a desktop flourish. On a phone the cards are near enough
+  // full-width that rotating them away just makes text harder to read, and it
+  // is the one part of this that costs real compositing work per frame.
+  const arc = wide && !shouldReduceMotion;
 
   return (
-    <div
-      ref={sectionRef}
-      // Pin length per card. Higher = slower sideways travel per unit of wheel.
-      // At a viewport each, seven cards were a 6000px slog; 55vh still left the
-      // pin 5200px tall — over half the length of the entire page, so the
-      // section read as the site stalling rather than as a feature. 34vh puts
-      // it near 3200px: a little over one flick per card, enough to register
-      // each without asking for six screens of scrolling to get past them.
-      style={{ height: `${examples.length * 34}vh` }}
-      className="relative w-full"
-    >
-      {/* The panel is a full viewport because `sticky top-0` needs it to pin.
-          Two ways to get that wrong: centre a small block in it and the section
-          reads as a hole, or spread the parts to the edges and the holes just
-          move in between them. Neither is a spacing value — both are the same
-          block being the wrong size.
+    <div className="flex w-full flex-col items-center gap-10 py-16">
+      {header}
 
-          So: one centred block with a single gap between every part, and cards
-          tall enough that the block has real height. The rhythm is even by
-          construction, and what is left over sits as equal margin top and
-          bottom rather than as a gap somewhere inside the content. */}
-      <div className="sticky top-0 flex h-screen flex-col items-center justify-center gap-10 overflow-hidden py-12">
-        {header}
-        <div
-          className="relative flex w-full items-center justify-center"
-          // Deep perspective on the container, so every card shares one
-          // vanishing point and the row curves as a single surface.
-          style={{ perspective: "1200px", perspectiveOrigin: "50% 50%" }}
-        >
-          <motion.div
-            className="flex items-center"
-            style={{ x, gap: `${GAP}px`, transformStyle: "preserve-3d" }}
-          >
-            {examples.map((example, i) => (
-              <RingCard
-                key={example.topic}
-                example={example}
-                index={i}
-                progress={progress}
-                total={examples.length}
-              />
-            ))}
-          </motion.div>
-        </div>
+      <section
+        ref={railRef}
+        onScroll={onScroll}
+        // Focusable so the arrow keys work. A scroll container is only
+        // keyboard-operable if something can focus it, and this one holds
+        // content rather than controls, so it takes the focus itself — the
+        // named exception to "don't put tabIndex on a div", and why it is
+        // labelled as a region rather than left as an anonymous box.
+        // biome-ignore lint/a11y/noNoninteractiveTabindex: scrollable region, keyboard-reachable on purpose
+        tabIndex={0}
+        aria-label="Example sessions"
+        className={cn(
+          "no-scrollbar flex w-full snap-x snap-mandatory items-center overflow-x-auto",
+          "focus-visible:outline-none",
+          // Room for the arc to lean out of the box without being clipped.
+          arc ? "py-16" : "py-6",
+        )}
+        style={{
+          gap: `${GAP}px`,
+          // Half a viewport minus half a card, so the first and last cards can
+          // reach the centre instead of stopping against the edge.
+          paddingInline: `calc(50% - ${CARD_W / 2}px)`,
+          perspective: arc ? "1200px" : undefined,
+          perspectiveOrigin: "50% 50%",
+          transformStyle: arc ? "preserve-3d" : undefined,
+        }}
+      >
+        {examples.map((example, i) => (
+          <RingCard
+            key={example.topic}
+            example={example}
+            index={i}
+            position={position}
+            arc={arc}
+          />
+        ))}
+      </section>
 
-        <ProgressDots progress={progress} ids={examples.map((e) => e.topic)} />
-      </div>
+      <ProgressDots
+        nearest={nearest}
+        ids={examples.map((e) => e.topic)}
+        onSelect={(index) => {
+          railRef.current?.scrollTo({
+            left: index * PITCH,
+            behavior: shouldReduceMotion ? "auto" : "smooth",
+          });
+        }}
+      />
     </div>
   );
 }
@@ -273,15 +145,15 @@ export function ExampleCarousel({
 function RingCard({
   example,
   index,
-  progress,
-  total,
+  position,
+  arc,
 }: {
   example: Example;
   index: number;
-  progress: MotionValue<number>;
-  total: number;
+  position: MotionValue<number>;
+  arc: boolean;
 }) {
-  const offset = useTransform(progress, (p) => index - p * (total - 1));
+  const offset = useTransform(position, (p) => index - p);
 
   // Turn away from the viewer, and push back in z, the further out you are.
   const rotateY = useTransform(offset, (o) => clamp(o * -22, -55, 55));
@@ -307,20 +179,24 @@ function RingCard({
 
   return (
     <motion.article
-      style={{
-        width: CARD_W,
-        rotateY,
-        z,
-        y,
-        scale,
-        opacity,
-        filter: blur,
-        zIndex,
-        transformStyle: "preserve-3d",
-      }}
-      className="glass relative flex min-h-[20rem] shrink-0 flex-col rounded-2xl p-6 text-left"
+      style={
+        arc
+          ? {
+              width: CARD_W,
+              rotateY,
+              z,
+              y,
+              scale,
+              opacity,
+              filter: blur,
+              zIndex,
+              transformStyle: "preserve-3d",
+            }
+          : { width: CARD_W }
+      }
+      className="glass relative flex min-h-[20rem] shrink-0 snap-center flex-col rounded-2xl p-6 text-left"
     >
-      <FocusGlow offset={offset} />
+      {arc && <FocusGlow offset={offset} />}
       <div className="relative">
         <ExampleBody example={example} />
       </div>
@@ -374,47 +250,43 @@ function ExampleBody({ example }: { example: Example }) {
   );
 }
 
-/** Position readout along the ring — the "path" the section walks through. */
+/**
+ * Position readout, and the way to move without a gesture. They were decorative
+ * dots; now that the row is a scroll container they may as well be the
+ * buttons that scroll it, which is also the only pointer-driven way through
+ * for someone on a mouse with no horizontal wheel.
+ */
 function ProgressDots({
-  progress,
+  nearest,
   ids,
+  onSelect,
 }: {
-  progress: MotionValue<number>;
+  nearest: number;
   ids: string[];
+  onSelect: (index: number) => void;
 }) {
   return (
     <div className="flex items-center gap-2">
       {ids.map((id, i) => (
-        <Dot key={id} index={i} progress={progress} total={ids.length} />
+        <button
+          key={id}
+          type="button"
+          onClick={() => onSelect(i)}
+          aria-label={`Go to example ${i + 1} of ${ids.length}`}
+          aria-current={i === nearest}
+          className="group flex h-6 items-center px-0.5"
+        >
+          <span
+            className={cn(
+              "h-1.5 rounded-full transition-all duration-300",
+              i === nearest
+                ? "w-6 bg-brand"
+                : "w-1.5 bg-white/20 group-hover:bg-white/40",
+            )}
+          />
+        </button>
       ))}
     </div>
-  );
-}
-
-function Dot({
-  index,
-  progress,
-  total,
-}: {
-  index: number;
-  progress: MotionValue<number>;
-  total: number;
-}) {
-  const offset = useTransform(progress, (p) =>
-    Math.abs(index - p * (total - 1)),
-  );
-  const width = useTransform(offset, (o) => (o < 0.5 ? 26 : 6));
-  const background = useTransform(offset, (o) =>
-    o < 0.5 ? "var(--color-brand)" : "rgba(255,255,255,0.2)",
-  );
-
-  return (
-    <motion.span
-      aria-hidden
-      style={{ width, background }}
-      transition={{ duration: 0.3, ease: EASE }}
-      className={cn("h-1.5 rounded-full")}
-    />
   );
 }
 
