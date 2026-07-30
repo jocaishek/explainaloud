@@ -7,7 +7,7 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import { ArrowRight, Check } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
@@ -24,7 +24,6 @@ import { Card } from "~/components/ui/card";
 import { useCyclingTypewriter } from "~/hooks/use-cycling-typewriter";
 import { useInView } from "~/hooks/use-in-view";
 import { useMediaQuery } from "~/hooks/use-media-query";
-import { PLAN_FEATURES, planLabel } from "~/lib/plans";
 import { cn } from "~/lib/utils";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -486,24 +485,24 @@ export default function Home() {
         </section>
       </div>
 
-      {/* ── Section 5: Pricing ──────────────────────────────────────── */}
+      {/* ── Section 8: The two ways to spend a recording ───────────── */}
       <section className="relative flex w-full flex-col items-center px-6 pt-24 pb-14">
         <div className="relative flex flex-col items-center text-center">
-          <Eyebrow index="08" label="Pricing" className="mb-4" />
+          <Eyebrow index="08" label="Two modes" className="mb-4" />
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-            {/* The accent list is matched after stripping full stops, so the
-                word is listed without one. */}
-            <WordReveal text="It is free." accent={["free"]} />
+            <WordReveal
+              text="Explain it, or get interviewed"
+              accent={["interviewed"]}
+            />
           </h2>
           <p className="mt-4 max-w-lg text-[#A1A1AA]">
-            Everything Explainaloud does — live gap colouring, the full report,
-            Re-Teach, courses built from your own sources. There is no paid tier
-            to compare this against.
+            Same three minutes, same score, same gap report at the end. What
+            changes is what the clock is spent on.
           </p>
         </div>
 
-        <Reveal delay={120} className="relative mt-10 w-full max-w-md">
-          <LandingPlans />
+        <Reveal delay={120} className="relative mt-10 w-full max-w-3xl">
+          <ModeCards />
         </Reveal>
       </section>
 
@@ -1582,52 +1581,63 @@ function GapPanel() {
 }
 
 /**
- * What the one plan includes, in the landing page's own dark palette.
+ * The two ways to spend a recording.
  *
- * Deliberately not the shared plan UI used inside the app: that one inherits
- * the theme tokens and would render light-on-light here, since this page pins
- * itself dark regardless of the visitor's preference. The numbers read from
- * `~/lib/plans`, which is the part that must not drift.
- *
- * There is no second column. A comparison table with one plan in it is just a
- * feature list wearing a table's clothes, and a greyed-out Pro column would be
- * advertising something nobody can buy.
+ * Deliberately not a pricing table wearing new labels: there is no better and
+ * worse column, and no price. The only asymmetry worth showing is what the
+ * clock is spent on, so the shared half — score, pace, gap report — is stated
+ * once underneath rather than tick-marked twice down both sides.
  */
-function LandingPlans() {
+function ModeCards() {
+  const modes = [
+    {
+      label: "Topic mode",
+      line: "Explain as much as you know.",
+      body: "One topic, three minutes, no prompting. What you reach for first and what you never get to are both the point.",
+      detail: "Marked against the whole course",
+    },
+    {
+      label: "Podcast mode",
+      line: "Get interviewed about it.",
+      body: "Three questions drawn from the course, inside the same three minutes. Answer one, it moves to the next, and each answer is marked on the question it answered.",
+      detail: "Marked question by question",
+    },
+  ];
+
   return (
-    <div className="flex w-full flex-col rounded-2xl border border-brand/30 bg-brand/[0.04] p-6 text-left shadow-[0_0_60px_-24px_var(--color-brand)]">
-      <div className="flex items-baseline justify-between gap-3">
-        <h3 className="text-lg font-semibold text-brand">
-          {planLabel("free")}
-        </h3>
-        <p className="text-right">
-          <span className="text-2xl font-semibold text-white">$0</span>
-          <span className="ml-1 text-sm text-[#71717A]">forever</span>
-        </p>
+    <div className="flex flex-col gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
+        {modes.map((mode, i) => (
+          <div
+            key={mode.label}
+            className={cn(
+              "flex flex-col rounded-2xl border p-6 text-left",
+              i === 1
+                ? "border-brand/30 bg-brand/[0.05]"
+                : "border-white/10 bg-white/[0.02]",
+            )}
+          >
+            <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
+              {mode.label}
+            </span>
+            <h3 className="mt-3 text-xl font-semibold text-white">
+              {mode.line}
+            </h3>
+            <p className="mt-3 text-sm leading-relaxed text-[#A1A1AA]">
+              {mode.body}
+            </p>
+            <p className="mt-auto pt-5 text-xs font-medium text-brand">
+              {mode.detail}
+            </p>
+          </div>
+        ))}
       </div>
 
-      <ul className="mt-6 flex flex-1 flex-col gap-3">
-        {PLAN_FEATURES.map((feature) => (
-          <li key={feature.label} className="flex items-start gap-2.5 text-sm">
-            <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-brand" />
-            <span className="text-[#A1A1AA]">
-              {feature.label}
-              {typeof feature.free === "string" && (
-                <span className="ml-1 font-medium text-white">
-                  {feature.free}
-                </span>
-              )}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      <Button
-        asChild
-        className="mt-6 h-11 rounded-full bg-brand font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
-      >
-        <Link href="/signup">Start free</Link>
-      </Button>
+      <p className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-center text-sm leading-relaxed text-[#A1A1AA]">
+        Both cost one of the day's recordings, and both end the same way: a
+        score, your pace against your own baseline, the transcript coloured
+        where you were right and where you were not, and the gaps written out.
+      </p>
     </div>
   );
 }

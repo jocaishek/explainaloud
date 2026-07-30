@@ -24,14 +24,31 @@ type Session = {
   question_section?: number | null;
 };
 
-/** One answered question inside a podcast run, for the recap at the end. */
-type PodcastTurn = {
-  sessionId: string;
+/**
+ * One answered question inside a podcast recording.
+ *
+ * The whole run is a single recording and a single session, so a segment is a
+ * slice of it: what was asked, the words that answered it, and what that answer
+ * scored on its own question.
+ */
+type Segment = {
   question: string;
+  sectionIndex: number;
   section: string;
-  /** Null while the answer is still being graded, or if grading failed. */
+  transcript: string;
+  /** Null while the answer is still with the grader, or if grading failed. */
   score: number | null;
+  verdict: string | null;
+  spans: Span[];
+  gaps: Array<{ phrase: string; category: string; explanation: string }>;
+  strengths: string[];
 };
+
+/** How many questions one podcast recording asks. */
+const PODCAST_QUESTIONS = 3;
+
+/** Grace between answers before the next one starts on its own. */
+const BETWEEN_SECONDS = 5;
 
 /** One section's question, as offered on the record screen. */
 export type CourseQuestion = {
@@ -65,8 +82,13 @@ type Status =
   | "awaiting-mic"
   | "idle"
   | "recording"
+  /** Podcast mode, between questions: the take is open, the mic is muted. */
+  | "between"
   | "saving"
   | "analyzing";
+
+/** Which shape of recording this is. Both cost one of the day's recordings. */
+type Mode = "topic" | "podcast";
 
 /**
  * How long between live grades.
@@ -329,18 +351,25 @@ export function RecordConsole({
   // question that was on screen when they began, not one they scrolled to
   // mid-sentence.
   const answeringRef = useRef<CourseQuestion | null>(null);
+  const [mode, setMode] = useState<Mode>("topic");
   /**
-   * Podcast mode: the questions get asked one after another, and the answer to
-   * each is its own graded recording.
+   * The three questions this recording asks, drawn at the moment it starts.
    *
-   * The run id lives in a ref as well as in state because `finish()` reads it
-   * from inside callbacks that closed over an older render, and a turn written
-   * without its run id is a turn missing from the recap.
+   * Held in a ref as well as state because `finish()` and the analysis
+   * callbacks run from closures that captured an older render, and a segment
+   * saved against the wrong question is worse than no segment at all.
    */
-  const runIdRef = useRef<string | null>(null);
-  const [runId, setRunId] = useState<string | null>(null);
-  const [turns, setTurns] = useState<PodcastTurn[]>([]);
-  /** Seconds until the next question starts recording; null when not counting. */
+  const [asking, setAsking] = useState<CourseQuestion[]>([]);
+  const askingRef = useRef<CourseQuestion[]>([]);
+  const [segmentIndex, setSegmentIndex] = useState(0);
+  const segmentIndexRef = useRef(0);
+  const [segments, setSegments] = useState<Segment[]>([]);
+  const segmentsRef = useRef<Segment[]>([]);
+  /** Where in the transcript the current answer began. */
+  const segmentStartRef = useRef(0);
+  /** Podcast mode for the recording in progress, whatever the chooser says now. */
+  const podcastRef = useRef(false);
+  /** Seconds left to start the next answer yourself before it starts for you. */
   const [countdown, setCountdown] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -443,19 +472,16 @@ export function RecordConsole({
     : Math.max(0, (dailyLimit ?? 0) - used);
 
   /**
-   * The beat between questions.
+   * The grace period between answers, counted down in view.
    *
-   * Long enough to read the next question and gather a thought, short enough
-   * that the interview keeps its rhythm — and cancellable, because the mic
-   * opening on its own is only acceptable while the student can see it coming
-   * and stop it.
+   * Visible the whole way rather than silent: the microphone opening on its
+   * own is only tolerable when the person watched it coming.
    */
-  // biome-ignore lint/correctness/useExhaustiveDependencies: `startRecording` is rebuilt every render; the countdown owns when it fires, not which closure does
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `resumeRecording` is rebuilt every render; the countdown decides when it fires, not which closure does
   useEffect(() => {
     if (countdown === null) return;
     if (countdown === 0) {
-      setCountdown(null);
-      void startRecording();
+      resumeRecording();
       return;
     }
     const timer = window.setTimeout(() => {
@@ -844,7 +870,7 @@ export function RecordConsole({
           started_at: startedAt,
           question: answeringRef.current?.question ?? null,
           question_section: answeringRef.current?.index ?? null,
-          podcast_run: runIdRef.current,
+          mode: podcastRef.current ? "podcast" : "topic",
         })
         .select("id")
         .single<{ id: string }>();
@@ -1034,7 +1060,7 @@ export function RecordConsole({
               ended_at: new Date().toISOString(),
               question: answeringRef.current?.question ?? null,
               question_section: answeringRef.current?.index ?? null,
-              podcast_run: runIdRef.current,
+              mode: podcastRef.current ? "podcast" : "topic",
             })
             .select("id, transcript, started_at, ended_at, score")
             .single<Session>();
@@ -1072,33 +1098,17 @@ export function RecordConsole({
         return;
       }
 
-      // The turn joins the recap before grading, not after: an answer that
-      // was given is part of the interview whether or not the grader was
-      // reachable, and a run that ends on a 503 should still show it.
-      if (runIdRef.current && answeringRef.current) {
-        const asking = answeringRef.current;
-        setTurns((prev) => [
-          ...prev,
-          {
-            sessionId: data.id,
-            question: asking.question,
-            section: asking.section,
-            score: null,
-          },
-        ]);
-      }
-
       // Only now — after the student has stopped — do we ask for teaching.
       if (!courseReady || text.length < 24) {
         return;
       }
 
       setStatus("analyzing");
-      await analyzeSession(text, data.id);
-      // Grading is done, so the report for this answer is on screen. Only now
-      // does the interview move on — a question arriving while the previous
-      // answer is still being marked would bury it.
-      advancePodcast();
+      if (podcastRef.current) {
+        await finishPodcast(data.id);
+      } else {
+        await analyzeSession(text, data.id);
+      }
     } catch (finishError) {
       console.error("Recording finalization failed:", finishError);
       setError(
@@ -1108,6 +1118,153 @@ export function RecordConsole({
       setStatus("idle");
       finishingRef.current = false;
     }
+  }
+
+  /**
+   * Close a podcast recording: three answers, one session.
+   *
+   * Each answer was already graded against its own question while the next one
+   * was being given, so nothing is sent to the grader here. This is the
+   * assembly: the segments become one transcript, one set of coloured spans and
+   * one report, which is what makes the gap report and Re-Teach able to read a
+   * podcast session without knowing that questions exist.
+   *
+   * The transcript stored is the one the grading actually read — the live
+   * captions, sliced per answer — not the server's cleaner pass over the whole
+   * audio. Spans are positions in a specific string, so storing a different
+   * string would leave every colour pointing at the wrong words. The server
+   * pass still runs, because the pace metrics come from its word timings.
+   */
+  async function finishPodcast(sessionId: string) {
+    // The last answer never went through `endSegment`.
+    const last = askingRef.current[segmentIndexRef.current];
+    const whole = transcriptRef.current.trim();
+    const tail = whole.slice(segmentStartRef.current).trim();
+    if (last && tail) {
+      const segment: Segment = {
+        question: last.question,
+        sectionIndex: last.index,
+        section: last.section,
+        transcript: tail,
+        score: null,
+        verdict: null,
+        spans: [],
+        gaps: [],
+        strengths: [],
+      };
+      segmentsRef.current = [...segmentsRef.current, segment];
+      setSegments(segmentsRef.current);
+      await gradeSegment(segmentsRef.current.length - 1, tail, last.index);
+    }
+
+    const done = segmentsRef.current;
+    const answered = done.filter((segment) => segment.transcript.length > 0);
+    if (answered.length === 0) return;
+
+    // Two blank lines between answers, and the separator carries into the
+    // spans as neutral text so the coloured transcript keeps its paragraphs.
+    const transcript = answered
+      .map((segment) => segment.transcript)
+      .join("\n\n");
+    const spans: Span[] = [];
+    answered.forEach((segment, i) => {
+      if (i > 0) spans.push({ text: "\n\n", status: "neutral", issue: null });
+      spans.push(
+        ...(segment.spans.length > 0
+          ? segment.spans
+          : [
+              {
+                text: segment.transcript,
+                status: "neutral" as const,
+                issue: null,
+              },
+            ]),
+      );
+    });
+
+    const scored = answered.filter(
+      (segment): segment is Segment & { score: number } =>
+        segment.score !== null,
+    );
+    // The mean, because each answer was a whole answer to its own question.
+    // Weighting by length would say a rambling answer is worth more of the
+    // grade than a tight one, which is the opposite of true.
+    const score = scored.length
+      ? Math.round(
+          scored.reduce((total, segment) => total + segment.score, 0) /
+            scored.length,
+        )
+      : 0;
+
+    const report = {
+      score,
+      verdict: `You answered ${answered.length} question${answered.length === 1 ? "" : "s"} in this recording. ${scored
+        .map((segment, i) => `Q${i + 1}: ${segment.score}`)
+        .join(" · ")}`,
+      gaps: answered.flatMap((segment) => segment.gaps),
+      strengths: answered.flatMap((segment) => segment.strengths),
+      next_focus:
+        scored.length > 0
+          ? ([...scored].sort((a, b) => a.score - b.score)[0]?.question ?? "")
+          : "",
+    };
+
+    const supabase = createClient();
+    const { error: saveError } = await supabase
+      .from("course_sessions")
+      .update({
+        transcript,
+        spans,
+        report,
+        score,
+        segments: answered.map((segment) => ({
+          question: segment.question,
+          section_index: segment.sectionIndex,
+          transcript: segment.transcript,
+          score: segment.score,
+          verdict: segment.verdict,
+        })),
+        analyzed_at: new Date().toISOString(),
+      })
+      .eq("id", sessionId);
+
+    if (saveError) {
+      setError("The answers were graded but couldn't be saved.");
+      return;
+    }
+
+    // Written from here rather than by the analyze route: that route persists
+    // gaps for the session it graded, and it graded three answers separately
+    // without knowing they belonged to one.
+    await supabase.from("gaps").delete().eq("session_id", sessionId);
+    if (report.gaps.length > 0) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        await supabase.from("gaps").insert(
+          report.gaps.map((gap) => ({
+            session_id: sessionId,
+            user_id: user.id,
+            phrase: gap.phrase,
+            category: gap.category,
+            explanation: gap.explanation,
+          })),
+        );
+      }
+    }
+
+    setTranscript(transcript);
+    transcriptRef.current = transcript;
+    setSpans(spans);
+    setSpansCover(transcript);
+    setReport(report as Report);
+    setDisplayedSessionId(sessionId);
+    setSessions((prev) =>
+      prev.map((session) =>
+        session.id === sessionId ? { ...session, score } : session,
+      ),
+    );
   }
 
   async function analyzeSession(text: string, sessionId: string) {
@@ -1148,13 +1305,6 @@ export function RecordConsole({
             session.id === sessionId
               ? { ...session, score: Math.round(completedReport.score) }
               : session,
-          ),
-        );
-        setTurns((prev) =>
-          prev.map((turn) =>
-            turn.sessionId === sessionId
-              ? { ...turn, score: Math.round(completedReport.score) }
-              : turn,
           ),
         );
       }
@@ -1249,60 +1399,184 @@ export function RecordConsole({
     }
   }
 
-  /** How long the next question sits on screen before the mic opens. */
-  const NEXT_QUESTION_DELAY_S = 5;
-
   /**
-   * Start an interview: every question in the course, one after another.
-   *
-   * The questions were already there — this is the difference between being
-   * handed a list and being asked. You answer, it moves on, and each answer is
-   * graded on its own question rather than on the whole course.
+   * The clock. Extracted because podcast mode stops and restarts it between
+   * questions, and the deadline it reads is rebuilt from the time left rather
+   * than run continuously — so the seconds spent reading a question are not
+   * charged to the answer.
    */
-  function startPodcast() {
-    if (questions.length === 0) return;
-    const id = crypto.randomUUID();
-    runIdRef.current = id;
-    setRunId(id);
-    setTurns([]);
-    setAskedAt(0);
-    setCountdown(null);
-    // `startRecording` reads the question from state, which has not updated
-    // yet, so tell it explicitly which one this run opens on.
-    void startRecording(questions[0]);
-  }
-
-  /** Leave the run where it is; the answers already given keep their grades. */
-  function endPodcast() {
-    runIdRef.current = null;
-    setRunId(null);
-    setCountdown(null);
-  }
-
-  /**
-   * Move to the next question, or finish the run.
-   *
-   * Called after an answer has been graded. Everything that could end a run is
-   * checked here rather than at the countdown's expiry, so the reason is on
-   * screen while the student reads it instead of a beat before the mic opens.
-   */
-  function advancePodcast() {
-    if (!runIdRef.current) return;
-    const next = (answeringRef.current?.index ?? -1) + 1;
-    if (next >= questions.length) {
-      endPodcast();
-      setNotice("That's the last question. Full run below.");
-      return;
-    }
-    if (!unlimited && remaining <= 0) {
-      endPodcast();
+  function tick() {
+    const left = deadlineRef.current - Date.now();
+    setRemainingMs(left);
+    if (left <= 0) {
+      if (tickRef.current) clearInterval(tickRef.current);
       setNotice(
-        "That's your recordings for today, so the run stops here. It resets at midnight your time.",
+        `${Math.round(maxRecordingMs / 60_000)}-minute limit reached — wrapping up.`,
       );
-      return;
+      stopRecording();
     }
-    setAskedAt(next);
-    setCountdown(NEXT_QUESTION_DELAY_S);
+  }
+
+  /**
+   * Three questions, drawn at random from the ones the course actually asks.
+   *
+   * Random so a second run is a different interview rather than the same three
+   * again, and drawn from the section questions so they are the ones the
+   * material was built around — the essential ones — rather than something
+   * invented on the spot to fill a slot.
+   */
+  function drawQuestions() {
+    const pool = [...questions];
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const a = pool[i];
+      const b = pool[j];
+      if (a && b) {
+        pool[i] = b;
+        pool[j] = a;
+      }
+    }
+    // Asked in course order once drawn: the sections build on each other, and
+    // being asked about the end before the beginning is a different exercise.
+    return pool.slice(0, PODCAST_QUESTIONS).sort((a, b) => a.index - b.index);
+  }
+
+  /**
+   * End the current answer without ending the recording.
+   *
+   * The take stays open: the recorder pauses, the microphone track is muted so
+   * nothing said while reading the next question reaches either the audio or
+   * the captions, and the clock stops. The next question therefore starts with
+   * exactly the time the last one left behind.
+   */
+  function endSegment() {
+    const current = askingRef.current[segmentIndexRef.current];
+    if (!current) return;
+
+    if (tickRef.current) clearInterval(tickRef.current);
+    stopGradeLoop();
+    for (const track of mediaStreamRef.current?.getAudioTracks() ?? []) {
+      track.enabled = false;
+    }
+    const recorder = mediaRecorderRef.current;
+    if (recorder?.state === "recording") {
+      try {
+        recorder.pause();
+      } catch {
+        // A browser that will not pause still records a continuous take; the
+        // segment boundary is a position in the transcript, not in the audio.
+      }
+    }
+
+    const whole = transcriptRef.current.trim();
+    const answer = whole.slice(segmentStartRef.current).trim();
+    segmentStartRef.current = whole.length;
+
+    const segment: Segment = {
+      question: current.question,
+      sectionIndex: current.index,
+      section: current.section,
+      transcript: answer,
+      score: null,
+      verdict: null,
+      spans: [],
+      gaps: [],
+      strengths: [],
+    };
+    segmentsRef.current = [...segmentsRef.current, segment];
+    setSegments(segmentsRef.current);
+
+    // The agents start on this answer now, while the next question is being
+    // read and answered. By the time the recording ends, the early answers are
+    // already marked.
+    void gradeSegment(segmentsRef.current.length - 1, answer, current.index);
+
+    const next = segmentIndexRef.current + 1;
+    segmentIndexRef.current = next;
+    setSegmentIndex(next);
+    setStatus("between");
+    applyInterim("");
+    // A gap between questions is time not spent on the clock, so it cannot be
+    // open-ended: the three minutes would become however long you like with
+    // pauses in between. Long enough to read the question and draw breath,
+    // then it starts for you.
+    setCountdown(BETWEEN_SECONDS);
+  }
+
+  /** Pick the take back up where it stopped, on the next question. */
+  function resumeRecording() {
+    setCountdown(null);
+    for (const track of mediaStreamRef.current?.getAudioTracks() ?? []) {
+      track.enabled = true;
+    }
+    const recorder = mediaRecorderRef.current;
+    if (recorder?.state === "paused") {
+      try {
+        recorder.resume();
+      } catch {
+        // Nothing to do: the take is either running or already lost, and the
+        // transcript is what the grading reads either way.
+      }
+    }
+
+    // The deadline is rebuilt from what was left rather than kept running, so
+    // the seconds spent reading a question are not charged to the answer.
+    deadlineRef.current = Date.now() + Math.max(0, remainingMs);
+    if (tickRef.current) clearInterval(tickRef.current);
+    tickRef.current = setInterval(tick, 250);
+    stopGradeLoop();
+    gradeLoopRef.current?.();
+    setStatus("recording");
+  }
+
+  /**
+   * Mark one answer against the question it answered.
+   *
+   * Runs during the recording and writes into the segment when it lands, so a
+   * slow grader delays a score appearing and nothing else.
+   */
+  async function gradeSegment(
+    at: number,
+    answer: string,
+    sectionIndex: number,
+  ) {
+    if (answer.length < 24 || !courseReady) return;
+    try {
+      const { response, json } = await fetchJson(
+        `/api/courses/${courseId}/analyze`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            transcript: answer,
+            mode: "final",
+            sectionIndex,
+          }),
+        },
+        ANALYZE_TIMEOUT_MS,
+      );
+      const graded = json.report;
+      if (!response.ok || !graded) return;
+
+      segmentsRef.current = segmentsRef.current.map((segment, i) =>
+        i === at
+          ? {
+              ...segment,
+              score: Math.round(graded.score),
+              verdict: graded.verdict,
+              spans: Array.isArray(json.spans) ? json.spans : [],
+              gaps: Array.isArray(graded.gaps) ? graded.gaps : [],
+              strengths: Array.isArray(graded.strengths)
+                ? graded.strengths
+                : [],
+            }
+          : segment,
+      );
+      setSegments(segmentsRef.current);
+    } catch {
+      // The answer keeps its transcript and shows no score. Saying so is the
+      // report's job; failing loudly here would interrupt the next answer.
+    }
   }
 
   async function startRecording(question?: CourseQuestion) {
@@ -1325,9 +1599,21 @@ export function RecordConsole({
 
     setError(null);
     setNotice(null);
-    // Whatever is on screen now is what this recording answers, for the whole
-    // of its life — including the grading that happens after they stop.
-    answeringRef.current = question ?? asked ?? null;
+    // What this recording is answering, fixed for its whole life — including
+    // the grading that happens after it stops.
+    const podcast = mode === "podcast" && questions.length > 0;
+    podcastRef.current = podcast;
+    const drawn = podcast ? drawQuestions() : [];
+    askingRef.current = drawn;
+    setAsking(drawn);
+    segmentIndexRef.current = 0;
+    setSegmentIndex(0);
+    segmentsRef.current = [];
+    setSegments([]);
+    segmentStartRef.current = 0;
+    answeringRef.current = podcast
+      ? (drawn[0] ?? null)
+      : (question ?? asked ?? null);
 
     // Ask for the microphone FIRST and wait for the user to answer the
     // browser prompt. A denied prompt must not burn one of the day's five
@@ -1452,17 +1738,7 @@ export function RecordConsole({
     deadlineRef.current = Date.now() + maxRecordingMs;
     setRemainingMs(maxRecordingMs);
     if (tickRef.current) clearInterval(tickRef.current);
-    tickRef.current = setInterval(() => {
-      const left = deadlineRef.current - Date.now();
-      setRemainingMs(left);
-      if (left <= 0) {
-        if (tickRef.current) clearInterval(tickRef.current);
-        setNotice(
-          `${Math.round(maxRecordingMs / 60_000)}-minute limit reached — wrapping up.`,
-        );
-        stopRecording();
-      }
-    }, 250);
+    tickRef.current = setInterval(tick, 250);
 
     if (!Ctor) {
       startServerCaptions();
@@ -1642,61 +1918,73 @@ export function RecordConsole({
         ? heardText.slice(spansCover.length)
         : "";
   const outOfQuota = !unlimited && remaining === 0 && status !== "recording";
-  // Kept after the run ends so the interview has a last page rather than
-  // vanishing the moment the final answer is graded.
-  const showRecap = turns.length > 0 && !runId;
+  const running = status === "recording" || status === "between";
+  const live = podcastRef.current ? asking[segmentIndex] : asked;
+  // The last question ends the whole recording; the others just end an answer.
+  const lastQuestion = !podcastRef.current || segmentIndex >= asking.length - 1;
+  /**
+   * One button, four jobs. The label is the instruction — "Finishing" is not a
+   * status decoration, it is the answer to "why has nothing happened since I
+   * clicked", which is that the words are still being transcribed.
+   */
+  const primaryLabel =
+    status === "awaiting-mic"
+      ? "Waiting for microphone…"
+      : status === "saving"
+        ? "Finishing…"
+        : status === "analyzing"
+          ? "Reading it back…"
+          : status === "between"
+            ? "Continue recording"
+            : status === "recording"
+              ? lastQuestion
+                ? "I'm done"
+                : "Next question"
+              : mode === "podcast" && questions.length > 0
+                ? "Start the interview"
+                : asked
+                  ? "Answer out loud"
+                  : "Start explaining";
+  const primaryAction = () => {
+    if (status === "between") return resumeRecording();
+    if (status !== "recording") return void startRecording();
+    // Mid-recording in podcast mode, every question but the last ends only the
+    // answer. The take, and the clock, carry on.
+    if (podcastRef.current && !lastQuestion) return endSegment();
+    return stopRecording();
+  };
 
   return (
     <div className="flex flex-col items-center gap-8">
-      {asked && (
-        <QuestionCard
-          asked={asked}
-          position={Math.min(askedAt, questions.length - 1)}
-          total={questions.length}
-          // Locked while recording: swapping the question mid-answer would
-          // grade what they are saying against something they were never asked.
-          // Locked during a run too — the run decides what comes next.
-          locked={status === "recording" || busy || !!runId}
-          onNext={() =>
-            setAskedAt((current) => (current + 1) % questions.length)
-          }
-          inRun={!!runId}
-          countdown={countdown}
-          onHold={() => setCountdown(null)}
+      {!running && !busy && questions.length > 0 && (
+        <ModeChooser
+          mode={mode}
+          onChange={setMode}
+          questionCount={Math.min(PODCAST_QUESTIONS, questions.length)}
+          minutes={Math.round(maxRecordingMs / 60_000)}
         />
       )}
 
-      {questions.length > 1 && !runId && status !== "recording" && !busy && (
-        <button
-          type="button"
-          onClick={startPodcast}
-          disabled={outOfQuota}
-          className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-strong transition-colors hover:bg-surface disabled:opacity-50"
-        >
-          <Radio aria-hidden className="size-4 text-brand" />
-          Podcast mode · {questions.length} questions
-        </button>
-      )}
-
-      {runId && (
-        <button
-          type="button"
-          onClick={endPodcast}
-          className="text-xs font-medium text-subtle underline underline-offset-4 transition-colors hover:text-strong"
-        >
-          End the interview
-        </button>
+      {live && (mode === "podcast" || running) && (
+        <QuestionCard
+          asked={live}
+          position={podcastRef.current ? segmentIndex : askedAt}
+          total={podcastRef.current ? asking.length : questions.length}
+          // Locked mid-recording: swapping the question would grade what they
+          // are saying against something they were never asked.
+          locked={running || busy || mode === "podcast"}
+          onNext={() =>
+            setAskedAt((current) => (current + 1) % questions.length)
+          }
+          waiting={status === "between"}
+        />
       )}
 
       <div className="flex flex-col items-center gap-4 text-center">
         <button
           type="button"
-          aria-label={
-            status === "recording" ? "Stop recording" : "Start recording"
-          }
-          onClick={() =>
-            status === "recording" ? stopRecording() : startRecording()
-          }
+          aria-label={primaryLabel}
+          onClick={primaryAction}
           disabled={busy || outOfQuota}
           className={cn(
             "glass flex size-20 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-50",
@@ -1712,23 +2000,16 @@ export function RecordConsole({
 
         <Button
           type="button"
-          onClick={() =>
-            status === "recording" ? stopRecording() : startRecording()
-          }
+          onClick={primaryAction}
           disabled={busy || outOfQuota}
           className="h-11 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform hover:bg-brand/90 active:scale-[0.97]"
         >
-          {status === "awaiting-mic"
-            ? "Waiting for microphone…"
-            : status === "saving"
-              ? "Saving…"
-              : status === "analyzing"
-                ? "Reading it back…"
-                : status === "recording"
-                  ? "I'm done"
-                  : asked
-                    ? "Answer out loud"
-                    : "Start explaining"}
+          {primaryLabel}
+          {status === "between" && countdown !== null && (
+            <span className="ml-1.5 font-mono tabular-nums opacity-70">
+              {countdown}
+            </span>
+          )}
         </Button>
 
         {status === "recording" && (
@@ -1861,7 +2142,7 @@ export function RecordConsole({
         )}
       </AnimatePresence>
 
-      {showRecap && <PodcastRecap turns={turns} />}
+      {segments.length > 0 && !running && <PodcastRecap segments={segments} />}
 
       {sessions.length > 0 && (
         <div className="flex w-full max-w-2xl flex-col gap-2">
@@ -1942,6 +2223,93 @@ export function RecordConsole({
  * student always sees their words immediately, colour catches up after.
  */
 /**
+ * Topic or podcast, before anything starts.
+ *
+ * Both spend one of the day's recordings, which is the point: this is a choice
+ * about how to spend it, not a cheaper and a dearer option. One asks for
+ * everything you know about the topic; the other asks three questions and
+ * marks each answer against the question it answered.
+ */
+function ModeChooser({
+  mode,
+  onChange,
+  questionCount,
+  minutes,
+}: {
+  mode: Mode;
+  onChange: (mode: Mode) => void;
+  questionCount: number;
+  minutes: number;
+}) {
+  const options: Array<{
+    value: Mode;
+    icon: typeof Mic;
+    title: string;
+    body: string;
+  }> = [
+    {
+      value: "topic",
+      icon: Mic,
+      title: "Topic mode",
+      body: `Explain as much as you know, in ${minutes} minutes.`,
+    },
+    {
+      value: "podcast",
+      icon: Radio,
+      title: "Podcast mode",
+      body: `${questionCount} questions across the same ${minutes} minutes.`,
+    },
+  ];
+
+  return (
+    <fieldset className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+      <legend className="sr-only">Recording mode</legend>
+      {options.map((option) => {
+        const selected = mode === option.value;
+        const Icon = option.icon;
+        return (
+          <label
+            key={option.value}
+            className={cn(
+              "flex cursor-pointer flex-col gap-1.5 rounded-2xl border p-4 text-left transition-colors",
+              "focus-within:ring-2 focus-within:ring-brand/40",
+              selected
+                ? "border-brand/40 bg-brand/[0.06]"
+                : "border-border bg-surface hover:border-brand/25",
+            )}
+          >
+            <input
+              type="radio"
+              name="recording-mode"
+              value={option.value}
+              checked={selected}
+              onChange={() => onChange(option.value)}
+              className="sr-only"
+            />
+            <span className="flex items-center gap-2">
+              <Icon
+                aria-hidden
+                className={cn(
+                  "size-4",
+                  selected ? "text-brand" : "text-subtle",
+                )}
+              />
+              <span className="text-sm font-semibold text-strong">
+                {option.title}
+              </span>
+            </span>
+            <span className="text-xs leading-5 text-subtle">{option.body}</span>
+          </label>
+        );
+      })}
+      <p className="text-xs text-subtle sm:col-span-2">
+        Either way it costs one of today's recordings.
+      </p>
+    </fieldset>
+  );
+}
+
+/**
  * How the interview went, question by question.
  *
  * An average across the run is deliberately absent. Each answer was graded
@@ -1949,17 +2317,17 @@ export function RecordConsole({
  * nothing — and the useful reading is which question went badly, which this
  * shows directly.
  */
-function PodcastRecap({ turns }: { turns: PodcastTurn[] }) {
+function PodcastRecap({ segments }: { segments: Segment[] }) {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
       <h2 className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-        The interview · {turns.length} answered
+        This recording · {segments.length} answered
       </h2>
 
       <ol className="flex flex-col divide-y divide-border">
-        {turns.map((turn, i) => (
+        {segments.map((turn, i) => (
           <li
-            key={turn.sessionId}
+            key={turn.question}
             className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
           >
             <span className="mt-0.5 font-mono text-[10px] text-subtle tabular-nums">
@@ -2006,20 +2374,15 @@ function QuestionCard({
   total,
   locked,
   onNext,
-  inRun,
-  countdown,
-  onHold,
+  waiting,
 }: {
   asked: CourseQuestion;
   position: number;
   total: number;
   locked: boolean;
   onNext: () => void;
-  /** Inside a podcast run: the questions come to you, in order. */
-  inRun: boolean;
-  /** Seconds until this question's mic opens, or null when nothing is queued. */
-  countdown: number | null;
-  onHold: () => void;
+  /** Between answers: this question is up next, and nothing is being heard. */
+  waiting?: boolean;
 }) {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/[0.06] p-5">
@@ -2027,7 +2390,7 @@ function QuestionCard({
         <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
           Question {position + 1} of {total} · {asked.section}
         </span>
-        {total > 1 && !inRun && (
+        {total > 1 && !locked && (
           <button
             type="button"
             onClick={onNext}
@@ -2039,33 +2402,28 @@ function QuestionCard({
         )}
       </div>
 
-      <p className="text-lg leading-relaxed font-medium text-strong">
-        {asked.question}
-      </p>
+      {/* Keyed on the question, so a change is an exit and an entrance rather
+          than text quietly mutating in place — in podcast mode the question
+          changing IS the event, and it happens while the student is looking
+          at something else on the page. */}
+      <AnimatePresence mode="wait" initial={false}>
+        <motion.p
+          key={asked.question}
+          initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
+          transition={{ duration: 0.34, ease: [0.23, 1, 0.32, 1] }}
+          className="text-lg leading-relaxed font-medium text-strong"
+        >
+          {asked.question}
+        </motion.p>
+      </AnimatePresence>
 
-      {countdown === null ? (
-        <p className="text-xs leading-5 text-subtle">
-          Answer just this. You are marked on the answer, not on everything else
-          the course covers.
-        </p>
-      ) : (
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-xs leading-5 text-subtle">
-            Recording starts in{" "}
-            <span className="font-mono font-medium text-strong tabular-nums">
-              {countdown}
-            </span>
-            .
-          </p>
-          <button
-            type="button"
-            onClick={onHold}
-            className="text-xs font-medium text-brand transition-opacity hover:opacity-80"
-          >
-            Hold on
-          </button>
-        </div>
-      )}
+      <p className="text-xs leading-5 text-subtle">
+        {waiting
+          ? "Take a second. The clock is stopped and the mic is off until you continue."
+          : "Answer just this. You are marked on the answer, not on everything else the course covers."}
+      </p>
     </div>
   );
 }
