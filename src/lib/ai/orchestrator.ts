@@ -346,6 +346,93 @@ const breadthSchema = z.object({
 });
 
 /**
+ * Topics that name a whole field rather than a thing inside one.
+ *
+ * This is a list, not a judgement, because the judgement did not work. Asked
+ * as a field inside the course JSON it flagged "the Krebs cycle"; asked with a
+ * tighter prompt it let "Psychology" through; asked as its own call on the
+ * small model it missed "machine learning"; asked again on the larger model it
+ * missed "Chemistry" as well. Four configurations, four different wrong
+ * answers, all on a question a person answers instantly.
+ *
+ * A list cannot generalise, but it also cannot tell someone their perfectly
+ * good topic is too broad — and that is the failure that actually costs
+ * something. Anything not here is treated as specific, which is the safe
+ * default. Extend it when a real topic slips through.
+ */
+const FIELD_TOPICS = new Set([
+  "algebra",
+  "anatomy",
+  "art",
+  "artificial intelligence",
+  "astronomy",
+  "biology",
+  "business",
+  "calculus",
+  "chemistry",
+  "computer science",
+  "data science",
+  "deep learning",
+  "earth science",
+  "ecology",
+  "economics",
+  "engineering",
+  "english",
+  "finance",
+  "genetics",
+  "geography",
+  "geometry",
+  "history",
+  "law",
+  "linguistics",
+  "literature",
+  "machine learning",
+  "maths",
+  "mathematics",
+  "medicine",
+  "microbiology",
+  "music",
+  "neuroscience",
+  "nursing",
+  "philosophy",
+  "physics",
+  "physiology",
+  "politics",
+  "programming",
+  "psychology",
+  "science",
+  "sociology",
+  "software engineering",
+  "statistics",
+  "trigonometry",
+  "world history",
+]);
+
+/**
+ * Strips the decoration people put around a subject name so "Intro to Biology"
+ * and "biology 101" both reach the list as "biology".
+ */
+function normalizedTopicName(topic: string): string {
+  return topic
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\b(an?|the)\b/g, " ")
+    .replace(/\b(intro|introduction|basics|fundamentals|overview)\b/g, " ")
+    .replace(/\bto\b/g, " ")
+    .replace(/\b(101|1|i)\b$/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/** Used when the copy call fails but the list has already decided. */
+const FALLBACK_BREADTH_REASON = (topic: string) =>
+  `"${topic}" covers a whole field, which is more than one explanation can reach.`;
+
+function namesAWholeField(topic: string): boolean {
+  return FIELD_TOPICS.has(normalizedTopicName(topic));
+}
+
+/**
  * Whether the topic is too wide to explain back, as its own small call.
  *
  * Returns null on anything unexpected, including an unavailable provider. The
@@ -355,16 +442,21 @@ const breadthSchema = z.object({
 async function judgeTopicBreadth(
   topic: string,
 ): Promise<GeneratedCourse["scope_note"]> {
+  if (!namesAWholeField(topic)) return null;
+
+  // The list has already decided. The model only writes the copy, which is
+  // what it is reliably good at, and runs in parallel with generation so it
+  // costs no wall-clock time.
   try {
     const result = await completeJson(
       topicBreadthPrompt(topic),
       (value) => breadthSchema.parse(value),
-      // One short answer, and the small model is enough for a binary this
-      // well specified.
       { fast: true, maxOutputTokens: 300 },
     );
-    const { broad, reason, suggestions } = result.data;
-    if (!broad || !reason?.trim()) return null;
+    const { reason, suggestions } = result.data;
+    if (!reason?.trim()) {
+      return { reason: FALLBACK_BREADTH_REASON(topic), suggestions: [] };
+    }
     return {
       reason: reason.trim(),
       // Strip the "Narrower topic:" style prefixes the model reaches for even
@@ -376,7 +468,9 @@ async function judgeTopicBreadth(
         .slice(0, 3),
     };
   } catch {
-    return null;
+    // The list already established this is a field; losing the warning because
+    // the copy call failed would be the wrong trade.
+    return { reason: FALLBACK_BREADTH_REASON(topic), suggestions: [] };
   }
 }
 
@@ -514,7 +608,14 @@ ${renderSources(evidenceSources)}`,
         }),
         (value) => courseSchema.parse(value),
       );
-      course = verifyCourseCitations(revision.data, evidenceSources);
+      course = {
+        ...verifyCourseCitations(revision.data, evidenceSources),
+        // The reviser rewrites the course body and has no idea the topic was
+        // classified as a field, so it returns this as null and would silently
+        // discard the warning. Breadth is decided from the topic string alone
+        // and cannot be changed by revising the prose.
+        scope_note: architectCourse.scope_note,
+      };
       agents.push(
         agentStep(
           "revision-specialist",

@@ -9,6 +9,28 @@ import {
 
 const TAVILY_SEARCH_URL = "https://api.tavily.com/search";
 
+/**
+ * Tavily rejects anything longer with a 400: "Max query length is 400
+ * characters." Every query here is built partly from user input — the topic is
+ * whatever someone typed — so the ceiling has to be enforced rather than
+ * assumed.
+ */
+const TAVILY_MAX_QUERY_CHARS = 400;
+
+/**
+ * Clamps a query to Tavily's limit, cutting at a word boundary.
+ *
+ * Truncating mid-word leaves a fragment that matches nothing, which is a
+ * quieter failure than the 400 but not a better one.
+ */
+function tavilyQuery(value: string): string {
+  const query = value.replace(/\s+/g, " ").trim();
+  if (query.length <= TAVILY_MAX_QUERY_CHARS) return query;
+  const clipped = query.slice(0, TAVILY_MAX_QUERY_CHARS);
+  const lastSpace = clipped.lastIndexOf(" ");
+  return (lastSpace > 200 ? clipped.slice(0, lastSpace) : clipped).trim();
+}
+
 export type CourseVideo = {
   title: string;
   url: string;
@@ -134,12 +156,16 @@ export async function discoverCourseVideos(
         authorization: `Bearer ${env.TAVILY_API_KEY}`,
       },
       body: JSON.stringify({
-        query: [
-          `Best English-language educational YouTube videos about "${topic}".`,
-          `Cover these ideas: ${queries.join("; ")}.`,
-          "Every video must be spoken in English and have an English title.",
-          "Return direct video watch pages, not search, channel, or playlist pages.",
-        ].join(" "),
+        // Keywords, not instructions. The previous version read as a brief to
+        // a human researcher — "Every video must be spoken in English and have
+        // an English title" — which is not text that appears on any page, so
+        // it only diluted the terms that do. Stated as prose it also ran past
+        // Tavily's 400-character ceiling and 400'd outright. Searching the
+        // topic plus the two strongest generated queries returns actual
+        // results; `include_domains` already restricts this to YouTube.
+        query: tavilyQuery(
+          [topic, "explained", ...queries.slice(0, 2)].join(" "),
+        ),
         topic: "general",
         country: "united states",
         search_depth: "basic",
@@ -230,7 +256,9 @@ export async function discoverCourseEvidence(
         authorization: `Bearer ${env.TAVILY_API_KEY}`,
       },
       body: JSON.stringify({
-        query: `"${topicPhrase}" official documentation educational overview`,
+        query: tavilyQuery(
+          `"${topicPhrase}" official documentation educational overview`,
+        ),
         topic: "general",
         country: "united states",
         search_depth: "basic",
@@ -351,8 +379,9 @@ export async function discoverCourseResources(
           ),
       ),
     ].slice(0, 3);
-    const query =
-      `English educational websites ${topicPhrase} ${conceptKeywords.join(" ")}`.trim();
+    const query = tavilyQuery(
+      `English educational websites ${topicPhrase} ${conceptKeywords.join(" ")}`,
+    );
     const response = await fetch(TAVILY_SEARCH_URL, {
       method: "POST",
       signal: AbortSignal.timeout(15_000),
