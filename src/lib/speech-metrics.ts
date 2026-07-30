@@ -28,6 +28,22 @@ export type TranscribedWord = {
 };
 
 /**
+ * One segment, Whisper's own sentence-ish unit.
+ *
+ * Worth having alongside words because the two disagree about silence, and
+ * segments are the more trustworthy of the pair. Word timestamps come from
+ * cross-attention and are heuristic: on some runs a 1.4 second silence appears
+ * as a 1.4 second gap between words, and on other runs of the same audio the
+ * surrounding words simply stretch to cover it and the gap vanishes. Segment
+ * boundaries are placed where the model detected a break, so they survive.
+ */
+export type TranscribedSegment = {
+  text: string;
+  start: number;
+  end: number;
+};
+
+/**
  * Silence shorter than this is articulation, not hesitation — stop consonants
  * alone open gaps of this size. Counting them would swamp the real signal.
  */
@@ -132,22 +148,92 @@ function endsClause(word: string): boolean {
   return /[.,;:!?—]["')\]]?$/.test(word.trim());
 }
 
-function pauseStats(words: TranscribedWord[]): PauseStats {
-  const all: number[] = [];
-  const midClause: number[] = [];
+/** One silence, with where it happened so two sources can be reconciled. */
+type PauseEvent = { atSeconds: number; ms: number; midClause: boolean };
+
+/**
+ * Two observations of the same silence are the same silence.
+ *
+ * A pause shows up as both a word gap and a segment boundary whenever both
+ * sources notice it, and counting it twice would double the pause count and
+ * halve the apparent median. Whisper's two clocks do not agree to the
+ * millisecond, so events are matched by proximity rather than equality, and the
+ * longer measurement wins: segment boundaries are conservative about where
+ * speech resumes, so they under-report duration more often than they invent it.
+ */
+const SAME_PAUSE_WINDOW_SECONDS = 0.75;
+
+function mergePauseEvents(events: PauseEvent[]): PauseEvent[] {
+  const ordered = [...events].sort((a, b) => a.atSeconds - b.atSeconds);
+  const merged: PauseEvent[] = [];
+
+  for (const event of ordered) {
+    const previous = merged.at(-1);
+    if (
+      previous &&
+      event.atSeconds - previous.atSeconds <= SAME_PAUSE_WINDOW_SECONDS
+    ) {
+      if (event.ms > previous.ms) {
+        previous.ms = event.ms;
+        // Keep the mid-clause reading from whichever source saw the longer
+        // silence, since that is the one being reported.
+        previous.midClause = event.midClause;
+      }
+      continue;
+    }
+    merged.push({ ...event });
+  }
+
+  return merged;
+}
+
+/**
+ * Silences, drawn from word gaps and segment boundaries together.
+ *
+ * Neither source alone is sufficient. Word gaps catch hesitation inside a
+ * sentence, which is the diagnostically interesting kind, but they vanish
+ * entirely on some runs. Segment boundaries are stable but only ever land
+ * between sentences. Using both means a real pause has to be missed twice
+ * before it goes unreported.
+ */
+function pauseStats(
+  words: TranscribedWord[],
+  segments: TranscribedSegment[],
+): PauseStats {
+  const events: PauseEvent[] = [];
 
   for (let i = 0; i < words.length - 1; i++) {
     const current = words[i] as TranscribedWord;
     const next = words[i + 1] as TranscribedWord;
     const gapMs = (next.start - current.end) * 1000;
     if (gapMs < PAUSE_FLOOR_MS) continue;
-
-    all.push(gapMs);
-    if (!endsClause(current.word)) midClause.push(gapMs);
+    events.push({
+      atSeconds: current.end,
+      ms: gapMs,
+      midClause: !endsClause(current.word),
+    });
   }
 
-  all.sort((a, b) => a - b);
-  midClause.sort((a, b) => a - b);
+  for (let i = 0; i < segments.length - 1; i++) {
+    const current = segments[i] as TranscribedSegment;
+    const next = segments[i + 1] as TranscribedSegment;
+    const gapMs = (next.start - current.end) * 1000;
+    if (gapMs < PAUSE_FLOOR_MS) continue;
+    events.push({
+      atSeconds: current.end,
+      ms: gapMs,
+      // A segment break is a sentence break by construction, so a silence
+      // there is punctuation rather than someone hunting for the next idea.
+      midClause: false,
+    });
+  }
+
+  const merged = mergePauseEvents(events);
+  const all = merged.map((event) => event.ms).sort((a, b) => a - b);
+  const midClause = merged
+    .filter((event) => event.midClause)
+    .map((event) => event.ms)
+    .sort((a, b) => a - b);
 
   return {
     count: all.length,
@@ -214,7 +300,10 @@ function rateWindows(words: TranscribedWord[]): RateWindow[] {
  * all, so callers can carry on with a plain transcript rather than storing
  * zeroes that would later be indistinguishable from a very slow speaker.
  */
-export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
+export function speechMetrics(
+  words: TranscribedWord[],
+  segments: TranscribedSegment[] = [],
+): SpeechMetrics | null {
   const usable = words.filter(
     (word) =>
       Number.isFinite(word.start) &&
@@ -247,7 +336,7 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
     capableWpm: Math.round(
       rates.length ? percentile(rates, CAPABLE_PACE_PERCENTILE) : overallWpm,
     ),
-    pauses: pauseStats(usable),
+    pauses: pauseStats(usable, segments),
     fillerPer100: Number(((fillers / usable.length) * 100).toFixed(1)),
     slowestStretch: slowestStretch(usable, windows),
     reliable: speakingSeconds >= MIN_SPEAKING_SECONDS && rates.length > 0,

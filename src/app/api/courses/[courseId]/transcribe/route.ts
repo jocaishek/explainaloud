@@ -82,11 +82,14 @@ export async function POST(
   }
 
   try {
-    const { transcript, words } = await transcribeAudio(audio, course.topic);
+    const { transcript, words, segments } = await transcribeAudio(audio);
     // Metrics ride along with the transcript rather than in a second request:
     // the word timings only exist here, and re-deriving them would mean paying
     // for the same transcription twice.
-    return NextResponse.json({ transcript, metrics: speechMetrics(words) });
+    return NextResponse.json({
+      transcript,
+      metrics: speechMetrics(words, segments),
+    });
   } catch (error) {
     if (error instanceof NoSpeechDetectedError) {
       return NextResponse.json(

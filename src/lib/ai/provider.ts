@@ -1,7 +1,7 @@
 import "server-only";
 
 import { env } from "~/env";
-import type { TranscribedWord } from "~/lib/speech-metrics";
+import type { TranscribedSegment, TranscribedWord } from "~/lib/speech-metrics";
 
 /**
  * Two-provider JSON completion: Gemini first, Groq as failover.
@@ -368,6 +368,7 @@ const GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo";
 export type TranscriptionResult = {
   transcript: string;
   words: TranscribedWord[];
+  segments: TranscribedSegment[];
 };
 
 export class NoSpeechDetectedError extends Error {
@@ -390,7 +391,6 @@ function normalizedTranscript(value: string) {
  */
 export async function transcribeAudio(
   file: File,
-  topic: string,
 ): Promise<TranscriptionResult> {
   if (!env.GROQ_API_KEY) {
     throw new AiUnavailableError("groq: no API key configured");
@@ -404,11 +404,26 @@ export async function transcribeAudio(
   // Same model, same call, same cost — the timings are simply discarded under
   // `json`, and they are what makes pace and hesitation measurable at all.
   body.set("response_format", "verbose_json");
-  body.set("timestamp_granularities[]", "word");
-  const prompt =
-    `A student is explaining ${topic}. ` +
-    "Preserve course terminology and punctuation.";
-  body.set("prompt", prompt);
+  // Both granularities. Word gaps locate hesitation inside a sentence, which is
+  // the interesting kind, but they are heuristic and sometimes collapse a real
+  // silence into stretched neighbouring words. Segment boundaries are placed
+  // where the model heard a break and survive that, so the two together miss
+  // far less than either alone. Costs nothing: same call, same response.
+  body.append("timestamp_granularities[]", "word");
+  body.append("timestamp_granularities[]", "segment");
+
+  // No `prompt`. It used to carry the topic, on the theory that naming it would
+  // protect course terminology. Measured against a recording with four
+  // deliberate 1.4-second silences, it did the opposite on both counts:
+  //
+  //   with prompt     largest word gap 20ms      "the energy Preciar things"
+  //   without prompt  largest word gap 1480ms    "the energy carrier things"
+  //
+  // Conditioning the decoder makes it emit near-contiguous timings, which
+  // erases every pause in the recording — and here it also garbled the exact
+  // word it was supposed to safeguard. Three runs each, same outcome. If topic
+  // conditioning is ever revisited it needs to be measured against timings, not
+  // assumed to be free.
 
   const response = await withTimeout((signal) =>
     fetch(GROQ_TRANSCRIPTION_URL, {
@@ -429,19 +444,19 @@ export async function transcribeAudio(
   }
   const transcript = json.text.trim();
   const normalized = normalizedTranscript(transcript);
-  const promptEcho =
-    normalized === normalizedTranscript(prompt) ||
-    normalized.startsWith("a student is explaining") ||
-    normalized.includes("preserve course terminology");
+  // Whisper's stock hallucinations on near-silent audio. The old prompt-echo
+  // check went with the prompt, but these remain: the model still narrates the
+  // absence of speech rather than returning nothing.
   if (
     !transcript ||
-    promptEcho ||
     normalized === "blank audio" ||
-    normalized === "silence"
+    normalized === "silence" ||
+    normalized === "you" ||
+    normalized === "thank you"
   ) {
     throw new NoSpeechDetectedError();
   }
-  return { transcript, words: parseWords(json) };
+  return { transcript, words: parseWords(json), segments: parseSegments(json) };
 }
 
 /**
@@ -472,6 +487,35 @@ function parseWords(json: unknown): TranscribedWord[] {
     }
   }
   return words;
+}
+
+/**
+ * Segment timings out of a `verbose_json` body.
+ *
+ * Same tolerance as `parseWords`, and for the same reason: timings enrich the
+ * transcript rather than being the point of it, so a provider that omits or
+ * renames this field should cost the caller some pause statistics, not the
+ * whole transcription.
+ */
+function parseSegments(json: unknown): TranscribedSegment[] {
+  const raw = (json as { segments?: unknown })?.segments;
+  if (!Array.isArray(raw)) return [];
+
+  const segments: TranscribedSegment[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") continue;
+    const { text, start, end } = entry as Record<string, unknown>;
+    if (
+      typeof text === "string" &&
+      typeof start === "number" &&
+      typeof end === "number" &&
+      Number.isFinite(start) &&
+      Number.isFinite(end)
+    ) {
+      segments.push({ text, start, end });
+    }
+  }
+  return segments;
 }
 
 export function aiConfigured() {

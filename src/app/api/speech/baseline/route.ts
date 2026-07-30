@@ -26,12 +26,6 @@ const SUPPORTED_AUDIO_TYPES = new Set([
 ]);
 
 /**
- * The prompt the warm-up asks. Passed to Whisper as context so it favours the
- * expected vocabulary, exactly as the session recorder passes the course topic.
- */
-const WARMUP_TOPIC = "why humans need sleep";
-
-/**
  * Records a speaker's confident-speech baseline from the onboarding warm-up.
  *
  * Everything the caller sends is thrown away except the derived statistics —
@@ -80,8 +74,9 @@ export async function POST(request: Request) {
   }
 
   let words: Awaited<ReturnType<typeof transcribeAudio>>["words"];
+  let segments: Awaited<ReturnType<typeof transcribeAudio>>["segments"];
   try {
-    ({ words } = await transcribeAudio(audio, WARMUP_TOPIC));
+    ({ words, segments } = await transcribeAudio(audio));
   } catch (error) {
     if (error instanceof NoSpeechDetectedError) {
       return NextResponse.json(
@@ -102,7 +97,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const metrics = speechMetrics(words);
+  const metrics = speechMetrics(words, segments);
   if (!metrics) {
     return NextResponse.json(
       { error: "We couldn't hear enough to measure. Try again." },
