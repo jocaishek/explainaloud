@@ -149,6 +149,15 @@ export default async function GapReportPage({
   const markSubstantiveNeutralAsGap =
     score < 50 && weaknesses.length > 0 && !hasClassifiedClaim;
 
+  // "missing_step" means the student never reached the point. Everything else
+  // is a claim they made that was wrong. Only the second kind is a mistake.
+  const mistakes = weaknesses.filter(
+    (weakness) => weakness.category !== "missing_step",
+  );
+  const notCovered = weaknesses.filter(
+    (weakness) => weakness.category === "missing_step",
+  );
+
   // Everything that answers "how did I do" sits above the fold, before the
   // transcript: the score, the pace, and the one place those two agree.
   const metrics = session.speech_metrics;
@@ -316,55 +325,103 @@ export default async function GapReportPage({
         )}
       </section>
 
-      <section
-        aria-labelledby="weaknesses-heading"
-        className="flex flex-col gap-3"
-      >
-        <div>
-          <h2
-            id="weaknesses-heading"
-            className="text-base font-semibold text-strong"
-          >
-            Knowledge weaknesses
-          </h2>
-          <p className="mt-1 text-sm text-subtle">
-            Review one concept at a time.
-          </p>
-        </div>
+      {/* Two lists, because they are two different things.
+          A tester saw five cards reading "Missing Step" under "Knowledge
+          weaknesses" and concluded the app had docked them for not reciting
+          the whole course. They were right to. Getting something wrong and
+          not having reached it yet deserve different headings, different
+          colours, and different words. */}
+      <WeaknessList
+        heading="Where you went wrong"
+        description="Worth fixing first: these are things the explanation got wrong."
+        emptyText="Nothing you said was wrong. "
+        tone="error"
+        courseId={courseId}
+        items={mistakes}
+      />
 
-        {weaknesses.length > 0 ? (
-          <div className="divide-y divide-border border-y border-border">
-            {weaknesses.map((weakness) => (
-              <article
-                id={`weakness-${weakness.id}`}
-                key={weakness.id}
-                tabIndex={-1}
-                className="flex scroll-mt-24 flex-col gap-2 py-4 outline-none target:bg-red-500/[0.04]"
-              >
-                <p className="text-xs font-medium text-red-600 capitalize dark:text-red-400">
-                  {weakness.category.replace(/_/g, " ")}
-                </p>
-                <h3 className="text-sm font-semibold text-strong">
-                  {weakness.phrase}
-                </h3>
-                {/* The report says what was missed; Re-Teach is where it gets
-                    explained. Printing the explanation here too meant the
-                    answer arrived before the student had registered the gap. */}
-                <Link
-                  href={`/dashboard/courses/${courseId}/re-teach#gap-${weakness.id}`}
-                  className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  Re-teach this
-                </Link>
-              </article>
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-subtle">
-            No weaknesses were flagged in this explanation.
-          </p>
-        )}
-      </section>
+      <WeaknessList
+        heading="Not covered yet"
+        description="You didn't get to these. That isn't the same as getting them wrong."
+        emptyText="You reached every key point in the course."
+        tone="neutral"
+        courseId={courseId}
+        items={notCovered}
+      />
     </div>
+  );
+}
+
+/**
+ * One group of report items.
+ *
+ * `tone` is the whole point of the split: an error is red because it needs
+ * correcting, an omission is not, because nothing about it is wrong.
+ */
+function WeaknessList({
+  heading,
+  description,
+  emptyText,
+  tone,
+  courseId,
+  items,
+}: {
+  heading: string;
+  description: string;
+  emptyText: string;
+  tone: "error" | "neutral";
+  courseId: string;
+  items: GapRow[];
+}) {
+  const headingId = `${tone}-heading`;
+
+  return (
+    <section aria-labelledby={headingId} className="flex flex-col gap-3">
+      <div>
+        <h2 id={headingId} className="text-base font-semibold text-strong">
+          {heading}
+        </h2>
+        <p className="mt-1 text-sm text-subtle">{description}</p>
+      </div>
+
+      {items.length > 0 ? (
+        <div className="divide-y divide-border border-y border-border">
+          {items.map((item) => (
+            <article
+              id={`weakness-${item.id}`}
+              key={item.id}
+              tabIndex={-1}
+              className={cn(
+                "flex scroll-mt-24 flex-col gap-2 py-4 outline-none",
+                tone === "error" && "target:bg-red-500/[0.04]",
+              )}
+            >
+              {/* Only errors get a category chip. Under "Not covered yet",
+                  a label reading "Missing Step" restates the heading and
+                  reintroduces the tone the split exists to remove. */}
+              {tone === "error" && (
+                <p className="text-xs font-medium text-red-600 capitalize dark:text-red-400">
+                  {item.category.replace(/_/g, " ")}
+                </p>
+              )}
+              <h3 className="text-sm font-semibold text-strong">
+                {item.phrase}
+              </h3>
+              {/* The report says what was missed; Re-Teach is where it gets
+                  explained. Printing the explanation here too meant the
+                  answer arrived before the student had registered the gap. */}
+              <Link
+                href={`/dashboard/courses/${courseId}/re-teach#gap-${item.id}`}
+                className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Re-teach this
+              </Link>
+            </article>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-subtle">{emptyText}</p>
+      )}
+    </section>
   );
 }
