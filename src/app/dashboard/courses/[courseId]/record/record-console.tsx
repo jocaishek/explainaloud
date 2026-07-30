@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { ArrowRight, Mic, Square } from "lucide-react";
+import { ArrowRight, Mic, Radio, Square } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentOrchestration } from "~/components/agent-orchestration";
@@ -22,6 +22,15 @@ type Session = {
   score: number | null;
   /** Which section's question this answered; null for pre-question sessions. */
   question_section?: number | null;
+};
+
+/** One answered question inside a podcast run, for the recap at the end. */
+type PodcastTurn = {
+  sessionId: string;
+  question: string;
+  section: string;
+  /** Null while the answer is still being graded, or if grading failed. */
+  score: number | null;
 };
 
 /** One section's question, as offered on the record screen. */
@@ -320,6 +329,19 @@ export function RecordConsole({
   // question that was on screen when they began, not one they scrolled to
   // mid-sentence.
   const answeringRef = useRef<CourseQuestion | null>(null);
+  /**
+   * Podcast mode: the questions get asked one after another, and the answer to
+   * each is its own graded recording.
+   *
+   * The run id lives in a ref as well as in state because `finish()` reads it
+   * from inside callbacks that closed over an older render, and a turn written
+   * without its run id is a turn missing from the recap.
+   */
+  const runIdRef = useRef<string | null>(null);
+  const [runId, setRunId] = useState<string | null>(null);
+  const [turns, setTurns] = useState<PodcastTurn[]>([]);
+  /** Seconds until the next question starts recording; null when not counting. */
+  const [countdown, setCountdown] = useState<number | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadingCheckId, setLoadingCheckId] = useState<string | null>(null);
@@ -419,6 +441,28 @@ export function RecordConsole({
   const remaining = unlimited
     ? Number.POSITIVE_INFINITY
     : Math.max(0, (dailyLimit ?? 0) - used);
+
+  /**
+   * The beat between questions.
+   *
+   * Long enough to read the next question and gather a thought, short enough
+   * that the interview keeps its rhythm — and cancellable, because the mic
+   * opening on its own is only acceptable while the student can see it coming
+   * and stop it.
+   */
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `startRecording` is rebuilt every render; the countdown owns when it fires, not which closure does
+  useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) {
+      setCountdown(null);
+      void startRecording();
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setCountdown((current) => (current === null ? null : current - 1));
+    }, 1000);
+    return () => window.clearTimeout(timer);
+  }, [countdown]);
 
   /** Forget the frozen head, so the next pass grades the transcript afresh. */
   const resetGradedHead = useCallback(() => {
@@ -800,6 +844,7 @@ export function RecordConsole({
           started_at: startedAt,
           question: answeringRef.current?.question ?? null,
           question_section: answeringRef.current?.index ?? null,
+          podcast_run: runIdRef.current,
         })
         .select("id")
         .single<{ id: string }>();
@@ -989,6 +1034,7 @@ export function RecordConsole({
               ended_at: new Date().toISOString(),
               question: answeringRef.current?.question ?? null,
               question_section: answeringRef.current?.index ?? null,
+              podcast_run: runIdRef.current,
             })
             .select("id, transcript, started_at, ended_at, score")
             .single<Session>();
@@ -1026,6 +1072,22 @@ export function RecordConsole({
         return;
       }
 
+      // The turn joins the recap before grading, not after: an answer that
+      // was given is part of the interview whether or not the grader was
+      // reachable, and a run that ends on a 503 should still show it.
+      if (runIdRef.current && answeringRef.current) {
+        const asking = answeringRef.current;
+        setTurns((prev) => [
+          ...prev,
+          {
+            sessionId: data.id,
+            question: asking.question,
+            section: asking.section,
+            score: null,
+          },
+        ]);
+      }
+
       // Only now — after the student has stopped — do we ask for teaching.
       if (!courseReady || text.length < 24) {
         return;
@@ -1033,6 +1095,10 @@ export function RecordConsole({
 
       setStatus("analyzing");
       await analyzeSession(text, data.id);
+      // Grading is done, so the report for this answer is on screen. Only now
+      // does the interview move on — a question arriving while the previous
+      // answer is still being marked would bury it.
+      advancePodcast();
     } catch (finishError) {
       console.error("Recording finalization failed:", finishError);
       setError(
@@ -1082,6 +1148,13 @@ export function RecordConsole({
             session.id === sessionId
               ? { ...session, score: Math.round(completedReport.score) }
               : session,
+          ),
+        );
+        setTurns((prev) =>
+          prev.map((turn) =>
+            turn.sessionId === sessionId
+              ? { ...turn, score: Math.round(completedReport.score) }
+              : turn,
           ),
         );
       }
@@ -1176,7 +1249,63 @@ export function RecordConsole({
     }
   }
 
-  async function startRecording() {
+  /** How long the next question sits on screen before the mic opens. */
+  const NEXT_QUESTION_DELAY_S = 5;
+
+  /**
+   * Start an interview: every question in the course, one after another.
+   *
+   * The questions were already there — this is the difference between being
+   * handed a list and being asked. You answer, it moves on, and each answer is
+   * graded on its own question rather than on the whole course.
+   */
+  function startPodcast() {
+    if (questions.length === 0) return;
+    const id = crypto.randomUUID();
+    runIdRef.current = id;
+    setRunId(id);
+    setTurns([]);
+    setAskedAt(0);
+    setCountdown(null);
+    // `startRecording` reads the question from state, which has not updated
+    // yet, so tell it explicitly which one this run opens on.
+    void startRecording(questions[0]);
+  }
+
+  /** Leave the run where it is; the answers already given keep their grades. */
+  function endPodcast() {
+    runIdRef.current = null;
+    setRunId(null);
+    setCountdown(null);
+  }
+
+  /**
+   * Move to the next question, or finish the run.
+   *
+   * Called after an answer has been graded. Everything that could end a run is
+   * checked here rather than at the countdown's expiry, so the reason is on
+   * screen while the student reads it instead of a beat before the mic opens.
+   */
+  function advancePodcast() {
+    if (!runIdRef.current) return;
+    const next = (answeringRef.current?.index ?? -1) + 1;
+    if (next >= questions.length) {
+      endPodcast();
+      setNotice("That's the last question. Full run below.");
+      return;
+    }
+    if (!unlimited && remaining <= 0) {
+      endPodcast();
+      setNotice(
+        "That's your recordings for today, so the run stops here. It resets at midnight your time.",
+      );
+      return;
+    }
+    setAskedAt(next);
+    setCountdown(NEXT_QUESTION_DELAY_S);
+  }
+
+  async function startRecording(question?: CourseQuestion) {
     const Ctor = browserCaptionsUsable()
       ? (window.SpeechRecognition ?? window.webkitSpeechRecognition)
       : undefined;
@@ -1198,7 +1327,7 @@ export function RecordConsole({
     setNotice(null);
     // Whatever is on screen now is what this recording answers, for the whole
     // of its life — including the grading that happens after they stop.
-    answeringRef.current = asked ?? null;
+    answeringRef.current = question ?? asked ?? null;
 
     // Ask for the microphone FIRST and wait for the user to answer the
     // browser prompt. A denied prompt must not burn one of the day's five
@@ -1513,6 +1642,9 @@ export function RecordConsole({
         ? heardText.slice(spansCover.length)
         : "";
   const outOfQuota = !unlimited && remaining === 0 && status !== "recording";
+  // Kept after the run ends so the interview has a last page rather than
+  // vanishing the moment the final answer is graded.
+  const showRecap = turns.length > 0 && !runId;
 
   return (
     <div className="flex flex-col items-center gap-8">
@@ -1523,11 +1655,37 @@ export function RecordConsole({
           total={questions.length}
           // Locked while recording: swapping the question mid-answer would
           // grade what they are saying against something they were never asked.
-          locked={status === "recording" || busy}
+          // Locked during a run too — the run decides what comes next.
+          locked={status === "recording" || busy || !!runId}
           onNext={() =>
             setAskedAt((current) => (current + 1) % questions.length)
           }
+          inRun={!!runId}
+          countdown={countdown}
+          onHold={() => setCountdown(null)}
         />
+      )}
+
+      {questions.length > 1 && !runId && status !== "recording" && !busy && (
+        <button
+          type="button"
+          onClick={startPodcast}
+          disabled={outOfQuota}
+          className="flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-strong transition-colors hover:bg-surface disabled:opacity-50"
+        >
+          <Radio aria-hidden className="size-4 text-brand" />
+          Podcast mode · {questions.length} questions
+        </button>
+      )}
+
+      {runId && (
+        <button
+          type="button"
+          onClick={endPodcast}
+          className="text-xs font-medium text-subtle underline underline-offset-4 transition-colors hover:text-strong"
+        >
+          End the interview
+        </button>
       )}
 
       <div className="flex flex-col items-center gap-4 text-center">
@@ -1536,7 +1694,9 @@ export function RecordConsole({
           aria-label={
             status === "recording" ? "Stop recording" : "Start recording"
           }
-          onClick={status === "recording" ? stopRecording : startRecording}
+          onClick={() =>
+            status === "recording" ? stopRecording() : startRecording()
+          }
           disabled={busy || outOfQuota}
           className={cn(
             "glass flex size-20 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-50",
@@ -1552,7 +1712,9 @@ export function RecordConsole({
 
         <Button
           type="button"
-          onClick={status === "recording" ? stopRecording : startRecording}
+          onClick={() =>
+            status === "recording" ? stopRecording() : startRecording()
+          }
           disabled={busy || outOfQuota}
           className="h-11 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform hover:bg-brand/90 active:scale-[0.97]"
         >
@@ -1699,6 +1861,8 @@ export function RecordConsole({
         )}
       </AnimatePresence>
 
+      {showRecap && <PodcastRecap turns={turns} />}
+
       {sessions.length > 0 && (
         <div className="flex w-full max-w-2xl flex-col gap-2">
           <h2 className="text-sm font-medium text-subtle">Past sessions</h2>
@@ -1778,6 +1942,57 @@ export function RecordConsole({
  * student always sees their words immediately, colour catches up after.
  */
 /**
+ * How the interview went, question by question.
+ *
+ * An average across the run is deliberately absent. Each answer was graded
+ * against its own question, so a mean over five of them is a number about
+ * nothing — and the useful reading is which question went badly, which this
+ * shows directly.
+ */
+function PodcastRecap({ turns }: { turns: PodcastTurn[] }) {
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
+      <h2 className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+        The interview · {turns.length} answered
+      </h2>
+
+      <ol className="flex flex-col divide-y divide-border">
+        {turns.map((turn, i) => (
+          <li
+            key={turn.sessionId}
+            className="flex items-start gap-3 py-3 first:pt-0 last:pb-0"
+          >
+            <span className="mt-0.5 font-mono text-[10px] text-subtle tabular-nums">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm leading-6 text-foreground">
+                {turn.question}
+              </p>
+              <p className="mt-0.5 text-xs text-subtle">{turn.section}</p>
+            </div>
+            <span
+              className={cn(
+                "shrink-0 font-mono text-lg font-semibold tabular-nums",
+                turn.score === null
+                  ? "text-subtle"
+                  : turn.score >= 70
+                    ? "text-green-500"
+                    : turn.score >= 40
+                      ? "text-amber-500"
+                      : "text-red-500",
+              )}
+            >
+              {turn.score ?? "—"}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/**
  * The question this recording answers.
  *
  * It sits above the microphone because it is the instruction, not a footnote:
@@ -1791,12 +2006,20 @@ function QuestionCard({
   total,
   locked,
   onNext,
+  inRun,
+  countdown,
+  onHold,
 }: {
   asked: CourseQuestion;
   position: number;
   total: number;
   locked: boolean;
   onNext: () => void;
+  /** Inside a podcast run: the questions come to you, in order. */
+  inRun: boolean;
+  /** Seconds until this question's mic opens, or null when nothing is queued. */
+  countdown: number | null;
+  onHold: () => void;
 }) {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/[0.06] p-5">
@@ -1804,7 +2027,7 @@ function QuestionCard({
         <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
           Question {position + 1} of {total} · {asked.section}
         </span>
-        {total > 1 && (
+        {total > 1 && !inRun && (
           <button
             type="button"
             onClick={onNext}
@@ -1820,10 +2043,29 @@ function QuestionCard({
         {asked.question}
       </p>
 
-      <p className="text-xs leading-5 text-subtle">
-        Answer just this. You are marked on the answer, not on everything else
-        the course covers.
-      </p>
+      {countdown === null ? (
+        <p className="text-xs leading-5 text-subtle">
+          Answer just this. You are marked on the answer, not on everything else
+          the course covers.
+        </p>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-xs leading-5 text-subtle">
+            Recording starts in{" "}
+            <span className="font-mono font-medium text-strong tabular-nums">
+              {countdown}
+            </span>
+            .
+          </p>
+          <button
+            type="button"
+            onClick={onHold}
+            className="text-xs font-medium text-brand transition-opacity hover:opacity-80"
+          >
+            Hold on
+          </button>
+        </div>
+      )}
     </div>
   );
 }
