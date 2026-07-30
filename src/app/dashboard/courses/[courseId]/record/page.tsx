@@ -16,7 +16,9 @@ export default async function RecordPage({
   const [{ data: sessions }, { data: course }, usage] = await Promise.all([
     supabase
       .from("course_sessions")
-      .select("id, transcript, started_at, ended_at, score, question_section")
+      .select(
+        "id, transcript, started_at, ended_at, score, question_section, mode",
+      )
       .eq("course_id", courseId)
       .eq("user_id", user.id)
       .order("started_at", { ascending: false }),
