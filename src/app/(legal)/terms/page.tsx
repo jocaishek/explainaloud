@@ -6,16 +6,15 @@ import {
   MINIMUM_AGE,
   TERMS_EFFECTIVE_DATE,
 } from "~/lib/legal";
-import { PLAN_RECORDING_MS, PRO_PRICE_USD } from "~/lib/plans";
+import { PLAN_RECORDING_MS } from "~/lib/plans";
 
 export const metadata = {
   title: "Terms of Service · Explainaloud",
   description:
-    "The agreement between you and Explainaloud covering accounts, subscriptions, acceptable use, and your content.",
+    "The agreement between you and Explainaloud covering accounts, acceptable use, and your content.",
 };
 
 const freeMinutes = Math.round(PLAN_RECORDING_MS.free / 60_000);
-const proMinutes = Math.round(PLAN_RECORDING_MS.pro / 60_000);
 
 export default function TermsPage() {
   return (
@@ -91,43 +90,23 @@ export default function TermsPage() {
         academic contexts, and that is between you and your institution.
       </p>
 
-      <h2>4. Plans, billing, and cancellation</h2>
+      <h2>4. Plans and pricing</h2>
       <p>
-        The Service offers a free plan and a paid &ldquo;Pro&rdquo; plan. The
-        free plan includes recordings of up to {freeMinutes} minutes and a
-        limited number of topics per day. Pro costs{" "}
-        <strong>${PRO_PRICE_USD.toFixed(2)} per month</strong>, includes
-        recordings of up to {proMinutes} minutes, a higher daily topic limit,
-        and unlimited recordings. Current limits are shown on the pricing
-        section of our home page and inside the app.
+        <strong>The Service is currently free.</strong> There is no paid plan,
+        no subscription, and nothing to cancel. We do not ask for a payment
+        method and we do not charge you.
       </p>
       <p>
-        Payments are processed by Stripe. We do not receive or store your full
-        card number. Your use of Stripe&rsquo;s checkout is additionally subject
-        to Stripe&rsquo;s own terms.
-      </p>
-      <p>
-        <strong>Pro is a recurring subscription.</strong> Unless you cancel, it
-        renews automatically each month and your payment method is charged the
-        then-current price plus any applicable tax. You authorise that recurring
-        charge when you subscribe.
-      </p>
-      <p>
-        You may cancel at any time from the billing settings in your account.
-        Cancellation takes effect at the end of the billing period you have
-        already paid for; you keep Pro features until then. Except where
-        required by law, <strong>payments are non-refundable</strong> and we do
-        not provide partial refunds for unused time.
-      </p>
-      <p>
-        We may change prices. We will give you notice before a price change
-        takes effect for your subscription, and the change will apply only to
-        billing periods beginning after that notice. If you do not accept the
-        new price, cancel before it takes effect.
-      </p>
-      <p>
-        If a payment fails, we may retry it and may suspend or downgrade Pro
-        features until payment succeeds.
+        The free plan includes recordings of up to {freeMinutes} minutes and a
+        limited number of recordings and new topics per day. Current limits are
+        shown on the pricing section of our home page and in your settings. We
+        may change these limits, and we may introduce a paid plan in future. If
+        we do, we will give you notice first, and{" "}
+        <strong>
+          we will never charge you without you separately agreeing to a price
+        </strong>
+        . Continuing to use the free plan will never itself become a payment
+        obligation.
       </p>
 
       <h2>5. Your content</h2>
@@ -214,11 +193,7 @@ export default function TermsPage() {
         Service or to other users. Where it is reasonable and lawful to do so,
         we will give you notice first.
       </p>
-      <p>
-        If we terminate your paid subscription without cause, we will refund the
-        unused portion of the period you have paid for. Sections 5, 9, 10, 11,
-        and 12 survive termination.
-      </p>
+      <p>Sections 5, 9, 10, 11, and 12 survive termination.</p>
 
       <h2>9. Disclaimer of warranties</h2>
       <p>

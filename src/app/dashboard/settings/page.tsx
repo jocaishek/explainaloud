@@ -1,8 +1,7 @@
 import { ThemeSwitcher } from "~/components/theme-switcher";
-import { planLabel } from "~/lib/plans";
+import { PLAN_FEATURES } from "~/lib/plans";
 import { USE_TYPE_LABELS } from "~/lib/profile";
 import { requireProfile } from "~/lib/supabase/server";
-import { PlanPanel } from "./plan-panel";
 import { ProfileForm } from "./profile-form";
 import { VoiceBaselinePanel } from "./voice-baseline-panel";
 
@@ -28,15 +27,25 @@ export default async function SettingsPage() {
         </p>
       </div>
 
+      {/* No plan picker: there is one plan and it is free. A panel offering an
+          upgrade nobody can buy is worse than no panel. */}
       <Section
-        title="Plan"
-        description="What your account includes, and how to change it."
+        title="What's included"
+        description="Everything Explainaloud does, at no cost."
       >
-        <PlanPanel
-          plan={profile.plan}
-          renewsAt={profile.plan_renews_at}
-          hasCustomer={!!profile.stripe_customer_id}
-        />
+        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+          {PLAN_FEATURES.map((feature) => (
+            <li
+              key={feature.label}
+              className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm"
+            >
+              <span className="text-subtle">{feature.label}</span>
+              <span className="font-medium text-strong">
+                {typeof feature.free === "string" ? feature.free : "Included"}
+              </span>
+            </li>
+          ))}
+        </ul>
       </Section>
 
       <Section
@@ -60,7 +69,6 @@ export default async function SettingsPage() {
       <Section title="Account" description="Details tied to your login.">
         <dl className="divide-y divide-border overflow-hidden rounded-xl border border-border">
           <Row label="Email" value={user.email ?? "—"} />
-          <Row label="Plan" value={`${planLabel(profile.plan)}`} />
           <Row
             label="Using it for"
             value={USE_TYPE_LABELS[profile.use_type].title}
