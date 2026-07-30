@@ -53,10 +53,17 @@ export function VoiceWarmup({
   onSkip,
   skipped,
   result,
+  allowSkip = true,
 }: {
   onComplete: (result: WarmupResult) => void;
   onSkip: () => void;
   skipped: boolean;
+  /**
+   * Whether skipping is offered. False in Settings, where the skip message
+   * ("you can do this later from settings") would be pointing at the page the
+   * reader is already on.
+   */
+  allowSkip?: boolean;
   result: WarmupResult | null;
 }) {
   const shouldReduceMotion = useReducedMotion();
@@ -361,7 +368,7 @@ export function VoiceWarmup({
           </Button>
         )}
 
-        {stage !== "done" && stage !== "recording" && (
+        {allowSkip && stage !== "done" && stage !== "recording" && (
           <button
             type="button"
             onClick={onSkip}

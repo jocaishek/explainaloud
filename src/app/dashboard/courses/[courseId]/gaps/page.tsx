@@ -1,7 +1,12 @@
 import Link from "next/link";
+import {
+  DeliverySummary,
+  SlowSpotCallout,
+} from "~/components/delivery-summary";
 import { KnowledgeScore } from "~/components/knowledge-score";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import type { GapReport, SpanStatus } from "~/lib/ai/schemas";
+import { PACE_DROP_FRACTION, type SpeechMetrics } from "~/lib/speech-metrics";
 import { requireUser } from "~/lib/supabase/server";
 import { cn } from "~/lib/utils";
 
@@ -26,8 +31,35 @@ type SessionReport = {
   score: number | null;
   spans: StoredSpan[] | null;
   report: GapReport | null;
+  speech_metrics: SpeechMetrics | null;
   gaps: GapRow[];
 };
+
+type BaselineRow = { capable_wpm: number; median_wpm: number };
+
+/**
+ * Whether the slowest stretch of speech landed on something the grader also
+ * flagged.
+ *
+ * Substring matching in both directions, over normalised text, because the two
+ * sides come from different places: the stretch is whatever words fell inside a
+ * ten-second window, so it starts and ends mid-sentence, while a weakness
+ * phrase is the grader's own wording of the point that was missed. Neither
+ * contains the other reliably, and requiring an exact match would mean this
+ * never fires.
+ */
+function weaknessOnSlowStretch(stretch: string, weaknesses: GapRow[]) {
+  const haystack = normalized(stretch);
+  if (haystack.length < 12) return null;
+  return (
+    weaknesses.find((weakness) => {
+      const phrase = normalized(weakness.phrase);
+      // Two or three words are too common to be evidence of anything.
+      if (phrase.length < 12) return false;
+      return haystack.includes(phrase) || phrase.includes(haystack);
+    }) ?? null
+  );
+}
 
 function normalized(text: string) {
   return text
@@ -57,17 +89,39 @@ export default async function GapReportPage({
   const { courseId } = await params;
   const { supabase, user } = await requireUser();
 
-  const { data: session } = await supabase
-    .from("course_sessions")
-    .select(
-      "id, transcript, score, spans, report, gaps ( id, phrase, category, explanation, resolved, created_at )",
-    )
-    .eq("course_id", courseId)
-    .eq("user_id", user.id)
-    .not("report", "is", null)
-    .order("started_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<SessionReport>();
+  const [{ data: session }, { data: baseline }, { data: pastSessions }] =
+    await Promise.all([
+      supabase
+        .from("course_sessions")
+        .select(
+          "id, transcript, score, spans, report, speech_metrics, gaps ( id, phrase, category, explanation, resolved, created_at )",
+        )
+        .eq("course_id", courseId)
+        .eq("user_id", user.id)
+        .not("report", "is", null)
+        .order("started_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<SessionReport>(),
+      // The warm-up's reference, if they recorded one.
+      supabase
+        .from("speech_baselines")
+        .select("capable_wpm, median_wpm")
+        .eq("user_id", user.id)
+        .maybeSingle<BaselineRow>(),
+      // Fallback reference for anyone who skipped the warm-up: their own past
+      // sessions. Across every course, because how fast someone talks is a fact
+      // about them rather than about the topic. Capped because a rolling recent
+      // window tracks a speaker who is getting more fluent, where a lifetime
+      // average would not.
+      supabase
+        .from("course_sessions")
+        .select("speech_metrics")
+        .eq("user_id", user.id)
+        .not("speech_metrics", "is", null)
+        .order("started_at", { ascending: false })
+        .limit(10)
+        .returns<{ speech_metrics: SpeechMetrics | null }[]>(),
+    ]);
 
   if (!session?.report) {
     return (
@@ -95,9 +149,68 @@ export default async function GapReportPage({
   const markSubstantiveNeutralAsGap =
     score < 50 && weaknesses.length > 0 && !hasClassifiedClaim;
 
+  // Everything that answers "how did I do" sits above the fold, before the
+  // transcript: the score, the pace, and the one place those two agree.
+  const metrics = session.speech_metrics;
+
+  // Two ways to know how someone usually sounds, in order of quality.
+  //
+  // The warm-up is better because it is deliberately a topic they know, so it
+  // captures confident speech. Averaging past sessions cannot make that
+  // distinction — it mixes topics they knew with topics they did not — but it
+  // is far better than comparing against nothing, and it costs the user
+  // nothing to obtain.
+  const reliablePastWpm = (pastSessions ?? [])
+    .map((row) => row.speech_metrics)
+    .filter((m): m is SpeechMetrics => !!m?.reliable)
+    .map((m) => m.medianWpm)
+    .filter((wpm) => wpm > 0);
+
+  // Median rather than mean: one recording where someone paused to find a
+  // reference should not drag their "usual" down for weeks.
+  const sessionAverage =
+    reliablePastWpm.length >= 2
+      ? Math.round(
+          [...reliablePastWpm].sort((a, b) => a - b)[
+            Math.floor(reliablePastWpm.length / 2)
+          ] as number,
+        )
+      : null;
+
+  const baselineWpm =
+    baseline?.capable_wpm ?? baseline?.median_wpm ?? sessionAverage;
+  const slowSpot =
+    metrics?.reliable && metrics.slowestStretch && baselineWpm
+      ? metrics.slowestStretch
+      : null;
+  // The same threshold the comparison helper uses, so the callout and any
+  // future pace judgement cannot disagree about what counts as a real dip.
+  const slowSpotWeakness =
+    slowSpot &&
+    baselineWpm &&
+    slowSpot.wpm <= baselineWpm * (1 - PACE_DROP_FRACTION)
+      ? weaknessOnSlowStretch(slowSpot.text, weaknesses)
+      : null;
+
   return (
     <div className="flex flex-col gap-8">
       <KnowledgeScore score={score} verdict={session.report.verdict} />
+
+      {metrics?.reliable && (
+        <DeliverySummary
+          wpm={metrics.medianWpm}
+          usualWpm={baselineWpm}
+          recordingsSoFar={reliablePastWpm.length}
+        />
+      )}
+
+      {slowSpot && slowSpotWeakness && baselineWpm && (
+        <SlowSpotCallout
+          text={slowSpot.text}
+          wpm={slowSpot.wpm}
+          baselineWpm={baselineWpm}
+        />
+      )}
 
       {session.transcript && spans.length > 0 && (
         <section
