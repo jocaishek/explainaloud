@@ -32,6 +32,8 @@ type SessionReport = {
   spans: StoredSpan[] | null;
   report: GapReport | null;
   speech_metrics: SpeechMetrics | null;
+  /** What they were asked. Null for sessions recorded before questions. */
+  question: string | null;
   gaps: GapRow[];
 };
 
@@ -94,7 +96,7 @@ export default async function GapReportPage({
       supabase
         .from("course_sessions")
         .select(
-          "id, transcript, score, spans, report, speech_metrics, gaps ( id, phrase, category, explanation, resolved, created_at )",
+          "id, transcript, score, spans, report, speech_metrics, question, gaps ( id, phrase, category, explanation, resolved, created_at )",
         )
         .eq("course_id", courseId)
         .eq("user_id", user.id)
@@ -203,6 +205,19 @@ export default async function GapReportPage({
 
   return (
     <div className="flex flex-col gap-8">
+      {/* A score means nothing without the question it answers. Ahead of it,
+          because it is the thing the rest of the page is about. */}
+      {session.question && (
+        <div className="flex flex-col gap-1.5 rounded-xl border border-brand/20 bg-brand/[0.06] p-5">
+          <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+            You were asked
+          </span>
+          <p className="text-base leading-relaxed font-medium text-strong">
+            {session.question}
+          </p>
+        </div>
+      )}
+
       <KnowledgeScore score={score} verdict={session.report.verdict} />
 
       {metrics?.reliable && (

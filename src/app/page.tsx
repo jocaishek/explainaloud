@@ -314,15 +314,15 @@ export default function Home() {
             />
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               <WordReveal
-                text="Every part ends with a question"
-                accent={["question"]}
+                text="You answer a question, not the whole topic"
+                accent={["question,"]}
               />
             </h2>
             <Reveal delay={120} className="mt-5">
               <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
-                You are not asked to recite the whole course back. Each section
-                closes on one question, you answer it out loud, and that answer
-                is what gets marked.
+                Hit record and there is a specific question waiting. You answer
+                that, and it is marked against that — not against everything
+                else the course happens to cover.
               </p>
             </Reveal>
 
@@ -1231,11 +1231,16 @@ function QuestionPanel() {
   return (
     <div className="glass flex h-full flex-col rounded-2xl p-6">
       <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
-        Section 2 of 3
+        Question 2 of 3 · The Calvin cycle
       </span>
 
       <p className="mt-4 rounded-lg border border-brand/20 bg-brand/[0.07] p-4 text-lg leading-relaxed text-white">
         {ASKED}
+      </p>
+
+      <p className="mt-3 text-xs leading-5 text-[#71717A]">
+        Answer just this. You are marked on the answer, not on everything else
+        the course covers.
       </p>
 
       <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-4">

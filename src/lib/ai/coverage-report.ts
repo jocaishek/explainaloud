@@ -110,6 +110,7 @@ export function completeCoverageReport({
   partial,
   thorough,
   spans,
+  scoped = false,
 }: {
   draft: CoachingReport;
   keyPoints: string[];
@@ -119,6 +120,12 @@ export function completeCoverageReport({
   /** Covered points the student explained rather than merely named. */
   thorough: Set<number>;
   spans: EvaluatedSpan[];
+  /**
+   * Whether these key points are one question's worth rather than the whole
+   * course. Changes only the wording: "the 3 course key points" is misleading
+   * when the student was asked about three of a course's twelve.
+   */
+  scoped?: boolean;
 }): CoachingReport {
   // Partially covered points are not missing. Listing them as weaknesses is
   // what produced "Missing Step: the light-dependent reactions produce ATP and
@@ -192,10 +199,18 @@ export function completeCoverageReport({
     partialOnly.length > 0
       ? ` You partly covered ${partialOnly.length} more.`
       : "";
+  // "Course key points" is the wrong noun for a question's worth of them, and
+  // the difference matters: it is the sentence that tells someone whether the
+  // number in front of them is about their answer or about the whole syllabus.
+  const pointsNoun = scoped
+    ? "points this question is about"
+    : "course key points";
   const coverageVerdict =
     missingCount === 0
-      ? `You covered all ${keyPoints.length} course key points.`
-      : `You covered ${covered.size} of ${keyPoints.length} course key points.${partialNote} The other ${missingCount} you did not get to — that is not the same as getting them wrong.`;
+      ? scoped
+        ? "You covered everything this question was asking for."
+        : `You covered all ${keyPoints.length} course key points.`
+      : `You covered ${covered.size} of ${keyPoints.length} ${pointsNoun}.${partialNote} The other ${missingCount} you did not get to — that is not the same as getting them wrong.`;
   const accuracyVerdict =
     claimSpans.length > 0
       ? ` ${correctClaims} of ${claimSpans.length} checkable claim${claimSpans.length === 1 ? " was" : "s were"} accurate.`
