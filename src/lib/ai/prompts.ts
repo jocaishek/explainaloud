@@ -111,8 +111,11 @@ Return JSON with this exact shape:
   "notes": ["condensed revision notes, one fact per line${grounded ? ", drawn from the sources" : ""}"],
   "video_searches": ["YouTube SEARCH QUERIES, not URLs — e.g. 'Calvin cycle explained 3Blue1Brown'"],
   "resources": [{ "label": "what to look up next", "why": "one line on why it helps" }],
-  "uncovered": ["parts of the topic the sources do not cover, if any"]
+  "uncovered": ["parts of the topic the sources do not cover, if any"],
+  "scope_note": null | { "reason": "one sentence addressed to the student", "suggestions": ["The Cuban Missile Crisis", "Why the Roman Republic fell"] }
 }
+
+Always set "scope_note" to null. Topic breadth is judged separately.
 
 Produce 3-5 sections, 6-12 notes, 3-5 video searches and 2-4 resources.
 
@@ -138,6 +141,43 @@ video or page exists, and a fabricated link is worse than no link. Output
 search phrases only; the app turns them into working searches.
 
 ${grounded ? `"notes" must come from the SOURCES. "video_searches" and "resources" are the one exception to source grounding — they are pointers to material the student might go find, so they may name well-known topics or channels, but they must stay on the topic at hand and must not assert facts.` : `"notes" must contain settled, textbook-level facts. "video_searches" and "resources" are pointers to material the student might go find; they must stay on the topic at hand and must not assert facts.`}`;
+}
+
+/**
+ * One question, asked on its own.
+ *
+ * Breadth started life as a field inside the course-generation response and was
+ * wrong in both directions from one prompt edit to the next: first it flagged
+ * "the Krebs cycle" as too broad, then after tightening it let "Psychology"
+ * through. A subjective binary buried in a two-thousand-token JSON task is not
+ * something a small model attends to reliably.
+ *
+ * Asked alone, with the whole prompt about nothing else, it is answerable. The
+ * call runs alongside course generation so it costs no wall-clock time.
+ */
+export function topicBreadthPrompt(topic: string) {
+  return `Decide whether a student could explain this topic out loud in three
+minutes: "${topic}"
+
+BROAD means the name covers an entire field, language, era, or war — a
+container holding dozens of unrelated things.
+NOT BROAD means one identifiable thing: a mechanism, a theorem, a process, an
+event, a technique. Internal complexity does not make it broad.
+
+broad:      biology · history · psychology · machine learning · Python ·
+            World War II · the economy · chemistry
+not broad:  the Krebs cycle · Bayes' theorem · photosynthesis · recursion ·
+            the Cuban Missile Crisis · how vaccines work · big-O notation
+
+Return JSON only:
+{
+  "broad": true | false,
+  "reason": "if broad, one sentence to the student on why it is too wide; else null",
+  "suggestions": ["if broad, 2-3 narrower topics from inside it, phrased exactly as a student would type them; else empty"]
+}
+
+"suggestions" are topic names, never advice. "The Cuban Missile Crisis", not
+"pick a specific event". No "Narrower topic:" prefixes.`;
 }
 
 export function courseReviewPrompt(params: {
@@ -265,22 +305,37 @@ The student said (verbatim transcript${params.context ? ", the part you must gra
 ${params.transcript}
 """
 
-Segment the transcript into consecutive spans covering it end to end. Classify
-each span:
-- "correct"  — accurate and supported by the reference material
-- "gap"      — wrong, or a step skipped, or a claim the material contradicts
+Segment the transcript into consecutive spans covering it end to end.
+
+Spans judge ONLY what the student actually said. Whether they left something
+out is a separate question, answered by "covered_key_points" below, and it must
+never influence how a span is classified.
+
+Classify each span:
+- "correct"  — the statement is accurate
+- "gap"      — the statement is wrong, misleading, or contradicted by the
+               reference material, or it is off-topic
 - "neutral"  — filler, false starts, or content that makes no checkable claim
 
 Rules:
 - Spans must be exact verbatim substrings of the transcript, in order, with no
   overlap. Concatenating every span's text must reproduce the transcript.
-- Only mark "gap" when you can name the specific key point that was missed or
-  contradicted. A checkable claim unrelated to the assigned topic is also a
-  "gap"; say that it does not address the topic.
+- "correct" does not require the statement to appear in the key points. A true,
+  relevant statement is correct whether or not the course material happens to
+  mention it. Students add detail of their own; that is a good sign, not an
+  error. "The plant takes in carbon dioxide through tiny holes called stomata"
+  is correct even if no key point mentions stomata.
+- NEVER mark a span "gap" because something was omitted. A gap means the words
+  in that span are wrong. If the student's sentence is accurate, it is
+  "correct", even when the surrounding explanation skipped a step. Omissions
+  are reported through "covered_key_points" and nowhere else.
+- "off-topic" means it does not address ${params.topic} at all. It does not mean
+  "absent from the key points".
 - Use "neutral" only for filler, false starts, or connective words. Do not mark
   an entire off-topic explanation neutral.
 - Be strict about correctness but do not invent gaps. A student who is simply
-  brief is not wrong.
+  brief is not wrong. If you cannot state what is factually wrong with a span,
+  it is not a gap.
 - Check every numbered key point individually before returning, and add its
   index to "covered_key_points" when the student conveyed that MEANING.
   Paraphrase counts. Synonyms count. Their own phrasing counts. Saying it in a
@@ -291,7 +346,15 @@ Rules:
   incorrectly, or so vague you could not tell whether they understand it.
   Brevity and informality are not reasons to withhold it. Marking a point
   uncovered that the student did explain is the worst error you can make here,
-  because it tells someone who understands the material that they do not.${
+  because it tells someone who understands the material that they do not.
+- Then, separately, add to "thorough_key_points" only those covered indices the
+  student genuinely EXPLAINED rather than merely named. Stating a fact is
+  coverage; saying how or why it works is thoroughness. "The Calvin cycle
+  happens in the stroma" is covered but not thorough. "The Calvin cycle happens
+  in the stroma, using the ATP from the light reactions to fix CO2 into sugar"
+  is both. Be strict here: this is the difference between someone who has
+  memorised the labels and someone who understands the mechanism, and it is
+  supposed to be hard to earn. A point cannot be thorough unless it is covered.${
     params.context
       ? `
 - Judge the transcript in light of the context, but every returned span must be
@@ -306,10 +369,11 @@ Return JSON:
       "text": "exact substring",
       "status": "correct" | "gap" | "neutral",
       "key_point": "the related key point text, or null (never an index)",
-      "issue": "for gaps only: one sentence naming what was missed, or null"
+      "issue": "for gaps only: one sentence naming what is factually wrong with these words, or null"
     }
   ],
   "covered_key_points": [the bracketed indices of key points the student got right],
+  "thorough_key_points": [the subset of those indices they explained, not just named],
   "confidence": 0-100
 }`;
 }
@@ -370,6 +434,17 @@ ${
 Coach the flagged claims and at most four highest-priority omissions. The
 orchestrator deterministically checks every remaining course key point and
 adds any uncovered items after this response, so do not repeat the full rubric.
+
+Every entry in "gaps" must come from one of those two lists above. Do not
+introduce anything else. In particular:
+- Never list something the student explained correctly. If a point is not in
+  either list, they got it, and telling them otherwise is the single most
+  damaging thing this report can do.
+- Never write a "gap" whose explanation you are not certain of. An invented
+  correction is worse than a missing one.
+- If both lists say "none", return "gaps": []. An empty array is the correct
+  and expected answer for a complete explanation. Do not manufacture material
+  to fill it.
 
 Return JSON:
 {
