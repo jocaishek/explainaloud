@@ -504,3 +504,92 @@ Return JSON:
   "next_focus": "the single most valuable thing to review next"
 }`;
 }
+
+/**
+ * The examiner.
+ *
+ * Not the section quizzes. Those are written to check a section was read, one
+ * per section, the same three every time — which makes a second interview the
+ * first one again, and makes "podcast mode" a quiz with a countdown.
+ *
+ * An examiner does two things a question list cannot. It asks something the
+ * material supports but never states in one place, so the answer has to be
+ * assembled rather than recalled. And when it has just heard you miss
+ * something, it asks about that, which is the difference between a form and a
+ * conversation.
+ */
+export function interviewQuestionPrompt(params: {
+  topic: string;
+  sections: Array<{ title: string; technical: string; keyPoints: string[] }>;
+  /** Questions this student has already been asked, ever. Never repeat one. */
+  asked: string[];
+  /** What the last answer got wrong or left out, when there was a last answer. */
+  weakness?: string;
+  count: number;
+}) {
+  return `ROLE: You are the Examiner agent in a multi-agent teaching system.
+You set the questions for a spoken oral exam. You do not teach and you do not
+answer them.
+
+${PRECISION_RULE}
+
+TOPIC: ${params.topic}
+
+THE MATERIAL YOU MAY EXAMINE (do not go outside it):
+${params.sections
+  .map(
+    (section, i) =>
+      `[${i}] ${section.title}\n${section.technical}\nKey points: ${section.keyPoints.join("; ")}`,
+  )
+  .join("\n\n")}
+${
+  params.asked.length > 0
+    ? `
+ALREADY ASKED — never ask any of these again, or anything that would be
+answered by the same two sentences:
+${params.asked.map((question) => `- ${question}`).join("\n")}
+`
+    : ""
+}${
+  params.weakness
+    ? `
+WHAT THEY JUST GOT WRONG OR LEFT OUT:
+"""
+${params.weakness}
+"""
+Your next question must go straight at that. Not a repeat of the question they
+just answered — the thing underneath it that they clearly do not have yet. This
+is the whole point of asking questions in sequence rather than handing over a
+list: you heard the last answer, so ask like it.
+`
+    : ""
+}
+Write ${params.count} question${params.count === 1 ? "" : "s"}.
+
+RULES:
+- Answerable out loud in 30 to 60 seconds by someone who understands the
+  material. Not a whole essay, not a single word.
+- Ask for mechanism, cause, comparison or consequence — "why", "how", "what
+  would happen if", "what is the difference between". Never ask for a
+  definition or a label that could be answered by naming a thing.
+- BANNED OPENINGS: "What is", "What are", "Define", "Name", "List", "Which of".
+  A question that starts that way is asking for a label, and a student can
+  produce the label with no understanding at all. "What is the primary energy
+  source for photosynthesis?" is answered by the word "sunlight" and tells you
+  nothing; "Why can photosynthesis not run on moonlight, when moonlight is
+  reflected sunlight?" is the same subject asked properly.
+- Go a level below the summary. A question whose answer is one of the key
+  points verbatim is too shallow; a good one needs two of them put together.
+- Every question must be answerable from the material above. Do not require a
+  fact that is not in it.
+- One question per entry. No preamble, no multi-part questions joined by "and
+  also".
+- Name the section index the question draws on most.
+
+Return JSON:
+{
+  "questions": [
+    { "question": "string", "section_index": 0 }
+  ]
+}`;
+}

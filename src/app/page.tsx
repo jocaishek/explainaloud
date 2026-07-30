@@ -308,20 +308,20 @@ export default function Home() {
           <div className="mx-auto max-w-5xl">
             <Eyebrow
               index="05"
-              label="Questions, not recital"
+              label="An examiner, not a quiz"
               className="mb-4"
             />
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               <WordReveal
-                text="You answer a question, not the whole topic"
-                accent={["question,"]}
+                text="It asks. You answer. Then it asks about what you missed."
+                accent={["missed."]}
               />
             </h2>
             <Reveal delay={120} className="mt-5">
               <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
-                Hit record and there is a specific question waiting. You answer
-                that, and it is marked against that — not against everything
-                else the course happens to cover.
+                Interview mode gives you one question at a time. You cannot see
+                the next one until you have answered this one — and the next one
+                is written out of what your last answer got wrong.
               </p>
             </Reveal>
 
@@ -490,14 +490,11 @@ export default function Home() {
         <div className="relative flex flex-col items-center text-center">
           <Eyebrow index="08" label="Two modes" className="mb-4" />
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-            <WordReveal
-              text="Explain it, or get interviewed"
-              accent={["interviewed"]}
-            />
+            <WordReveal text="Explain it, or sit the exam" accent={["exam"]} />
           </h2>
           <p className="mt-4 max-w-lg text-[#A1A1AA]">
             Same three minutes, same score, same gap report at the end. What
-            changes is what the clock is spent on.
+            changes is whether anyone is asking.
           </p>
         </div>
 
@@ -1230,7 +1227,7 @@ function QuestionPanel() {
   return (
     <div className="glass flex h-full flex-col rounded-2xl p-6">
       <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
-        Question 2 of 3 · The Calvin cycle
+        Question 2 of 3 · asked because of answer 1
       </span>
 
       <p className="mt-4 rounded-lg border border-brand/20 bg-brand/[0.07] p-4 text-lg leading-relaxed text-white">
@@ -1238,8 +1235,8 @@ function QuestionPanel() {
       </p>
 
       <p className="mt-3 text-xs leading-5 text-[#71717A]">
-        Answer just this. You are marked on the answer, not on everything else
-        the course covers.
+        You could not see this one until you had answered the last one. Answer
+        just this; you are marked on the answer.
       </p>
 
       <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-4">
@@ -1593,13 +1590,13 @@ function ModeCards() {
     {
       label: "Topic mode",
       line: "Explain as much as you know.",
-      body: "One topic, three minutes, no prompting. What you reach for first and what you never get to are both the point.",
+      body: "Open-ended. One topic, three minutes, no prompting. What you reach for first and what you never get to are both the point.",
       detail: "Marked against the whole course",
     },
     {
-      label: "Podcast mode",
-      line: "Get interviewed about it.",
-      body: "Three questions drawn from the course, inside the same three minutes. Answer one, it moves to the next, and each answer is marked on the question it answered.",
+      label: "Interview mode",
+      line: "Sit the oral exam.",
+      body: "Three questions inside the same three minutes, asked one at a time. Answer, and the clock carries straight on to a question written out of what you just missed.",
       detail: "Marked question by question",
     },
   ];
