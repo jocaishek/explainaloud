@@ -3,7 +3,6 @@ import Link from "next/link";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { SignOutButton } from "~/components/sign-out-button";
 import { Button } from "~/components/ui/button";
-import { UpgradeButton } from "~/components/upgrade-button";
 import { isAdminEmail } from "~/lib/admin";
 import { requireProfile } from "~/lib/supabase/server";
 import { DashboardNav } from "./dashboard-nav";
@@ -30,11 +29,6 @@ export default async function DashboardLayout({
           <DashboardNav showAdmin={isAdminEmail(user.email)} />
         </div>
         <div className="flex shrink-0 items-center gap-2 lg:gap-4">
-          {/* Only for people who would gain something. Showing "Upgrade" to a
-              subscriber reads as the app not knowing who they are. */}
-          {profile.plan === "free" && (
-            <UpgradeButton className="hidden sm:inline-flex" />
-          )}
           <Button
             asChild
             size="sm"

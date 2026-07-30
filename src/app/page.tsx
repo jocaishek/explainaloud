@@ -7,7 +7,7 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import { ArrowRight, Check, X } from "lucide-react";
+import { ArrowRight, Check } from "lucide-react";
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { type Example, ExampleCarousel } from "~/components/example-carousel";
@@ -22,7 +22,7 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { useCyclingTypewriter } from "~/hooks/use-cycling-typewriter";
 import { useInView } from "~/hooks/use-in-view";
-import { PLAN_FEATURES, PRO_PRICE_USD, planLabel } from "~/lib/plans";
+import { PLAN_FEATURES, planLabel } from "~/lib/plans";
 import { cn } from "~/lib/utils";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -200,7 +200,6 @@ export default function Home() {
             examples={EXAMPLES}
             header={
               <div className="relative mx-auto flex max-w-4xl flex-col items-center px-6 text-center">
-                <GlowOrb className="-top-10 left-1/2 h-72 w-[36rem] -translate-x-1/2" />
                 <Eyebrow index="02" label="Today's board" className="mb-4" />
                 <h2 className="relative text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
                   <WordReveal
@@ -211,8 +210,8 @@ export default function Home() {
                 <Reveal delay={120} className="mt-4">
                   <p className="max-w-md text-[#A1A1AA]">
                     A topic, an explanation scored on how well you actually said
-                    it, and the exact step you skipped. Keep scrolling to turn
-                    the ring.
+                    it, and the exact step you skipped. Scroll down or swipe
+                    sideways to turn the ring.
                   </p>
                 </Reveal>
               </div>
@@ -227,9 +226,8 @@ export default function Home() {
 
         {/* ── Section 2: Multi-agent orchestration ──────────────────── */}
         <section className="relative w-full px-6 py-24">
-          <GlowOrb className="top-10 left-[12%] h-80 w-80 opacity-[0.12]" />
           <div className="relative mx-auto grid max-w-5xl gap-12 md:grid-cols-[0.8fr_1.2fr] md:items-center md:gap-16">
-            <div>
+            <div className="border-l-2 border-brand/40 pl-6">
               <Eyebrow
                 index="03"
                 label="Multi-agent by design"
@@ -255,39 +253,42 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── Section 2: The Illusion of Competence ─────────────────── */}
+        {/* ── Section 4: What you see while you are still speaking ──── */}
         <section className="w-full px-6 py-24">
-          <div className="mx-auto grid max-w-4xl gap-10 md:grid-cols-[1fr_1.2fr] md:gap-16">
-            <div>
-              <Eyebrow index="04" label="Why it works" className="mb-4" />
-              <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-                <WordReveal
-                  text="The illusion of competence"
-                  accent={["illusion"]}
-                />
-              </h2>
-            </div>
-            <Reveal delay={120}>
-              <div className="flex max-w-prose flex-col gap-5 text-lg text-[#A1A1AA]">
-                <p>
-                  Rereading feels like learning. The material looks familiar, so
-                  your brain files it as known. But recognition is not recall,
-                  and exams only test recall.
-                </p>
-                <p>
-                  The gaps stay hidden until you explain the idea in your own
-                  words. Explainaloud is built around that moment.
-                </p>
-              </div>
+          <div className="mx-auto max-w-5xl">
+            <Eyebrow index="04" label="While you speak" className="mb-4" />
+            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+              <WordReveal
+                text="The feedback arrives mid-sentence"
+                accent={["mid-sentence"]}
+              />
+            </h2>
+            <Reveal delay={120} className="mt-5">
+              <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
+                Your words colour themselves as you say them, and your pace is
+                measured against your own baseline. You do not have to finish
+                and wait for a verdict to find out something went wrong.
+              </p>
             </Reveal>
+
+            <div className="mt-12 grid gap-4 md:grid-cols-[1.35fr_1fr]">
+              <Reveal>
+                <LiveColouringPanel />
+              </Reveal>
+              <Reveal delay={100}>
+                <PaceTrackerPanel />
+              </Reveal>
+            </div>
           </div>
         </section>
 
         {/* ── Section 3: Feature grid ──────────────────────────────────── */}
         <section className="relative w-full px-6 py-24">
-          {/* Glow orbs BEHIND the glass cards — these make the blur visible */}
-          <GlowOrb className="top-16 left-[22%] h-80 w-80" />
-          <GlowOrb className="bottom-16 right-[18%] h-96 w-96" />
+          {/* The one orb left on the page below the hero. Glass only reads as
+              glass with something coloured behind it to blur, so the feature
+              row keeps its light source while the rest of the page switched to
+              flat brand accents. */}
+          <GlowOrb className="top-16 left-1/2 h-80 w-[44rem] -translate-x-1/2 opacity-[0.12]" />
 
           <Eyebrow
             index="05"
@@ -435,35 +436,33 @@ export default function Home() {
         <div className="relative flex flex-col items-center text-center">
           <Eyebrow index="07" label="Pricing" className="mb-4" />
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-            <WordReveal
-              text="Start free. Go deeper for $9.99."
-              accent={["$9.99."]}
-            />
+            {/* The accent list is matched after stripping full stops, so the
+                word is listed without one. */}
+            <WordReveal text="It is free." accent={["free"]} />
           </h2>
           <p className="mt-4 max-w-lg text-[#A1A1AA]">
-            Everything that makes Explainaloud work — live gap colouring, the
-            full report, Re-Teach — is on the free plan. Pro raises the ceiling.
+            Everything Explainaloud does — live gap colouring, the full report,
+            Re-Teach, courses built from your own sources. There is no paid tier
+            to compare this against.
           </p>
         </div>
 
-        <Reveal delay={120} className="relative mt-10 w-full max-w-3xl">
+        <Reveal delay={120} className="relative mt-10 w-full max-w-md">
           <LandingPlans />
         </Reveal>
       </section>
 
       {/* ── Section 6: Sign up ──────────────────────────────────────── */}
       <section className="relative flex w-full flex-col items-center px-6 pt-4 pb-24">
-        {/* Sized to this block, not to the auth card that used to live here —
-            at the old size the glow washed out the very text it sat behind. */}
-        <GlowOrb className="top-0 left-1/2 h-56 w-[26rem] -translate-x-1/2 opacity-[0.12]" />
+        <AccentDivider />
 
-        <div className="relative flex flex-col items-center text-center">
+        <div className="relative mt-10 flex flex-col items-center text-center">
           <Eyebrow index="08" label="Get started" className="mb-4" />
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
             <WordReveal text="Create your account" accent={["account"]} />
           </h2>
           <p className="mt-4 max-w-md text-[#A1A1AA]">
-            Free to start, no card needed.
+            Free to use. No card, no paid plan.
           </p>
           {/* The form lives at /signup now rather than inline here, so it can
                 be linked to, bookmarked, and returned to after an expired
@@ -788,6 +787,24 @@ function GlowOrb({
   );
 }
 
+/* A hairline with a lit brand dot at its centre. Marks a section break with a
+   single accent instead of another blurred wash. */
+function AccentDivider({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden
+      className={cn(
+        "flex w-full max-w-sm items-center gap-3 text-white/10",
+        className,
+      )}
+    >
+      <span className="h-px flex-1 bg-current" />
+      <span className="size-1.5 rounded-full bg-brand shadow-[0_0_12px_0_var(--color-brand)]" />
+      <span className="h-px flex-1 bg-current" />
+    </div>
+  );
+}
+
 function GlassCard({
   children,
   className,
@@ -952,17 +969,6 @@ function ScrollSquiggle({
       className="pointer-events-none absolute inset-0 hidden h-full w-full md:block"
     >
       <defs>
-        <linearGradient
-          id="squiggle-stroke"
-          gradientUnits="userSpaceOnUse"
-          x1="0"
-          y1="0"
-          x2="0"
-          y2="1000"
-        >
-          <stop offset="0%" stopColor="#7FB3F0" />
-          <stop offset="100%" stopColor="#4A90E2" />
-        </linearGradient>
         <filter id="squiggle-glow">
           <feGaussianBlur stdDeviation="6" />
         </filter>
@@ -983,7 +989,7 @@ function ScrollSquiggle({
       />
       <motion.path
         d={SQUIGGLE_PATH}
-        stroke="url(#squiggle-stroke)"
+        stroke="var(--color-brand)"
         strokeOpacity="0.65"
         strokeWidth="1.5"
         strokeLinecap="round"
@@ -1076,13 +1082,9 @@ function DeepDiveRow({
           reversed && "md:flex-row-reverse",
         )}
       >
-        <GlowOrb
-          className={cn(
-            "top-1/2 h-72 w-72 -translate-y-1/2",
-            reversed ? "left-[5%]" : "right-[5%]",
-          )}
-        />
-        <div className="relative flex-1">
+        {/* A brand rule down the side of the step, in place of the glow that
+            used to sit behind it. */}
+        <div className="relative flex-1 border-l-2 border-brand/50 pl-5">
           <p className="text-sm font-semibold text-brand">{step}</p>
           <h3 className="mt-2 text-2xl font-semibold tracking-tight text-balance text-white">
             {title}
@@ -1154,6 +1156,203 @@ function LiveTranscript() {
       <p className="min-h-[2.5rem] text-xs text-[#A1A1AA]">
         <TypedText phrases={TRANSCRIPT_LINES} />
       </p>
+    </div>
+  );
+}
+
+/* The same three statuses the recording screen paints: right, missing a step,
+   and unjudged. Written as one continuous sentence so the colouring reads as
+   something happening to speech rather than as a list of verdicts. */
+const SPOKEN_WORDS: Array<{ text: string; status: "correct" | "gap" | null }> =
+  [
+    { text: "So the light reactions", status: "correct" },
+    { text: "split water", status: "correct" },
+    { text: "and that", status: null },
+    { text: "energy turns directly into glucose,", status: "gap" },
+    { text: "which the plant", status: null },
+    { text: "uses to grow.", status: "correct" },
+  ];
+
+/** How far the colouring trails the voice, in reveal steps. */
+const JUDGEMENT_LAG = 1;
+const REVEAL_MS = 620;
+/** Beats the finished sentence is held before the loop starts over. */
+const HOLD_STEPS = 4;
+
+/**
+ * The live colouring, played back at speaking speed.
+ *
+ * The lag matters: the grader is shown catching up a beat behind the words,
+ * because that is what actually happens and because colour landing on the
+ * syllable would read as a scripted animation rather than as a judgement.
+ */
+function LiveColouringPanel() {
+  const shouldReduceMotion = useReducedMotion();
+  const { ref, visible } = useInView<HTMLDivElement>();
+  const [spoken, setSpoken] = useState(0);
+
+  useEffect(() => {
+    if (shouldReduceMotion || !visible) return;
+    const loop = SPOKEN_WORDS.length + JUDGEMENT_LAG + HOLD_STEPS;
+    const timer = window.setInterval(
+      () => setSpoken((current) => (current >= loop ? 0 : current + 1)),
+      REVEAL_MS,
+    );
+    return () => window.clearInterval(timer);
+  }, [shouldReduceMotion, visible]);
+
+  // Under reduced motion the sentence is simply shown finished, which is the
+  // thing being advertised anyway.
+  const said = shouldReduceMotion ? SPOKEN_WORDS.length : spoken;
+  const judged = shouldReduceMotion
+    ? SPOKEN_WORDS.length
+    : spoken - JUDGEMENT_LAG;
+  const talking =
+    !shouldReduceMotion && spoken > 0 && said < SPOKEN_WORDS.length;
+
+  return (
+    <div ref={ref} className="glass flex h-full flex-col rounded-2xl p-6">
+      <div className="flex items-center justify-between gap-4">
+        <span className="flex items-center gap-2 text-xs font-medium text-[#A1A1AA]">
+          <span className="relative flex size-2">
+            {talking && (
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
+            )}
+            <span className="relative inline-flex size-2 rounded-full bg-red-500" />
+          </span>
+          Recording
+        </span>
+        <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
+          Colouring live
+        </span>
+      </div>
+
+      <p className="mt-5 min-h-[7.5rem] text-lg leading-relaxed text-balance">
+        {SPOKEN_WORDS.map((word, i) => (
+          <span
+            key={word.text}
+            className={cn(
+              "transition-all duration-500",
+              i >= said && "opacity-0",
+              i < said && i >= judged && "text-white",
+              i < judged && word.status === null && "text-[#71717A]",
+              i < judged && word.status === "correct" && "text-green-500",
+              i < judged &&
+                word.status === "gap" &&
+                "rounded bg-red-500/10 font-medium text-red-500",
+            )}
+          >
+            {word.text}{" "}
+          </span>
+        ))}
+      </p>
+
+      <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4">
+        <Legend className="bg-green-500" label="Said it right" />
+        <Legend className="bg-red-500" label="Step missing" />
+        <Legend className="bg-white/25" label="Not a claim" />
+      </div>
+    </div>
+  );
+}
+
+function Legend({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="flex items-center gap-2 text-xs text-[#A1A1AA]">
+      <span className={cn("size-1.5 rounded-full", className)} />
+      {label}
+    </span>
+  );
+}
+
+/* Illustrative figures. They match what the report actually shows: this
+   session's pace, the speaker's own baseline, and a difference only called
+   out when it is large enough to mean anything. */
+const PACE_WPM = 108;
+const PACE_USUAL = 142;
+
+/**
+ * The pace tracker. Deliberately makes no claim on its own — the callout at
+ * the bottom is conditioned on the grader having independently marked the
+ * same stretch, which is the rule the real report follows.
+ */
+function PaceTrackerPanel() {
+  const { ref, visible } = useInView<HTMLDivElement>();
+  const slower = Math.round(((PACE_USUAL - PACE_WPM) / PACE_USUAL) * 100);
+
+  return (
+    <div ref={ref} className="glass flex h-full flex-col rounded-2xl p-6">
+      <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
+        How you spoke
+      </span>
+
+      {/* Each figure carries its own bar. Stacking the two bars together read
+          as one bar with a stray line under it. */}
+      <div className="mt-4 grid grid-cols-2 gap-x-5">
+        <PaceFigure
+          label="This explanation"
+          value={PACE_WPM}
+          pct={(PACE_WPM / PACE_USUAL) * 100}
+          visible={visible}
+        />
+        <PaceFigure
+          label="Your usual"
+          value={PACE_USUAL}
+          pct={100}
+          visible={visible}
+          muted
+        />
+      </div>
+
+      <p className="mt-auto border-l-2 border-amber-500/50 pt-5 pl-3 text-sm leading-6 text-[#A1A1AA]">
+        <span className="font-medium text-amber-400">
+          {slower}% slower than usual
+        </span>{" "}
+        — and right where the explanation was marked weak. Worth re-teaching
+        first.
+      </p>
+    </div>
+  );
+}
+
+function PaceFigure({
+  label,
+  value,
+  pct,
+  visible,
+  muted,
+}: {
+  label: string;
+  value: number;
+  /** Width of this figure's bar, as a share of the larger of the two. */
+  pct: number;
+  visible: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-[#71717A]">{label}</p>
+      <p
+        className={cn(
+          "mt-0.5 font-mono text-2xl font-semibold tabular-nums",
+          muted ? "text-[#A1A1AA]" : "text-white",
+        )}
+      >
+        {value}
+        <span className="ml-1.5 font-sans text-[10px] font-normal text-[#71717A]">
+          wpm
+        </span>
+      </p>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <div
+          className={cn(
+            "h-full rounded-full transition-[width] duration-700",
+            EASE_CSS,
+            muted ? "bg-white/25" : "bg-amber-500",
+          )}
+          style={{ width: visible ? `${pct}%` : "0%" }}
+        />
+      </div>
     </div>
   );
 }
@@ -1234,101 +1433,52 @@ function GapPanel() {
 }
 
 /**
- * Free versus Pro, in the landing page's own dark palette.
+ * What the one plan includes, in the landing page's own dark palette.
  *
- * Deliberately not the shared `PlanComparison` used inside the app: that one
- * inherits the theme tokens and would render light-on-light here, since this
- * page pins itself dark regardless of the visitor's preference. The numbers
- * both read from `~/lib/plans`, which is the part that must not drift.
+ * Deliberately not the shared plan UI used inside the app: that one inherits
+ * the theme tokens and would render light-on-light here, since this page pins
+ * itself dark regardless of the visitor's preference. The numbers read from
+ * `~/lib/plans`, which is the part that must not drift.
+ *
+ * There is no second column. A comparison table with one plan in it is just a
+ * feature list wearing a table's clothes, and a greyed-out Pro column would be
+ * advertising something nobody can buy.
  */
 function LandingPlans() {
   return (
-    <div className="grid w-full gap-4 sm:grid-cols-2">
-      {(["free", "pro"] as const).map((tier) => {
-        const pro = tier === "pro";
-        return (
-          <div
-            key={tier}
-            className={cn(
-              "flex flex-col rounded-2xl border p-6 text-left",
-              pro
-                ? "border-brand/40 bg-brand/[0.06] shadow-[0_0_60px_-24px_var(--color-brand)]"
-                : "border-white/10 bg-white/[0.02]",
-            )}
-          >
-            <div className="flex items-baseline justify-between gap-3">
-              <h3
-                className={cn(
-                  "text-lg font-semibold",
-                  pro ? "text-brand" : "text-white",
-                )}
-              >
-                {planLabel(tier)}
-              </h3>
-              <p className="text-right">
-                <span className="text-2xl font-semibold text-white">
-                  {pro ? `$${PRO_PRICE_USD.toFixed(2)}` : "$0"}
-                </span>
-                <span className="ml-1 text-sm text-[#71717A]">
-                  {pro ? "/month" : "forever"}
-                </span>
-              </p>
-            </div>
+    <div className="flex w-full flex-col rounded-2xl border border-brand/30 bg-brand/[0.04] p-6 text-left shadow-[0_0_60px_-24px_var(--color-brand)]">
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="text-lg font-semibold text-brand">
+          {planLabel("free")}
+        </h3>
+        <p className="text-right">
+          <span className="text-2xl font-semibold text-white">$0</span>
+          <span className="ml-1 text-sm text-[#71717A]">forever</span>
+        </p>
+      </div>
 
-            <ul className="mt-6 flex flex-1 flex-col gap-3">
-              {PLAN_FEATURES.map((feature) => {
-                const value = pro ? feature.pro : feature.free;
-                const absent = value === false;
-                return (
-                  <li
-                    key={feature.label}
-                    className="flex items-start gap-2.5 text-sm"
-                  >
-                    {absent ? (
-                      <X
-                        aria-hidden
-                        className="mt-0.5 size-4 shrink-0 text-[#52525B]"
-                      />
-                    ) : (
-                      <Check
-                        aria-hidden
-                        className={cn(
-                          "mt-0.5 size-4 shrink-0",
-                          pro ? "text-brand" : "text-[#A1A1AA]",
-                        )}
-                      />
-                    )}
-                    <span
-                      className={absent ? "text-[#52525B]" : "text-[#A1A1AA]"}
-                    >
-                      {feature.label}
-                      {typeof value === "string" && (
-                        <span className="ml-1 font-medium text-white">
-                          {value}
-                        </span>
-                      )}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-
-            <Button
-              asChild
-              className={cn(
-                "mt-6 h-11 rounded-full font-semibold transition-transform duration-200 ease-out active:scale-[0.97]",
-                pro
-                  ? "bg-brand text-white hover:bg-brand/90"
-                  : "border border-white/15 bg-transparent text-white hover:bg-white/5",
+      <ul className="mt-6 flex flex-1 flex-col gap-3">
+        {PLAN_FEATURES.map((feature) => (
+          <li key={feature.label} className="flex items-start gap-2.5 text-sm">
+            <Check aria-hidden className="mt-0.5 size-4 shrink-0 text-brand" />
+            <span className="text-[#A1A1AA]">
+              {feature.label}
+              {typeof feature.free === "string" && (
+                <span className="ml-1 font-medium text-white">
+                  {feature.free}
+                </span>
               )}
-            >
-              <Link href="/signup">
-                {pro ? "Start with Pro" : "Start free"}
-              </Link>
-            </Button>
-          </div>
-        );
-      })}
+            </span>
+          </li>
+        ))}
+      </ul>
+
+      <Button
+        asChild
+        className="mt-6 h-11 rounded-full bg-brand font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+      >
+        <Link href="/signup">Start free</Link>
+      </Button>
     </div>
   );
 }

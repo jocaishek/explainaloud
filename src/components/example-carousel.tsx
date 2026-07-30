@@ -8,7 +8,8 @@ import {
   useSpring,
   useTransform,
 } from "framer-motion";
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
+import { scrollPageBy } from "~/lib/page-scroll";
 import { cn } from "~/lib/utils";
 
 export type Example = {
@@ -26,15 +27,113 @@ const CARD_W = 300;
 const GAP = 28;
 const PITCH = CARD_W + GAP;
 
+/** Below this the gesture is treated as vertical and left to the page. */
+const HORIZONTAL_BIAS = 1.2;
+
+/**
+ * Turn the ring with sideways gestures too — a trackpad two-finger swipe, a
+ * tilt wheel, or a horizontal drag on a touchscreen.
+ *
+ * The ring's position is a function of *vertical* scroll, and that stays true:
+ * rather than driving the cards directly, a sideways gesture scrolls the page
+ * by the same distance. One source of truth, so the two input directions can
+ * never disagree about where the ring is, and letting go at either end
+ * releases into the rest of the page exactly as a vertical scroll would.
+ *
+ * Only intercepted while the section is actually pinned and still has travel
+ * left in the gesture's direction. Otherwise the event is left alone, so a
+ * horizontal swipe outside the ring still does whatever the browser does with
+ * it — including the back-navigation gesture.
+ */
+function useHorizontalTurn(ref: React.RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const section = ref.current;
+    if (!section) return;
+
+    /** Pixels of page scroll this sideways delta should consume, or 0. */
+    function travel(dx: number) {
+      const node = ref.current;
+      if (!node || dx === 0) return 0;
+      const rect = node.getBoundingClientRect();
+      // Pinned: the sticky panel fills the viewport.
+      if (rect.top > 1 || rect.bottom < window.innerHeight - 1) return 0;
+      // Runway in the direction asked for. Without this the last card would
+      // swallow a swipe that should have carried on down the page.
+      const remaining = dx > 0 ? rect.bottom - window.innerHeight : -rect.top;
+      if (remaining <= 1) return 0;
+      return Math.sign(dx) * Math.min(Math.abs(dx), remaining);
+    }
+
+    function onWheel(event: WheelEvent) {
+      if (Math.abs(event.deltaX) < Math.abs(event.deltaY) * HORIZONTAL_BIAS) {
+        return;
+      }
+      const delta = travel(event.deltaX);
+      if (delta === 0) return;
+      // Non-passive: this also stops Safari and Chrome reading the swipe as
+      // "go back a page" while the reader is mid-ring.
+      event.preventDefault();
+      scrollPageBy(delta);
+    }
+
+    let startX = 0;
+    let startY = 0;
+    let lastX = 0;
+    let horizontal = false;
+
+    function onTouchStart(event: TouchEvent) {
+      const touch = event.touches[0];
+      if (!touch) return;
+      startX = touch.clientX;
+      startY = touch.clientY;
+      lastX = touch.clientX;
+      horizontal = false;
+    }
+
+    function onTouchMove(event: TouchEvent) {
+      const touch = event.touches[0];
+      if (!touch) return;
+      // Decide once per gesture, on the first movement big enough to have a
+      // direction. Re-deciding every frame makes a diagonal drag stutter
+      // between the two axes.
+      if (!horizontal) {
+        const dx = Math.abs(touch.clientX - startX);
+        const dy = Math.abs(touch.clientY - startY);
+        if (dx < 8 && dy < 8) return;
+        horizontal = dx > dy * HORIZONTAL_BIAS;
+        if (!horizontal) return;
+      }
+      // Dragging left (negative) walks forward, matching the direction the
+      // cards themselves move.
+      const delta = travel(lastX - touch.clientX);
+      lastX = touch.clientX;
+      if (delta === 0) return;
+      event.preventDefault();
+      scrollPageBy(delta);
+    }
+
+    section.addEventListener("wheel", onWheel, { passive: false });
+    section.addEventListener("touchstart", onTouchStart, { passive: true });
+    section.addEventListener("touchmove", onTouchMove, { passive: false });
+    return () => {
+      section.removeEventListener("wheel", onWheel);
+      section.removeEventListener("touchstart", onTouchStart);
+      section.removeEventListener("touchmove", onTouchMove);
+    };
+  }, [ref]);
+}
+
 /**
  * Scroll-driven horizontal ring of example sessions.
  *
  * The section is deliberately tall; an inner panel sticks to the viewport
  * while it scrolls past, and vertical scroll progress is remapped onto
  * horizontal travel. So a normal downward scroll walks sideways through the
- * examples and then releases into the rest of the page — no wheel hijacking,
- * no scroll listeners, just a tall element and a sticky child, which means
- * Lenis's inertia carries straight through it.
+ * examples and then releases into the rest of the page — just a tall element
+ * and a sticky child, which means Lenis's inertia carries straight through it.
+ *
+ * Sideways gestures work too, via `useHorizontalTurn`: they are converted into
+ * the same vertical scroll rather than moving the cards on their own.
  *
  * Cards sit on an arc: each one rotates and drops away from the centre in 3D,
  * so the row reads as the surface of a globe turning past you rather than as
@@ -50,6 +149,10 @@ export function ExampleCarousel({
 }) {
   const shouldReduceMotion = useReducedMotion();
   const sectionRef = useRef<HTMLDivElement>(null);
+
+  // Safe to call unconditionally: under reduced motion the ref is never
+  // attached, so the hook finds no node and binds nothing.
+  useHorizontalTurn(sectionRef);
 
   const { scrollYProgress } = useScroll({
     target: sectionRef,
