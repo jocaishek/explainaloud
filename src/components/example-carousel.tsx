@@ -9,6 +9,7 @@ import {
   useTransform,
 } from "framer-motion";
 import { useEffect, useRef } from "react";
+import { useMediaQuery } from "~/hooks/use-media-query";
 import { scrollPageBy } from "~/lib/page-scroll";
 import { cn } from "~/lib/utils";
 
@@ -29,6 +30,16 @@ const PITCH = CARD_W + GAP;
 
 /** Below this the gesture is treated as vertical and left to the page. */
 const HORIZONTAL_BIAS = 1.2;
+
+/**
+ * Page scroll per pixel of sideways gesture.
+ *
+ * 1:1 was the obvious choice and the wrong one: the pin gives each card only
+ * about a quarter of a viewport, so matching the gesture to page pixels meant
+ * a full swipe across the trackpad advanced barely two cards. This makes a
+ * sideways flick cover roughly what a downward flick does.
+ */
+const HORIZONTAL_GAIN = 2.2;
 
 /**
  * Turn the ring with sideways gestures too — a trackpad two-finger swipe, a
@@ -61,7 +72,8 @@ function useHorizontalTurn(ref: React.RefObject<HTMLDivElement | null>) {
       // swallow a swipe that should have carried on down the page.
       const remaining = dx > 0 ? rect.bottom - window.innerHeight : -rect.top;
       if (remaining <= 1) return 0;
-      return Math.sign(dx) * Math.min(Math.abs(dx), remaining);
+      const wanted = Math.abs(dx) * HORIZONTAL_GAIN;
+      return Math.sign(dx) * Math.min(wanted, remaining);
     }
 
     function onWheel(event: WheelEvent) {
@@ -148,6 +160,7 @@ export function ExampleCarousel({
   header?: React.ReactNode;
 }) {
   const shouldReduceMotion = useReducedMotion();
+  const wide = useMediaQuery("(min-width: 768px)");
   const sectionRef = useRef<HTMLDivElement>(null);
 
   // Safe to call unconditionally: under reduced motion the ref is never
@@ -175,8 +188,14 @@ export function ExampleCarousel({
   const halfTravel = ((examples.length - 1) * PITCH) / 2;
   const x = useTransform(progress, [0, 1], [halfTravel, -halfTravel]);
 
-  // Reduced motion: fall back to a plain, user-driven horizontal scroller.
-  if (shouldReduceMotion) {
+  // Phones and reduced motion both get the plain, user-driven scroller.
+  //
+  // On a phone the 3D ring is the wrong trade twice over: it costs seven
+  // blurred, transformed panels animating against every scroll frame, and it
+  // buys a gesture — pin, then walk sideways — that a thumb already does
+  // better by just swiping the row. This component only renders on the client,
+  // so choosing here costs nothing at hydration.
+  if (shouldReduceMotion || !wide) {
     return (
       <div className="py-16">
         {header}

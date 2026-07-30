@@ -145,10 +145,35 @@
 
 .glass {
   background: linear-gradient(155deg, var(--glass-from), var(--glass-to));
+  /* Written unprefixed and left to the compiler, which is where prefixes
+     belong. Note it currently emits only `-webkit-backdrop-filter` for this
+     project's default targets, so the blur is missing in Firefox — a
+     browserslist question, not something another hand-written line fixes. */
   backdrop-filter: blur(24px) saturate(180%);
-  -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid var(--glass-border);
   box-shadow: inset 0 1px 1px var(--glass-highlight);
+}
+
+/* Phones drop the backdrop blur.
+ *
+ * `backdrop-filter` is the most expensive thing on this page: the compositor
+ * re-samples and blurs everything behind every glass surface on each frame,
+ * and the landing page has more than a dozen of them. On a phone GPU that is
+ * the difference between a page that settles and one that keeps working after
+ * it has loaded. The panels keep their translucent fill and their lit edge, so
+ * at that size the loss is a blur nobody can see through a 6-inch screen
+ * anyway. */
+@media (max-width: 767px) {
+  .glass,
+  .capsule {
+    backdrop-filter: none;
+  }
+  .dark .glass {
+    background: rgba(24, 24, 27, 0.72);
+  }
+  .dark .capsule {
+    background: rgba(23, 23, 23, 0.92);
+  }
 }
 
 /* Hide scrollbars on the horizontal card rails while keeping them scrollable. */
@@ -167,7 +192,6 @@
 .capsule {
   background: var(--capsule-bg);
   backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
   box-shadow:
     inset 0 1px 0 0 var(--glass-highlight),
     0 0 0 1px var(--glass-border),

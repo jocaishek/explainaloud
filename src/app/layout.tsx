@@ -5,9 +5,11 @@ import { siteUrl } from "~/lib/site";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 
+/* Three weights, not four. Nothing in the app uses `font-bold`, so 700 was a
+   whole extra face fetched on every first load and never drawn. */
 const poppins = Poppins({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["400", "500", "600"],
   variable: "--font-sans",
 });
 

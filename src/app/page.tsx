@@ -8,9 +8,10 @@ import {
   useTransform,
 } from "framer-motion";
 import { ArrowRight, Check } from "lucide-react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
-import { type Example, ExampleCarousel } from "~/components/example-carousel";
+import type { Example } from "~/components/example-carousel";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { Magnetic } from "~/components/magnetic";
 import { Marquee } from "~/components/marquee";
@@ -22,11 +23,30 @@ import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
 import { useCyclingTypewriter } from "~/hooks/use-cycling-typewriter";
 import { useInView } from "~/hooks/use-in-view";
+import { useMediaQuery } from "~/hooks/use-media-query";
 import { PLAN_FEATURES, planLabel } from "~/lib/plans";
 import { cn } from "~/lib/utils";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 const EASE_CSS = "ease-[cubic-bezier(0.23,1,0.32,1)]";
+
+/**
+ * The ring is the single heaviest thing on the page — seven glass panels, each
+ * with six scroll-driven transforms — and it is entirely below the fold. Held
+ * back from the first load and from the prerendered HTML, so a phone paints
+ * and becomes usable before any of it exists. Rendering client-side only also
+ * frees the component to pick a cheaper layout on small screens without a
+ * hydration mismatch to correct.
+ */
+const ExampleCarousel = dynamic(
+  () => import("~/components/example-carousel").then((m) => m.ExampleCarousel),
+  {
+    ssr: false,
+    // Roughly a screen, so the page below does not jump up while the section
+    // is still on its way.
+    loading: () => <div className="h-screen w-full" />,
+  },
+);
 
 function Reveal({
   children,
@@ -124,6 +144,7 @@ function WordReveal({
 
 export default function Home() {
   const journeyRef = useRef<HTMLDivElement>(null);
+  const wide = useMediaQuery("(min-width: 768px)");
 
   return (
     // `dark` is pinned here rather than inherited: the whole marketing design
@@ -138,7 +159,11 @@ export default function Home() {
           sign-up cue, so the line is established at the top of the page rather
           than appearing five sections in with no lead-in. */}
       <div ref={journeyRef} className="relative w-full">
-        <ScrollSquiggle target={journeyRef} />
+        {/* Desktop only, and now genuinely so. The line was already hidden
+            below `md`, but hiding it in CSS still mounted it: 200
+            getPointAtLength() samples and a live scroll spring, on the phones
+            that can least afford them, for something nobody could see. */}
+        {wide && <ScrollSquiggle target={journeyRef} />}
 
         {/* ── Section 1: Hero ─────────────────────────────────────────── */}
         <section className="relative flex w-full flex-col items-center px-6 pt-16 pb-16 sm:pt-24 sm:pb-20">
@@ -211,7 +236,7 @@ export default function Home() {
                   <p className="max-w-md text-[#A1A1AA]">
                     A topic, an explanation scored on how well you actually said
                     it, and the exact step you skipped. Scroll down or swipe
-                    sideways to turn the ring.
+                    sideways to move through them.
                   </p>
                 </Reveal>
               </div>
@@ -282,6 +307,39 @@ export default function Home() {
           </div>
         </section>
 
+        {/* ── Section 5: The question at the end of each part ────────── */}
+        <section className="w-full px-6 py-24">
+          <div className="mx-auto max-w-5xl">
+            <Eyebrow
+              index="05"
+              label="Questions, not recital"
+              className="mb-4"
+            />
+            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+              <WordReveal
+                text="Every part ends with a question"
+                accent={["question"]}
+              />
+            </h2>
+            <Reveal delay={120} className="mt-5">
+              <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
+                You are not asked to recite the whole course back. Each section
+                closes on one question, you answer it out loud, and that answer
+                is what gets marked.
+              </p>
+            </Reveal>
+
+            <div className="mt-12 grid gap-4 md:grid-cols-2">
+              <Reveal>
+                <QuestionPanel />
+              </Reveal>
+              <Reveal delay={100}>
+                <AnswerPanel />
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
         {/* ── Section 3: Feature grid ──────────────────────────────────── */}
         <section className="relative w-full px-6 py-24">
           {/* The one orb left on the page below the hero. Glass only reads as
@@ -291,7 +349,7 @@ export default function Home() {
           <GlowOrb className="top-16 left-1/2 h-80 w-[44rem] -translate-x-1/2 opacity-[0.12]" />
 
           <Eyebrow
-            index="05"
+            index="06"
             label="What you get"
             className="mx-auto mb-4 max-w-6xl"
           />
@@ -392,7 +450,7 @@ export default function Home() {
         {/* ── Section 4: How it works, in detail ──────────────────────── */}
         <section className="relative w-full px-6 py-24">
           <div className="mx-auto mb-20 flex max-w-2xl flex-col items-center text-center">
-            <Eyebrow index="06" label="The flow" className="mb-4" />
+            <Eyebrow index="07" label="The flow" className="mb-4" />
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               <WordReveal text="How it works" accent={["works"]} />
             </h2>
@@ -434,7 +492,7 @@ export default function Home() {
       {/* ── Section 5: Pricing ──────────────────────────────────────── */}
       <section className="relative flex w-full flex-col items-center px-6 pt-24 pb-14">
         <div className="relative flex flex-col items-center text-center">
-          <Eyebrow index="07" label="Pricing" className="mb-4" />
+          <Eyebrow index="08" label="Pricing" className="mb-4" />
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
             {/* The accent list is matched after stripping full stops, so the
                 word is listed without one. */}
@@ -457,7 +515,7 @@ export default function Home() {
         <AccentDivider />
 
         <div className="relative mt-10 flex flex-col items-center text-center">
-          <Eyebrow index="08" label="Get started" className="mb-4" />
+          <Eyebrow index="09" label="Get started" className="mb-4" />
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
             <WordReveal text="Create your account" accent={["account"]} />
           </h2>
@@ -1156,6 +1214,95 @@ function LiveTranscript() {
       <p className="min-h-[2.5rem] text-xs text-[#A1A1AA]">
         <TypedText phrases={TRANSCRIPT_LINES} />
       </p>
+    </div>
+  );
+}
+
+/* Written the way the course builder writes them: one question per section,
+   open-ended, answerable in a couple of sentences by someone who followed it. */
+const COURSE_QUESTIONS = [
+  { section: "Light reactions", done: true },
+  { section: "The Calvin cycle", done: false },
+  { section: "Limiting factors", done: false },
+];
+
+const ASKED =
+  "Why does the Calvin cycle need the light reactions to run first?";
+
+/** The question card, as it appears at the end of a section. */
+function QuestionPanel() {
+  return (
+    <div className="glass flex h-full flex-col rounded-2xl p-6">
+      <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
+        Section 2 of 3
+      </span>
+
+      <p className="mt-4 rounded-lg border border-brand/20 bg-brand/[0.07] p-4 text-lg leading-relaxed text-white">
+        {ASKED}
+      </p>
+
+      <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-4">
+        {COURSE_QUESTIONS.map((item, i) => (
+          <div key={item.section} className="flex items-center gap-2.5 text-xs">
+            <span
+              className={cn(
+                "size-1.5 shrink-0 rounded-full",
+                item.done
+                  ? "bg-green-500"
+                  : i === 1
+                    ? "bg-brand"
+                    : "bg-white/20",
+              )}
+            />
+            <span className={i === 1 ? "text-white" : "text-[#A1A1AA]"}>
+              {item.section}
+            </span>
+            <span className="ml-auto shrink-0 font-mono text-[10px] tracking-[0.12em] text-[#71717A] uppercase">
+              {item.done ? "Answered" : i === 1 ? "Asking" : "Next"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * What comes back from answering it. Deliberately shows a partial answer
+ * scoring well: the whole point of asking one question is that you are marked
+ * on the answer, not on everything you failed to mention.
+ */
+function AnswerPanel() {
+  return (
+    <div className="glass flex h-full flex-col rounded-2xl p-6">
+      <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
+        Your answer, marked
+      </span>
+
+      <p className="mt-4 text-sm leading-relaxed text-[#A1A1AA] italic">
+        &ldquo;Because it needs the ATP and the NADPH — the light part makes
+        those, and the cycle spends them fixing the carbon.&rdquo;
+      </p>
+
+      <div className="mt-5 flex items-center gap-4">
+        <span className="font-mono text-3xl font-semibold text-white tabular-nums">
+          82
+        </span>
+        <span className="text-xs leading-5 text-[#A1A1AA]">
+          Answered the question that was asked, and got it right.
+        </span>
+      </div>
+
+      <div className="mt-auto flex flex-col gap-2 border-t border-white/10 pt-4 text-xs">
+        <span className="flex items-start gap-2.5 text-[#A1A1AA]">
+          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-green-500" />
+          Named both products and what spends them
+        </span>
+        <span className="flex items-start gap-2.5 text-[#A1A1AA]">
+          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" />
+          Did not say why NADPH specifically
+        </span>
+      </div>
     </div>
   );
 }
