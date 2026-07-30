@@ -28,6 +28,14 @@ const requestSchema = z.object({
   // is the context that makes that slice judgeable on its own.
   context: z.string().max(MAX_CONTEXT_CHARS).optional(),
   sessionId: z.uuid().optional(),
+  /**
+   * Which section's question the student is answering.
+   *
+   * Only an index crosses the wire. The question text and the key points are
+   * read from the stored course on this side, so a caller cannot choose what
+   * they are graded against by sending a friendlier question with it.
+   */
+  sectionIndex: z.number().int().nonnegative().optional(),
 });
 
 /**
@@ -99,8 +107,18 @@ export async function POST(
     return NextResponse.json({ error: "Topic not found." }, { status: 404 });
   }
 
-  const keyPoints =
-    course.generated?.sections.flatMap((s) => s.key_points) ?? [];
+  // A question narrows the grading to the section it came from. That is the
+  // whole point of asking one: an answer is complete when it answers what was
+  // asked, so the denominator has to be what was asked and nothing else.
+  const sections = course.generated?.sections ?? [];
+  const section =
+    parsedBody.data.sectionIndex !== undefined
+      ? sections[parsedBody.data.sectionIndex]
+      : undefined;
+  const question = section?.quiz?.trim() || undefined;
+  const keyPoints = section
+    ? section.key_points
+    : sections.flatMap((s) => s.key_points);
 
   if (keyPoints.length === 0) {
     return NextResponse.json(
@@ -123,6 +141,7 @@ export async function POST(
     const result = await orchestrateExplanation({
       topic: course.topic,
       keyPoints,
+      question,
       transcript,
       grounded,
       sources: sources ?? [],

@@ -20,6 +20,16 @@ type Session = {
   started_at: string;
   ended_at: string | null;
   score: number | null;
+  /** Which section's question this answered; null for pre-question sessions. */
+  question_section?: number | null;
+};
+
+/** One section's question, as offered on the record screen. */
+export type CourseQuestion = {
+  /** Position in `courses.generated.sections` — what grading is scoped to. */
+  index: number;
+  section: string;
+  question: string;
 };
 
 type Span = {
@@ -262,6 +272,8 @@ function initSegmentEnd(bytes: Uint8Array, mimeType: string) {
 export function RecordConsole({
   courseId,
   initialSessions,
+  questions,
+  initialQuestion,
   courseReady,
   recordingsUsed,
   unlimited,
@@ -270,6 +282,10 @@ export function RecordConsole({
 }: {
   courseId: string;
   initialSessions: Session[];
+  /** Empty when the course is ungenerated, or generated without any quizzes. */
+  questions: CourseQuestion[];
+  /** Index into `questions` to open on — the first one not yet answered. */
+  initialQuestion: number;
   courseReady: boolean;
   recordingsUsed: number;
   unlimited: boolean;
@@ -296,6 +312,14 @@ export function RecordConsole({
   const [displayedSessionId, setDisplayedSessionId] = useState<string | null>(
     null,
   );
+  // Which question is on screen. Clamped on read rather than on write, so a
+  // course that regenerates with fewer sections cannot leave this dangling.
+  const [askedAt, setAskedAt] = useState(initialQuestion);
+  const asked = questions[Math.min(askedAt, questions.length - 1)];
+  // Pinned when recording starts: the answer must be graded against the
+  // question that was on screen when they began, not one they scrolled to
+  // mid-sentence.
+  const answeringRef = useRef<CourseQuestion | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadingCheckId, setLoadingCheckId] = useState<string | null>(null);
@@ -444,6 +468,9 @@ export function RecordConsole({
               transcript: tail,
               mode: "live",
               ...(context ? { context } : {}),
+              ...(answeringRef.current
+                ? { sectionIndex: answeringRef.current.index }
+                : {}),
             }),
           },
           LIVE_REQUEST_TIMEOUT_MS,
@@ -771,6 +798,8 @@ export function RecordConsole({
           user_id: user.id,
           transcript: null,
           started_at: startedAt,
+          question: answeringRef.current?.question ?? null,
+          question_section: answeringRef.current?.index ?? null,
         })
         .select("id")
         .single<{ id: string }>();
@@ -958,6 +987,8 @@ export function RecordConsole({
               speech_metrics: speechMetrics,
               started_at: startedAtRef.current ?? new Date().toISOString(),
               ended_at: new Date().toISOString(),
+              question: answeringRef.current?.question ?? null,
+              question_section: answeringRef.current?.index ?? null,
             })
             .select("id, transcript, started_at, ended_at, score")
             .single<Session>();
@@ -1024,6 +1055,9 @@ export function RecordConsole({
             transcript: text,
             mode: "final",
             sessionId,
+            ...(answeringRef.current
+              ? { sectionIndex: answeringRef.current.index }
+              : {}),
           }),
         },
         ANALYZE_TIMEOUT_MS,
@@ -1162,6 +1196,9 @@ export function RecordConsole({
 
     setError(null);
     setNotice(null);
+    // Whatever is on screen now is what this recording answers, for the whole
+    // of its life — including the grading that happens after they stop.
+    answeringRef.current = asked ?? null;
 
     // Ask for the microphone FIRST and wait for the user to answer the
     // browser prompt. A denied prompt must not burn one of the day's five
@@ -1479,6 +1516,20 @@ export function RecordConsole({
 
   return (
     <div className="flex flex-col items-center gap-8">
+      {asked && (
+        <QuestionCard
+          asked={asked}
+          position={Math.min(askedAt, questions.length - 1)}
+          total={questions.length}
+          // Locked while recording: swapping the question mid-answer would
+          // grade what they are saying against something they were never asked.
+          locked={status === "recording" || busy}
+          onNext={() =>
+            setAskedAt((current) => (current + 1) % questions.length)
+          }
+        />
+      )}
+
       <div className="flex flex-col items-center gap-4 text-center">
         <button
           type="button"
@@ -1513,7 +1564,9 @@ export function RecordConsole({
                 ? "Reading it back…"
                 : status === "recording"
                   ? "I'm done"
-                  : "Start explaining"}
+                  : asked
+                    ? "Answer out loud"
+                    : "Start explaining"}
         </Button>
 
         {status === "recording" && (
@@ -1724,6 +1777,57 @@ export function RecordConsole({
  * there are no spans, so the raw text shows in the neutral colour — the
  * student always sees their words immediately, colour catches up after.
  */
+/**
+ * The question this recording answers.
+ *
+ * It sits above the microphone because it is the instruction, not a footnote:
+ * before this the screen said "Start explaining" and left the student to guess
+ * the scope, which is how someone ends up explaining a whole topic and being
+ * marked down for the parts they never claimed to be covering.
+ */
+function QuestionCard({
+  asked,
+  position,
+  total,
+  locked,
+  onNext,
+}: {
+  asked: CourseQuestion;
+  position: number;
+  total: number;
+  locked: boolean;
+  onNext: () => void;
+}) {
+  return (
+    <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/[0.06] p-5">
+      <div className="flex items-center justify-between gap-4">
+        <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+          Question {position + 1} of {total} · {asked.section}
+        </span>
+        {total > 1 && (
+          <button
+            type="button"
+            onClick={onNext}
+            disabled={locked}
+            className="shrink-0 text-xs font-medium text-brand transition-opacity hover:opacity-80 disabled:opacity-40"
+          >
+            Ask a different one
+          </button>
+        )}
+      </div>
+
+      <p className="text-lg leading-relaxed font-medium text-strong">
+        {asked.question}
+      </p>
+
+      <p className="text-xs leading-5 text-subtle">
+        Answer just this. You are marked on the answer, not on everything else
+        the course covers.
+      </p>
+    </div>
+  );
+}
+
 function ColouredTranscript({
   spans,
   fallback,

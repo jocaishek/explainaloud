@@ -713,6 +713,15 @@ type ExplanationParams = {
   sources: SourceRow[];
   mode: "live" | "final";
   /**
+   * The section question this recording answers.
+   *
+   * When set, `keyPoints` are that section's alone and both prompts are told
+   * what was asked, so the answer is judged against the question instead of
+   * against the whole course. Absent for sessions recorded before questions
+   * existed, and for courses that have no sections to ask about.
+   */
+  question?: string;
+  /**
    * Speech that came before `transcript` and has already been graded.
    *
    * Live passes grade only the newest slice of the explanation, so that the
@@ -941,6 +950,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
       report = completeCoverageReport({
         draft: coaching.data,
         keyPoints: params.keyPoints,
+        scoped: !!params.question,
         covered,
         partial,
         thorough,
