@@ -524,10 +524,10 @@ export function RecordConsole({
   }, [status]);
 
   // When the writer finishes after the count has already run out, start then.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `resumeRecording` is rebuilt every render; this fires on the writer settling, not on the closure changing
   useEffect(() => {
     writingRef.current = writing;
     if (!writing && countdown === 0) resumeRecording();
-    // biome-ignore lint/correctness/useExhaustiveDependencies: `resumeRecording` is rebuilt every render; this fires on the writer settling, not on it
   }, [writing, countdown]);
 
   const remaining = unlimited
