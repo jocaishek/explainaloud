@@ -347,6 +347,11 @@ Rules:
   Brevity and informality are not reasons to withhold it. Marking a point
   uncovered that the student did explain is the worst error you can make here,
   because it tells someone who understands the material that they do not.
+- When the student got the substance of a point but not all of it, put it in
+  "partial_key_points" instead of leaving it out. Key points are often two
+  facts in one sentence: for "The light-dependent reactions produce ATP and
+  NADPH", a student who said the light reactions make ATP is partial, not
+  missing. Half credit is the honest answer there; zero is not.
 - Then, separately, add to "thorough_key_points" only those covered indices the
   student genuinely EXPLAINED rather than merely named. Stating a fact is
   coverage; saying how or why it works is thoroughness. "The Calvin cycle
@@ -373,7 +378,8 @@ Return JSON:
     }
   ],
   "covered_key_points": [the bracketed indices of key points the student got right],
-  "thorough_key_points": [the subset of those indices they explained, not just named],
+  "partial_key_points": [indices where they got the substance but not all of it],
+  "thorough_key_points": [the subset of covered indices they explained, not just named],
   "confidence": 0-100
 }`;
 }

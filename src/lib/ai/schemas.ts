@@ -166,6 +166,16 @@ export const spansSchema = z.object({
     .min(1),
   covered_key_points: z.array(z.number().int().nonnegative()).default([]),
   /**
+   * Points where the student got the substance but not all of it.
+   *
+   * Key points are frequently compound — "the light-dependent reactions
+   * produce ATP and NADPH" is two facts wearing one number. Under a binary
+   * decision a student who said ATP scored the same as one who said nothing,
+   * which is how an accurate explanation ended up at 8 out of 100. These earn
+   * half credit.
+   */
+  partial_key_points: z.array(z.number().int().nonnegative()).default([]),
+  /**
    * The subset of covered points the student actually *explained* rather than
    * merely named.
    *

@@ -42,6 +42,21 @@ function reportCoversConcept(report: CoachingReport, keyPoint: string) {
 }
 
 /**
+ * How the three signals combine.
+ *
+ * The base is deliberately non-zero: saying true things about the subject is
+ * itself evidence of knowing something, and a rubric that awards nothing for it
+ * tells an accurate student they know nothing. Coverage carries the most weight
+ * because breadth is what the course asks for, and depth is close behind
+ * because explaining beats naming. They sum to 1, so a student who covers
+ * everything, explains all of it, and says nothing false scores 100 -- and
+ * nothing short of that does.
+ */
+const SCORE_BASE = 0.3;
+const SCORE_COVERAGE = 0.4;
+const SCORE_DEPTH = 0.3;
+
+/**
  * Shortest phrase worth matching on. Below this, "the" or "and" would match
  * almost any key point and let anything through.
  */
@@ -92,40 +107,71 @@ export function completeCoverageReport({
   draft,
   keyPoints,
   covered,
+  partial,
   thorough,
   spans,
 }: {
   draft: CoachingReport;
   keyPoints: string[];
   covered: Set<number>;
+  /** Points whose substance was there but incomplete. Half credit. */
+  partial: Set<number>;
   /** Covered points the student explained rather than merely named. */
   thorough: Set<number>;
   spans: EvaluatedSpan[];
 }): CoachingReport {
-  const missingKeyPoints = keyPoints.filter((_, index) => !covered.has(index));
+  // Partially covered points are not missing. Listing them as weaknesses is
+  // what produced "Missing Step: the light-dependent reactions produce ATP and
+  // NADPH" for a student who had just said the light reactions make ATP.
+  const missingKeyPoints = keyPoints.filter(
+    (_, index) => !covered.has(index) && !partial.has(index),
+  );
   const claimSpans = spans.filter((span) => span.status !== "neutral");
   const correctClaims = claimSpans.filter(
     (span) => span.status === "correct",
   ).length;
-  // Coverage answers "did they say it", thoroughness "did they explain it".
+  // A tester explained photosynthesis accurately, every span came back green,
+  // and the score was 8 out of 100. Two fractions of the whole course were
+  // being multiplied together: 2 of 12 points covered and 0 of 12 explained in
+  // depth, so a partial-but-correct explanation was penalised twice for the
+  // same thing. Nobody speaking for two minutes covers a twelve-point rubric,
+  // and a score that assumes they should is measuring recitation.
   //
-  // Coverage alone made full marks cheap: name every point in a sentence each
-  // and the rubric had nothing left to ask for. Weighting the two equally means
-  // 100 requires every point explained, not merely mentioned, and multiplying
-  // by accuracy means one wrong claim still pulls it down. Someone who lists
-  // labels correctly now lands near 50, which is the honest reading of what
-  // they demonstrated.
-  const coverage = keyPoints.length > 0 ? covered.size / keyPoints.length : 0;
-  const thoroughness =
-    keyPoints.length > 0
-      ? // Guard against a model returning indices not present in `covered`.
-        [...thorough].filter((index) => covered.has(index)).length /
-        keyPoints.length
-      : 0;
+  // Three signals now, weighted rather than multiplied:
+  //
+  //   accuracy   was what you said true? Multiplies everything, because
+  //              being wrong is different in kind from being incomplete.
+  //   coverage   how much of the material you reached, with half credit for
+  //              points whose substance you got.
+  //   depth      of the points you did cover, how many you explained rather
+  //              than named. Measured against what you covered, not against
+  //              the whole course, so a narrow but well-explained answer is
+  //              not punished for its narrowness twice.
+  //
+  // The base term is what says "you spoke accurately about this subject" has
+  // value on its own. Full marks still require covering the material and
+  // explaining it, so 100 stays rare.
   const accuracy =
     claimSpans.length > 0 ? correctClaims / claimSpans.length : 0;
-  const understanding = coverage * 0.5 + thoroughness * 0.5;
-  const score = Math.round(understanding * accuracy * 100);
+
+  const partialOnly = [...partial].filter((index) => !covered.has(index));
+  const coverage =
+    keyPoints.length > 0
+      ? Math.min(
+          1,
+          (covered.size + partialOnly.length * 0.5) / keyPoints.length,
+        )
+      : 0;
+
+  // Guard against a model returning indices not present in `covered`.
+  const thoroughCount = [...thorough].filter((index) =>
+    covered.has(index),
+  ).length;
+  const depth = covered.size > 0 ? thoroughCount / covered.size : 0;
+
+  const understanding =
+    SCORE_BASE + SCORE_COVERAGE * coverage + SCORE_DEPTH * depth;
+  const score = Math.round(accuracy * understanding * 100);
   // Drop anything the coach invented before it can reach a student.
   const flaggedSpanTexts = spans
     .filter((span) => span.status === "gap")
@@ -142,19 +188,18 @@ export function completeCoverageReport({
       explanation: `The course material says: ${keyPoint}`,
     }));
   const missingCount = missingKeyPoints.length;
+  const partialNote =
+    partialOnly.length > 0
+      ? ` You partly covered ${partialOnly.length} more.`
+      : "";
   const coverageVerdict =
     missingCount === 0
-      ? `You correctly covered all ${keyPoints.length} course key points.`
-      : `You correctly covered ${covered.size} of ${keyPoints.length} course key points. ${missingCount} key detail${missingCount === 1 ? " is" : "s are"} still missing.`;
+      ? `You covered all ${keyPoints.length} course key points.`
+      : `You covered ${covered.size} of ${keyPoints.length} course key points.${partialNote} The other ${missingCount} you did not get to — that is not the same as getting them wrong.`;
   const accuracyVerdict =
     claimSpans.length > 0
       ? ` ${correctClaims} of ${claimSpans.length} checkable claim${claimSpans.length === 1 ? " was" : "s were"} accurate.`
       : "";
-  // Without this the score is inexplicable: someone who covered everything and
-  // said nothing wrong would see a number well under 100 and no reason for it.
-  const thoroughCount = [...thorough].filter((index) =>
-    covered.has(index),
-  ).length;
   const depthVerdict =
     covered.size > 0 && thoroughCount < covered.size
       ? ` You explained ${thoroughCount} of them in depth; the rest you stated without saying how or why.`
