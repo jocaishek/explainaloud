@@ -832,6 +832,7 @@ function localGapReport({
     // understates rather than flatters, which is the right way to be wrong when
     // the grader is degraded.
     thorough: new Set<number>(),
+    partial: new Set<number>(),
     draft: {
       score: 0,
       verdict: "",
@@ -863,6 +864,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
 
   let spans: EvaluatedTranscriptSpan[];
   let covered: Set<number>;
+  let partial: Set<number>;
   let thorough: Set<number>;
   let detectionProvider: "gemini" | "groq" | "local";
   let detectionStatus: AgentStep["status"] = "completed";
@@ -883,6 +885,10 @@ export async function orchestrateExplanation(params: ExplanationParams) {
       detection.data.covered_key_points,
       params.keyPoints.length,
     );
+    partial = coveredKeyPointIndices(
+      detection.data.partial_key_points,
+      params.keyPoints.length,
+    );
     thorough = coveredKeyPointIndices(
       detection.data.thorough_key_points,
       params.keyPoints.length,
@@ -893,7 +899,9 @@ export async function orchestrateExplanation(params: ExplanationParams) {
     const fallback = localTranscriptEvaluation(params);
     spans = fallback.spans;
     covered = fallback.covered;
-    // Vocabulary matching cannot tell a mechanism from a mention.
+    // Vocabulary matching can tell neither a mechanism from a mention nor a
+    // half-covered point from a whole one.
+    partial = new Set<number>();
     thorough = new Set<number>();
     detectionProvider = "local";
     detectionStatus = "degraded";
@@ -934,6 +942,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
         draft: coaching.data,
         keyPoints: params.keyPoints,
         covered,
+        partial,
         thorough,
         spans,
       });
