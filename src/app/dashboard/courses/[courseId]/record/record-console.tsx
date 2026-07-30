@@ -1603,7 +1603,9 @@ export function RecordConsole({
     // the grading that happens after it stops.
     const podcast = mode === "podcast" && questions.length > 0;
     podcastRef.current = podcast;
-    const drawn = podcast ? drawQuestions() : [];
+    // Already drawn when the mode was chosen; redrawn only if that never
+    // happened, so what was on screen is what gets asked.
+    const drawn = podcast ? (asking.length > 0 ? asking : drawQuestions()) : [];
     askingRef.current = drawn;
     setAsking(drawn);
     segmentIndexRef.current = 0;
@@ -1919,7 +1921,8 @@ export function RecordConsole({
         : "";
   const outOfQuota = !unlimited && remaining === 0 && status !== "recording";
   const running = status === "recording" || status === "between";
-  const live = podcastRef.current ? asking[segmentIndex] : asked;
+  const live =
+    mode === "podcast" || podcastRef.current ? asking[segmentIndex] : asked;
   // The last question ends the whole recording; the others just end an answer.
   const lastQuestion = !podcastRef.current || segmentIndex >= asking.length - 1;
   /**
@@ -1942,9 +1945,7 @@ export function RecordConsole({
                 : "Next question"
               : mode === "podcast" && questions.length > 0
                 ? "Start the interview"
-                : asked
-                  ? "Answer out loud"
-                  : "Start explaining";
+                : "Start explaining";
   const primaryAction = () => {
     if (status === "between") return resumeRecording();
     if (status !== "recording") return void startRecording();
@@ -1959,7 +1960,17 @@ export function RecordConsole({
       {!running && !busy && questions.length > 0 && (
         <ModeChooser
           mode={mode}
-          onChange={setMode}
+          onChange={(next) => {
+            setMode(next);
+            // Draw now so the card below shows the interview that is coming,
+            // and draw again on every switch back so a second look at podcast
+            // mode is a second set of questions.
+            const drawn = next === "podcast" ? drawQuestions() : [];
+            askingRef.current = drawn;
+            setAsking(drawn);
+            setSegmentIndex(0);
+            segmentIndexRef.current = 0;
+          }}
           questionCount={Math.min(PODCAST_QUESTIONS, questions.length)}
           minutes={Math.round(maxRecordingMs / 60_000)}
         />
@@ -1968,8 +1979,8 @@ export function RecordConsole({
       {live && (mode === "podcast" || running) && (
         <QuestionCard
           asked={live}
-          position={podcastRef.current ? segmentIndex : askedAt}
-          total={podcastRef.current ? asking.length : questions.length}
+          position={mode === "podcast" ? segmentIndex : askedAt}
+          total={mode === "podcast" ? asking.length : questions.length}
           // Locked mid-recording: swapping the question would grade what they
           // are saying against something they were never asked.
           locked={running || busy || mode === "podcast"}
