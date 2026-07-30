@@ -266,11 +266,36 @@ ${JSON.stringify(params.draft)}`;
  * student's own words and does nothing else, which is far more reliable than
  * asking it to teach and grade in the same call.
  */
+/**
+ * The framing that turns "recite the course" into "answer this".
+ *
+ * Without it the model treats the key points as a checklist the student was
+ * meant to walk, and every unmentioned one reads as a failure. With a question
+ * in hand it has a scope: the answer is complete when it answers what was
+ * asked, and material outside that is not missing, it was not requested.
+ */
+function askedFraming(question?: string) {
+  if (!question) return "";
+  return `THE STUDENT WAS ASKED THIS QUESTION:
+"""
+${question}
+"""
+
+They are answering that question, not delivering the whole course. The key
+points below are the ones this question is about, and they are the only thing
+to measure the answer against. Do not expect, look for, or penalise the absence
+of anything outside them.
+
+`;
+}
+
 export function gapDetectionPrompt(params: {
   topic: string;
   keyPoints: string[];
   transcript: string;
   grounded: boolean;
+  /** The section question this recording answers, if one was asked. */
+  question?: string;
   /**
    * What the student already said before this excerpt, for judging claims that
    * only make sense in context ("that means it doubles"). Read-only: it is not
@@ -287,7 +312,7 @@ ${PRECISION_RULE}
 
 TOPIC: ${params.topic}
 
-KEY POINTS a correct explanation must contain:
+${askedFraming(params.question)}KEY POINTS ${params.question ? "a complete answer to that question contains" : "a correct explanation must contain"}:
 ${params.keyPoints.map((p, i) => `[${i}] ${p}`).join("\n")}
 ${
   params.context
@@ -330,7 +355,7 @@ Rules:
   "correct", even when the surrounding explanation skipped a step. Omissions
   are reported through "covered_key_points" and nowhere else.
 - "off-topic" means it does not address ${params.topic} at all. It does not mean
-  "absent from the key points".
+  "absent from the key points"${params.question ? ", and it does not mean the student wandered\n  slightly wide of the question — true, relevant background is still correct" : ""}.
 - Use "neutral" only for filler, false starts, or connective words. Do not mark
   an entire off-topic explanation neutral.
 - Be strict about correctness but do not invent gaps. A student who is simply
@@ -347,6 +372,11 @@ Rules:
   Brevity and informality are not reasons to withhold it. Marking a point
   uncovered that the student did explain is the worst error you can make here,
   because it tells someone who understands the material that they do not.
+- When the student got the substance of a point but not all of it, put it in
+  "partial_key_points" instead of leaving it out. Key points are often two
+  facts in one sentence: for "The light-dependent reactions produce ATP and
+  NADPH", a student who said the light reactions make ATP is partial, not
+  missing. Half credit is the honest answer there; zero is not.
 - Then, separately, add to "thorough_key_points" only those covered indices the
   student genuinely EXPLAINED rather than merely named. Stating a fact is
   coverage; saying how or why it works is thoroughness. "The Calvin cycle
@@ -373,7 +403,8 @@ Return JSON:
     }
   ],
   "covered_key_points": [the bracketed indices of key points the student got right],
-  "thorough_key_points": [the subset of those indices they explained, not just named],
+  "partial_key_points": [indices where they got the substance but not all of it],
+  "thorough_key_points": [the subset of covered indices they explained, not just named],
   "confidence": 0-100
 }`;
 }
@@ -390,6 +421,8 @@ export function gapReportPrompt(params: {
   gaps: Array<{ text: string; issue: string | null }>;
   missingKeyPoints: string[];
   grounded: boolean;
+  /** The section question this recording answers, if one was asked. */
+  question?: string;
 }) {
   return `ROLE: You are the Gap Coach agent in a multi-agent teaching system.
 You receive the Transcript Evaluator agent's findings only after the student
@@ -399,7 +432,17 @@ ${params.grounded ? GROUNDING_RULE : OPEN_KNOWLEDGE_RULE}
 
 ${PRECISION_RULE}
 
-The student has FINISHED explaining "${params.topic}". Now teach the gaps.
+${
+  params.question
+    ? `The student was asked:
+"""
+${params.question}
+"""
+They have FINISHED answering it. Teach only what that answer got wrong or left
+out. Material this question did not ask about is not a gap — bringing it up
+here is how a good answer gets told it was a bad one.`
+    : `The student has FINISHED explaining "${params.topic}". Now teach the gaps.`
+}
 
 COACHING RULES:
 - State the correction directly. Each explanation must be 1-2 short sentences

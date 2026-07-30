@@ -713,6 +713,15 @@ type ExplanationParams = {
   sources: SourceRow[];
   mode: "live" | "final";
   /**
+   * The section question this recording answers.
+   *
+   * When set, `keyPoints` are that section's alone and both prompts are told
+   * what was asked, so the answer is judged against the question instead of
+   * against the whole course. Absent for sessions recorded before questions
+   * existed, and for courses that have no sections to ask about.
+   */
+  question?: string;
+  /**
    * Speech that came before `transcript` and has already been graded.
    *
    * Live passes grade only the newest slice of the explanation, so that the
@@ -832,6 +841,7 @@ function localGapReport({
     // understates rather than flatters, which is the right way to be wrong when
     // the grader is degraded.
     thorough: new Set<number>(),
+    partial: new Set<number>(),
     draft: {
       score: 0,
       verdict: "",
@@ -863,6 +873,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
 
   let spans: EvaluatedTranscriptSpan[];
   let covered: Set<number>;
+  let partial: Set<number>;
   let thorough: Set<number>;
   let detectionProvider: "gemini" | "groq" | "local";
   let detectionStatus: AgentStep["status"] = "completed";
@@ -883,6 +894,10 @@ export async function orchestrateExplanation(params: ExplanationParams) {
       detection.data.covered_key_points,
       params.keyPoints.length,
     );
+    partial = coveredKeyPointIndices(
+      detection.data.partial_key_points,
+      params.keyPoints.length,
+    );
     thorough = coveredKeyPointIndices(
       detection.data.thorough_key_points,
       params.keyPoints.length,
@@ -893,7 +908,9 @@ export async function orchestrateExplanation(params: ExplanationParams) {
     const fallback = localTranscriptEvaluation(params);
     spans = fallback.spans;
     covered = fallback.covered;
-    // Vocabulary matching cannot tell a mechanism from a mention.
+    // Vocabulary matching can tell neither a mechanism from a mention nor a
+    // half-covered point from a whole one.
+    partial = new Set<number>();
     thorough = new Set<number>();
     detectionProvider = "local";
     detectionStatus = "degraded";
@@ -933,7 +950,9 @@ export async function orchestrateExplanation(params: ExplanationParams) {
       report = completeCoverageReport({
         draft: coaching.data,
         keyPoints: params.keyPoints,
+        scoped: !!params.question,
         covered,
+        partial,
         thorough,
         spans,
       });
