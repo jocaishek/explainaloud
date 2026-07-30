@@ -1,5 +1,7 @@
 import "server-only";
 
+import { z } from "zod";
+
 import {
   completeCoverageReport,
   coveredKeyPointIndices,
@@ -10,6 +12,7 @@ import {
   courseRevisionPrompt,
   gapDetectionPrompt,
   gapReportPrompt,
+  topicBreadthPrompt,
 } from "~/lib/ai/prompts";
 import { AiUnavailableError, completeJson } from "~/lib/ai/provider";
 import {
@@ -336,6 +339,47 @@ function localCourseReview(
   };
 }
 
+const breadthSchema = z.object({
+  broad: z.boolean(),
+  reason: z.string().nullish(),
+  suggestions: z.array(z.string().min(1)).default([]),
+});
+
+/**
+ * Whether the topic is too wide to explain back, as its own small call.
+ *
+ * Returns null on anything unexpected, including an unavailable provider. The
+ * note is a courtesy; a course that fails to build because the breadth check
+ * had a bad minute would be a far worse trade.
+ */
+async function judgeTopicBreadth(
+  topic: string,
+): Promise<GeneratedCourse["scope_note"]> {
+  try {
+    const result = await completeJson(
+      topicBreadthPrompt(topic),
+      (value) => breadthSchema.parse(value),
+      // One short answer, and the small model is enough for a binary this
+      // well specified.
+      { fast: true, maxOutputTokens: 300 },
+    );
+    const { broad, reason, suggestions } = result.data;
+    if (!broad || !reason?.trim()) return null;
+    return {
+      reason: reason.trim(),
+      // Strip the "Narrower topic:" style prefixes the model reaches for even
+      // when told not to.
+      suggestions: suggestions
+        .map((s) => s.replace(/^\s*(narrower\s+topic|try|instead)\s*:\s*/i, ""))
+        .map((s) => s.trim())
+        .filter(Boolean)
+        .slice(0, 3),
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function orchestrateCourse(params: {
   topic: string;
   notes: string | null;
@@ -368,16 +412,23 @@ export async function orchestrateCourse(params: {
     ),
   ];
 
-  const architect = await completeJson(
-    `${courseGenerationPrompt(params.topic, params.notes, evidenceGrounded)}
+  // Breadth is judged by its own call, in parallel, so it adds no wall-clock
+  // time to an operation already measured in tens of seconds. Asked as one
+  // question it is answerable; asked as a field inside the course JSON it was
+  // wrong in both directions.
+  const [architect, breadth] = await Promise.all([
+    completeJson(
+      `${courseGenerationPrompt(params.topic, params.notes, evidenceGrounded)}
 
 ${renderSources(evidenceSources)}`,
-    (value) => courseSchema.parse(value),
-  );
-  const architectCourse = verifyCourseCitations(
-    architect.data,
-    evidenceSources,
-  );
+      (value) => courseSchema.parse(value),
+    ),
+    judgeTopicBreadth(params.topic),
+  ]);
+  const architectCourse = {
+    ...verifyCourseCitations(architect.data, evidenceSources),
+    scope_note: breadth,
+  };
   const keyPointCount = architectCourse.sections.reduce(
     (total, section) => total + section.key_points.length,
     0,
@@ -675,6 +726,11 @@ function localGapReport({
 }): GapReport {
   const correctClaims = spans.filter((span) => span.status === "correct");
   return completeCoverageReport({
+    // The offline path cannot judge depth — it matches vocabulary, which says
+    // nothing about whether a mechanism was explained. Claiming no thoroughness
+    // understates rather than flatters, which is the right way to be wrong when
+    // the grader is degraded.
+    thorough: new Set<number>(),
     draft: {
       score: 0,
       verdict: "",
@@ -706,6 +762,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
 
   let spans: EvaluatedTranscriptSpan[];
   let covered: Set<number>;
+  let thorough: Set<number>;
   let detectionProvider: "gemini" | "groq" | "local";
   let detectionStatus: AgentStep["status"] = "completed";
 
@@ -725,12 +782,18 @@ export async function orchestrateExplanation(params: ExplanationParams) {
       detection.data.covered_key_points,
       params.keyPoints.length,
     );
+    thorough = coveredKeyPointIndices(
+      detection.data.thorough_key_points,
+      params.keyPoints.length,
+    );
     detectionProvider = detection.provider;
   } catch (error) {
     if (!(error instanceof AiUnavailableError)) throw error;
     const fallback = localTranscriptEvaluation(params);
     spans = fallback.spans;
     covered = fallback.covered;
+    // Vocabulary matching cannot tell a mechanism from a mention.
+    thorough = new Set<number>();
     detectionProvider = "local";
     detectionStatus = "degraded";
   }
@@ -770,6 +833,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
         draft: coaching.data,
         keyPoints: params.keyPoints,
         covered,
+        thorough,
         spans,
       });
       finalProvider = coaching.provider;

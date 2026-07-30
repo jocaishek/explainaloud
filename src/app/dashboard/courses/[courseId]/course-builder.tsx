@@ -190,6 +190,38 @@ export function CourseBuilder({
             transition={{ duration: 0.4, ease: EASE }}
             className="flex flex-col gap-8"
           >
+            {/* Broad topics still get a course. They just grade badly, because
+                the key points spread across a whole field and a good
+                explanation of one corner scores like a poor explanation of all
+                of it. Saying so here turns a confusing score into an
+                understood one, before the recording rather than after it. */}
+            {course.scope_note && (
+              <aside className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4">
+                <p className="text-sm font-semibold text-strong">
+                  This topic is quite broad
+                </p>
+                <p className="mt-2 text-sm leading-6 text-subtle">
+                  {course.scope_note.reason} You can still record an explanation
+                  and the course below is yours to use, but expect a lower score
+                  than a narrower topic would give you.
+                </p>
+                {course.scope_note.suggestions.length > 0 && (
+                  <p className="mt-3 text-sm leading-6 text-subtle">
+                    Sharper next time:{" "}
+                    {course.scope_note.suggestions.map((suggestion, index) => (
+                      <span key={suggestion}>
+                        {index > 0 && ", "}
+                        <span className="font-medium text-strong">
+                          {suggestion}
+                        </span>
+                      </span>
+                    ))}
+                    .
+                  </p>
+                )}
+              </aside>
+            )}
+
             <div className="text-foreground">
               <p>{course.summary}</p>
               <CitationMarks

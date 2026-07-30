@@ -111,8 +111,11 @@ Return JSON with this exact shape:
   "notes": ["condensed revision notes, one fact per line${grounded ? ", drawn from the sources" : ""}"],
   "video_searches": ["YouTube SEARCH QUERIES, not URLs — e.g. 'Calvin cycle explained 3Blue1Brown'"],
   "resources": [{ "label": "what to look up next", "why": "one line on why it helps" }],
-  "uncovered": ["parts of the topic the sources do not cover, if any"]
+  "uncovered": ["parts of the topic the sources do not cover, if any"],
+  "scope_note": null | { "reason": "one sentence addressed to the student", "suggestions": ["The Cuban Missile Crisis", "Why the Roman Republic fell"] }
 }
+
+Always set "scope_note" to null. Topic breadth is judged separately.
 
 Produce 3-5 sections, 6-12 notes, 3-5 video searches and 2-4 resources.
 
@@ -138,6 +141,43 @@ video or page exists, and a fabricated link is worse than no link. Output
 search phrases only; the app turns them into working searches.
 
 ${grounded ? `"notes" must come from the SOURCES. "video_searches" and "resources" are the one exception to source grounding — they are pointers to material the student might go find, so they may name well-known topics or channels, but they must stay on the topic at hand and must not assert facts.` : `"notes" must contain settled, textbook-level facts. "video_searches" and "resources" are pointers to material the student might go find; they must stay on the topic at hand and must not assert facts.`}`;
+}
+
+/**
+ * One question, asked on its own.
+ *
+ * Breadth started life as a field inside the course-generation response and was
+ * wrong in both directions from one prompt edit to the next: first it flagged
+ * "the Krebs cycle" as too broad, then after tightening it let "Psychology"
+ * through. A subjective binary buried in a two-thousand-token JSON task is not
+ * something a small model attends to reliably.
+ *
+ * Asked alone, with the whole prompt about nothing else, it is answerable. The
+ * call runs alongside course generation so it costs no wall-clock time.
+ */
+export function topicBreadthPrompt(topic: string) {
+  return `Decide whether a student could explain this topic out loud in three
+minutes: "${topic}"
+
+BROAD means the name covers an entire field, language, era, or war — a
+container holding dozens of unrelated things.
+NOT BROAD means one identifiable thing: a mechanism, a theorem, a process, an
+event, a technique. Internal complexity does not make it broad.
+
+broad:      biology · history · psychology · machine learning · Python ·
+            World War II · the economy · chemistry
+not broad:  the Krebs cycle · Bayes' theorem · photosynthesis · recursion ·
+            the Cuban Missile Crisis · how vaccines work · big-O notation
+
+Return JSON only:
+{
+  "broad": true | false,
+  "reason": "if broad, one sentence to the student on why it is too wide; else null",
+  "suggestions": ["if broad, 2-3 narrower topics from inside it, phrased exactly as a student would type them; else empty"]
+}
+
+"suggestions" are topic names, never advice. "The Cuban Missile Crisis", not
+"pick a specific event". No "Narrower topic:" prefixes.`;
 }
 
 export function courseReviewPrompt(params: {
@@ -306,7 +346,15 @@ Rules:
   incorrectly, or so vague you could not tell whether they understand it.
   Brevity and informality are not reasons to withhold it. Marking a point
   uncovered that the student did explain is the worst error you can make here,
-  because it tells someone who understands the material that they do not.${
+  because it tells someone who understands the material that they do not.
+- Then, separately, add to "thorough_key_points" only those covered indices the
+  student genuinely EXPLAINED rather than merely named. Stating a fact is
+  coverage; saying how or why it works is thoroughness. "The Calvin cycle
+  happens in the stroma" is covered but not thorough. "The Calvin cycle happens
+  in the stroma, using the ATP from the light reactions to fix CO2 into sugar"
+  is both. Be strict here: this is the difference between someone who has
+  memorised the labels and someone who understands the mechanism, and it is
+  supposed to be hard to earn. A point cannot be thorough unless it is covered.${
     params.context
       ? `
 - Judge the transcript in light of the context, but every returned span must be
@@ -325,6 +373,7 @@ Return JSON:
     }
   ],
   "covered_key_points": [the bracketed indices of key points the student got right],
+  "thorough_key_points": [the subset of those indices they explained, not just named],
   "confidence": 0-100
 }`;
 }

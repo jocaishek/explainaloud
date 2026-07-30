@@ -103,6 +103,28 @@ const courseResponseSchema = z.object({
     )
     .default([]),
   uncovered: z.array(z.string()).default([]),
+  /**
+   * Set when the topic is too broad to grade an explanation against well.
+   *
+   * A vague topic still produces a course, because refusing to build one is a
+   * worse experience than building a shallow one. But it quietly degrades
+   * everything downstream: the key points spread thin across a whole field, so
+   * a good explanation of one corner scores badly against a rubric covering
+   * ten. The student reads that as the app being wrong about them, and they are
+   * more right than not.
+   *
+   * Saying so up front turns an unexplained bad score into an understood one,
+   * and points at the fix. Null when the topic is specific enough.
+   */
+  scope_note: z
+    .object({
+      /** One sentence, addressed to the student, on why this is broad. */
+      reason: z.string().min(1),
+      /** Two or three narrower topics they could use instead. */
+      suggestions: z.array(z.string().min(1)).default([]),
+    })
+    .nullish()
+    .transform((value) => value ?? null),
   orchestration: agentRunSchema.optional(),
 });
 
@@ -143,6 +165,16 @@ export const spansSchema = z.object({
     )
     .min(1),
   covered_key_points: z.array(z.number().int().nonnegative()).default([]),
+  /**
+   * The subset of covered points the student actually *explained* rather than
+   * merely named.
+   *
+   * Coverage alone cannot separate "the Calvin cycle happens in the stroma"
+   * from an account of what the Calvin cycle does and why it needs the stroma.
+   * Both state the point correctly, so both are covered, and a rubric that
+   * stops there hands full marks to someone reciting a list of labels.
+   */
+  thorough_key_points: z.array(z.number().int().nonnegative()).default([]),
   confidence: z.number().min(0).max(100).default(0),
 });
 export type TranscriptSpans = z.infer<typeof spansSchema>;

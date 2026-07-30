@@ -92,11 +92,14 @@ export function completeCoverageReport({
   draft,
   keyPoints,
   covered,
+  thorough,
   spans,
 }: {
   draft: CoachingReport;
   keyPoints: string[];
   covered: Set<number>;
+  /** Covered points the student explained rather than merely named. */
+  thorough: Set<number>;
   spans: EvaluatedSpan[];
 }): CoachingReport {
   const missingKeyPoints = keyPoints.filter((_, index) => !covered.has(index));
@@ -104,10 +107,25 @@ export function completeCoverageReport({
   const correctClaims = claimSpans.filter(
     (span) => span.status === "correct",
   ).length;
+  // Coverage answers "did they say it", thoroughness "did they explain it".
+  //
+  // Coverage alone made full marks cheap: name every point in a sentence each
+  // and the rubric had nothing left to ask for. Weighting the two equally means
+  // 100 requires every point explained, not merely mentioned, and multiplying
+  // by accuracy means one wrong claim still pulls it down. Someone who lists
+  // labels correctly now lands near 50, which is the honest reading of what
+  // they demonstrated.
   const coverage = keyPoints.length > 0 ? covered.size / keyPoints.length : 0;
+  const thoroughness =
+    keyPoints.length > 0
+      ? // Guard against a model returning indices not present in `covered`.
+        [...thorough].filter((index) => covered.has(index)).length /
+        keyPoints.length
+      : 0;
   const accuracy =
     claimSpans.length > 0 ? correctClaims / claimSpans.length : 0;
-  const score = Math.round(coverage * accuracy * 100);
+  const understanding = coverage * 0.5 + thoroughness * 0.5;
+  const score = Math.round(understanding * accuracy * 100);
   // Drop anything the coach invented before it can reach a student.
   const flaggedSpanTexts = spans
     .filter((span) => span.status === "gap")
@@ -132,11 +150,20 @@ export function completeCoverageReport({
     claimSpans.length > 0
       ? ` ${correctClaims} of ${claimSpans.length} checkable claim${claimSpans.length === 1 ? " was" : "s were"} accurate.`
       : "";
+  // Without this the score is inexplicable: someone who covered everything and
+  // said nothing wrong would see a number well under 100 and no reason for it.
+  const thoroughCount = [...thorough].filter((index) =>
+    covered.has(index),
+  ).length;
+  const depthVerdict =
+    covered.size > 0 && thoroughCount < covered.size
+      ? ` You explained ${thoroughCount} of them in depth; the rest you stated without saying how or why.`
+      : "";
 
   return {
     ...draft,
     score,
-    verdict: `${coverageVerdict}${accuracyVerdict}`,
+    verdict: `${coverageVerdict}${depthVerdict}${accuracyVerdict}`,
     gaps: [...coachedGaps, ...supplementalGaps],
     next_focus: draft.next_focus || missingKeyPoints[0] || "",
   };
