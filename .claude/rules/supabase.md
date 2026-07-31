@@ -56,3 +56,53 @@ Production auth URLs are managed in the Supabase dashboard, under
 Authentication → URL Configuration. `config.toml` reads its values from the
 environment (see `.env.example`) so no hostname is committed, but that is a
 safeguard against the literal, not a licence to push the file.
+
+## The confirmation email template
+
+`/auth/confirm` verifies a token hash on the server. It only receives one if
+the project's **Authentication → Email Templates → Confirm signup** template
+sends it there:
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed">
+  Confirm your email
+</a>
+```
+
+The default template uses `{{ .ConfirmationURL }}`, which points at Supabase's
+own `/auth/v1/verify` endpoint and then redirects back. Two things break there,
+and both look identical to the person holding the link — they land on the
+landing page as if they had never clicked anything:
+
+- **Mail scanners.** Corporate filters follow every link in an email before
+  the recipient does. The token is single-use, so it is spent by the time it
+  is clicked.
+- **The fragment.** A project on the implicit flow returns the session in the
+  URL hash, which no server route can read.
+
+A token hash has neither problem: it is verified against the cookie store the
+request already owns, so the session exists before the page renders.
+
+Do the same for **Reset password** with `type=recovery` and
+`next=/auth/update-password`.
+
+## Confirmation emails that never arrive
+
+Supabase's built-in SMTP is a development convenience with a hard, low
+send limit — a couple of emails an hour across the entire project, shared by
+every user. Past it, `signUp` and `resend` both return success and no mail is
+sent. From the outside this is indistinguishable from the feature being
+broken, and it gets worse the more people sign up.
+
+A production project needs a custom SMTP provider configured under
+**Authentication → Emails → SMTP Settings**. Check there first whenever
+"the email won't send" is reported, before looking at any of this code.
+
+Two other things that produce the same report:
+
+- **Signing up again does not resend.** For an address that already exists,
+  `signUp` returns an obfuscated success and sends nothing — deliberately, so
+  the form cannot be used to discover who has an account. Resending needs
+  `supabase.auth.resend({ type: "signup" })`, which is what the "Send a new
+  confirmation email" action on a failed login calls.
+- **A one-minute per-address cooldown**, separate from the project quota.

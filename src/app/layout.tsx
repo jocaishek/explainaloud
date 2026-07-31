@@ -1,6 +1,7 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Geist_Mono, Instrument_Serif, Poppins } from "next/font/google";
+import { AuthHashRescue } from "~/components/auth-hash-rescue";
 import { siteUrl } from "~/lib/site";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
@@ -74,6 +75,10 @@ export default function RootLayout({
         className={`${poppins.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans`}
       >
         <ThemeProvider>{children}</ThemeProvider>
+        {/* At the root because an emailed link lands wherever the project's
+            Site URL points, and a session in the URL fragment is invisible to
+            every server route. Renders nothing. */}
+        <AuthHashRescue />
         <Analytics />
       </body>
     </html>
