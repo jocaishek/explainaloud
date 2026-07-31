@@ -166,7 +166,7 @@ export default function Home() {
                 out loud is where you find out.{" "}
                 <span className="text-white">
                   Upload your material, talk through it for three minutes, and
-                  get back your own words marked sentence by sentence — what you
+                  get back your own words marked sentence by sentence: what you
                   had right, what was vague, and the steps you skipped without
                   noticing.
                 </span>
@@ -239,14 +239,14 @@ export default function Home() {
             <DeepDiveRow
               step="Step 1"
               title="Start with what you already have"
-              body="Drop in your textbook chapters, lecture recordings, and slides. The course is built from your actual material — and if you'd rather it used nothing else, say so and it won't."
+              body="Drop in your textbook chapters, lecture recordings, and slides. The course is built from your actual material, and if you'd rather it used nothing else, say so and it won't."
               mockup={<SourcesPanel />}
             />
             <DeepDiveRow
               reversed
               step="Step 2"
               title="Say it back, out loud"
-              body="Hit record and explain the concept like you're teaching a friend — or switch to interview mode and answer one question at a time. Your words colour themselves as you speak, so a shaky step shows up mid-sentence rather than in a verdict at the end."
+              body="Hit record and explain the concept like you're teaching a friend, or switch to interview mode and answer one question at a time. Your words colour themselves as you speak, so a shaky step shows up mid-sentence rather than in a verdict at the end."
               mockup={<ExplainPanel />}
             />
             <DeepDiveRow
@@ -258,7 +258,41 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ── 03 · Feature grid ───────────────────────────────────────── */}
+        {/* ── 03 · What happens while you are still speaking ───────────
+            The two things no other study app does: your sentences colour
+            themselves as you say them, and your pace is read against your own
+            baseline rather than a generic target. Worth a section of its own
+            rather than a clause inside step 2. */}
+        <section id="live" className="w-full scroll-mt-24 px-6 py-24">
+          <div className="mx-auto max-w-5xl">
+            <Eyebrow index="03" label="While you speak" className="mb-4" />
+            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+              <WordReveal
+                text="The feedback arrives mid-sentence"
+                accent={["mid-sentence"]}
+              />
+            </h2>
+            <Reveal delay={120} className="mt-5">
+              <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
+                Your words colour themselves as you say them, and your speaking
+                pace is measured against your own baseline rather than a generic
+                target. You do not have to finish and wait for a verdict to find
+                out something went wrong.
+              </p>
+            </Reveal>
+
+            <div className="mt-12 grid gap-4 md:grid-cols-[1.35fr_1fr]">
+              <Reveal>
+                <LiveColouringPanel />
+              </Reveal>
+              <Reveal delay={100}>
+                <PaceTrackerPanel />
+              </Reveal>
+            </div>
+          </div>
+        </section>
+
+        {/* ── 04 · Feature grid ───────────────────────────────────────── */}
         <section
           id="features"
           className="relative w-full scroll-mt-24 px-6 py-24"
@@ -270,7 +304,7 @@ export default function Home() {
           <GlowOrb className="top-16 left-1/2 h-80 w-[44rem] -translate-x-1/2 opacity-[0.12]" />
 
           <Eyebrow
-            index="03"
+            index="04"
             label="What you get"
             className="mx-auto mb-4 max-w-6xl"
           />
@@ -376,7 +410,7 @@ export default function Home() {
           <div className="relative mx-auto grid max-w-5xl gap-12 md:grid-cols-[0.8fr_1.2fr] md:items-center md:gap-16">
             <div className="border-l-2 border-brand/40 pl-6">
               <Eyebrow
-                index="04"
+                index="05"
                 label="Multi-agent by design"
                 className="mb-4"
               />
@@ -410,7 +444,7 @@ export default function Home() {
         <AccentDivider />
 
         <div className="relative mt-10 flex flex-col items-center text-center">
-          <Eyebrow index="05" label="Get started" className="mb-4" />
+          <Eyebrow index="06" label="Get started" className="mb-4" />
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
             <WordReveal text="Create your account" accent={["account"]} />
           </h2>
@@ -589,6 +623,7 @@ const PLAN_ITEMS: Array<{ label: string; status: string }> = [
  */
 const SECTIONS = [
   { id: "how", label: "How it works" },
+  { id: "live", label: "While you speak" },
   { id: "features", label: "What you get" },
   { id: "agents", label: "The agents" },
 ] as const;
@@ -619,17 +654,17 @@ function Nav() {
           Explainaloud
         </span>
 
-        {/* Jump links. Hidden on a phone, where three more words either wrap
+        {/* Jump links. Hidden below `md`, where four more labels either wrap
             the capsule onto a second line or squeeze the sign-up button off
-            it — and where the page is one thumb-flick end to end anyway.
+            it, and where the page is one thumb-flick end to end anyway.
             Lenis is mounted with `anchors: true`, so these scroll smoothly
             instead of being fought and reverted on the next frame. */}
-        <div className="hidden items-center gap-1 sm:flex">
+        <div className="hidden items-center gap-0.5 md:flex">
           {SECTIONS.map((section) => (
             <a
               key={section.id}
               href={`#${section.id}`}
-              className="rounded-full px-3 py-1.5 text-sm font-medium text-[#A1A1AA] transition-colors duration-200 hover:bg-white/5 hover:text-white"
+              className="rounded-full px-2.5 py-1.5 text-sm font-medium whitespace-nowrap text-[#A1A1AA] transition-colors duration-200 hover:bg-white/5 hover:text-white"
             >
               {section.label}
             </a>
@@ -1082,6 +1117,203 @@ function LiveTranscript() {
       <p className="min-h-[2.5rem] text-xs text-[#A1A1AA]">
         <TypedText phrases={TRANSCRIPT_LINES} />
       </p>
+    </div>
+  );
+}
+
+/* The same three statuses the recording screen paints: right, missing a step,
+   and unjudged. Written as one continuous sentence so the colouring reads as
+   something happening to speech rather than as a list of verdicts. */
+const SPOKEN_WORDS: Array<{ text: string; status: "correct" | "gap" | null }> =
+  [
+    { text: "So the light reactions", status: "correct" },
+    { text: "split water", status: "correct" },
+    { text: "and that", status: null },
+    { text: "energy turns directly into glucose,", status: "gap" },
+    { text: "which the plant", status: null },
+    { text: "uses to grow.", status: "correct" },
+  ];
+
+/** How far the colouring trails the voice, in reveal steps. */
+const JUDGEMENT_LAG = 1;
+const REVEAL_MS = 620;
+/** Beats the finished sentence is held before the loop starts over. */
+const HOLD_STEPS = 4;
+
+/**
+ * The live colouring, played back at speaking speed.
+ *
+ * The lag matters: the grader is shown catching up a beat behind the words,
+ * because that is what actually happens and because colour landing on the
+ * syllable would read as a scripted animation rather than as a judgement.
+ */
+function LiveColouringPanel() {
+  const shouldReduceMotion = useReducedMotion();
+  const { ref, visible } = useInView<HTMLDivElement>();
+  const [spoken, setSpoken] = useState(0);
+
+  useEffect(() => {
+    if (shouldReduceMotion || !visible) return;
+    const loop = SPOKEN_WORDS.length + JUDGEMENT_LAG + HOLD_STEPS;
+    const timer = window.setInterval(
+      () => setSpoken((current) => (current >= loop ? 0 : current + 1)),
+      REVEAL_MS,
+    );
+    return () => window.clearInterval(timer);
+  }, [shouldReduceMotion, visible]);
+
+  // Under reduced motion the sentence is simply shown finished, which is the
+  // thing being advertised anyway.
+  const said = shouldReduceMotion ? SPOKEN_WORDS.length : spoken;
+  const judged = shouldReduceMotion
+    ? SPOKEN_WORDS.length
+    : spoken - JUDGEMENT_LAG;
+  const talking =
+    !shouldReduceMotion && spoken > 0 && said < SPOKEN_WORDS.length;
+
+  return (
+    <div ref={ref} className="glass flex h-full flex-col rounded-2xl p-6">
+      <div className="flex items-center justify-between gap-4">
+        <span className="flex items-center gap-2 text-xs font-medium text-[#A1A1AA]">
+          <span className="relative flex size-2">
+            {talking && (
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
+            )}
+            <span className="relative inline-flex size-2 rounded-full bg-red-500" />
+          </span>
+          Recording
+        </span>
+        <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
+          Colouring live
+        </span>
+      </div>
+
+      <p className="mt-5 min-h-[7.5rem] text-lg leading-relaxed text-balance">
+        {SPOKEN_WORDS.map((word, i) => (
+          <span
+            key={word.text}
+            className={cn(
+              "transition-all duration-500",
+              i >= said && "opacity-0",
+              i < said && i >= judged && "text-white",
+              i < judged && word.status === null && "text-[#71717A]",
+              i < judged && word.status === "correct" && "text-green-500",
+              i < judged &&
+                word.status === "gap" &&
+                "rounded bg-red-500/10 font-medium text-red-500",
+            )}
+          >
+            {word.text}{" "}
+          </span>
+        ))}
+      </p>
+
+      <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4">
+        <Legend className="bg-green-500" label="Said it right" />
+        <Legend className="bg-red-500" label="Step missing" />
+        <Legend className="bg-white/25" label="Not a claim" />
+      </div>
+    </div>
+  );
+}
+
+function Legend({ className, label }: { className: string; label: string }) {
+  return (
+    <span className="flex items-center gap-2 text-xs text-[#A1A1AA]">
+      <span className={cn("size-1.5 rounded-full", className)} />
+      {label}
+    </span>
+  );
+}
+
+/* Illustrative figures. They match what the report actually shows: this
+   session's pace, the speaker's own baseline, and a difference only called
+   out when it is large enough to mean anything. */
+const PACE_WPM = 108;
+const PACE_USUAL = 142;
+
+/**
+ * The pace tracker. Deliberately makes no claim on its own — the callout at
+ * the bottom is conditioned on the grader having independently marked the
+ * same stretch, which is the rule the real report follows.
+ */
+function PaceTrackerPanel() {
+  const { ref, visible } = useInView<HTMLDivElement>();
+  const slower = Math.round(((PACE_USUAL - PACE_WPM) / PACE_USUAL) * 100);
+
+  return (
+    <div ref={ref} className="glass flex h-full flex-col rounded-2xl p-6">
+      <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
+        How you spoke
+      </span>
+
+      {/* Each figure carries its own bar. Stacking the two bars together read
+          as one bar with a stray line under it. */}
+      <div className="mt-4 grid grid-cols-2 gap-x-5">
+        <PaceFigure
+          label="This explanation"
+          value={PACE_WPM}
+          pct={(PACE_WPM / PACE_USUAL) * 100}
+          visible={visible}
+        />
+        <PaceFigure
+          label="Your usual"
+          value={PACE_USUAL}
+          pct={100}
+          visible={visible}
+          muted
+        />
+      </div>
+
+      <p className="mt-auto border-l-2 border-amber-500/50 pt-5 pl-3 text-sm leading-6 text-[#A1A1AA]">
+        <span className="font-medium text-amber-400">
+          {slower}% slower than usual
+        </span>
+        , and right where the explanation was marked weak. Worth re-teaching
+        first.
+      </p>
+    </div>
+  );
+}
+
+function PaceFigure({
+  label,
+  value,
+  pct,
+  visible,
+  muted,
+}: {
+  label: string;
+  value: number;
+  /** Width of this figure's bar, as a share of the larger of the two. */
+  pct: number;
+  visible: boolean;
+  muted?: boolean;
+}) {
+  return (
+    <div>
+      <p className="text-xs text-[#71717A]">{label}</p>
+      <p
+        className={cn(
+          "mt-0.5 font-mono text-2xl font-semibold tabular-nums",
+          muted ? "text-[#A1A1AA]" : "text-white",
+        )}
+      >
+        {value}
+        <span className="ml-1.5 font-sans text-[10px] font-normal text-[#71717A]">
+          wpm
+        </span>
+      </p>
+      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
+        <div
+          className={cn(
+            "h-full rounded-full transition-[width] duration-700",
+            EASE_CSS,
+            muted ? "bg-white/25" : "bg-amber-500",
+          )}
+          style={{ width: visible ? `${pct}%` : "0%" }}
+        />
+      </div>
     </div>
   );
 }

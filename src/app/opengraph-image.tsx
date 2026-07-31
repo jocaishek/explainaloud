@@ -15,7 +15,7 @@ import { ImageResponse } from "next/og";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const alt =
-  "Explainaloud — explain it back out loud and know exactly when you actually understand it.";
+  "Explainaloud: explain it back out loud and know exactly when you actually understand it.";
 
 const BRAND = "#4a90e2";
 
