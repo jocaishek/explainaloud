@@ -22,6 +22,8 @@ type Session = {
   score: number | null;
   /** Which section's question this answered; null for pre-question sessions. */
   question_section?: number | null;
+  /** Topic or interview. Older rows predate the distinction and read topic. */
+  mode?: string | null;
 };
 
 /**
@@ -270,6 +272,25 @@ function requestTimedOut(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
+/**
+ * What has been said since the last answer ended.
+ *
+ * Prefix comparison rather than an index, because the only assumption that
+ * holds is that the transcript usually grows from what it was. When it does
+ * not — a wholesale rewrite by the server caption path — falling back to the
+ * whole transcript is wrong but recoverable; a stale offset silently returns
+ * someone else's answer, which is not.
+ */
+function newSpeech(whole: string, captured: string) {
+  if (!captured) return whole.trim();
+  if (whole.startsWith(captured)) return whole.slice(captured.length).trim();
+  // The string was rebuilt. Take whatever tail is genuinely new if we can
+  // find the old ending inside it, and the whole thing if we cannot.
+  const seam = captured.slice(-60);
+  const at = seam ? whole.lastIndexOf(seam) : -1;
+  return at >= 0 ? whole.slice(at + seam.length).trim() : whole.trim();
+}
+
 function formatClock(ms: number) {
   const total = Math.max(0, Math.ceil(ms / 1000));
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
@@ -339,6 +360,8 @@ export function RecordConsole({
   maxRecordingMs: number;
 }) {
   const [status, setStatus] = useState<Status>("checking");
+  /** Read from async callbacks that closed over an older render. */
+  const statusRef = useRef<Status>("checking");
   const [transcript, setTranscript] = useState("");
   const [interim, setInterim] = useState("");
   const [spans, setSpans] = useState<Span[]>([]);
@@ -379,8 +402,16 @@ export function RecordConsole({
   const segmentIndexRef = useRef(0);
   const [segments, setSegments] = useState<Segment[]>([]);
   const segmentsRef = useRef<Segment[]>([]);
-  /** Where in the transcript the current answer began. */
-  const segmentStartRef = useRef(0);
+  /**
+   * Everything already claimed by a finished answer.
+   *
+   * A character offset was wrong here: the transcript is not append-only. The
+   * server caption path rewrites it wholesale, and the recogniser rewrites
+   * words it revises, so an index taken at question one could point anywhere
+   * by question two — which is how three different answers ended up being
+   * graded on nearly the same text and scoring the same.
+   */
+  const capturedRef = useRef("");
   /** Podcast mode for the recording in progress, whatever the chooser says now. */
   const interviewRef = useRef(false);
   /** Seconds left to start the next answer yourself before it starts for you. */
@@ -389,6 +420,7 @@ export function RecordConsole({
   const usedQuestionsRef = useRef<string[]>([]);
   /** True while the next question is being written. */
   const [writing, setWriting] = useState(false);
+  const writingRef = useRef(false);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadingCheckId, setLoadingCheckId] = useState<string | null>(null);
@@ -485,6 +517,19 @@ export function RecordConsole({
     [],
   );
 
+  // Kept in step so the late-arriving question writers can tell whether the
+  // student has already started talking.
+  useEffect(() => {
+    statusRef.current = status;
+  }, [status]);
+
+  // When the writer finishes after the count has already run out, start then.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `resumeRecording` is rebuilt every render; this fires on the writer settling, not on the closure changing
+  useEffect(() => {
+    writingRef.current = writing;
+    if (!writing && countdown === 0) resumeRecording();
+  }, [writing, countdown]);
+
   const remaining = unlimited
     ? Number.POSITIVE_INFINITY
     : Math.max(0, (dailyLimit ?? 0) - used);
@@ -499,6 +544,8 @@ export function RecordConsole({
   useEffect(() => {
     if (countdown === null) return;
     if (countdown === 0) {
+      // Do not open the microphone on a card that has no question on it yet.
+      if (writingRef.current) return;
       resumeRecording();
       return;
     }
@@ -1157,7 +1204,7 @@ export function RecordConsole({
     // The last answer never went through `endSegment`.
     const last = askingRef.current[segmentIndexRef.current];
     const whole = transcriptRef.current.trim();
-    const tail = whole.slice(segmentStartRef.current).trim();
+    const tail = newSpeech(whole, capturedRef.current);
     if (last && tail) {
       const segment: Segment = {
         question: last.question,
@@ -1537,8 +1584,8 @@ export function RecordConsole({
     }
 
     const whole = transcriptRef.current.trim();
-    const answer = whole.slice(segmentStartRef.current).trim();
-    segmentStartRef.current = whole.length;
+    const answer = newSpeech(whole, capturedRef.current);
+    capturedRef.current = whole;
 
     const segment: Segment = {
       question: current.question,
@@ -1564,13 +1611,28 @@ export function RecordConsole({
     // Grade this answer, then write the next question out of what it missed.
     // This is the whole difference between a list and an examiner: question
     // two exists because of how question one went.
+    // The clock between answers starts now, not when the writer finishes.
+    // Hanging it off the network call is how it came to never appear at all:
+    // one slow or failed request and there was no countdown, no explanation,
+    // and a button that looked inert.
+    setCountdown(BETWEEN_SECONDS);
+
     if (next < INTERVIEW_QUESTIONS) {
       setWriting(true);
       void gradeSegment(at, answer, current.index)
         .then((weakness) => writeQuestion(weakness))
         .then((written) => {
           const follow = written[0];
-          if (!follow || segmentIndexRef.current !== next) return;
+          // Only fill a slot nobody is answering yet. If they pressed
+          // "Continue recording" before this landed, they are already talking
+          // to the question that was there.
+          if (
+            !follow ||
+            segmentIndexRef.current !== next ||
+            statusRef.current === "recording"
+          ) {
+            return;
+          }
           const updated = [...askingRef.current];
           updated[next] = follow;
           askingRef.current = updated;
@@ -1711,7 +1773,7 @@ export function RecordConsole({
     setSegmentIndex(0);
     segmentsRef.current = [];
     setSegments([]);
-    segmentStartRef.current = 0;
+    capturedRef.current = "";
     answeringRef.current = interview
       ? (drawn[0] ?? null)
       : (question ?? asked ?? null);
@@ -2079,7 +2141,10 @@ export function RecordConsole({
             setWriting(true);
             void writeQuestion(undefined, INTERVIEW_QUESTIONS)
               .then((written) => {
-                if (written.length === 0) return;
+                // The recording may have started while this was in flight.
+                // Whatever was on screen when they pressed record is what they
+                // are answering, so a late arrival is dropped, not applied.
+                if (written.length === 0 || interviewRef.current) return;
                 // Keep the fallbacks in the tail if fewer came back than asked
                 // for, so there is always something to ask.
                 const updated = fallback.map((item, i) => written[i] ?? item);
@@ -2106,6 +2171,7 @@ export function RecordConsole({
           }
           waiting={status === "between"}
           writing={writing}
+          countdown={status === "between" ? countdown : null}
         />
       )}
 
@@ -2283,7 +2349,20 @@ export function RecordConsole({
               className="flex flex-wrap items-start gap-3 rounded-lg border border-border bg-surface p-3"
             >
               <div className="min-w-0 flex-1">
-                <p className="text-xs text-subtle">
+                <p className="flex flex-wrap items-center gap-2 text-xs text-subtle">
+                  {/* Which of the two it was. Without it a list of past
+                      sessions is a list of scores with no idea what was being
+                      asked of the person, and the two are not comparable. */}
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] uppercase",
+                      session.mode === "interview"
+                        ? "bg-brand/12 text-brand"
+                        : "bg-foreground/10 text-subtle",
+                    )}
+                  >
+                    {session.mode === "interview" ? "Interview" : "Topic"}
+                  </span>
                   {new Date(session.started_at).toLocaleString()}
                 </p>
                 <p className="mt-1 line-clamp-2 text-sm text-foreground">
@@ -2570,6 +2649,7 @@ function QuestionCard({
   onNext,
   waiting,
   writing,
+  countdown,
 }: {
   asked: CourseQuestion;
   position: number;
@@ -2580,6 +2660,8 @@ function QuestionCard({
   waiting?: boolean;
   /** The examiner is still writing this one, out of the last answer. */
   writing?: boolean;
+  /** Seconds until this question starts recording on its own. */
+  countdown?: number | null;
 }) {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/[0.06] p-5">
@@ -2616,13 +2698,26 @@ function QuestionCard({
         </motion.p>
       </AnimatePresence>
 
-      <p className="text-xs leading-5 text-subtle">
-        {writing
-          ? "Writing your next question from that answer…"
-          : waiting
-            ? "Take a second. The clock is stopped and the mic is off until you continue."
-            : "Answer just this. You are marked on the answer, not on everything else the course covers."}
-      </p>
+      {countdown !== null && countdown !== undefined ? (
+        <div className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand/15 font-mono text-lg font-semibold text-brand tabular-nums">
+            {countdown}
+          </span>
+          <p className="text-xs leading-5 text-subtle">
+            {writing
+              ? "Writing your next question from that answer…"
+              : `Recording starts in ${countdown}. The clock is stopped until it does.`}
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs leading-5 text-subtle">
+          {writing
+            ? "Writing your next question from that answer…"
+            : waiting
+              ? "Take a second. The clock is stopped and the mic is off until you continue."
+              : "Answer just this. You are marked on the answer, not on everything else the course covers."}
+        </p>
+      )}
     </div>
   );
 }
