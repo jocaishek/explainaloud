@@ -20,6 +20,143 @@ const BANK_FLOOR = 6;
 /** One batch is capped so a single request cannot ask for an essay. */
 const MAX_BATCH = 12;
 
+/**
+ * How much of a question's vocabulary must come from the course material.
+ *
+ * The prompt tells the examiner to stay inside the sections, and mostly it
+ * does. Told to examine "Claude Code basics" it nonetheless asked how Claude's
+ * pricing plans differ — a real question about a real product, about nothing
+ * in the material, marked against key points the student was never taught.
+ * An instruction is a request; this is the part that holds.
+ */
+const GROUNDING_FRACTION = 0.35;
+
+/**
+ * And how many of its words must be, in absolute terms.
+ *
+ * The fraction alone is not enough. "How do Claude's payment plans differ?" is
+ * short, so the single word it shares with the material ("claude") is a large
+ * slice of a small question. Both tests have to pass: enough of the question
+ * has to come from the material, and enough of the material has to be in the
+ * question.
+ */
+const MIN_MATERIAL_HITS = 3;
+
+/** Words that carry no subject matter, so they are no evidence of grounding. */
+const STOPWORDS = new Set([
+  "about",
+  "and",
+  "are",
+  "because",
+  "between",
+  "both",
+  "but",
+  "can",
+  "could",
+  "difference",
+  "different",
+  "does",
+  "explain",
+  "for",
+  "from",
+  "happen",
+  "how",
+  "its",
+  "might",
+  "not",
+  "one",
+  "only",
+  "other",
+  "rather",
+  "same",
+  "that",
+  "the",
+  "their",
+  "them",
+  "then",
+  "there",
+  "these",
+  "they",
+  "this",
+  "those",
+  "two",
+  "use",
+  "used",
+  "uses",
+  "using",
+  "were",
+  "what",
+  "when",
+  "where",
+  "which",
+  "while",
+  "why",
+  "with",
+  "without",
+  "would",
+  "you",
+  "your",
+]);
+
+/**
+ * Crude suffix stripping, so a question about "reading the work trees" counts
+ * as grounded in material that says "read" and "tree".
+ *
+ * Not a real stemmer, and it does not need to be: both sides go through it, so
+ * it only has to be consistent. Without it the test rejects perfectly good
+ * questions for conjugating a verb.
+ */
+function stem(word: string): string {
+  for (const suffix of ["ing", "ies", "ed", "es", "s"]) {
+    if (word.length > suffix.length + 2 && word.endsWith(suffix)) {
+      return word.slice(0, -suffix.length);
+    }
+  }
+  return word;
+}
+
+function terms(value: string): string[] {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .split(" ")
+    .filter((word) => word.length > 2 && !STOPWORDS.has(word))
+    .map(stem);
+}
+
+/**
+ * Whether a question is about the material it claims to examine.
+ *
+ * Word overlap against everything the course actually says — topic, section
+ * titles, prose and key points. A question drawn from the material reuses its
+ * vocabulary almost by definition; one invented from general knowledge about
+ * the same product does not, because the words it needs are words the sections
+ * never use.
+ */
+function groundedInMaterial(
+  question: string,
+  vocabulary: Set<string>,
+): boolean {
+  const words = terms(question);
+  if (words.length === 0) return false;
+  const hits = words.filter((word) => vocabulary.has(word)).length;
+  return hits >= MIN_MATERIAL_HITS && hits / words.length >= GROUNDING_FRACTION;
+}
+
+function materialVocabulary(
+  topic: string,
+  sections: GeneratedCourse["sections"],
+): Set<string> {
+  return new Set([
+    ...terms(topic),
+    ...sections.flatMap((section) => [
+      ...terms(section.title),
+      ...terms(section.technical),
+      ...section.key_points.flatMap((point) => terms(point)),
+    ]),
+  ]);
+}
+
 export type BankQuestion = {
   id: string;
   question: string;
@@ -130,21 +267,31 @@ export async function fillQuestionBank({
     { fast: true, maxOutputTokens: 2200 },
   );
 
-  const rows = result.data.questions.map((written) => {
-    const index = Math.min(written.section_index, sections.length - 1);
-    const section = sections[index];
-    return {
-      course_id: courseId,
-      user_id: userId,
-      question: written.question.trim(),
-      section_index: index,
-      section: section?.title ?? "",
-      key_points:
-        written.key_points.length > 0
-          ? written.key_points
-          : (section?.key_points ?? []),
-    };
-  });
+  const vocabulary = materialVocabulary(topic, sections);
+  const rows = result.data.questions
+    .filter((written) => groundedInMaterial(written.question, vocabulary))
+    .map((written) => {
+      const index = Math.min(written.section_index, sections.length - 1);
+      const section = sections[index];
+      return {
+        course_id: courseId,
+        user_id: userId,
+        question: written.question.trim(),
+        section_index: index,
+        section: section?.title ?? "",
+        // A question with no key points cannot be marked: the grader has no
+        // yardstick, reports "you reached every key point", and hands out the
+        // base score for anything at all. The section's own points are a
+        // blunter rubric than a bespoke one, and far better than none.
+        key_points:
+          written.key_points.length > 0
+            ? written.key_points
+            : (section?.key_points ?? []),
+      };
+    })
+    .filter((row) => row.key_points.length > 0);
+
+  if (rows.length === 0) return [];
 
   const { data: inserted } = await supabase
     .from("course_questions")
@@ -317,4 +464,20 @@ export async function warmQuestionBank({
     count: BANK_TARGET - held,
   });
   return written.length;
+}
+
+/**
+ * The grounding test, for questions that never touch the bank.
+ *
+ * The adaptive follow-up is written on the spot out of the last answer, so it
+ * skips `fillQuestionBank` entirely — and it is written by the same model,
+ * under the same instruction, with the same tendency to drift off the material
+ * when it runs out of things to ask.
+ */
+export function isGroundedQuestion(
+  question: string,
+  topic: string,
+  sections: GeneratedCourse["sections"],
+): boolean {
+  return groundedInMaterial(question, materialVocabulary(topic, sections));
 }
