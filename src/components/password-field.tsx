@@ -103,7 +103,7 @@ function PasswordCheckItem({ met, label }: { met: boolean; label: string }) {
       <span
         className={cn(
           "size-1 rounded-full",
-          met ? "bg-[#84CC16]" : "bg-[#71717A]",
+          met ? "bg-[#84CC16]" : "bg-subtle",
         )}
       />
       {label}
