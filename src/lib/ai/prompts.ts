@@ -592,10 +592,20 @@ RULES:
   also".
 - Name the section index the question draws on most.
 
+For each question, also write what a complete spoken answer to THAT question
+contains. Two to four checkable claims, drawn from the material, specific
+enough to mark. These are what the answer is scored against, so they must be
+about the question you asked and nothing else — key points belonging to the
+section at large are what made a good answer to a narrow question score zero.
+
 Return JSON:
 {
   "questions": [
-    { "question": "string", "section_index": 0 }
+    {
+      "question": "string",
+      "section_index": 0,
+      "key_points": ["what a complete answer to this question contains"]
+    }
   ]
 }`;
 }

@@ -66,6 +66,8 @@ export type CourseQuestion = {
   index: number;
   section: string;
   question: string;
+  /** What a complete answer to this question contains, per the Examiner. */
+  keyPoints?: string[];
 };
 
 type Span = {
@@ -237,6 +239,7 @@ type ApiPayload = {
     question: string;
     section_index: number;
     section: string;
+    key_points?: string[];
   }>;
 };
 
@@ -412,6 +415,8 @@ export function RecordConsole({
    * graded on nearly the same text and scoring the same.
    */
   const capturedRef = useRef("");
+  /** The final answer, captured at the stop and never re-derived. */
+  const lastAnswerRef = useRef("");
   /** Podcast mode for the recording in progress, whatever the chooser says now. */
   const interviewRef = useRef(false);
   /** Seconds left to start the next answer yourself before it starts for you. */
@@ -1039,6 +1044,19 @@ export function RecordConsole({
     recognitionRef.current = null;
     setStatus("saving");
 
+    // The last answer, taken before anything else can rewrite the transcript.
+    //
+    // `finish()` replaces `transcriptRef` with the server's transcription of
+    // the whole recording, which shares no prefix with the live captions the
+    // earlier answers were sliced from. Reading the last segment after that
+    // meant the prefix test failed and the fallback returned the entire
+    // recording — which is why question three's answer was the whole session,
+    // and why the same words appeared twice in the report.
+    lastAnswerRef.current = newSpeech(
+      transcriptRef.current.trim(),
+      capturedRef.current,
+    );
+
     try {
       let text = transcriptRef.current.trim();
       // Delivery statistics for this attempt — pace, pauses, filler rate. Only
@@ -1203,8 +1221,7 @@ export function RecordConsole({
   async function finishInterview(sessionId: string) {
     // The last answer never went through `endSegment`.
     const last = askingRef.current[segmentIndexRef.current];
-    const whole = transcriptRef.current.trim();
-    const tail = newSpeech(whole, capturedRef.current);
+    const tail = lastAnswerRef.current;
     if (last && tail) {
       const segment: Segment = {
         question: last.question,
@@ -1219,7 +1236,12 @@ export function RecordConsole({
       };
       segmentsRef.current = [...segmentsRef.current, segment];
       setSegments(segmentsRef.current);
-      await gradeSegment(segmentsRef.current.length - 1, tail, last.index);
+      await gradeSegment(
+        segmentsRef.current.length - 1,
+        tail,
+        last.index,
+        last.keyPoints,
+      );
     }
 
     const done = segmentsRef.current;
@@ -1288,6 +1310,10 @@ export function RecordConsole({
           transcript: segment.transcript,
           score: segment.score,
           verdict: segment.verdict,
+          // Per answer, so the report can show what this one missed rather
+          // than pooling every mistake in the recording under all three.
+          gaps: segment.gaps,
+          strengths: segment.strengths,
         })),
         analyzed_at: new Date().toISOString(),
       })
@@ -1530,6 +1556,7 @@ export function RecordConsole({
           section:
             item.section || questions[item.section_index ?? 0]?.section || "",
           question: item.question,
+          keyPoints: item.key_points,
         }));
       }
     } catch {
@@ -1611,15 +1638,9 @@ export function RecordConsole({
     // Grade this answer, then write the next question out of what it missed.
     // This is the whole difference between a list and an examiner: question
     // two exists because of how question one went.
-    // The clock between answers starts now, not when the writer finishes.
-    // Hanging it off the network call is how it came to never appear at all:
-    // one slow or failed request and there was no countdown, no explanation,
-    // and a button that looked inert.
-    setCountdown(BETWEEN_SECONDS);
-
     if (next < INTERVIEW_QUESTIONS) {
       setWriting(true);
-      void gradeSegment(at, answer, current.index)
+      void gradeSegment(at, answer, current.index, current.keyPoints)
         .then((weakness) => writeQuestion(weakness))
         .then((written) => {
           const follow = written[0];
@@ -1646,7 +1667,7 @@ export function RecordConsole({
           setCountdown(BETWEEN_SECONDS);
         });
     } else {
-      void gradeSegment(at, answer, current.index);
+      void gradeSegment(at, answer, current.index, current.keyPoints);
       setCountdown(BETWEEN_SECONDS);
     }
   }
@@ -1687,6 +1708,7 @@ export function RecordConsole({
     at: number,
     answer: string,
     sectionIndex: number,
+    questionKeyPoints?: string[],
   ): Promise<string | undefined> {
     if (answer.length < 24 || !courseReady) return undefined;
     try {
@@ -1699,6 +1721,7 @@ export function RecordConsole({
             transcript: answer,
             mode: "final",
             sectionIndex,
+            ...(questionKeyPoints?.length ? { questionKeyPoints } : {}),
           }),
         },
         ANALYZE_TIMEOUT_MS,

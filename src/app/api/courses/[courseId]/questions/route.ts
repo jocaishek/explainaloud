@@ -32,6 +32,7 @@ const responseSchema = z.object({
       z.object({
         question: z.string().min(8),
         section_index: z.number().int().nonnegative().default(0),
+        key_points: z.array(z.string().min(1)).default([]),
       }),
     )
     .min(1),
@@ -142,6 +143,15 @@ export async function POST(
         section_index: Math.min(q.section_index, sections.length - 1),
         section:
           sections[Math.min(q.section_index, sections.length - 1)]?.title ?? "",
+        // What a complete answer to this question contains. Grading uses these
+        // rather than the section's own key points: the examiner writes a
+        // narrow question, and marking it against everything the section
+        // covers is what scored a decent answer zero for coverage.
+        key_points:
+          q.key_points.length > 0
+            ? q.key_points
+            : (sections[Math.min(q.section_index, sections.length - 1)]
+                ?.key_points ?? []),
       })),
     });
   } catch (error) {

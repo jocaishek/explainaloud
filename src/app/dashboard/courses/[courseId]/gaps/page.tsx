@@ -40,6 +40,8 @@ type SessionReport = {
     transcript: string;
     score: number | null;
     verdict: string | null;
+    gaps?: Array<{ phrase: string; category: string; explanation: string }>;
+    strengths?: string[];
   }> | null;
   /** What they were asked. Null for sessions recorded before questions. */
   question: string | null;
@@ -234,8 +236,11 @@ export default async function GapReportPage({
         )
       : null;
 
+  // The warm-up reports the median, so "your usual" has to be the median too.
+  // Reading `capable_wpm` first meant onboarding told you 150 and the report
+  // then compared you against 174 — two different numbers for one idea.
   const baselineWpm =
-    baseline?.capable_wpm ?? baseline?.median_wpm ?? sessionAverage;
+    baseline?.median_wpm ?? baseline?.capable_wpm ?? sessionAverage;
   const slowSpot =
     metrics?.reliable && metrics.slowestStretch && baselineWpm
       ? metrics.slowestStretch
@@ -262,7 +267,7 @@ export default async function GapReportPage({
 
   return (
     <div className="flex flex-col gap-8">
-      {(graded?.length ?? 0) > 1 && (
+      {(graded?.length ?? 0) > 0 && (
         <SessionPicker
           sessions={graded ?? []}
           current={session.id}
@@ -282,7 +287,7 @@ export default async function GapReportPage({
 
       {/* A score means nothing without the question it answers. Ahead of it,
           because it is the thing the rest of the page is about. */}
-      {session.question && (
+      {session.question && segments.length === 0 && (
         <div className="flex flex-col gap-1.5 rounded-xl border border-brand/20 bg-brand/[0.06] p-5">
           <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
             You were asked
@@ -325,171 +330,212 @@ export default async function GapReportPage({
         <KnowledgeScore score={score} verdict={session.report.verdict} />
       )}
 
-      {!focused && metrics?.reliable && (
-        <DeliverySummary
-          wpm={metrics.medianWpm}
-          usualWpm={baselineWpm}
-          recordingsSoFar={reliablePastWpm.length}
-        />
-      )}
+      {/* Two columns on a wide screen: what you did on the left — the score's
+          context, your pace, your words — and what it means on the right.
+          A single centred column made this page a very long scroll past four
+          full-width blocks, when half of them are short lists. The picker and
+          the question tabs stay full width above it, because they choose what
+          the whole page is showing. */}
+      <div
+        className={cn(
+          "grid gap-8",
+          !focused && "lg:grid-cols-[1.5fr_1fr] lg:items-start",
+        )}
+      >
+        <div className="flex min-w-0 flex-col gap-8">
+          {!focused && metrics?.reliable && (
+            <DeliverySummary
+              wpm={metrics.medianWpm}
+              usualWpm={baselineWpm}
+              recordingsSoFar={reliablePastWpm.length}
+            />
+          )}
 
-      {!focused && slowSpot && slowSpotWeakness && baselineWpm && (
-        <SlowSpotCallout
-          text={slowSpot.text}
-          wpm={slowSpot.wpm}
-          baselineWpm={baselineWpm}
-        />
-      )}
+          {!focused && slowSpot && slowSpotWeakness && baselineWpm && (
+            <SlowSpotCallout
+              text={slowSpot.text}
+              wpm={slowSpot.wpm}
+              baselineWpm={baselineWpm}
+            />
+          )}
 
-      {!focused && session.transcript && spans.length > 0 && (
-        <section
-          aria-labelledby="transcript-heading"
-          className="flex flex-col gap-3"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          {!focused && session.transcript && spans.length > 0 && (
+            <section
+              aria-labelledby="transcript-heading"
+              className="flex flex-col gap-3"
+            >
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2
+                  id="transcript-heading"
+                  className="text-base font-semibold text-strong"
+                >
+                  Your transcript
+                </h2>
+                <div className="flex items-center gap-3 text-xs text-subtle">
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-green-500" />
+                    Accurate
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="size-2 rounded-full bg-red-500" />
+                    Needs work
+                  </span>
+                </div>
+              </div>
+              <p className="max-w-3xl rounded-xl bg-surface p-4 text-sm leading-7 text-foreground">
+                {spans.map((span, index) => {
+                  const substantive = span.text.trim().length > 0;
+                  const status =
+                    span.status === "neutral" &&
+                    substantive &&
+                    markSubstantiveNeutralAsGap
+                      ? "gap"
+                      : span.status;
+                  const weakness =
+                    status === "gap"
+                      ? relatedWeakness(span.text, index, weaknesses)
+                      : null;
+
+                  if (status === "gap" && weakness) {
+                    return (
+                      <ScrollToTargetLink
+                        // biome-ignore lint/suspicious/noArrayIndexKey: transcript spans are positional
+                        key={`${index}-${span.text.slice(0, 16)}`}
+                        targetId={`weakness-${weakness.id}`}
+                        title={span.issue ?? "Jump to this weakness"}
+                        className="rounded bg-red-500/10 text-red-600 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-red-400"
+                      >
+                        {span.text}
+                      </ScrollToTargetLink>
+                    );
+                  }
+
+                  return (
+                    <span
+                      // biome-ignore lint/suspicious/noArrayIndexKey: transcript spans are positional
+                      key={`${index}-${span.text.slice(0, 16)}`}
+                      className={cn(
+                        status === "correct" &&
+                          "text-green-600 dark:text-green-400",
+                        // Vague is grey, not red: too woolly to check is not the
+                        // same as wrong, and colouring it red says it is.
+                        (status === "vague" || status === "neutral") &&
+                          "text-subtle",
+                      )}
+                    >
+                      {span.text}
+                    </span>
+                  );
+                })}
+              </p>
+              <p className="text-xs text-subtle">
+                Select any red text to jump to the matching weakness.
+              </p>
+            </section>
+          )}
+        </div>
+
+        <div className="flex min-w-0 flex-col gap-8">
+          <section
+            aria-labelledby="strengths-heading"
+            className="flex flex-col gap-3"
+          >
             <h2
-              id="transcript-heading"
+              id="strengths-heading"
               className="text-base font-semibold text-strong"
             >
-              Your transcript
+              Knowledge strengths
             </h2>
-            <div className="flex items-center gap-3 text-xs text-subtle">
-              <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-green-500" />
-                Accurate
-              </span>
-              <span className="flex items-center gap-1.5">
-                <span className="size-2 rounded-full bg-red-500" />
-                Needs work
-              </span>
-            </div>
-          </div>
-          <p className="max-w-3xl rounded-xl bg-surface p-4 text-sm leading-7 text-foreground">
-            {spans.map((span, index) => {
-              const substantive = span.text.trim().length > 0;
-              const status =
-                span.status === "neutral" &&
-                substantive &&
-                markSubstantiveNeutralAsGap
-                  ? "gap"
-                  : span.status;
-              const weakness =
-                status === "gap"
-                  ? relatedWeakness(span.text, index, weaknesses)
-                  : null;
-
-              if (status === "gap" && weakness) {
-                return (
-                  <ScrollToTargetLink
-                    // biome-ignore lint/suspicious/noArrayIndexKey: transcript spans are positional
-                    key={`${index}-${span.text.slice(0, 16)}`}
-                    targetId={`weakness-${weakness.id}`}
-                    title={span.issue ?? "Jump to this weakness"}
-                    className="rounded bg-red-500/10 text-red-600 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-red-400"
+            {session.report.strengths.length > 0 ? (
+              <ul className="flex max-w-3xl flex-col gap-2">
+                {session.report.strengths.map((strength) => (
+                  <li
+                    key={strength}
+                    className="flex gap-2 text-sm leading-6 text-foreground"
                   >
-                    {span.text}
-                  </ScrollToTargetLink>
-                );
-              }
+                    <span
+                      aria-hidden
+                      className="mt-2 size-2 shrink-0 rounded-full bg-green-500"
+                    />
+                    {strength}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-sm text-subtle">
+                No clear strengths were demonstrated in this explanation yet.
+              </p>
+            )}
+          </section>
 
-              return (
-                <span
-                  // biome-ignore lint/suspicious/noArrayIndexKey: transcript spans are positional
-                  key={`${index}-${span.text.slice(0, 16)}`}
-                  className={cn(
-                    status === "correct" &&
-                      "text-green-600 dark:text-green-400",
-                    // Vague is grey, not red: too woolly to check is not the
-                    // same as wrong, and colouring it red says it is.
-                    (status === "vague" || status === "neutral") &&
-                      "text-subtle",
-                  )}
-                >
-                  {span.text}
-                </span>
-              );
-            })}
-          </p>
-          <p className="text-xs text-subtle">
-            Select any red text to jump to the matching weakness.
-          </p>
-        </section>
-      )}
-
-      <section
-        aria-labelledby="strengths-heading"
-        className="flex flex-col gap-3"
-      >
-        <h2
-          id="strengths-heading"
-          className="text-base font-semibold text-strong"
-        >
-          Knowledge strengths
-        </h2>
-        {session.report.strengths.length > 0 ? (
-          <ul className="flex max-w-3xl flex-col gap-2">
-            {session.report.strengths.map((strength) => (
-              <li
-                key={strength}
-                className="flex gap-2 text-sm leading-6 text-foreground"
-              >
-                <span
-                  aria-hidden
-                  className="mt-2 size-2 shrink-0 rounded-full bg-green-500"
-                />
-                {strength}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-subtle">
-            No clear strengths were demonstrated in this explanation yet.
-          </p>
-        )}
-      </section>
-
-      {/* Two lists, because they are two different things.
+          {/* Two lists, because they are two different things.
           A tester saw five cards reading "Missing Step" under "Knowledge
           weaknesses" and concluded the app had docked them for not reciting
           the whole course. They were right to. Getting something wrong and
           not having reached it yet deserve different headings, different
           colours, and different words. */}
-      {/* The weakness lists belong to the recording, not to one answer inside
+          {/* The weakness lists belong to the recording, not to one answer inside
           it — a gap row carries no question number — so under a single
           question they would be someone else's mistakes as often as not.
           Hidden there, with a way back rather than a dead end. */}
-      {focused ? (
-        <p className="text-sm text-subtle">
-          The gaps and re-teaching cover the whole recording.{" "}
-          <Link
-            href={`/dashboard/courses/${courseId}/gaps?session=${session.id}`}
-            className="font-medium text-strong underline underline-offset-2"
-          >
-            See everything
-          </Link>
-          .
-        </p>
-      ) : (
-        <>
-          <WeaknessList
-            heading="Where you went wrong"
-            description="Worth fixing first: these are things the explanation got wrong."
-            emptyText="Nothing you said was wrong. "
-            tone="error"
-            courseId={courseId}
-            items={mistakes}
-          />
+          {focused ? (
+            <>
+              {(focused.gaps?.length ?? 0) > 0 && (
+                <section className="flex flex-col gap-3">
+                  <h2 className="text-base font-semibold text-strong">
+                    What this answer missed
+                  </h2>
+                  <ul className="flex flex-col gap-2">
+                    {focused.gaps?.map((gap) => (
+                      <li
+                        key={gap.phrase}
+                        className="rounded-xl border border-border bg-surface p-4"
+                      >
+                        <p className="text-sm font-medium text-strong">
+                          {gap.phrase}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-subtle">
+                          {gap.explanation}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              <p className="text-sm text-subtle">
+                Re-teaching covers the whole recording.{" "}
+                <Link
+                  href={`/dashboard/courses/${courseId}/gaps?session=${session.id}`}
+                  className="font-medium text-strong underline underline-offset-2"
+                >
+                  See everything
+                </Link>
+                .
+              </p>
+            </>
+          ) : (
+            <>
+              <WeaknessList
+                heading="Where you went wrong"
+                description="Worth fixing first: these are things the explanation got wrong."
+                emptyText="Nothing you said was wrong. "
+                tone="error"
+                courseId={courseId}
+                items={mistakes}
+              />
 
-          <WeaknessList
-            heading="Not covered yet"
-            description="You didn't get to these. That isn't the same as getting them wrong."
-            emptyText="You reached every key point in the course."
-            tone="neutral"
-            courseId={courseId}
-            items={notCovered}
-          />
-        </>
-      )}
+              <WeaknessList
+                heading="Not covered yet"
+                description="You didn't get to these. That isn't the same as getting them wrong."
+                emptyText="You reached every key point in the course."
+                tone="neutral"
+                courseId={courseId}
+                items={notCovered}
+              />
+            </>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

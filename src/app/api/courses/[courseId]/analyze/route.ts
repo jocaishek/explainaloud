@@ -36,6 +36,17 @@ const requestSchema = z.object({
    * they are graded against by sending a friendlier question with it.
    */
   sectionIndex: z.number().int().nonnegative().optional(),
+  /**
+   * What a complete answer to the question contains, as the Examiner wrote it
+   * alongside the question itself.
+   *
+   * The section's own key points are the wrong yardstick for a question the
+   * Examiner invented: it asks something narrow, and marking the answer
+   * against everything the section covers reported "0 of 3 covered" for an
+   * answer that addressed the question well. These come from a model, not from
+   * the student, and the only thing they can bias is the student's own score.
+   */
+  questionKeyPoints: z.array(z.string().min(1).max(400)).max(6).optional(),
 });
 
 /**
@@ -116,9 +127,11 @@ export async function POST(
       ? sections[parsedBody.data.sectionIndex]
       : undefined;
   const question = section?.quiz?.trim() || undefined;
-  const keyPoints = section
-    ? section.key_points
-    : sections.flatMap((s) => s.key_points);
+  const keyPoints = parsedBody.data.questionKeyPoints?.length
+    ? parsedBody.data.questionKeyPoints
+    : section
+      ? section.key_points
+      : sections.flatMap((s) => s.key_points);
 
   if (keyPoints.length === 0) {
     return NextResponse.json(
