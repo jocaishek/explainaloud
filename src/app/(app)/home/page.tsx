@@ -25,9 +25,6 @@ export default async function DashboardPage() {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-8 px-6 py-12">
       <div>
         <Greeting name={profile.first_name} />
-        <p className="mt-2 text-subtle">
-          Every topic you&apos;ve started, from teach-back to gap report.
-        </p>
       </div>
 
       <TopicGrid folders={folders ?? []} courses={courses ?? []} />
