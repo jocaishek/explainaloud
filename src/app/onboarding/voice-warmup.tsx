@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Mic, Square } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
+import { requestJson } from "~/lib/api-client";
 import { audioExtension, preferredRecorderMimeType } from "~/lib/audio";
 import { MIN_SPEAKING_SECONDS } from "~/lib/speech-metrics";
 import { cn } from "~/lib/utils";
@@ -120,34 +121,26 @@ export function VoiceWarmup({
         }),
       );
 
-      try {
-        const response = await fetch("/api/speech/baseline", {
-          method: "POST",
-          body,
-        });
-        const json = await response.json().catch(() => ({}));
-        if (abandonedRef.current) return;
+      const result = await requestJson<{
+        saved?: boolean;
+        medianWpm?: number;
+        speakingSeconds?: number;
+      }>("/api/speech/baseline", { method: "POST", body });
+      if (abandonedRef.current) return;
 
-        if (!response.ok || !json?.saved) {
-          setStage("error");
-          setError(
-            typeof json?.error === "string"
-              ? json.error
-              : "Couldn't process that. You can skip this step.",
-          );
-          return;
-        }
-
-        setStage("done");
-        onComplete({
-          medianWpm: Number(json.medianWpm) || 0,
-          speakingSeconds: Number(json.speakingSeconds) || 0,
-        });
-      } catch {
-        if (abandonedRef.current) return;
+      if (!result.ok || !result.data.saved) {
         setStage("error");
-        setError("Couldn't reach the server. You can skip this step.");
+        setError(
+          `${result.ok ? "Couldn't process that." : result.error} You can skip this step.`,
+        );
+        return;
       }
+
+      setStage("done");
+      onComplete({
+        medianWpm: Number(result.data.medianWpm) || 0,
+        speakingSeconds: Number(result.data.speakingSeconds) || 0,
+      });
     },
     [onComplete],
   );

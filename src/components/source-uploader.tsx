@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { useRef, useState } from "react";
+import { requestJson } from "~/lib/api-client";
 import { ACCEPT_ATTRIBUTE, sourceLimitFor } from "~/lib/uploads";
 import { cn } from "~/lib/utils";
 
@@ -117,23 +118,20 @@ export function SourceUploader({
   async function remove(id: string) {
     setRemovingId(id);
     setErrors([]);
-    try {
-      const response = await fetch(
-        `/api/courses/${courseId}/sources?id=${id}`,
-        { method: "DELETE" },
-      );
-      const json = await response.json();
-      if (!response.ok) {
-        setErrors([json.error ?? "Couldn't remove that source."]);
-        return;
-      }
+    const result = await requestJson(
+      `/api/courses/${courseId}/sources?id=${id}`,
+      { method: "DELETE" },
+    );
+
+    if (result.ok) {
       publish(sources.filter((source) => source.id !== id));
       setConfirmRemoveId(null);
-    } catch {
-      setErrors(["Couldn't reach the server. The source was not removed."]);
-    } finally {
-      setRemovingId(null);
+    } else {
+      // What happened to the source matters as much as why it failed: a
+      // half-answered "did that delete or not" is worse than the error.
+      setErrors([`${result.error} The source was not removed.`]);
     }
+    setRemovingId(null);
   }
 
   return (
