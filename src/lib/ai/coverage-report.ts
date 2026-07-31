@@ -91,6 +91,29 @@ const DEPTH_FLOOR = 0.35;
  */
 const ECHO_FRACTION = 0.6;
 
+/**
+ * Questions that ask for a label, not a mechanism.
+ *
+ * Depth measures whether someone said *how* or *why*. A question shaped like
+ * "What is the definition of equilibrium?" asks for neither, so marking the
+ * answer on depth docks the student for answering exactly what was asked —
+ * nineteen points, in the case that prompted this, on a reply the grader had
+ * just confirmed was completely correct.
+ *
+ * The same list the Examiner is forbidden from writing. Generated section
+ * quizzes never had that rule applied, so definition questions still reach
+ * topic mode; until every course predating the rule has been regenerated,
+ * this is what stops them being scored on an axis they rule out.
+ */
+const LABEL_QUESTION =
+  /^\s*(what\s+(is|are|was|were)\b|define\b|name\b|list\b|which\s+of\b|who\s+(is|was)\b|when\s+(is|was|did)\b)/i;
+
+/** Whether depth is a fair thing to ask of the answer to this question. */
+function invitesDepth(question: string | undefined): boolean {
+  if (!question?.trim()) return true;
+  return !LABEL_QUESTION.test(question);
+}
+
 /** Words too common to be evidence that a concept was actually discussed. */
 const STOPWORDS = new Set([
   "a",
@@ -216,6 +239,7 @@ export function completeCoverageReport({
   thorough,
   spans,
   transcript = "",
+  question,
   scoped = false,
 }: {
   draft: CoachingReport;
@@ -228,6 +252,14 @@ export function completeCoverageReport({
   spans: EvaluatedSpan[];
   /** What was actually said, for the not-covered backstop. */
   transcript?: string;
+  /**
+   * The question that was asked, when there was one.
+   *
+   * Only used to decide whether depth is a fair axis. A question that asks
+   * for a definition cannot be answered with a mechanism, so scoring one
+   * against the other punishes a correct answer.
+   */
+  question?: string;
   /**
    * Whether these key points are one question's worth rather than the whole
    * course. Changes only the wording: "the 3 course key points" is misleading
@@ -307,6 +339,10 @@ export function completeCoverageReport({
   const thoroughCount = [...thorough].filter((index) =>
     covered.has(index),
   ).length;
+  // A question that asks for a label gets no depth axis at all — its weight
+  // moves to coverage, so the total still comes to 1 and answering a
+  // definition question well can still reach 100.
+  const depthCounts = invitesDepth(question);
   const depth =
     covered.size > 0
       ? (thoroughCount + DEPTH_FLOOR * (covered.size - thoroughCount)) /
@@ -326,8 +362,8 @@ export function completeCoverageReport({
 
   const understanding =
     (engaged ? SCORE_BASE : 0) +
-    SCORE_COVERAGE * coverage +
-    SCORE_DEPTH * depth;
+    (depthCounts ? SCORE_COVERAGE : SCORE_COVERAGE + SCORE_DEPTH) * coverage +
+    (depthCounts ? SCORE_DEPTH * depth : 0);
   // No checkable claims at all is not the same as every claim being wrong.
   // Speech too hedged to mark is graded on what it covered — but only when it
   // covered something, which `engaged` has already settled.
@@ -377,9 +413,16 @@ export function completeCoverageReport({
       explanation: `The course material says: ${keyPoint}`,
     }));
   const missingCount = missingKeyPoints.length;
+  // Printed on every branch, not only when something was missed outright.
+  // A partial costs real marks — a half-covered point out of two is ten of
+  // them — and saying "you covered everything" while docking for one is the
+  // page disagreeing with its own number, which is what made a 71 on a
+  // correct answer unexplainable.
   const partialNote =
     partialOnly.length > 0
-      ? ` You partly covered ${partialOnly.length} more.`
+      ? partialOnly.length === 1
+        ? " One of them only partly, which is why this is not full marks."
+        : ` ${partialOnly.length} of them only partly, which is why this is not full marks.`
       : "";
   // "Course key points" is the wrong noun for a question's worth of them, and
   // the difference matters: it is the sentence that tells someone whether the
@@ -394,15 +437,15 @@ export function completeCoverageReport({
         ? "Nothing in this recording addressed the question."
         : missingCount === 0
           ? scoped
-            ? "You covered everything this question was asking for."
-            : `You covered all ${keyPoints.length} course key points.`
+            ? `You covered everything this question was asking for.${partialNote}`
+            : `You covered all ${keyPoints.length} course key points.${partialNote}`
           : `You covered ${covered.size} of ${keyPoints.length} ${pointsNoun}.${partialNote} The other ${missingCount} you did not get to — that is not the same as getting them wrong.`;
   const accuracyVerdict =
     claimSpans.length > 0
       ? ` ${correctClaims} of ${claimSpans.length} checkable claim${claimSpans.length === 1 ? " was" : "s were"} accurate.`
       : "";
   const depthVerdict =
-    covered.size > 0 && thoroughCount < covered.size
+    depthCounts && covered.size > 0 && thoroughCount < covered.size
       ? ` You explained ${thoroughCount} of them in depth; the rest you stated without saying how or why.`
       : "";
 
