@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageEnter } from "~/components/page-enter";
+import { SessionPicker } from "~/components/session-picker";
 import { conciseTeachingText } from "~/lib/ai/presentation";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import {
@@ -24,22 +25,50 @@ type GapRow = {
  */
 export default async function ReTeachPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ courseId: string }>;
+  /** `?session=` picks which recording to re-teach. Absent means the newest. */
+  searchParams: Promise<{ session?: string }>;
 }) {
   const { courseId } = await params;
+  const { session: wanted } = await searchParams;
   const { supabase, user } = await requireUser();
 
+  const { data: graded } = await supabase
+    .from("course_sessions")
+    .select("id, started_at, score, mode")
+    .eq("course_id", courseId)
+    .eq("user_id", user.id)
+    .not("report", "is", null)
+    .order("started_at", { ascending: false })
+    .limit(30)
+    .returns<
+      Array<{
+        id: string;
+        started_at: string;
+        score: number | null;
+        mode: string | null;
+      }>
+    >();
+
   const [{ data: session }, { data: course }] = await Promise.all([
-    supabase
-      .from("course_sessions")
-      .select("id, gaps ( id, phrase, category, explanation, resolved )")
-      .eq("course_id", courseId)
-      .eq("user_id", user.id)
-      .not("report", "is", null)
-      .order("started_at", { ascending: false })
-      .limit(1)
-      .maybeSingle<{ id: string; gaps: GapRow[] }>(),
+    (wanted
+      ? supabase
+          .from("course_sessions")
+          .select("id, gaps ( id, phrase, category, explanation, resolved )")
+          .eq("course_id", courseId)
+          .eq("user_id", user.id)
+          .eq("id", wanted)
+      : supabase
+          .from("course_sessions")
+          .select("id, gaps ( id, phrase, category, explanation, resolved )")
+          .eq("course_id", courseId)
+          .eq("user_id", user.id)
+          .not("report", "is", null)
+          .order("started_at", { ascending: false })
+          .limit(1)
+    ).maybeSingle<{ id: string; gaps: GapRow[] }>(),
     supabase
       .from("courses")
       .select("generated")
@@ -75,6 +104,14 @@ export default async function ReTeachPage({
   return (
     <PageEnter>
       <div className="flex flex-col gap-6">
+        {(graded?.length ?? 0) > 1 && session && (
+          <SessionPicker
+            sessions={graded ?? []}
+            current={session.id}
+            courseId={courseId}
+            basePath="re-teach"
+          />
+        )}
         <p className="text-sm text-subtle">
           {gaps.length} thing{gaps.length === 1 ? "" : "s"} to go back over.
           Each one is just the piece you missed.

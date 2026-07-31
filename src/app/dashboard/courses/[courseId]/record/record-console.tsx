@@ -382,7 +382,7 @@ export function RecordConsole({
   );
   // Which question is on screen. Clamped on read rather than on write, so a
   // course that regenerates with fewer sections cannot leave this dangling.
-  const [askedAt, setAskedAt] = useState(initialQuestion);
+  const askedAt = initialQuestion;
   const asked = questions[Math.min(askedAt, questions.length - 1)];
   // Pinned when recording starts: the answer must be graded against the
   // question that was on screen when they began, not one they scrolled to
@@ -2163,12 +2163,6 @@ export function RecordConsole({
           asked={live}
           position={mode === "interview" ? segmentIndex : askedAt}
           total={mode === "interview" ? asking.length : questions.length}
-          // Locked mid-recording: swapping the question would grade what they
-          // are saying against something they were never asked.
-          locked={running || busy || mode === "interview"}
-          onNext={() =>
-            setAskedAt((current) => (current + 1) % questions.length)
-          }
           waiting={status === "between"}
           writing={writing}
           countdown={status === "between" ? countdown : null}
@@ -2545,6 +2539,7 @@ function ModeChooser({
         return (
           <label
             key={option.value}
+            htmlFor={`mode-${option.value}`}
             className={cn(
               "flex cursor-pointer flex-col gap-1.5 rounded-2xl border p-4 text-left transition-colors",
               "focus-within:ring-2 focus-within:ring-brand/40",
@@ -2554,10 +2549,14 @@ function ModeChooser({
             )}
           >
             <input
+              id={`mode-${option.value}`}
               type="radio"
               name="recording-mode"
               value={option.value}
               checked={selected}
+              // Clicking anywhere on the card has to select it. A nested input
+              // alone was not enough — `htmlFor` is what makes the whole card
+              // the control rather than just the invisible dot inside it.
               onChange={() => onChange(option.value)}
               className="sr-only"
             />
@@ -2647,8 +2646,6 @@ function QuestionCard({
   asked,
   position,
   total,
-  locked,
-  onNext,
   waiting,
   writing,
   countdown,
@@ -2656,8 +2653,6 @@ function QuestionCard({
   asked: CourseQuestion;
   position: number;
   total: number;
-  locked: boolean;
-  onNext: () => void;
   /** Between answers: this question is up next, and nothing is being heard. */
   waiting?: boolean;
   /** The examiner is still writing this one, out of the last answer. */
@@ -2671,16 +2666,6 @@ function QuestionCard({
         <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
           Question {position + 1} of {total} · {asked.section}
         </span>
-        {total > 1 && !locked && (
-          <button
-            type="button"
-            onClick={onNext}
-            disabled={locked}
-            className="shrink-0 text-xs font-medium text-brand transition-opacity hover:opacity-80 disabled:opacity-40"
-          >
-            Ask a different one
-          </button>
-        )}
       </div>
 
       {/* Keyed on the question, so a change is an exit and an entrance rather
