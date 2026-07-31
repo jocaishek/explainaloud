@@ -46,9 +46,16 @@ export const env = createEnv({
     // pointing at the wrong hostname. Optional: unset, the Vercel host is
     // still a working fallback.
     NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
+    // The Google OAuth client id, so the sign-in handshake can run on this
+    // origin instead of redirecting through `<ref>.supabase.co` — which is
+    // the host Google's consent screen would otherwise name. Public by
+    // design; the client secret is never involved in this flow. Optional:
+    // unset, the button falls back to the Supabase redirect.
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   },
   runtimeEnv: {
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    NEXT_PUBLIC_GOOGLE_CLIENT_ID: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID,
     NODE_ENV: process.env.NODE_ENV,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
