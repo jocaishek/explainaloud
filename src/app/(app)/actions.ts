@@ -27,6 +27,10 @@ export async function createCourse(
   const topic = String(formData.get("topic") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const folderId = String(formData.get("folderId") ?? "").trim();
+  // Only honoured once files arrive. The form hides the switch until something
+  // is queued, but the course row is written before the uploads are, so this
+  // records the intent and `orchestrateCourse` ignores it if nothing landed.
+  const sourcesOnly = formData.get("sourcesOnly") === "on";
   // The browser sends its own calendar date so the cap resets at the
   // student's midnight, not the server's.
   const day = String(formData.get("day") ?? "") || localDay();
@@ -60,6 +64,7 @@ export async function createCourse(
       input_notes: notes || null,
       folder_id: folderId || null,
       slug,
+      sources_only: sourcesOnly,
     })
     .select("id, slug")
     .single<{ id: string; slug: string }>();

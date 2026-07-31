@@ -5,6 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AgentOrchestration } from "~/components/agent-orchestration";
+import {
+  SCOPE_OPTIONS,
+  SCOPE_QUESTION,
+  SourceScopeOption,
+} from "~/components/source-scope-choice";
 import { type SourceItem, SourceUploader } from "~/components/source-uploader";
 import { Button } from "~/components/ui/button";
 import type { CourseCitation, GeneratedCourse } from "~/lib/ai/schemas";
@@ -22,6 +27,7 @@ export function CourseBuilder({
   slug,
   initialSources,
   initialCourse,
+  initialSourcesOnly = false,
   unlimited = false,
 }: {
   courseId: string;
@@ -29,11 +35,14 @@ export function CourseBuilder({
   slug: string;
   initialSources: SourceItem[];
   initialCourse: GeneratedCourse | null;
+  /** How this course was last built: strictly from its files, or not. */
+  initialSourcesOnly?: boolean;
   /** Admins bypass the per-topic source cap. */
   unlimited?: boolean;
 }) {
   const router = useRouter();
   const [sources, setSources] = useState(initialSources);
+  const [sourcesOnly, setSourcesOnly] = useState(initialSourcesOnly);
   const [course, setCourse] = useState(initialCourse);
   const [generating, setGenerating] = useState(false);
   const [findingLinks, setFindingLinks] = useState(false);
@@ -60,7 +69,13 @@ export function CourseBuilder({
     const result = await requestJson<{
       course: GeneratedCourse;
       detail?: string;
-    }>(`/api/courses/${courseId}/generate`, { method: "POST" });
+    }>(`/api/courses/${courseId}/generate`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      // Sent every build so the switch below takes effect immediately, rather
+      // than only on courses created after it existed.
+      body: JSON.stringify({ sourcesOnly: sourcesOnly && sources.length > 0 }),
+    });
 
     if (result.ok) {
       setCourse(result.data.course);
@@ -142,6 +157,41 @@ export function CourseBuilder({
           onChange={setSources}
           unlimited={unlimited}
         />
+
+        {/* Shown only with files present: with nothing uploaded there is
+            nothing to be strict about, and the course has to come from
+            somewhere. */}
+        {sources.length > 0 && (
+          <fieldset
+            disabled={generating}
+            className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 disabled:opacity-60"
+          >
+            <legend className="px-1 text-sm font-semibold text-strong">
+              {SCOPE_QUESTION}
+            </legend>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <SourceScopeOption
+                name="course-source-scope"
+                value="off"
+                checked={!sourcesOnly}
+                onSelect={() => setSourcesOnly(false)}
+                {...SCOPE_OPTIONS.open}
+              />
+              <SourceScopeOption
+                name="course-source-scope"
+                value="on"
+                checked={sourcesOnly}
+                onSelect={() => setSourcesOnly(true)}
+                {...SCOPE_OPTIONS.strict}
+              />
+            </div>
+            {sourcesOnly !== initialSourcesOnly && course && (
+              <p className="text-xs leading-5 text-subtle">
+                Rebuild the course for this to take effect.
+              </p>
+            )}
+          </fieldset>
+        )}
       </section>
 
       <div className="flex flex-wrap items-center gap-3">

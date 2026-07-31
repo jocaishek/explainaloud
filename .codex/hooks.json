@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh '/Users/jovannyshek/Coding Projects/Lumos Fellows App (TeachItBack)/Ropes/.codex/hooks/stop-checks.sh'",
+            "timeout": 120,
+            "statusMessage": "Running checks"
+          }
+        ]
+      }
+    ]
+  }
+}

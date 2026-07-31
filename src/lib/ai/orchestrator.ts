@@ -478,10 +478,19 @@ export async function orchestrateCourse(params: {
   topic: string;
   notes: string | null;
   sources: SourceRow[];
+  /**
+   * The student switched outside sources off.
+   *
+   * Only meaningful alongside uploads — with no files there is nothing to be
+   * strict about, and honouring the flag would mean generating a course from
+   * nothing at all. So it is ignored unless something was uploaded.
+   */
+  sourcesOnly?: boolean;
 }) {
   const startedAt = new Date().toISOString();
   const runId = crypto.randomUUID();
   const grounded = params.sources.length > 0;
+  const strict = grounded && params.sourcesOnly === true;
   const research = grounded
     ? { sources: [], resources: [], searched: false }
     : await discoverCourseEvidence(params.topic);
@@ -493,11 +502,13 @@ export async function orchestrateCourse(params: {
       "source-scout",
       "Source Scout",
       "Index uploads or research direct evidence before generation.",
-      grounded
-        ? `Indexed ${params.sources.length} source${params.sources.length === 1 ? "" : "s"} for grounded generation.`
-        : research.sources.length > 0
-          ? `Researched ${research.sources.length} direct source${research.sources.length === 1 ? "" : "s"} with one basic search.`
-          : "No uploads or reliable research results were available; using established textbook knowledge.",
+      strict
+        ? `Indexed ${params.sources.length} source${params.sources.length === 1 ? "" : "s"}. Outside sources are off, so no research was run and nothing beyond these files was used.`
+        : grounded
+          ? `Indexed ${params.sources.length} source${params.sources.length === 1 ? "" : "s"} for grounded generation.`
+          : research.sources.length > 0
+            ? `Researched ${research.sources.length} direct source${research.sources.length === 1 ? "" : "s"} with one basic search.`
+            : "No uploads or reliable research results were available; using established textbook knowledge.",
       {
         status:
           grounded || research.sources.length > 0 ? "completed" : "degraded",
@@ -512,7 +523,7 @@ export async function orchestrateCourse(params: {
   // wrong in both directions.
   const [architect, breadth] = await Promise.all([
     completeJson(
-      `${courseGenerationPrompt(params.topic, params.notes, evidenceGrounded)}
+      `${courseGenerationPrompt(params.topic, params.notes, evidenceGrounded, strict)}
 
 ${renderSources(evidenceSources)}`,
       (value) => courseSchema.parse(value),
@@ -551,16 +562,23 @@ ${renderSources(evidenceSources)}`,
    * the reviser corrects claims rather than deciding which topics exist. So
    * they overlap the review instead of queueing behind it, and one whole stage
    * leaves the critical path.
+   *
+   * Null with outside sources off. Both of these point away from the uploads —
+   * a YouTube link is somebody else's explanation of the topic, not their
+   * lecturer's — so they are never started rather than started and discarded,
+   * and the build loses two web round trips with them.
    */
-  const supplementary = Promise.all([
-    discoverCourseVideos(params.topic, architectCourse.video_searches),
-    grounded
-      ? discoverCourseResources(
-          params.topic,
-          architectCourse.sections.flatMap((section) => section.key_points),
-        )
-      : Promise.resolve(research),
-  ]);
+  const supplementary = strict
+    ? null
+    : Promise.all([
+        discoverCourseVideos(params.topic, architectCourse.video_searches),
+        grounded
+          ? discoverCourseResources(
+              params.topic,
+              architectCourse.sections.flatMap((section) => section.key_points),
+            )
+          : Promise.resolve(research),
+      ]);
 
   let review: CourseReview;
   let reviewerProvider: "gemini" | "groq" | "local" = "local";
@@ -571,6 +589,7 @@ ${renderSources(evidenceSources)}`,
       courseReviewPrompt({
         topic: params.topic,
         grounded: evidenceGrounded,
+        sourcesOnly: strict,
         sourceNames: evidenceSources.map((source) => source.filename),
         sourceEvidence: sourceEvidence(evidenceSources),
         draft: auditView(architectCourse),
@@ -672,43 +691,69 @@ ${renderSources(evidenceSources)}`,
     throw new CourseCitationError();
   }
 
-  // Already in flight since the draft landed; by here it has usually settled.
-  const [videoDiscovery, resourceDiscovery] = await supplementary;
-  course = {
-    ...course,
-    videos: videoDiscovery.videos,
-    resources:
-      resourceDiscovery.resources.length > 0
-        ? resourceDiscovery.resources
-        : course.resources,
-  };
-  agents.push(
-    agentStep(
-      "video-researcher",
-      "Video Researcher",
-      "Find direct educational videos for the finished course.",
-      videoDiscovery.videos.length > 0
-        ? `Found ${videoDiscovery.videos.length} direct video${videoDiscovery.videos.length === 1 ? "" : "s"} matched to this course.`
-        : "No reliable direct videos were found, so no search-page links were added.",
-      {
-        status: videoDiscovery.videos.length > 0 ? "completed" : "degraded",
-      },
-    ),
-  );
-  agents.push(
-    agentStep(
-      "resource-researcher",
-      "Resource Researcher",
-      "Resolve follow-up topics to direct English educational websites.",
-      resourceDiscovery.resources.length > 0
-        ? `Found ${resourceDiscovery.resources.length} direct English reading resource${resourceDiscovery.resources.length === 1 ? "" : "s"}.`
-        : "No reliable direct reading pages were found, so no search-page links were added.",
-      {
-        status:
-          resourceDiscovery.resources.length > 0 ? "completed" : "degraded",
-      },
-    ),
-  );
+  /**
+   * Videos and further reading, both of which point away from the uploads.
+   *
+   * Already in flight since the draft landed, unless the student switched
+   * outside sources off — in which case nothing was started, and there is
+   * nothing to collect.
+   */
+  if (supplementary) {
+    const [videoDiscovery, resourceDiscovery] = await supplementary;
+    course = {
+      ...course,
+      videos: videoDiscovery.videos,
+      resources:
+        resourceDiscovery.resources.length > 0
+          ? resourceDiscovery.resources
+          : course.resources,
+    };
+    agents.push(
+      agentStep(
+        "video-researcher",
+        "Video Researcher",
+        "Find direct educational videos for the finished course.",
+        videoDiscovery.videos.length > 0
+          ? `Found ${videoDiscovery.videos.length} direct video${videoDiscovery.videos.length === 1 ? "" : "s"} matched to this course.`
+          : "No reliable direct videos were found, so no search-page links were added.",
+        {
+          status: videoDiscovery.videos.length > 0 ? "completed" : "degraded",
+        },
+      ),
+    );
+    agents.push(
+      agentStep(
+        "resource-researcher",
+        "Resource Researcher",
+        "Resolve follow-up topics to direct English educational websites.",
+        resourceDiscovery.resources.length > 0
+          ? `Found ${resourceDiscovery.resources.length} direct English reading resource${resourceDiscovery.resources.length === 1 ? "" : "s"}.`
+          : "No reliable direct reading pages were found, so no search-page links were added.",
+        {
+          status:
+            resourceDiscovery.resources.length > 0 ? "completed" : "degraded",
+        },
+      ),
+    );
+  } else {
+    course = { ...course, videos: [], resources: [] };
+    agents.push(
+      agentStep(
+        "video-researcher",
+        "Video Researcher",
+        "Find direct educational videos for the finished course.",
+        "Skipped: outside sources are off, so this course links only to your own material.",
+        { status: "skipped" },
+      ),
+      agentStep(
+        "resource-researcher",
+        "Resource Researcher",
+        "Resolve follow-up topics to direct English educational websites.",
+        "Skipped: outside sources are off, so this course links only to your own material.",
+        { status: "skipped" },
+      ),
+    );
+  }
 
   const orchestration: AgentRun = {
     run_id: runId,

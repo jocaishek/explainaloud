@@ -18,13 +18,14 @@ export default async function CoursePage({
   const [{ data: course }, { data: sources }] = await Promise.all([
     supabase
       .from("courses")
-      .select("input_notes, status, generated")
+      .select("input_notes, status, generated, sources_only")
       .eq("id", courseId)
       .eq("user_id", user.id)
       .maybeSingle<{
         input_notes: string | null;
         status: string;
         generated: unknown;
+        sources_only: boolean;
       }>(),
     supabase
       .from("course_sources")
@@ -60,6 +61,7 @@ export default async function CoursePage({
         slug={slug}
         initialSources={sources ?? []}
         initialCourse={parsedCourse?.success ? parsedCourse.data : null}
+        initialSourcesOnly={course.sources_only === true}
         unlimited={isAdminEmail(user.email)}
       />
     </div>
