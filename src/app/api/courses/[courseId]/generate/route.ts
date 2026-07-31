@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { CourseCitationError, orchestrateCourse } from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
+import { BANK_TARGET, fillQuestionBank } from "~/lib/ai/question-bank";
 import type { SourceRow } from "~/lib/ai/sources";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
@@ -76,6 +77,25 @@ export async function POST(
         { error: "Built the course but couldn't save it. Try again." },
         { status: 500 },
       );
+    }
+
+    // Fill the interview question bank now rather than on the first click.
+    // Awaited, not fired and forgotten: a serverless function that returns
+    // stops executing, so a floating promise here would be cancelled halfway
+    // through and leave a half-written bank. Generation already takes tens of
+    // seconds, so one more model call is not what makes it slow — and it is
+    // what makes picking interview mode instant later.
+    try {
+      await fillQuestionBank({
+        supabase,
+        courseId,
+        userId: user.id,
+        topic: course.topic,
+        sections: result.course.sections,
+        count: BANK_TARGET,
+      });
+    } catch {
+      // A course without a bank still works: the first interview fills it.
     }
 
     return NextResponse.json({
