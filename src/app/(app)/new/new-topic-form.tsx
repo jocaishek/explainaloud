@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { type DragEvent, type FormEvent, useRef, useState } from "react";
-import { createCourse } from "~/app/dashboard/actions";
+import { createCourse } from "~/app/(app)/actions";
 import { LocalDayField } from "~/components/local-day-field";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -57,6 +57,9 @@ export function NewTopicForm({
     initialError ? (ERROR_MESSAGES[initialError] ?? null) : null,
   );
   const [createdCourseId, setCreatedCourseId] = useState<string | null>(null);
+  // Kept alongside the id because links address a course by slug, and a
+  // half-finished upload still has to be able to open the course it made.
+  const [createdSlug, setCreatedSlug] = useState<string | null>(null);
 
   function addFiles(incoming: File[]) {
     setError(null);
@@ -157,6 +160,7 @@ export function NewTopicForm({
     setError(null);
 
     let courseId = createdCourseId;
+    let courseSlug = createdSlug;
     if (!courseId) {
       setStatus("Creating your topic…");
       const result = await createCourse(formData);
@@ -167,7 +171,9 @@ export function NewTopicForm({
         return;
       }
       courseId = result.courseId;
+      courseSlug = result.slug;
       setCreatedCourseId(courseId);
+      setCreatedSlug(courseSlug);
     }
 
     const uploaded = await uploadSources(courseId);
@@ -177,7 +183,7 @@ export function NewTopicForm({
     }
 
     setStatus("Opening your course…");
-    router.push(`/dashboard/courses/${courseId}`);
+    router.push(`/home/${courseSlug ?? courseId}`);
   }
 
   function leaveDragTarget() {
@@ -350,7 +356,9 @@ export function NewTopicForm({
             type="button"
             variant="outline"
             disabled={pending}
-            onClick={() => router.push(`/dashboard/courses/${createdCourseId}`)}
+            onClick={() =>
+              router.push(`/home/${createdSlug ?? createdCourseId}`)
+            }
           >
             Continue without failed sources
           </Button>

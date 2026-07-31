@@ -20,7 +20,7 @@ export default async function DashboardLayout({
       <header className="flex w-full items-center justify-between gap-3 border-b border-border px-3 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="flex min-w-0 items-center gap-2 lg:gap-8">
           <Link
-            href="/dashboard"
+            href="/home"
             className="flex items-center gap-2 text-base font-semibold tracking-tight text-strong"
           >
             <ExplainaloudMark className="size-6 shrink-0 text-brand" />
@@ -34,7 +34,7 @@ export default async function DashboardLayout({
             size="sm"
             className="gap-1.5 rounded-full bg-brand font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
           >
-            <Link href="/dashboard/new" aria-label="New topic">
+            <Link href="/new" aria-label="New topic">
               <Plus className="size-4" />
               <span className="hidden sm:inline">New topic</span>
             </Link>

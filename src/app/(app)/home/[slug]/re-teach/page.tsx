@@ -7,6 +7,7 @@ import {
   courseSectionId,
   findRelatedSectionIndex,
 } from "~/lib/course-sections";
+import { courseIdForSlug } from "~/lib/courses";
 import { requireUser } from "~/lib/supabase/server";
 
 type GapRow = {
@@ -27,11 +28,12 @@ export default async function ReTeachPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ courseId: string }>;
+  params: Promise<{ slug: string }>;
   /** `?session=` picks which recording to re-teach. Absent means the newest. */
   searchParams: Promise<{ session?: string }>;
 }) {
-  const { courseId } = await params;
+  const { slug } = await params;
+  const courseId = await courseIdForSlug(slug);
   const { session: wanted } = await searchParams;
   const { supabase, user } = await requireUser();
 
@@ -89,7 +91,7 @@ export default async function ReTeachPage({
             lesson.
           </p>
           <Link
-            href={`/dashboard/courses/${courseId}/record`}
+            href={`/home/${slug}/record`}
             className="w-fit rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
           >
             Start explaining
@@ -103,12 +105,12 @@ export default async function ReTeachPage({
 
   return (
     <PageEnter>
-      <div className="flex flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
         {(graded?.length ?? 0) > 0 && session && (
           <SessionPicker
             sessions={graded ?? []}
             current={session.id}
-            courseId={courseId}
+            slug={slug}
             basePath="re-teach"
           />
         )}
@@ -152,7 +154,7 @@ export default async function ReTeachPage({
 
               {section && (
                 <Link
-                  href={`/dashboard/courses/${courseId}#${courseSectionId(sectionIndex)}`}
+                  href={`/home/${slug}#${courseSectionId(sectionIndex)}`}
                   className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Review “{section.title}” in your course →
@@ -163,7 +165,7 @@ export default async function ReTeachPage({
         })}
 
         <Link
-          href={`/dashboard/courses/${courseId}/record`}
+          href={`/home/${slug}/record`}
           className="w-fit rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
         >
           Record another explanation

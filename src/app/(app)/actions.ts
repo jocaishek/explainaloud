@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { uniqueCourseSlug } from "~/lib/courses";
 import { folderNameError, isFolderColor, topicNameError } from "~/lib/folders";
 import { looksLikeHomework } from "~/lib/homework";
 import { claimQuota, localDay } from "~/lib/limits";
@@ -8,7 +9,7 @@ import { requireUser } from "~/lib/supabase/server";
 import { isTopicTooBroad } from "~/lib/topic-scope";
 
 export type CreateCourseResult =
-  | { ok: true; courseId: string }
+  | { ok: true; courseId: string; slug: string }
   | {
       ok: false;
       error:
@@ -49,6 +50,8 @@ export async function createCourse(
     return { ok: false, error: "topic_limit" };
   }
 
+  const slug = await uniqueCourseSlug(supabase, user.id, topic);
+
   const { data, error } = await supabase
     .from("courses")
     .insert({
@@ -56,16 +59,17 @@ export async function createCourse(
       topic,
       input_notes: notes || null,
       folder_id: folderId || null,
+      slug,
     })
-    .select("id")
-    .single();
+    .select("id, slug")
+    .single<{ id: string; slug: string }>();
 
   if (error || !data) {
     return { ok: false, error: "create_failed" };
   }
 
-  revalidatePath("/dashboard");
-  return { ok: true, courseId: data.id };
+  revalidatePath("/home");
+  return { ok: true, courseId: data.id, slug: data.slug };
 }
 
 export type MutationState = { error: string | null };
@@ -90,7 +94,7 @@ export async function createFolder(
 
   if (error) return { error: "We couldn't create that folder. Try again." };
 
-  revalidatePath("/dashboard");
+  revalidatePath("/home");
   return OK;
 }
 
@@ -117,7 +121,7 @@ export async function renameFolder(
 
   if (error) return { error: "We couldn't save that. Try again." };
 
-  revalidatePath("/dashboard");
+  revalidatePath("/home");
   return OK;
 }
 
@@ -138,7 +142,7 @@ export async function deleteFolder(
 
   if (error) return { error: "We couldn't delete that folder. Try again." };
 
-  revalidatePath("/dashboard");
+  revalidatePath("/home");
   return OK;
 }
 
@@ -161,7 +165,7 @@ export async function renameCourse(
 
   if (error) return { error: "We couldn't save that. Try again." };
 
-  revalidatePath("/dashboard");
+  revalidatePath("/home");
   return OK;
 }
 
@@ -185,7 +189,7 @@ export async function moveCourse(
 
   if (error) return { error: "We couldn't move that topic. Try again." };
 
-  revalidatePath("/dashboard");
+  revalidatePath("/home");
   return OK;
 }
 
@@ -212,6 +216,6 @@ export async function deleteCourse(
 
   if (error) return { error: "We couldn't delete that topic. Try again." };
 
-  revalidatePath("/dashboard");
+  revalidatePath("/home");
   return OK;
 }

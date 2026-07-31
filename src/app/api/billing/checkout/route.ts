@@ -69,7 +69,7 @@ export async function POST() {
       subscription_data: { metadata: { supabase_user_id: user.id } },
       metadata: { supabase_user_id: user.id },
       allow_promotion_codes: true,
-      success_url: `${origin}/dashboard/settings?upgraded=1`,
+      success_url: `${origin}/settings?upgraded=1`,
       cancel_url: `${origin}/dashboard?upgrade=cancelled`,
     });
 

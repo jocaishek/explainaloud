@@ -41,6 +41,34 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  /**
+   * The old `/dashboard/*` addresses.
+   *
+   * Permanent, because they are gone for good — but note the course rule keeps
+   * the id in place of the slug. `courseIdForSlug` accepts either, so an old
+   * bookmark lands on the right course and the address bar tidies itself up
+   * the next time the student clicks a link.
+   */
+  async redirects() {
+    return [
+      { source: "/dashboard", destination: "/home", permanent: true },
+      {
+        source: "/dashboard/courses/:id",
+        destination: "/home/:id",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/courses/:id/:rest*",
+        destination: "/home/:id/:rest*",
+        permanent: true,
+      },
+      {
+        source: "/dashboard/:path*",
+        destination: "/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

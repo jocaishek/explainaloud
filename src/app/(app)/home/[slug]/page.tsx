@@ -2,15 +2,17 @@ import { notFound } from "next/navigation";
 import type { SourceItem } from "~/components/source-uploader";
 import { isAdminEmail } from "~/lib/admin";
 import { courseSchema } from "~/lib/ai/schemas";
+import { courseIdForSlug } from "~/lib/courses";
 import { requireUser } from "~/lib/supabase/server";
 import { CourseBuilder } from "./course-builder";
 
 export default async function CoursePage({
   params,
 }: {
-  params: Promise<{ courseId: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { courseId } = await params;
+  const { slug } = await params;
+  const courseId = await courseIdForSlug(slug);
   const { supabase, user } = await requireUser();
 
   const [{ data: course }, { data: sources }] = await Promise.all([
@@ -41,7 +43,7 @@ export default async function CoursePage({
     : null;
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       {course.input_notes && (
         <div>
           <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
@@ -55,6 +57,7 @@ export default async function CoursePage({
 
       <CourseBuilder
         courseId={courseId}
+        slug={slug}
         initialSources={sources ?? []}
         initialCourse={parsedCourse?.success ? parsedCourse.data : null}
         unlimited={isAdminEmail(user.email)}

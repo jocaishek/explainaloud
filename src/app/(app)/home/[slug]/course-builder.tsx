@@ -18,11 +18,14 @@ const EASE = [0.23, 1, 0.32, 1] as const;
 
 export function CourseBuilder({
   courseId,
+  slug,
   initialSources,
   initialCourse,
   unlimited = false,
 }: {
   courseId: string;
+  /** The course's URL segment. Links use it; API calls use the id. */
+  slug: string;
   initialSources: SourceItem[];
   initialCourse: GeneratedCourse | null;
   /** Admins bypass the per-topic source cap. */
@@ -167,9 +170,7 @@ export function CourseBuilder({
             variant="outline"
             className="h-11 rounded-full border-input"
           >
-            <Link href={`/dashboard/courses/${courseId}/record`}>
-              Start explaining
-            </Link>
+            <Link href={`/home/${slug}/record`}>Start explaining</Link>
           </Button>
         )}
       </div>

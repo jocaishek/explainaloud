@@ -32,12 +32,13 @@ function label(session: GradedSession) {
 export function SessionPicker({
   sessions,
   current,
-  courseId,
+  slug,
   basePath,
 }: {
   sessions: GradedSession[];
   current: string;
-  courseId: string;
+  /** The course's URL segment — the picker only ever builds links. */
+  slug: string;
   /** Which screen these link to — the picker is shared by both. */
   basePath: "gaps" | "re-teach";
 }) {
@@ -56,7 +57,7 @@ export function SessionPicker({
         value={current}
         onChange={(event) => {
           router.push(
-            `/dashboard/courses/${courseId}/${basePath}?session=${event.target.value}`,
+            `/home/${slug}/${basePath}?session=${event.target.value}`,
           );
         }}
         className={cn(

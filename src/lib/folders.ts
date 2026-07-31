@@ -101,12 +101,23 @@ export type Folder = {
 export type Course = {
   id: string;
   topic: string;
+  /**
+   * The course's URL segment. Null only for rows created between the slug
+   * migration and the deploy that started writing one, which fall back to
+   * being addressed by id.
+   */
+  slug: string | null;
   /** User-chosen display name; null means it was never renamed. */
   name: string | null;
   status: string;
   folder_id: string | null;
   created_at: string;
 };
+
+/** Where a course lives. Slug when it has one, id for the rows that don't. */
+export function courseHref(course: Pick<Course, "id" | "slug">) {
+  return `/home/${course.slug ?? course.id}`;
+}
 
 /** What to show as the card's title. */
 export function courseTitle(course: Pick<Course, "name" | "topic">) {

@@ -22,7 +22,7 @@ export default function RootTemplate({
 
   // The authenticated app optimizes for repeated task navigation. Marketing
   // routes keep the entrance fade, but dashboard clicks render immediately.
-  if (shouldReduceMotion || pathname.startsWith("/dashboard")) {
+  if (shouldReduceMotion || pathname.startsWith("/home")) {
     return <>{children}</>;
   }
 

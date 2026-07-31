@@ -63,5 +63,5 @@ export async function saveProfile(
     return { error: "We couldn't save that. Try again." };
   }
 
-  redirect("/dashboard");
+  redirect("/home");
 }

@@ -5,7 +5,7 @@ import { siteUrl } from "~/lib/site";
  * Every publicly reachable page — which today is the landing page alone.
  *
  * Deliberately not generated from the route tree: almost every route under
- * `/dashboard` is per-user and sign-in gated, so a crawl of the file system
+ * `/home` is per-user and sign-in gated, so a crawl of the file system
  * would list URLs that answer with a redirect for everyone who isn't signed in.
  * A short hand-kept list that is true beats a long generated one that isn't.
  *

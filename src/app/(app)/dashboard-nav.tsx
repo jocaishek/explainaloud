@@ -1,16 +1,25 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { House, Mic, Settings, ShieldCheck } from "lucide-react";
+import {
+  ClipboardList,
+  GraduationCap,
+  House,
+  Mic,
+  Settings,
+  ShieldCheck,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId } from "react";
 import { cn } from "~/lib/utils";
 
 const ITEMS = [
-  { href: "/dashboard", label: "Home", icon: House },
-  { href: "/dashboard/record", label: "Record", icon: Mic },
-  { href: "/dashboard/settings", label: "Settings", icon: Settings },
+  { href: "/home", label: "Home", icon: House },
+  { href: "/record", label: "Record", icon: Mic },
+  { href: "/gapreport", label: "Gap Report", icon: ClipboardList },
+  { href: "/reteach", label: "Re-Teach", icon: GraduationCap },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
@@ -20,7 +29,7 @@ export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
     ? [
         ...ITEMS,
         {
-          href: "/dashboard/admin",
+          href: "/admin",
           label: "Admin",
           icon: ShieldCheck,
         },
@@ -31,8 +40,8 @@ export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
     <nav className="flex items-center gap-1">
       {items.map((item) => {
         const active =
-          item.href === "/dashboard"
-            ? pathname === "/dashboard"
+          item.href === "/home"
+            ? pathname === "/home"
             : pathname.startsWith(item.href);
         const Icon = item.icon;
         return (

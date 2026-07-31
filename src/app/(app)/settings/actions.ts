@@ -43,6 +43,6 @@ export async function updateProfile(
     return { error: "We couldn't save that. Try again.", saved: false };
 
   // The header and the home-screen greeting both read the first name.
-  revalidatePath("/dashboard", "layout");
+  revalidatePath("/home", "layout");
   return { error: null, saved: true };
 }

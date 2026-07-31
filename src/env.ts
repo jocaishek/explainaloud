@@ -15,6 +15,10 @@ export const env = createEnv({
     // Set by Vercel to the project's stable production hostname, without a
     // protocol. Absent locally, which is why it's optional.
     VERCEL_PROJECT_PRODUCTION_URL: z.string().min(1).optional(),
+    // Which kind of deployment this is. Only "production" is treated as the
+    // canonical one — preview builds must stay on their own hostname or
+    // reviewing a pull request would bounce you to the live site.
+    VERCEL_ENV: z.enum(["production", "preview", "development"]).optional(),
     // Billing. All optional so the app still boots without them: unconfigured,
     // the upgrade button reports that billing isn't set up rather than the
     // whole site failing to start. Every one of these is a secret — none may
@@ -50,6 +54,7 @@ export const env = createEnv({
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     TAVILY_API_KEY: process.env.TAVILY_API_KEY,
     VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
+    VERCEL_ENV: process.env.VERCEL_ENV,
     STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
     STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
     STRIPE_PRICE_ID: process.env.STRIPE_PRICE_ID,

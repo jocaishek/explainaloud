@@ -15,7 +15,7 @@ export default async function OnboardingPage() {
     .eq("user_id", user.id)
     .maybeSingle();
 
-  if (profile) redirect("/dashboard");
+  if (profile) redirect("/home");
 
   return (
     <>
