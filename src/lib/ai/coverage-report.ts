@@ -13,7 +13,7 @@ type CoachingReport = {
 };
 
 type EvaluatedSpan = {
-  status: "correct" | "gap" | "neutral";
+  status: "correct" | "gap" | "vague" | "neutral";
   /** Present for real spans; absent only in the degraded local fallback. */
   text?: string;
 };
@@ -133,7 +133,13 @@ export function completeCoverageReport({
   const missingKeyPoints = keyPoints.filter(
     (_, index) => !covered.has(index) && !partial.has(index),
   );
-  const claimSpans = spans.filter((span) => span.status !== "neutral");
+  // Accuracy is right-against-wrong, so only spans that actually committed to
+  // something count. Vague speech is neither: including it would make "I'm not
+  // sure, something about ATP" arithmetically identical to being wrong, which
+  // is the opposite of what grey is for.
+  const claimSpans = spans.filter(
+    (span) => span.status === "correct" || span.status === "gap",
+  );
   const correctClaims = claimSpans.filter(
     (span) => span.status === "correct",
   ).length;
