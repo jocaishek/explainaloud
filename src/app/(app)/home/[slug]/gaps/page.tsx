@@ -323,7 +323,7 @@ export default async function GapReportPage({
             verdict={
               focused.verdict ??
               (focused.transcript
-                ? "This answer has no grade — the grader could not be reached for it."
+                ? "This answer has no grade. The grader could not be reached for it."
                 : "You did not answer this one.")
             }
           />

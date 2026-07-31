@@ -162,7 +162,7 @@ export function TopicGrid({
                     <p className="mt-3 text-xs text-subtle">
                       {zone.active
                         ? "Drop to file it here."
-                        : "Empty for now — drag a topic in from below, or start one here."}
+                        : "Empty for now. Drag a topic in from below, or start one here."}
                     </p>
                   )}
                 </motion.div>
@@ -190,7 +190,7 @@ export function TopicGrid({
                 Loose topics
                 {dragging && (
                   <span className="ml-2 font-normal text-subtle">
-                    — drop here to take it out of a folder
+                    Drop here to take it out of a folder
                   </span>
                 )}
               </h3>

@@ -280,7 +280,7 @@ export function AuthCard({
     const reason = resendError.message.toLowerCase();
     setResendStatus(
       reason.includes("rate limit") || reason.includes("too many")
-        ? "Too many emails have gone out recently. Wait a few minutes and try once more — if it keeps failing, the site owner needs to look at the mail settings."
+        ? "Too many emails have gone out recently. Wait a few minutes and try once more. If it keeps failing, the site owner needs to look at the mail settings."
         : "We couldn't send it just now. Wait a minute, then try again.",
     );
   }
@@ -313,7 +313,7 @@ export function AuthCard({
             <div className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-white/[0.03] p-3">
               <p className="text-xs leading-5 text-foreground">
                 Didn&apos;t get it, or has the link expired? Signing up again
-                won&apos;t send another one — this will.
+                won&apos;t send another one. This will.
               </p>
               <button
                 type="button"

@@ -32,25 +32,24 @@ export default function PrivacyPage() {
       <h3>Information you give us</h3>
       <ul>
         <li>
-          <strong>Account details</strong> — your email address, and a password
+          <strong>Account details</strong>: your email address, and a password
           if you sign up with one. If you sign in with Google, we receive your
           email address and basic profile details from Google instead; we never
           see your Google password.
         </li>
         <li>
-          <strong>Profile details</strong> — your first and last name, date of
+          <strong>Profile details</strong>: your first and last name, date of
           birth, and whether you are using Explainaloud as a student or
           otherwise. We collect date of birth to confirm the age requirement in
           our Terms.
         </li>
         <li>
-          <strong>Study content</strong> — the courses and topics you create,
-          any source material or notes you add, and the transcripts of your
-          spoken explanations together with the scores and gaps generated from
-          them.
+          <strong>Study content</strong>: the courses and topics you create, any
+          source material or notes you add, and the transcripts of your spoken
+          explanations together with the scores and gaps generated from them.
         </li>
         <li>
-          <strong>Correspondence</strong> — what you send us if you email us.
+          <strong>Correspondence</strong>: what you send us if you email us.
         </li>
       </ul>
 
@@ -60,7 +59,7 @@ export default function PrivacyPage() {
         to our transcription provider so it can be turned into text.{" "}
         <strong>
           We do not store your audio. It is processed to produce a transcript
-          and then discarded — there is no recording archive in your account and
+          and then discarded. There is no recording archive in your account and
           no audio file to retrieve.
         </strong>{" "}
         The transcript is what we keep.
@@ -75,15 +74,15 @@ export default function PrivacyPage() {
       <h3>Information collected automatically</h3>
       <ul>
         <li>
-          <strong>Authentication cookies</strong> — set so you stay signed in.
+          <strong>Authentication cookies</strong>: set so you stay signed in.
           These are strictly necessary for the Service to function.
         </li>
         <li>
-          <strong>Usage counters</strong> — how many topics and recordings you
+          <strong>Usage counters</strong>: how many topics and recordings you
           have used on a given day, so we can apply plan limits.
         </li>
         <li>
-          <strong>Server and security logs</strong> — including IP address,
+          <strong>Server and security logs</strong>: including IP address,
           browser type, and timestamps, kept by our hosting and database
           providers to keep the Service running and to detect abuse.
         </li>
@@ -96,24 +95,24 @@ export default function PrivacyPage() {
       <h2>2. Why we use it</h2>
       <ul>
         <li>
-          <strong>To provide the Service</strong> — creating your account,
+          <strong>To provide the Service</strong>: creating your account,
           transcribing and scoring your explanations, saving your work, applying
           plan limits.
         </li>
         <li>
-          <strong>To take payment</strong> — processing Pro subscriptions and
+          <strong>To take payment</strong>: processing Pro subscriptions and
           keeping your plan status current.
         </li>
         <li>
-          <strong>To keep the Service secure</strong> — detecting and preventing
+          <strong>To keep the Service secure</strong>: detecting and preventing
           fraud, abuse, and unauthorised access.
         </li>
         <li>
-          <strong>To communicate with you</strong> — account and transactional
+          <strong>To communicate with you</strong>: account and transactional
           email such as verification, password resets, and billing notices.
         </li>
         <li>
-          <strong>To improve the Service</strong> — understanding, in aggregate,
+          <strong>To improve the Service</strong>: understanding, in aggregate,
           which features are used and where things break.
         </li>
       </ul>
@@ -134,31 +133,31 @@ export default function PrivacyPage() {
       </p>
       <ul>
         <li>
-          <strong>Supabase</strong> — database, authentication, and account
-          email delivery.
+          <strong>Supabase</strong>: database, authentication, and account email
+          delivery.
         </li>
         <li>
-          <strong>Vercel</strong> — application hosting and delivery.
+          <strong>Vercel</strong>: application hosting and delivery.
         </li>
         <li>
-          <strong>Groq</strong> — speech-to-text transcription of your
+          <strong>Groq</strong>: speech-to-text transcription of your
           recordings.
         </li>
         <li>
-          <strong>Google (Gemini)</strong> — generating scores, gap analysis,
-          and study material from your transcripts and topics.
+          <strong>Google (Gemini)</strong>: generating scores, gap analysis, and
+          study material from your transcripts and topics.
         </li>
         <li>
-          <strong>Tavily</strong> — retrieving supporting web results for a
+          <strong>Tavily</strong>: retrieving supporting web results for a
           topic.
         </li>
         <li>
-          <strong>Stripe</strong> — subscription payments. Stripe collects your
+          <strong>Stripe</strong>: subscription payments. Stripe collects your
           payment details directly;{" "}
           <strong>we never receive or store your full card number.</strong>
         </li>
         <li>
-          <strong>Google</strong> — if you choose to sign in with a Google
+          <strong>Google</strong>: if you choose to sign in with a Google
           account.
         </li>
       </ul>
@@ -171,7 +170,7 @@ export default function PrivacyPage() {
       </p>
       <p>
         We may also disclose information if required by law, to enforce our
-        Terms, or in connection with a merger or acquisition — in which case we
+        Terms, or in connection with a merger or acquisition, in which case we
         will give you notice before your information becomes subject to a
         different policy.
       </p>
@@ -188,18 +187,18 @@ export default function PrivacyPage() {
       <h2>5. How long we keep it</h2>
       <ul>
         <li>
-          <strong>Audio</strong> — not retained; discarded once transcribed.
+          <strong>Audio</strong>: not retained; discarded once transcribed.
         </li>
         <li>
-          <strong>Account and study content</strong> — kept while your account
-          is open, so your history stays available to you.
+          <strong>Account and study content</strong>: kept while your account is
+          open, so your history stays available to you.
         </li>
         <li>
-          <strong>After deletion</strong> — removed from live systems promptly
+          <strong>After deletion</strong>: removed from live systems promptly
           and purged from backups within {DELETION_GRACE_PERIOD_DAYS} days.
         </li>
         <li>
-          <strong>Billing records</strong> — retained by us and by Stripe for as
+          <strong>Billing records</strong>: retained by us and by Stripe for as
           long as tax and accounting law requires, typically several years, even
           after your account is closed.
         </li>
@@ -229,8 +228,8 @@ export default function PrivacyPage() {
       </p>
       <p>
         You can change your profile details in your account settings at any
-        time. For anything else — including deleting your account and its
-        content — email{" "}
+        time. For anything else, including deleting your account and its
+        content, email{" "}
         <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a> from
         the address on the account. We will respond within the period required
         by applicable law, and within 30 days in any case.

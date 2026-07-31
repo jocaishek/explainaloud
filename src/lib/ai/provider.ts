@@ -523,11 +523,11 @@ function describeProbeStatus(status: number): { ok: boolean; reason: string } {
   if (status === 401 || status === 403) {
     return {
       ok: false,
-      reason: `unauthorized (${status}) — key invalid or revoked`,
+      reason: `unauthorized (${status}), key invalid or revoked`,
     };
   }
   if (status === 429) {
-    return { ok: false, reason: "rate limited (429) — wait a minute" };
+    return { ok: false, reason: "rate limited (429), wait a minute" };
   }
   return { ok: false, reason: `unexpected status ${status}` };
 }

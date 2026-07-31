@@ -873,7 +873,7 @@ export function RecordConsole({
     serverTranscriptRef.current = "";
 
     setNotice(
-      "Live captions aren't available in this browser. Keep going — your full transcript arrives when you finish.",
+      "Live captions aren't available in this browser. Keep going: your full transcript arrives when you finish.",
     );
   }, []);
 
@@ -1504,7 +1504,7 @@ export function RecordConsole({
     } catch (analysisError) {
       setError(
         requestTimedOut(analysisError)
-          ? "Gap Coach took too long. The session is saved — retry when you're ready."
+          ? "Gap Coach took too long. The session is saved, so retry when you're ready."
           : "Couldn't reach Gap Coach. The session is saved.",
       );
     }
@@ -1604,7 +1604,7 @@ export function RecordConsole({
     if (left <= 0) {
       if (tickRef.current) clearInterval(tickRef.current);
       setNotice(
-        `${Math.round(maxRecordingMs / 60_000)}-minute limit reached — wrapping up.`,
+        `${Math.round(maxRecordingMs / 60_000)}-minute limit reached, wrapping up.`,
       );
       stopRecording();
       return;
@@ -1655,7 +1655,7 @@ export function RecordConsole({
       silenceLeftRef.current = null;
       setSilenceLeft(null);
       setNotice(
-        "Stopped — nothing was heard. Check your microphone is unmuted and that the right input is selected.",
+        "Stopped. Nothing was heard. Check your microphone is unmuted and that the right input is selected.",
       );
       stopRecording();
       return;
@@ -2500,7 +2500,7 @@ export function RecordConsole({
             </p>
             <p className="text-xs leading-5 text-foreground">
               Nothing has been picked up for 30 seconds. Check your microphone
-              is unmuted and that the right input is selected — this recording
+              is unmuted and that the right input is selected. This recording
               stops in {silenceLeft}s, and it still counts against today&apos;s.
             </p>
           </div>
@@ -2542,7 +2542,7 @@ export function RecordConsole({
             </span>
             {status === "recording" && (
               <span className="ml-auto text-brand">
-                Listening — nothing interrupts you
+                Listening. Nothing interrupts you
               </span>
             )}
           </div>
@@ -2778,7 +2778,7 @@ function ExamClock({
         {paused
           ? "Clock stopped between questions."
           : question
-            ? `Question ${question} of ${of} — this is the whole recording's time, not this question's.`
+            ? `Question ${question} of ${of}. This is the whole recording's time, not this question's.`
             : "Time left in this recording."}
       </p>
     </div>
@@ -2986,8 +2986,8 @@ function QuestionCard({
       {!asked ? (
         <p className="text-xs leading-5 text-subtle">
           Stay on this tab. Nothing is being recorded and the clock is stopped,
-          but switching away can pause the browser mid-take — your next question
-          appears here in a moment.
+          but switching away can pause the browser mid-take, and your next
+          question appears here in a moment.
         </p>
       ) : countdown !== null && countdown !== undefined ? (
         <div className="flex items-center gap-3">

@@ -57,7 +57,7 @@ export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label={
-            current ? `Menu — currently on ${current.label}` : "Open menu"
+            current ? `Menu. Currently on ${current.label}` : "Open menu"
           }
           className="flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-sm font-medium text-strong transition-colors hover:bg-surface/80 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none md:hidden"
         >

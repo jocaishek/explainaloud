@@ -12,7 +12,7 @@
 
 const OFFLINE = "You appear to be offline. Check your connection and retry.";
 const TOO_LONG =
-  "That took too long and was cut off. Try again — it usually works second time.";
+  "That took too long and was cut off. Try again. It usually works second time.";
 const UNREACHABLE = "Couldn't reach the server. Try again in a moment.";
 
 /** What to say about a response that arrived but was not a success. */
@@ -27,7 +27,7 @@ function describe(
   // the client — so a failure is diagnosable from the screen rather than from
   // the hosting provider's log viewer.
   if (body?.error) {
-    return body.detail ? `${body.error} — ${body.detail}` : body.error;
+    return body.detail ? `${body.error}: ${body.detail}` : body.error;
   }
 
   if (status === 408 || status === 502 || status === 504) return TOO_LONG;

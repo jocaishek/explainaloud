@@ -23,7 +23,7 @@ export function renderSources(sources: SourceRow[]): string {
   if (sources.length === 0) {
     // Sources are optional. The prompt already swapped in the open-knowledge
     // rule, so this just states the situation rather than forcing a refusal.
-    return `SOURCES: none provided — teach from established knowledge, and be
+    return `SOURCES: none provided. Teach from established knowledge, and be
 explicit in "uncovered" about anything you are not confident in.`;
   }
 
@@ -91,7 +91,7 @@ export async function extractText(
         return {
           ok: false,
           reason:
-            "That PDF has no selectable text — it looks like a scan or images. Export a text PDF, or paste the text in as notes.",
+            "That PDF has no selectable text. It looks like a scan or images. Export a text PDF, or paste the text in as notes.",
         };
       }
     } else if (name.endsWith(".docx")) {
@@ -123,7 +123,7 @@ export async function extractText(
   } catch {
     return {
       ok: false,
-      reason: "Couldn't read that file — it may be corrupt or password-locked.",
+      reason: "Couldn't read that file. It may be corrupt or password-locked.",
     };
   }
 

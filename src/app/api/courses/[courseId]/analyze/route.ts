@@ -136,7 +136,7 @@ export async function POST(
   if (keyPoints.length === 0) {
     return NextResponse.json(
       {
-        error: "Generate the course first — there's nothing to grade against.",
+        error: "Generate the course first. There's nothing to grade against.",
       },
       { status: 422 },
     );

@@ -330,7 +330,7 @@ export function NewTopicForm({
             {sourcesOnly && (
               <p className="text-xs leading-5 text-subtle">
                 Expect a shorter course. If your files only cover part of the
-                topic, that is what you will get — the rest is named instead of
+                topic, that is what you will get. The rest is named instead of
                 filled in.
               </p>
             )}

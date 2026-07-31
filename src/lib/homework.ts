@@ -51,7 +51,7 @@ const ANSWER_IMPERATIVE =
   /\b(?:solve|evaluate|compute|calculate|simplify|factor(?:ise|ize)?|integrate|differentiate|derive|prove|graph|plot|convert|round|estimate|find)\b/i;
 
 export const HOMEWORK_MESSAGE =
-  "Explainaloud is for explaining ideas, not for answering set problems. Try the concept behind the question instead — for example, “how integration by parts works” rather than a specific integral to evaluate.";
+  "Explainaloud is for explaining ideas, not for answering set problems. Try the concept behind the question instead. For example, “how integration by parts works” rather than a specific integral to evaluate.";
 
 export function looksLikeHomework(value: string) {
   const text = value.trim();
