@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { NoSpeechDetectedError, transcribeAudio } from "~/lib/ai/provider";
+import type { GeneratedCourse } from "~/lib/ai/schemas";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { speechMetrics } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/server";
@@ -40,10 +41,10 @@ export async function POST(
 
   const { data: course } = await supabase
     .from("courses")
-    .select("topic")
+    .select("topic, generated")
     .eq("id", courseId)
     .eq("user_id", user.id)
-    .maybeSingle<{ topic: string }>();
+    .maybeSingle<{ topic: string; generated: GeneratedCourse | null }>();
 
   if (!course) {
     return NextResponse.json({ error: "Topic not found." }, { status: 404 });
@@ -82,7 +83,19 @@ export async function POST(
   }
 
   try {
-    const { transcript, words } = await transcribeAudio(audio, course.topic);
+    // The course's own words, so the transcriber spells them the way the
+    // grader expects to read them. Titles before key points: a section title
+    // is where the proper nouns live, and the prompt is length-capped.
+    const sections = course.generated?.sections ?? [];
+    const vocabulary = [
+      ...sections.map((section) => section.title),
+      ...sections.flatMap((section) => section.key_points),
+    ];
+    const { transcript, words } = await transcribeAudio(
+      audio,
+      course.topic,
+      vocabulary,
+    );
     // Metrics ride along with the transcript rather than in a second request:
     // the word timings only exist here, and re-deriving them would mean paying
     // for the same transcription twice.
