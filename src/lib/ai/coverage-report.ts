@@ -52,6 +52,18 @@ function reportCoversConcept(report: CoachingReport, keyPoint: string) {
  * everything, explains all of it, and says nothing false scores 100 -- and
  * nothing short of that does.
  */
+/**
+ * How much of the score accuracy can take away.
+ *
+ * It used to multiply the whole thing, so a run where the evaluator marked no
+ * span "correct" scored exactly zero — for three minutes of on-topic speech
+ * about the right subject. Zero is a claim that nothing said had any value,
+ * and it is essentially never true of someone who showed up and explained
+ * something. Being wrong still costs more than being incomplete, which is why
+ * this is a multiplier at all; it just no longer erases the rest.
+ */
+const ACCURACY_FLOOR = 0.45;
+
 const SCORE_BASE = 0.3;
 const SCORE_COVERAGE = 0.4;
 const SCORE_DEPTH = 0.3;
@@ -303,14 +315,46 @@ export function completeCoverageReport({
 
   const understanding =
     SCORE_BASE + SCORE_COVERAGE * coverage + SCORE_DEPTH * depth;
-  const score = Math.round(accuracy * understanding * 100);
+  // No checkable claims at all is not the same as every claim being wrong.
+  // Speech too hedged to mark is graded on what it covered, not punished for
+  // the evaluator having found nothing to check.
+  const accuracyFactor =
+    claimSpans.length === 0
+      ? 1
+      : ACCURACY_FLOOR + (1 - ACCURACY_FLOOR) * accuracy;
+  const score = Math.round(accuracyFactor * understanding * 100);
   // Drop anything the coach invented before it can reach a student.
   const flaggedSpanTexts = spans
     .filter((span) => span.status === "gap")
     .map((span) => normalizedConcept(span.text ?? ""));
-  const coachedGaps = draft.gaps.filter((gap) =>
-    isJustified(gap, flaggedSpanTexts, missingKeyPoints),
+  // A gap whose own explanation is already in the transcript is not a gap.
+  //
+  // The clearest failure this report has: "For example, like hackathons, even
+  // startups" flagged as missed, explained as "Claude Code can be used in
+  // various applications such as hackathons and startups" — the thing they
+  // had just said, printed back at them as the thing they had not said, three
+  // inches below the same sentence listed as a strength. A misconception is
+  // untouched by this, because its explanation is the correct fact and the
+  // correct fact is precisely what is absent from the transcript.
+  const strengthWords = draft.strengths.map((strength) =>
+    contentWords(strength).join(" "),
   );
+  const coachedGaps = draft.gaps
+    .filter((gap) => isJustified(gap, flaggedSpanTexts, missingKeyPoints))
+    .filter((gap) => !echoedInTranscript(gap.explanation, transcriptWords))
+    // And one the report itself already credits them for. Saying both on one
+    // screen is not strictness, it is the page disagreeing with itself.
+    .filter((gap) => {
+      const words = contentWords(gap.explanation).join(" ");
+      return (
+        words.length === 0 ||
+        !strengthWords.some(
+          (strength) =>
+            strength.length > 0 &&
+            (strength.includes(words) || words.includes(strength)),
+        )
+      );
+    });
 
   const supplementalGaps = missingKeyPoints
     .filter((keyPoint) => !reportCoversConcept(draft, keyPoint))

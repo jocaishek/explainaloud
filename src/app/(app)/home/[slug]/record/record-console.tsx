@@ -521,6 +521,20 @@ export function RecordConsole({
     setStatus(canRecord ? "idle" : "unsupported");
   }, []);
 
+  // Top the question bank up now, while the page is being read, so picking
+  // interview mode later is a database read rather than a model call. Returns
+  // immediately without writing anything when the bank is already healthy,
+  // which is the normal case. Nothing depends on the result — a failure here
+  // just means the draw pays for the fill itself.
+  useEffect(() => {
+    if (!courseReady) return;
+    void fetch(`/api/courses/${courseId}/questions`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ warm: true }),
+    }).catch(() => {});
+  }, [courseId, courseReady]);
+
   // Unmounting mid-recording must not leave the mic open or timers running.
   useEffect(
     () => () => {
@@ -2142,6 +2156,20 @@ export function RecordConsole({
    * instruction that rewrites itself is worse than one that arrives late.
    */
   const drafting = interviewing && writing && (!live || status === "between");
+  /**
+   * Whether the take is finished and every answer has come back graded.
+   *
+   * Marks are a verdict on the whole thing. Handing one out per answer, while
+   * the clock is still running on the next, is not feedback — it is a score
+   * arriving in the middle of the exam.
+   */
+  const interviewComplete =
+    !interviewing ||
+    (!running &&
+      status !== "saving" &&
+      status !== "analyzing" &&
+      segments.length >= Math.min(INTERVIEW_QUESTIONS, asking.length) &&
+      segments.every((segment) => segment.score !== null));
   // The last question ends the whole recording; the others just end an answer.
   const lastQuestion =
     !interviewRef.current || segmentIndex >= asking.length - 1;
@@ -2345,7 +2373,7 @@ export function RecordConsole({
       )}
 
       <AnimatePresence>
-        {report && (
+        {report && interviewComplete && (
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
@@ -2402,7 +2430,12 @@ export function RecordConsole({
         )}
       </AnimatePresence>
 
-      {segments.length > 0 && !running && (
+      {/* Marks are held back until the interview is over.
+          Seeing 38 out of 100 for question one while question two is being
+          read changes how question two gets answered — it turns the rest of
+          the take into a reaction to a number. The clock is still running,
+          and there is nothing useful to do with the score until it stops. */}
+      {segments.length > 0 && !running && interviewComplete && (
         <InterviewRecap segments={segments} />
       )}
 
@@ -2763,7 +2796,9 @@ function QuestionCard({
 
       {!asked ? (
         <p className="text-xs leading-5 text-subtle">
-          Nothing is being recorded while this is written. The clock is stopped.
+          Stay on this tab. Nothing is being recorded and the clock is stopped,
+          but switching away can pause the browser mid-take — your next question
+          appears here in a moment.
         </p>
       ) : countdown !== null && countdown !== undefined ? (
         <div className="flex items-center gap-3">

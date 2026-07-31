@@ -14,7 +14,7 @@ import type { GeneratedCourse } from "~/lib/ai/schemas";
  */
 export const BANK_TARGET = 12;
 
-/** Below this, top the bank up on the next draw. */
+/** Below this, a warm-up call tops the bank back up in the background. */
 const BANK_FLOOR = 6;
 
 /** One batch is capped so a single request cannot ask for an essay. */
@@ -201,10 +201,15 @@ export async function drawFromBank({
 
   let rows = await read();
 
-  // Two reasons to write more: the bank has never been filled, or this draw
-  // would leave too little behind for the next one to be different.
-  const shortfall = Math.max(BANK_TARGET - rows.length, count - rows.length);
-  if (rows.length < BANK_FLOOR + count || rows.length < count) {
+  // Only write on the blocking path when there is genuinely nothing to draw.
+  //
+  // It used to top up whenever the bank dipped below a comfortable margin,
+  // which meant a student with eight perfectly good questions banked waited on
+  // a model call before seeing any of them. Running low is a reason to write
+  // more later — `warmQuestionBank` does it off the critical path — not a
+  // reason to make someone wait for questions that already exist.
+  if (rows.length < count) {
+    const shortfall = Math.max(BANK_TARGET - rows.length, count - rows.length);
     try {
       await fillQuestionBank({
         supabase,
@@ -271,4 +276,45 @@ export async function drawFromBank({
   );
 
   return picked.map(toBankQuestion);
+}
+
+/**
+ * Top the bank up if it is running low, off the critical path.
+ *
+ * Called when the record screen opens, so the model call happens while the
+ * student is reading the page rather than after they have clicked and are
+ * watching a spinner. Writes nothing when the bank is already healthy, which
+ * is the normal case — this costs one query on most visits.
+ */
+export async function warmQuestionBank({
+  supabase,
+  courseId,
+  userId,
+  topic,
+  sections,
+}: {
+  supabase: SupabaseClient;
+  courseId: string;
+  userId: string;
+  topic: string;
+  sections: GeneratedCourse["sections"];
+}): Promise<number> {
+  const { count } = await supabase
+    .from("course_questions")
+    .select("id", { count: "exact", head: true })
+    .eq("course_id", courseId)
+    .eq("user_id", userId);
+
+  const held = count ?? 0;
+  if (held >= BANK_FLOOR) return 0;
+
+  const written = await fillQuestionBank({
+    supabase,
+    courseId,
+    userId,
+    topic,
+    sections,
+    count: BANK_TARGET - held,
+  });
+  return written.length;
 }
