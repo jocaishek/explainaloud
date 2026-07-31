@@ -2361,7 +2361,9 @@ export function RecordConsole({
                         : "bg-foreground/10 text-subtle",
                     )}
                   >
-                    {session.mode === "interview" ? "Interview" : "Topic"}
+                    {session.mode === "interview"
+                      ? `Interview · ${INTERVIEW_QUESTIONS} questions`
+                      : "Topic · open-ended"}
                   </span>
                   {new Date(session.started_at).toLocaleString()}
                 </p>
