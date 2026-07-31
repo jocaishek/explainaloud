@@ -28,9 +28,6 @@ function oauthErrorMessage(): string {
   return "That sign-in method isn't set up yet. Try email instead.";
 }
 
-const ACCEPT_TERMS_REQUIRED =
-  "Please accept the Terms of Service and Privacy Policy to create an account.";
-
 /**
  * Where the emailed confirmation link lands.
  *
@@ -108,10 +105,6 @@ export function AuthCard({
   /** Login failed because the address was never confirmed. Offer a new link. */
   const [needsVerification, setNeedsVerification] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
-  // Acceptance of the Terms and Privacy Policy. Required to create an account,
-  // by either route. The value is deliberately not remembered across a page
-  // load: consent has to be an act taken at signup, not a stale checkbox.
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -144,14 +137,6 @@ export function AuthCard({
   }
 
   async function handleOAuth(provider: "google") {
-    // The Google button leaves the page immediately, so it never passes
-    // through the form's native `required` validation. Gate it here or signing
-    // up with Google would skip the agreement entirely.
-    if (mode === "signup" && !acceptedTerms) {
-      setError(ACCEPT_TERMS_REQUIRED);
-      return;
-    }
-
     setError(null);
     setOauthLoading(provider);
 
@@ -175,13 +160,6 @@ export function AuthCard({
     setError(null);
 
     if (mode === "signup") {
-      // Belt and braces: the checkbox carries `required`, so a normal submit
-      // cannot reach here unticked. This catches the case where the form is
-      // submitted programmatically and keeps the rule in one readable place.
-      if (!acceptedTerms) {
-        setError(ACCEPT_TERMS_REQUIRED);
-        return;
-      }
       // Reject throwaway and undeliverable domains before we ever ask
       // Supabase to create the account.
       const addressError = emailError(email);
@@ -419,7 +397,6 @@ export function AuthCard({
                 mode === "signup" ? "new-password" : "current-password"
               }
               showStrength={mode === "signup"}
-              showGenerate={mode === "signup"}
             />
             {mode === "login" && (
               <button
@@ -434,15 +411,6 @@ export function AuthCard({
               </button>
             )}
           </div>
-          {mode === "signup" && (
-            <AcceptTerms
-              checked={acceptedTerms}
-              onChange={(next) => {
-                setAcceptedTerms(next);
-                if (next && error === ACCEPT_TERMS_REQUIRED) setError(null);
-              }}
-            />
-          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <Button
             type="submit"
@@ -458,6 +426,7 @@ export function AuthCard({
                 ? "Sign up"
                 : "Log in"}
           </Button>
+          {mode === "signup" && <AcceptTerms />}
           <p className="text-center text-xs text-[#71717A]">
             {mode === "signup" ? (
               <>
@@ -539,59 +508,47 @@ export function AuthCard({
 }
 
 /**
- * The agreement gate.
+ * The agreement, stated rather than ticked.
  *
- * `required` on a real checkbox is doing the load-bearing work: the browser
- * blocks submission and points at the control itself, which is both the
- * accessible behaviour and impossible to get out of sync with the JS check.
+ * A checkbox is the right control when acceptance is a separate decision the
+ * person could reasonably decline while still doing the thing — it is not one
+ * here. Nobody signs up intending to refuse the Terms, so the tick was a step
+ * that could only ever be completed, placed between someone and the product,
+ * and its most common outcome was an error message telling them to do the one
+ * thing they were always going to do.
  *
- * The links are plain anchors with `target="_blank"` rather than `next/link`
- * so they open a genuine second tab — someone reading the Terms should not
- * lose the half-filled form behind them.
+ * Consent is still recorded on the account exactly as before: `newConsent()`
+ * stamps when they accepted and which version, on both the email and Google
+ * paths. What changed is what triggers the stamp — pressing "Sign up" under a
+ * sentence saying that is what it means, which is how nearly every service
+ * does this and is what the sentence is for.
+ *
+ * Plain anchors with `target="_blank"` rather than `next/link`, so reading the
+ * Terms opens a genuine second tab and does not lose a half-filled form.
  */
-function AcceptTerms({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (next: boolean) => void;
-}) {
+function AcceptTerms() {
   return (
-    <label
-      htmlFor="accept-terms"
-      className="flex cursor-pointer items-start gap-3 text-xs leading-5 text-[#A1A1AA]"
-    >
-      <input
-        id="accept-terms"
-        name="accept-terms"
-        type="checkbox"
-        required
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-        className="mt-0.5 size-4 shrink-0 cursor-pointer rounded border-[#333333] bg-[#1E1E1E] accent-[var(--color-brand)]"
-      />
-      <span>
-        I agree to the{" "}
-        <a
-          href="/terms"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-white underline underline-offset-2 hover:text-brand"
-        >
-          Terms of Service
-        </a>{" "}
-        and{" "}
-        <a
-          href="/privacy"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="font-medium text-white underline underline-offset-2 hover:text-brand"
-        >
-          Privacy Policy
-        </a>
-        .
-      </span>
-    </label>
+    <p className="text-center text-xs leading-5 text-[#71717A]">
+      By signing up you agree to our{" "}
+      <a
+        href="/terms"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+      >
+        Terms of Service
+      </a>{" "}
+      and{" "}
+      <a
+        href="/privacy"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+      >
+        Privacy Policy
+      </a>
+      .
+    </p>
   );
 }
 

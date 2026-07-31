@@ -13,16 +13,26 @@ const EASE = [0.23, 1, 0.32, 1] as const;
 /**
  * Hard stop for the warm-up.
  *
- * Thirty seconds is roughly 60-80 words, which is enough for a stable median
- * speaking rate. It is deliberately not longer: this sits between someone and
- * the product they just signed up for, and a baseline that costs a minute is one
- * most people will skip.
+ * Ten seconds, down from thirty. This sits between someone and the product
+ * they just signed up for, and the cost of it being long is not that it is
+ * tedious — it is that people abandon onboarding. Ten seconds is roughly
+ * 20-25 words: fewer windows than thirty gave, so the median is noisier, but
+ * a slightly noisier baseline that everyone actually records beats a precise
+ * one that half of them quit halfway through.
  */
-const MAX_MS = 30_000;
+const MAX_MS = 10_000;
 
-/** The question. Chosen to satisfy four constraints at once; see the docs on
- * the step in `onboarding-form.tsx`. */
-export const WARMUP_QUESTION = "Why do we need to sleep?";
+/**
+ * The warm-up question.
+ *
+ * It has one job — get someone talking naturally for ten seconds — so it has
+ * to be something anyone can answer without preparation, that nobody can
+ * answer in three words, and that nobody feels tested by. "Why is sleep
+ * important?" invites reasons, which is what produces connected speech; the
+ * measurement wants a normal speaking rhythm, and a question answerable with
+ * a list of facts produces the wrong one.
+ */
+export const WARMUP_QUESTION = "Why is sleep important?";
 
 type Stage = "idle" | "recording" | "uploading" | "done" | "error";
 
@@ -215,7 +225,7 @@ export function VoiceWarmup({
   return (
     <div className="flex flex-col gap-5">
       {/* The reason comes before the ask.
-          A step that opens with "record 30 seconds" and explains itself only
+          A step that opens with "record yourself" and explains itself only
           afterwards is a step people skip, and the explanation then never gets
           read at all. What this buys them has to be legible before they decide. */}
       {stage !== "done" && (
@@ -239,7 +249,7 @@ export function VoiceWarmup({
             instead of just handing you a score.
           </p>
           <p className="mt-3 text-xs leading-5 text-subtle">
-            Takes 30 seconds, once. Skip it and we work your pace out from your
+            Takes ten seconds, once. Skip it and we work your pace out from your
             first few real sessions instead, which takes longer to get right.
           </p>
         </div>
@@ -254,7 +264,8 @@ export function VoiceWarmup({
         </p>
         <p className="mt-2 text-sm leading-6 text-subtle">
           Explain it like you&apos;re talking to a seven-year-old. There is no
-          right answer and nothing here is graded. Talk for about 30 seconds.
+          right answer and nothing here is graded — this is only so we know how
+          fast you normally talk. Ten seconds is plenty.
         </p>
       </div>
 
@@ -274,10 +285,24 @@ export function VoiceWarmup({
               {secondsLeft}s left
             </span>
           </div>
-          <div className="h-1.5 overflow-hidden rounded-full bg-card">
+          {/* Drains rather than fills. The number beside it counts down, and a
+              bar growing while a number shrinks makes the reader do arithmetic
+              to answer "how much have I got left" — which is the only question
+              anyone asks of a bar during a ten-second recording. */}
+          <div
+            className="h-2 overflow-hidden rounded-full bg-card"
+            role="progressbar"
+            aria-label="Time left in the warm-up"
+            aria-valuemin={0}
+            aria-valuemax={Math.round(MAX_MS / 1000)}
+            aria-valuenow={secondsLeft}
+          >
             <div
-              className="h-full rounded-full bg-brand transition-[width] duration-100 ease-linear motion-reduce:transition-none"
-              style={{ width: `${progress * 100}%` }}
+              className={cn(
+                "h-full rounded-full transition-[width,background-color] duration-100 ease-linear motion-reduce:transition-none",
+                longEnough ? "bg-green-500" : "bg-brand",
+              )}
+              style={{ width: `${Math.max(0, 1 - progress) * 100}%` }}
             />
           </div>
           <p className="text-xs text-subtle">

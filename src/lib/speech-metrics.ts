@@ -51,8 +51,14 @@ const MIN_WORDS_PER_WINDOW = 3;
 /**
  * Least speech needed before a rate is worth reporting at all. Under this
  * there are too few windows for a median to mean anything.
+ *
+ * Seven rather than twelve because the warm-up is ten seconds long, and
+ * ten seconds of wall clock is less than ten seconds of speech once pauses
+ * are taken out — a floor above what the warm-up can physically produce is a
+ * baseline that can never be accepted. Every real recording clears this many
+ * times over, so the only thing it now gates is the warm-up itself.
  */
-export const MIN_SPEAKING_SECONDS = 12;
+export const MIN_SPEAKING_SECONDS = 7;
 
 /** Fillers counted toward the disfluency rate, as whole words. */
 const FILLER_PATTERN =
