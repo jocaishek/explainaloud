@@ -81,6 +81,16 @@ const SILENCE_STOP_MS = 10_000;
 const SILENCE_RMS = 0.012;
 
 /**
+ * How long the adaptive follow-up gets before the banked question is shown.
+ *
+ * A question written out of the answer you just gave is the thing nobody else
+ * does, and it is worth a short wait. It is not worth the ten to fifteen
+ * seconds two chained model calls actually took, mid-interview, on a clock the
+ * student is being marked against.
+ */
+const FOLLOW_UP_BUDGET_MS = 3_000;
+
+/**
  * How long to wait for the Examiner before falling back.
  *
  * Short on purpose: this runs inside the gap between two answers, and a
@@ -1812,33 +1822,52 @@ export function RecordConsole({
     // This is the whole difference between a list and an examiner: question
     // two exists because of how question one went.
     if (next < INTERVIEW_QUESTIONS) {
+      // Grading still runs — the recap needs it — but the next question no
+      // longer waits behind it.
+      const graded = gradeSegment(at, answer, current.index, current.keyPoints);
+
+      // The adaptive follow-up, on a stopwatch.
+      //
+      // This was two model calls in series before the next question appeared:
+      // grade the answer, then write a question out of what it missed. That is
+      // ten to fifteen seconds of a card reading "choosing", between every
+      // pair of questions. Whichever arrives first inside the budget wins, and
+      // past the budget the banked question is shown and a late follow-up is
+      // dropped rather than swapped in — a question that changes after it has
+      // been read is the one thing this screen must never do.
+      const banked = askingRef.current[next] ?? null;
       setWriting(true);
-      void gradeSegment(at, answer, current.index, current.keyPoints)
-        .then((weakness) => writeQuestion(weakness))
-        .then((written) => {
-          const follow = written[0];
-          // Only fill a slot nobody is answering yet. If they pressed
-          // "Continue recording" before this landed, they are already talking
-          // to the question that was there.
-          if (
-            !follow ||
-            segmentIndexRef.current !== next ||
-            statusRef.current === "recording"
-          ) {
-            return;
-          }
+      let settled = false;
+      const reveal = (follow: CourseQuestion | null) => {
+        if (settled) return;
+        settled = true;
+        if (
+          follow &&
+          segmentIndexRef.current === next &&
+          statusRef.current !== "recording"
+        ) {
           const updated = [...askingRef.current];
           updated[next] = follow;
           askingRef.current = updated;
           setAsking(updated);
-        })
-        .finally(() => {
-          setWriting(false);
-          // Only start the clock once there is something to answer. Counting
-          // down against a question nobody has written yet is how you open a
-          // microphone on someone who is still reading.
-          startGrace();
-        });
+        }
+        setWriting(false);
+        // The clock only starts once there is something to answer. Counting
+        // down against a question nobody has written yet is how you open a
+        // microphone on someone who is still reading.
+        startGrace();
+      };
+
+      void graded
+        .then((weakness) => writeQuestion(weakness))
+        .then((written) => reveal(written[0] ?? null))
+        .catch(() => reveal(null));
+
+      // With nothing banked there is nothing to fall back to, so the wait is
+      // the only option — a slow question beats an empty card.
+      if (banked) {
+        window.setTimeout(() => reveal(null), FOLLOW_UP_BUDGET_MS);
+      }
     } else {
       void gradeSegment(at, answer, current.index, current.keyPoints);
       startGrace();

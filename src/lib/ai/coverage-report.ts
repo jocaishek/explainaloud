@@ -313,11 +313,24 @@ export function completeCoverageReport({
         covered.size
       : 0;
 
+  /**
+   * Whether anything at all landed on the subject.
+   *
+   * The base term says "you spoke accurately about this" and is worth real
+   * marks, but it presupposes there was something to speak about. Handed out
+   * unconditionally it paid 30 out of 100 for "duh duh duh, six seven, six
+   * seven" — nothing covered, nothing partial, not one correct claim. A score
+   * that cannot tell that from an honest attempt is not measuring anything.
+   */
+  const engaged = correctClaims > 0 || covered.size > 0 || partial.size > 0;
+
   const understanding =
-    SCORE_BASE + SCORE_COVERAGE * coverage + SCORE_DEPTH * depth;
+    (engaged ? SCORE_BASE : 0) +
+    SCORE_COVERAGE * coverage +
+    SCORE_DEPTH * depth;
   // No checkable claims at all is not the same as every claim being wrong.
-  // Speech too hedged to mark is graded on what it covered, not punished for
-  // the evaluator having found nothing to check.
+  // Speech too hedged to mark is graded on what it covered — but only when it
+  // covered something, which `engaged` has already settled.
   const accuracyFactor =
     claimSpans.length === 0
       ? 1
@@ -375,11 +388,15 @@ export function completeCoverageReport({
     ? "points this question is about"
     : "course key points";
   const coverageVerdict =
-    missingCount === 0
-      ? scoped
-        ? "You covered everything this question was asking for."
-        : `You covered all ${keyPoints.length} course key points.`
-      : `You covered ${covered.size} of ${keyPoints.length} ${pointsNoun}.${partialNote} The other ${missingCount} you did not get to — that is not the same as getting them wrong.`;
+    keyPoints.length === 0
+      ? "There was nothing to mark this against — the question arrived without any key points."
+      : !engaged
+        ? "Nothing in this recording addressed the question."
+        : missingCount === 0
+          ? scoped
+            ? "You covered everything this question was asking for."
+            : `You covered all ${keyPoints.length} course key points.`
+          : `You covered ${covered.size} of ${keyPoints.length} ${pointsNoun}.${partialNote} The other ${missingCount} you did not get to — that is not the same as getting them wrong.`;
   const accuracyVerdict =
     claimSpans.length > 0
       ? ` ${correctClaims} of ${claimSpans.length} checkable claim${claimSpans.length === 1 ? " was" : "s were"} accurate.`
