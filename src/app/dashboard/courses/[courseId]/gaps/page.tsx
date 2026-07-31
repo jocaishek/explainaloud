@@ -146,7 +146,10 @@ export default async function GapReportPage({
   const spans = session.spans ?? [];
   const weaknesses = (session.gaps ?? []) as GapRow[];
   const hasClassifiedClaim = spans.some(
-    (span) => span.status === "correct" || span.status === "gap",
+    (span) =>
+      span.status === "correct" ||
+      span.status === "gap" ||
+      span.status === "vague",
   );
   const markSubstantiveNeutralAsGap =
     score < 50 && weaknesses.length > 0 && !hasClassifiedClaim;
@@ -294,7 +297,10 @@ export default async function GapReportPage({
                   className={cn(
                     status === "correct" &&
                       "text-green-600 dark:text-green-400",
-                    status === "neutral" && "text-subtle",
+                    // Vague is grey, not red: too woolly to check is not the
+                    // same as wrong, and colouring it red says it is.
+                    (status === "vague" || status === "neutral") &&
+                      "text-subtle",
                   )}
                 >
                   {span.text}

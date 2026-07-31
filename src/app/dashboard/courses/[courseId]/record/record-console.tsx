@@ -70,7 +70,7 @@ export type CourseQuestion = {
 
 type Span = {
   text: string;
-  status: "correct" | "gap" | "neutral";
+  status: "correct" | "gap" | "vague" | "neutral";
   issue: string | null;
 };
 
@@ -2361,7 +2361,9 @@ export function RecordConsole({
                         : "bg-foreground/10 text-subtle",
                     )}
                   >
-                    {session.mode === "interview" ? "Interview" : "Topic"}
+                    {session.mode === "interview"
+                      ? `Interview · ${INTERVIEW_QUESTIONS} questions`
+                      : "Topic · open-ended"}
                   </span>
                   {new Date(session.started_at).toLocaleString()}
                 </p>
@@ -2761,7 +2763,10 @@ function ColouredTranscript({
           span.status === "correct" && "text-green-500",
           span.status === "gap" &&
             "rounded bg-red-500/10 font-medium text-red-500",
-          span.status === "neutral" && "text-subtle",
+          // Vague shares the grey of speech that made no claim, because to a
+          // reader they mean the same thing: nothing was established here.
+          (span.status === "vague" || span.status === "neutral") &&
+            "text-subtle",
         );
 
         return span.status === "gap" && linkedGap >= 0 ? (
