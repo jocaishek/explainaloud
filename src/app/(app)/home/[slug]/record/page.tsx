@@ -1,5 +1,6 @@
 import { isAdminEmail } from "~/lib/admin";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
+import { courseIdForSlug } from "~/lib/courses";
 import { localDay, usageToday } from "~/lib/limits";
 import { PLAN_LIMITS, PLAN_RECORDING_MS } from "~/lib/plans";
 import { requireProfile } from "~/lib/supabase/server";
@@ -8,9 +9,10 @@ import { type CourseQuestion, RecordConsole } from "./record-console";
 export default async function RecordPage({
   params,
 }: {
-  params: Promise<{ courseId: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { courseId } = await params;
+  const { slug } = await params;
+  const courseId = await courseIdForSlug(slug);
   const { supabase, user, profile } = await requireProfile();
 
   const [{ data: sessions }, { data: course }, usage] = await Promise.all([
@@ -56,19 +58,22 @@ export default async function RecordPage({
   );
 
   return (
-    <RecordConsole
-      courseId={courseId}
-      initialSessions={sessions ?? []}
-      questions={questions}
-      initialQuestion={firstUnanswered === -1 ? 0 : firstUnanswered}
-      courseReady={!!course?.generated}
-      recordingsUsed={usage.recordings_started}
-      // Pro has no daily cap, so it shares the admin's "don't count down"
-      // treatment. The database enforces this independently — see
-      // `claim_daily_quota`; this only decides what the counter says.
-      unlimited={isAdminEmail(user.email) || profile.plan === "pro"}
-      dailyLimit={PLAN_LIMITS[profile.plan].recording}
-      maxRecordingMs={PLAN_RECORDING_MS[profile.plan]}
-    />
+    <div className="mx-auto w-full max-w-2xl">
+      <RecordConsole
+        courseId={courseId}
+        slug={slug}
+        initialSessions={sessions ?? []}
+        questions={questions}
+        initialQuestion={firstUnanswered === -1 ? 0 : firstUnanswered}
+        courseReady={!!course?.generated}
+        recordingsUsed={usage.recordings_started}
+        // Pro has no daily cap, so it shares the admin's "don't count down"
+        // treatment. The database enforces this independently — see
+        // `claim_daily_quota`; this only decides what the counter says.
+        unlimited={isAdminEmail(user.email) || profile.plan === "pro"}
+        dailyLimit={PLAN_LIMITS[profile.plan].recording}
+        maxRecordingMs={PLAN_RECORDING_MS[profile.plan]}
+      />
+    </div>
   );
 }

@@ -233,7 +233,7 @@ export function AuthCard({
 
     // A full navigation guarantees the newly written auth cookies are present
     // before server-side dashboard and onboarding guards run.
-    window.location.assign("/dashboard");
+    window.location.assign("/home");
   }
 
   async function handleForgotPassword(e: FormEvent) {

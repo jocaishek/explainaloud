@@ -218,7 +218,7 @@ export function TopicGrid({
 function NewTopicTile({ folderId }: { folderId?: string }) {
   return (
     <Link
-      href={folderId ? `/dashboard/new?folder=${folderId}` : "/dashboard/new"}
+      href={folderId ? `/new?folder=${folderId}` : "/new"}
       className="glass glass-lift flex h-36 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border bg-transparent text-subtle transition-colors hover:text-strong"
     >
       <Plus className="size-4" />

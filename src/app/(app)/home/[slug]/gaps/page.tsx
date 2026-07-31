@@ -7,6 +7,7 @@ import { KnowledgeScore } from "~/components/knowledge-score";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { SessionPicker } from "~/components/session-picker";
 import type { GapReport, SpanStatus } from "~/lib/ai/schemas";
+import { courseIdForSlug } from "~/lib/courses";
 import { PACE_DROP_FRACTION, type SpeechMetrics } from "~/lib/speech-metrics";
 import { requireUser } from "~/lib/supabase/server";
 import { cn } from "~/lib/utils";
@@ -98,11 +99,12 @@ export default async function GapReportPage({
   params,
   searchParams,
 }: {
-  params: Promise<{ courseId: string }>;
+  params: Promise<{ slug: string }>;
   /** `?session=` picks which recording to read. Absent means the newest. */
   searchParams: Promise<{ session?: string; q?: string }>;
 }) {
-  const { courseId } = await params;
+  const { slug } = await params;
+  const courseId = await courseIdForSlug(slug);
   const { session: wanted, q } = await searchParams;
   const { supabase, user } = await requireUser();
 
@@ -172,13 +174,13 @@ export default async function GapReportPage({
 
   if (!session?.report) {
     return (
-      <div className="flex flex-col gap-3">
+      <div className="mx-auto flex w-full max-w-2xl flex-col gap-3">
         <p className="text-sm text-subtle">
           No gap report yet. Explain the topic once and your score, transcript,
           strengths, and weaknesses will appear here.
         </p>
         <Link
-          href={`/dashboard/courses/${courseId}/record`}
+          href={`/home/${slug}/record`}
           className="w-fit rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Start explaining
@@ -266,12 +268,20 @@ export default async function GapReportPage({
   const focused = selectedQuestion === null ? null : segments[selectedQuestion];
 
   return (
-    <div className="flex flex-col gap-8">
+    <div
+      className={cn(
+        "mx-auto flex w-full flex-col gap-8",
+        // The whole report is two panels and wants the screen. One question is
+        // one answer and one short list, which stretched across the same width
+        // would be mostly empty space.
+        focused ? "max-w-3xl" : "max-w-[96rem]",
+      )}
+    >
       {(graded?.length ?? 0) > 0 && (
         <SessionPicker
           sessions={graded ?? []}
           current={session.id}
-          courseId={courseId}
+          slug={slug}
           basePath="gaps"
         />
       )}
@@ -279,7 +289,7 @@ export default async function GapReportPage({
       {segments.length > 0 && (
         <QuestionTabs
           segments={segments}
-          courseId={courseId}
+          slug={slug}
           sessionId={session.id}
           selected={selectedQuestion}
         />
@@ -339,7 +349,8 @@ export default async function GapReportPage({
       <div
         className={cn(
           "grid gap-8",
-          !focused && "lg:grid-cols-[1.5fr_1fr] lg:items-start",
+          !focused &&
+            "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start",
         )}
       >
         <div className="flex min-w-0 flex-col gap-8">
@@ -382,7 +393,7 @@ export default async function GapReportPage({
                   </span>
                 </div>
               </div>
-              <p className="max-w-3xl rounded-xl bg-surface p-4 text-sm leading-7 text-foreground">
+              <p className="rounded-xl bg-surface p-4 text-sm leading-7 text-foreground">
                 {spans.map((span, index) => {
                   const substantive = span.text.trim().length > 0;
                   const status =
@@ -429,7 +440,7 @@ export default async function GapReportPage({
                 })}
               </p>
               <p className="text-xs text-subtle">
-                Select any red text to jump to the matching weakness.
+                Click any red phrase to highlight what it missed.
               </p>
             </section>
           )}
@@ -447,7 +458,7 @@ export default async function GapReportPage({
               Knowledge strengths
             </h2>
             {session.report.strengths.length > 0 ? (
-              <ul className="flex max-w-3xl flex-col gap-2">
+              <ul className="flex flex-col gap-2">
                 {session.report.strengths.map((strength) => (
                   <li
                     key={strength}
@@ -505,7 +516,7 @@ export default async function GapReportPage({
               <p className="text-sm text-subtle">
                 Re-teaching covers the whole recording.{" "}
                 <Link
-                  href={`/dashboard/courses/${courseId}/gaps?session=${session.id}`}
+                  href={`/home/${slug}/gaps?session=${session.id}`}
                   className="font-medium text-strong underline underline-offset-2"
                 >
                   See everything
@@ -520,7 +531,7 @@ export default async function GapReportPage({
                 description="Worth fixing first: these are things the explanation got wrong."
                 emptyText="Nothing you said was wrong. "
                 tone="error"
-                courseId={courseId}
+                slug={slug}
                 items={mistakes}
               />
 
@@ -529,7 +540,7 @@ export default async function GapReportPage({
                 description="You didn't get to these. That isn't the same as getting them wrong."
                 emptyText="You reached every key point in the course."
                 tone="neutral"
-                courseId={courseId}
+                slug={slug}
                 items={notCovered}
               />
             </>
@@ -551,14 +562,14 @@ function WeaknessList({
   description,
   emptyText,
   tone,
-  courseId,
+  slug,
   items,
 }: {
   heading: string;
   description: string;
   emptyText: string;
   tone: "error" | "neutral";
-  courseId: string;
+  slug: string;
   items: GapRow[];
 }) {
   const headingId = `${tone}-heading`;
@@ -580,8 +591,15 @@ function WeaknessList({
               key={item.id}
               tabIndex={-1}
               className={cn(
-                "flex scroll-mt-24 flex-col gap-2 py-4 outline-none",
-                tone === "error" && "target:bg-red-500/[0.04]",
+                "-mx-3 flex scroll-mt-24 flex-col gap-2 rounded-lg px-3 py-4",
+                "outline-none transition-colors duration-300",
+                // Set by the transcript link that points here. Strong enough
+                // to find at a glance from the other side of the screen —
+                // the point of the click is "that phrase, this miss".
+                tone === "error" &&
+                  "data-highlighted:bg-red-500/[0.09] data-highlighted:ring-1 data-highlighted:ring-red-500/30",
+                tone !== "error" &&
+                  "data-highlighted:bg-brand/[0.08] data-highlighted:ring-1 data-highlighted:ring-brand/25",
               )}
             >
               {/* Only errors get a category chip. Under "Not covered yet",
@@ -599,7 +617,7 @@ function WeaknessList({
                   explained. Printing the explanation here too meant the
                   answer arrived before the student had registered the gap. */}
               <Link
-                href={`/dashboard/courses/${courseId}/re-teach#gap-${item.id}`}
+                href={`/home/${slug}/re-teach#gap-${item.id}`}
                 className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Re-teach this
@@ -625,16 +643,16 @@ function WeaknessList({
  */
 function QuestionTabs({
   segments,
-  courseId,
+  slug,
   sessionId,
   selected,
 }: {
   segments: Array<{ question: string; score: number | null }>;
-  courseId: string;
+  slug: string;
   sessionId: string;
   selected: number | null;
 }) {
-  const base = `/dashboard/courses/${courseId}/gaps?session=${sessionId}`;
+  const base = `/home/${slug}/gaps?session=${sessionId}`;
 
   return (
     <nav

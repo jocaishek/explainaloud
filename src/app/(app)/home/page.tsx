@@ -1,7 +1,7 @@
 import { Greeting } from "~/components/greeting";
 import type { Course, Folder } from "~/lib/folders";
 import { requireProfile } from "~/lib/supabase/server";
-import { TopicGrid } from "./topic-grid";
+import { TopicGrid } from "../topic-grid";
 
 export default async function DashboardPage() {
   const { supabase, user, profile } = await requireProfile();
@@ -15,7 +15,7 @@ export default async function DashboardPage() {
       .returns<Folder[]>(),
     supabase
       .from("courses")
-      .select("id, topic, name, status, folder_id, created_at")
+      .select("id, topic, name, status, folder_id, created_at, slug")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .returns<Course[]>(),

@@ -67,7 +67,7 @@ const getCachedUser = cache(async () => {
 
 /**
  * For dashboard server components/actions. proxy.ts already redirects
- * unauthenticated `/dashboard/*` requests, but that's not a substitute for
+ * unauthenticated `/home/*` requests, but that's not a substitute for
  * checking here too - defense in depth per Supabase's SSR auth guidance.
  */
 export async function requireUser() {

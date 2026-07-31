@@ -9,7 +9,7 @@ export default function CourseTabLoading() {
   return (
     <div
       aria-label="Loading course tab"
-      className="flex flex-col gap-4"
+      className="mx-auto flex w-full max-w-2xl flex-col gap-4"
       role="status"
     >
       <Skeleton className="h-4 w-48" />

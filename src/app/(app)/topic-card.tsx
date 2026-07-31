@@ -6,7 +6,12 @@ import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { type Course, courseTitle, type Folder } from "~/lib/folders";
+import {
+  type Course,
+  courseHref,
+  courseTitle,
+  type Folder,
+} from "~/lib/folders";
 import { cn } from "~/lib/utils";
 import {
   deleteCourse,
@@ -66,7 +71,7 @@ export function TopicCard({
       ) : (
         <>
           <Link
-            href={`/dashboard/courses/${course.id}`}
+            href={courseHref(course)}
             aria-label={`${title} — topic: ${course.topic}`}
             className="glass glass-lift flex h-36 flex-col justify-between rounded-xl p-4"
           >

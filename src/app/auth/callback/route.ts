@@ -44,7 +44,7 @@ export async function GET(request: NextRequest) {
   if (!error) {
     // Where to land. An explicit `next` wins — email verification and password
     // reset both name their destination. Otherwise decide from the account
-    // itself rather than defaulting to /dashboard.
+    // itself rather than defaulting to /home.
     //
     // Google sign-in sends no `next`, so a first-time Google account used to be
     // dropped at /dashboard, whose profile guard bounced it to /onboarding —
@@ -60,9 +60,9 @@ export async function GET(request: NextRequest) {
           .select("user_id")
           .eq("user_id", userId)
           .maybeSingle<{ user_id: string }>();
-        destination = profile ? "/dashboard" : "/onboarding";
+        destination = profile ? "/home" : "/onboarding";
       } else {
-        destination = "/dashboard";
+        destination = "/home";
       }
     }
     return NextResponse.redirect(`${browserOrigin}${destination}`);

@@ -340,6 +340,7 @@ function initSegmentEnd(bytes: Uint8Array, mimeType: string) {
 
 export function RecordConsole({
   courseId,
+  slug,
   initialSessions,
   questions,
   initialQuestion,
@@ -350,6 +351,8 @@ export function RecordConsole({
   maxRecordingMs,
 }: {
   courseId: string;
+  /** The course's URL segment. Links use it; the API routes use the id. */
+  slug: string;
   initialSessions: Session[];
   /** Empty when the course is ungenerated, or generated without any quizzes. */
   questions: CourseQuestion[];
@@ -2344,7 +2347,7 @@ export function RecordConsole({
               asChild
               className="mt-1 h-11 w-fit gap-2 rounded-full bg-brand px-6 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
             >
-              <Link href={`/dashboard/courses/${courseId}/gaps`}>
+              <Link href={`/home/${slug}/gaps`}>
                 See the full gap report
                 <ArrowRight aria-hidden className="size-4" />
               </Link>

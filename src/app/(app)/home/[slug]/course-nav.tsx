@@ -11,10 +11,10 @@ const STEPS = [
   { slug: "/re-teach", label: "Re-Teach" },
 ];
 
-export function CourseNav({ courseId }: { courseId: string }) {
+export function CourseNav({ slug }: { slug: string }) {
   const pathname = usePathname();
   const router = useRouter();
-  const base = `/dashboard/courses/${courseId}`;
+  const base = `/home/${slug}`;
 
   return (
     <nav className="flex gap-1 overflow-x-auto border-b border-border px-6">

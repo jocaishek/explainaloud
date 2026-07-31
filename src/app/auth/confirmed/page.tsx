@@ -13,7 +13,7 @@ export const metadata = { title: "Email confirmed · Explainaloud" };
  * Signed in: the code exchange in `/auth/callback` worked and the session
  * cookie belongs to this browser, so the only thing left is to say so and point
  * onward. Where onward is depends on whether onboarding has been done, which is
- * why the profile is read here rather than sending everyone to `/dashboard` and
+ * why the profile is read here rather than sending everyone to `/home` and
  * letting its guard bounce the new accounts back out again.
  *
  * Not signed in: the address is still confirmed, because the exchange had to
@@ -39,7 +39,7 @@ export default async function EmailConfirmedPage() {
       .select("user_id")
       .eq("user_id", user.id)
       .maybeSingle<{ user_id: string }>();
-    destination = profile ? "/dashboard" : "/onboarding";
+    destination = profile ? "/home" : "/onboarding";
   }
 
   return (
