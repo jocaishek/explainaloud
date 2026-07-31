@@ -340,6 +340,12 @@ Classify each span:
 - "correct"  — the statement is accurate
 - "gap"      — the statement is wrong, misleading, or contradicted by the
                reference material, or it is off-topic
+- "vague"    — the statement is heading the right way but is too woolly to
+               check: it gestures at the idea without committing to anything
+               you could mark right or wrong. "It kind of turns into energy
+               somehow" is vague; "it turns into ATP" is correct; "it turns
+               into DNA" is a gap. Vague is NOT a mistake and NOT a pass — use
+               it when you would have to guess what they meant.
 - "neutral"  — filler, false starts, or content that makes no checkable claim
 
 Rules:
@@ -360,7 +366,7 @@ Rules:
   an entire off-topic explanation neutral.
 - Be strict about correctness but do not invent gaps. A student who is simply
   brief is not wrong. If you cannot state what is factually wrong with a span,
-  it is not a gap.
+  it is not a gap — it is "correct" if it is true, "vague" if you cannot tell.
 - Check every numbered key point individually before returning, and add its
   index to "covered_key_points" when the student conveyed that MEANING.
   Paraphrase counts. Synonyms count. Their own phrasing counts. Saying it in a
@@ -397,7 +403,7 @@ Return JSON:
   "spans": [
     {
       "text": "exact substring",
-      "status": "correct" | "gap" | "neutral",
+      "status": "correct" | "gap" | "vague" | "neutral",
       "key_point": "the related key point text, or null (never an index)",
       "issue": "for gaps only: one sentence naming what is factually wrong with these words, or null"
     }

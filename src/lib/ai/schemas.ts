@@ -145,7 +145,16 @@ export const courseSchema = courseResponseSchema.transform((course) => ({
 }));
 export type GeneratedCourse = z.infer<typeof courseSchema>;
 
-export const spanStatus = z.enum(["correct", "gap", "neutral"]);
+/**
+ * How a stretch of speech is coloured.
+ *
+ * "vague" is its own verdict rather than a shade of wrong. A student who says
+ * something true but woolly has not made a mistake, and colouring it red says
+ * they have; colouring it green says the woolliness passed. Grey is the honest
+ * third answer, and it shares that grey with speech that makes no claim at all
+ * because both mean the same thing to a reader: nothing was established here.
+ */
+export const spanStatus = z.enum(["correct", "gap", "vague", "neutral"]);
 export type SpanStatus = z.infer<typeof spanStatus>;
 
 export const spansSchema = z.object({
