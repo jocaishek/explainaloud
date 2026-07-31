@@ -588,6 +588,17 @@ RULES:
   points verbatim is too shallow; a good one needs two of them put together.
 - Every question must be answerable from the material above. Do not require a
   fact that is not in it.
+- STAY INSIDE THE MATERIAL. You know a great deal about this subject that the
+  sections do not cover, and none of it may be examined. The commonest way to
+  break this is to drift from how the thing works to how it is sold or run:
+  pricing, plans, tiers, limits, licensing, company history, release dates,
+  competitors. Asked about "Claude Code basics", "how do Claude's pricing plans
+  differ?" is out of bounds — it is about the product's commercial packaging,
+  not about the material the student studied, and they will be marked down for
+  not knowing something they were never taught.
+- Before returning each question, find the sentences in the sections above that
+  answer it. If you cannot point at them, the question is out of bounds:
+  replace it with one you can.
 - One question per entry. No preamble, no multi-part questions joined by "and
   also".
 - Name the section index the question draws on most.

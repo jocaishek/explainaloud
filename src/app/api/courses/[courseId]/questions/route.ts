@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { interviewQuestionPrompt } from "~/lib/ai/prompts";
 import { AiUnavailableError, completeJson } from "~/lib/ai/provider";
-import { drawFromBank, warmQuestionBank } from "~/lib/ai/question-bank";
+import {
+  drawFromBank,
+  isGroundedQuestion,
+  warmQuestionBank,
+} from "~/lib/ai/question-bank";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
@@ -184,8 +188,19 @@ export async function POST(
       { fast: true, maxOutputTokens: 700 },
     );
 
+    const followUps = result.data.questions
+      .slice(0, parsed.data.count)
+      // Same guard as the bank's. A follow-up that has drifted off the
+      // material is worse than no follow-up: the console falls back to the
+      // banked question, which is about the right thing by construction.
+      .filter((q) => isGroundedQuestion(q.question, course.topic, sections));
+
+    if (followUps.length === 0) {
+      return NextResponse.json({ questions: [] });
+    }
+
     return NextResponse.json({
-      questions: result.data.questions.slice(0, parsed.data.count).map((q) => {
+      questions: followUps.map((q) => {
         const index = Math.min(q.section_index, sections.length - 1);
         return {
           question: q.question,
