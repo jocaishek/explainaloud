@@ -1,7 +1,8 @@
 "use client";
 
-import { useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useMediaQuery } from "~/hooks/use-media-query";
+import { cn } from "~/lib/utils";
 
 function scoreColor(score: number) {
   const hue = Math.round((Math.max(0, Math.min(100, score)) / 100) * 120);
@@ -15,7 +16,11 @@ export function KnowledgeScore({
   score: number;
   verdict: string;
 }) {
-  const reduceMotion = useReducedMotion();
+  // The media query directly, rather than framer-motion's hook. This component
+  // is on the first screen of the gap report and pulled the whole animation
+  // library in for one boolean — 43kB gzipped to answer a question the browser
+  // will answer for free.
+  const reduceMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const [displayed, setDisplayed] = useState(0);
 
   useEffect(() => {
@@ -38,6 +43,15 @@ export function KnowledgeScore({
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
   }, [reduceMotion, score]);
+
+  // One frame at zero, then the real value, so the transition has something
+  // to travel from. Setting the final width on the first paint would arrive
+  // already full.
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(frame);
+  }, []);
 
   const color = scoreColor(displayed);
 
@@ -64,10 +78,22 @@ export function KnowledgeScore({
         aria-valuenow={score}
         className="h-2 overflow-hidden rounded-full bg-muted"
       >
+        {/* The bar is one CSS transition on `transform`, not a width set from
+            React every frame.
+            Two reasons. Width was being written as a whole percent a hundred
+            times over a second, so the bar advanced in visible 1% steps and
+            each step was a React render and a layout pass. And `transform` is
+            composited: the browser can run it off the main thread, which is
+            the difference between smooth and nearly smooth on a phone that is
+            also parsing the rest of the page. */}
         <div
-          className="h-full rounded-full"
+          className={cn(
+            "h-full origin-left rounded-full",
+            !reduceMotion &&
+              "transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
+          )}
           style={{
-            width: `${displayed}%`,
+            transform: `scaleX(${(grown ? score : 0) / 100})`,
             backgroundColor: color,
           }}
         />

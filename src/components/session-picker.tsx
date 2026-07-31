@@ -1,4 +1,6 @@
-import Link from "next/link";
+"use client";
+
+import { useRouter } from "next/navigation";
 import { cn } from "~/lib/utils";
 
 export type GradedSession = {
@@ -8,16 +10,24 @@ export type GradedSession = {
   mode: string | null;
 };
 
+function label(session: GradedSession) {
+  const when = new Date(session.started_at).toLocaleString(undefined, {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+  const mode = session.mode === "interview" ? "Interview" : "Topic";
+  return `${when} · ${mode} · ${session.score ?? "—"}/100`;
+}
+
 /**
  * Which recording you are reading.
  *
- * The gap report and Re-Teach used to show whichever session was newest, with
- * no way to reach any other — so recording again made every earlier attempt
- * unreadable. That is backwards for a product whose whole proposition is
- * explaining the same thing twice and seeing what changed.
- *
- * A row of links rather than a dropdown: the scores are the interesting part
- * and they should be visible at once, not one at a time behind a click.
+ * A dropdown rather than a row of cards: past sessions accumulate, and a row
+ * that grows without limit pushes the report itself off the screen — which is
+ * the thing you came to read. A select stays one line at ten sessions and at
+ * a hundred, and on a phone it opens the platform's own picker.
  */
 export function SessionPicker({
   sessions,
@@ -31,59 +41,35 @@ export function SessionPicker({
   /** Which screen these link to — the picker is shared by both. */
   basePath: "gaps" | "re-teach";
 }) {
-  return (
-    <nav
-      aria-label="Past recordings"
-      className="flex flex-col gap-2 rounded-xl border border-border bg-surface p-4"
-    >
-      <p className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-        Past recordings · {sessions.length}
-      </p>
+  const router = useRouter();
 
-      <ul className="flex flex-wrap gap-2">
-        {sessions.map((session) => {
-          const active = session.id === current;
-          return (
-            <li key={session.id}>
-              <Link
-                href={`/dashboard/courses/${courseId}/${basePath}?session=${session.id}`}
-                aria-current={active ? "page" : undefined}
-                className={cn(
-                  "flex flex-col gap-0.5 rounded-lg border px-3 py-2 transition-colors",
-                  active
-                    ? "border-brand/40 bg-brand/[0.08]"
-                    : "border-border hover:border-brand/25",
-                )}
-              >
-                <span className="flex items-baseline gap-2">
-                  <span
-                    className={cn(
-                      "font-mono text-lg font-semibold tabular-nums",
-                      active ? "text-brand" : "text-strong",
-                    )}
-                  >
-                    {session.score ?? "—"}
-                  </span>
-                  <span className="font-mono text-[9px] tracking-[0.1em] text-subtle uppercase">
-                    {session.mode === "interview" ? "Interview" : "Topic"}
-                  </span>
-                </span>
-                <span className="text-[11px] text-subtle">
-                  {new Date(session.started_at).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                  {" · "}
-                  {new Date(session.started_at).toLocaleTimeString(undefined, {
-                    hour: "numeric",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </Link>
-            </li>
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      <label
+        htmlFor="session-picker"
+        className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase"
+      >
+        Recording
+      </label>
+      <select
+        id="session-picker"
+        value={current}
+        onChange={(event) => {
+          router.push(
+            `/dashboard/courses/${courseId}/${basePath}?session=${event.target.value}`,
           );
-        })}
-      </ul>
-    </nav>
+        }}
+        className={cn(
+          "min-w-0 flex-1 rounded-lg border border-border bg-surface px-3 py-2",
+          "text-sm text-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/40",
+        )}
+      >
+        {sessions.map((session) => (
+          <option key={session.id} value={session.id}>
+            {label(session)}
+          </option>
+        ))}
+      </select>
+    </div>
   );
 }

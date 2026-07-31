@@ -33,6 +33,14 @@ type SessionReport = {
   spans: StoredSpan[] | null;
   report: GapReport | null;
   speech_metrics: SpeechMetrics | null;
+  /** One entry per question in an interview; null for topic-mode sessions. */
+  segments: Array<{
+    question: string;
+    section_index: number;
+    transcript: string;
+    score: number | null;
+    verdict: string | null;
+  }> | null;
   /** What they were asked. Null for sessions recorded before questions. */
   question: string | null;
   gaps: GapRow[];
@@ -90,10 +98,10 @@ export default async function GapReportPage({
 }: {
   params: Promise<{ courseId: string }>;
   /** `?session=` picks which recording to read. Absent means the newest. */
-  searchParams: Promise<{ session?: string }>;
+  searchParams: Promise<{ session?: string; q?: string }>;
 }) {
   const { courseId } = await params;
-  const { session: wanted } = await searchParams;
+  const { session: wanted, q } = await searchParams;
   const { supabase, user } = await requireUser();
 
   // Every graded recording, newest first. The report used to be whichever was
@@ -123,7 +131,7 @@ export default async function GapReportPage({
         ? supabase
             .from("course_sessions")
             .select(
-              "id, transcript, score, spans, report, speech_metrics, question, gaps ( id, phrase, category, explanation, resolved, created_at )",
+              "id, transcript, score, spans, report, speech_metrics, question, segments, gaps ( id, phrase, category, explanation, resolved, created_at )",
             )
             .eq("course_id", courseId)
             .eq("user_id", user.id)
@@ -131,7 +139,7 @@ export default async function GapReportPage({
         : supabase
             .from("course_sessions")
             .select(
-              "id, transcript, score, spans, report, speech_metrics, question, gaps ( id, phrase, category, explanation, resolved, created_at )",
+              "id, transcript, score, spans, report, speech_metrics, question, segments, gaps ( id, phrase, category, explanation, resolved, created_at )",
             )
             .eq("course_id", courseId)
             .eq("user_id", user.id)
@@ -241,6 +249,17 @@ export default async function GapReportPage({
       ? weaknessOnSlowStretch(slowSpot.text, weaknesses)
       : null;
 
+  // An interview is three answers to three questions, and reading it as one
+  // block is reading someone's exam paper with the question numbers torn off.
+  // The whole report stays the default; picking a question narrows to it.
+  const segments = session.segments ?? [];
+  const parsedQ = q === undefined ? null : Number.parseInt(q, 10);
+  const selectedQuestion =
+    parsedQ !== null && parsedQ >= 0 && parsedQ < segments.length
+      ? parsedQ
+      : null;
+  const focused = selectedQuestion === null ? null : segments[selectedQuestion];
+
   return (
     <div className="flex flex-col gap-8">
       {(graded?.length ?? 0) > 1 && (
@@ -249,6 +268,15 @@ export default async function GapReportPage({
           current={session.id}
           courseId={courseId}
           basePath="gaps"
+        />
+      )}
+
+      {segments.length > 0 && (
+        <QuestionTabs
+          segments={segments}
+          courseId={courseId}
+          sessionId={session.id}
+          selected={selectedQuestion}
         />
       )}
 
@@ -265,9 +293,39 @@ export default async function GapReportPage({
         </div>
       )}
 
-      <KnowledgeScore score={score} verdict={session.report.verdict} />
+      {focused ? (
+        <>
+          <div className="flex flex-col gap-1.5 rounded-xl border border-brand/20 bg-brand/[0.06] p-5">
+            <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+              Question {(selectedQuestion ?? 0) + 1} of {segments.length}
+            </span>
+            <p className="text-base leading-relaxed font-medium text-strong">
+              {focused.question}
+            </p>
+          </div>
+          <KnowledgeScore
+            score={focused.score ?? 0}
+            verdict={
+              focused.verdict ??
+              (focused.transcript
+                ? "This answer has no grade — the grader could not be reached for it."
+                : "You did not answer this one.")
+            }
+          />
+          <section className="flex flex-col gap-2">
+            <h2 className="text-base font-semibold text-strong">
+              What you said
+            </h2>
+            <p className="max-w-3xl rounded-xl bg-surface p-4 text-sm leading-7 text-foreground">
+              {focused.transcript || "Nothing was captured for this question."}
+            </p>
+          </section>
+        </>
+      ) : (
+        <KnowledgeScore score={score} verdict={session.report.verdict} />
+      )}
 
-      {metrics?.reliable && (
+      {!focused && metrics?.reliable && (
         <DeliverySummary
           wpm={metrics.medianWpm}
           usualWpm={baselineWpm}
@@ -275,7 +333,7 @@ export default async function GapReportPage({
         />
       )}
 
-      {slowSpot && slowSpotWeakness && baselineWpm && (
+      {!focused && slowSpot && slowSpotWeakness && baselineWpm && (
         <SlowSpotCallout
           text={slowSpot.text}
           wpm={slowSpot.wpm}
@@ -283,7 +341,7 @@ export default async function GapReportPage({
         />
       )}
 
-      {session.transcript && spans.length > 0 && (
+      {!focused && session.transcript && spans.length > 0 && (
         <section
           aria-labelledby="transcript-heading"
           className="flex flex-col gap-3"
@@ -396,23 +454,42 @@ export default async function GapReportPage({
           the whole course. They were right to. Getting something wrong and
           not having reached it yet deserve different headings, different
           colours, and different words. */}
-      <WeaknessList
-        heading="Where you went wrong"
-        description="Worth fixing first: these are things the explanation got wrong."
-        emptyText="Nothing you said was wrong. "
-        tone="error"
-        courseId={courseId}
-        items={mistakes}
-      />
+      {/* The weakness lists belong to the recording, not to one answer inside
+          it — a gap row carries no question number — so under a single
+          question they would be someone else's mistakes as often as not.
+          Hidden there, with a way back rather than a dead end. */}
+      {focused ? (
+        <p className="text-sm text-subtle">
+          The gaps and re-teaching cover the whole recording.{" "}
+          <Link
+            href={`/dashboard/courses/${courseId}/gaps?session=${session.id}`}
+            className="font-medium text-strong underline underline-offset-2"
+          >
+            See everything
+          </Link>
+          .
+        </p>
+      ) : (
+        <>
+          <WeaknessList
+            heading="Where you went wrong"
+            description="Worth fixing first: these are things the explanation got wrong."
+            emptyText="Nothing you said was wrong. "
+            tone="error"
+            courseId={courseId}
+            items={mistakes}
+          />
 
-      <WeaknessList
-        heading="Not covered yet"
-        description="You didn't get to these. That isn't the same as getting them wrong."
-        emptyText="You reached every key point in the course."
-        tone="neutral"
-        courseId={courseId}
-        items={notCovered}
-      />
+          <WeaknessList
+            heading="Not covered yet"
+            description="You didn't get to these. That isn't the same as getting them wrong."
+            emptyText="You reached every key point in the course."
+            tone="neutral"
+            courseId={courseId}
+            items={notCovered}
+          />
+        </>
+      )}
     </div>
   );
 }
@@ -488,5 +565,72 @@ function WeaknessList({
         <p className="text-sm text-subtle">{emptyText}</p>
       )}
     </section>
+  );
+}
+
+/**
+ * The whole report, or one question of it.
+ *
+ * An interview is three answers to three questions, and reading it as a single
+ * block is reading an exam paper with the question numbers torn off — you can
+ * see a score and a transcript with no way to tell which answer earned what.
+ * "Everything" stays the default, because the first thing anyone wants is the
+ * overall result; the tabs are for the second thing.
+ */
+function QuestionTabs({
+  segments,
+  courseId,
+  sessionId,
+  selected,
+}: {
+  segments: Array<{ question: string; score: number | null }>;
+  courseId: string;
+  sessionId: string;
+  selected: number | null;
+}) {
+  const base = `/dashboard/courses/${courseId}/gaps?session=${sessionId}`;
+
+  return (
+    <nav
+      aria-label="Questions in this interview"
+      className="flex flex-col gap-2"
+    >
+      <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+        This interview · {segments.length} questions
+      </span>
+      <div className="flex flex-wrap gap-2">
+        <Link
+          href={base}
+          aria-current={selected === null ? "page" : undefined}
+          className={cn(
+            "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+            selected === null
+              ? "border-brand/40 bg-brand/[0.08] text-brand"
+              : "border-border text-subtle hover:border-brand/25",
+          )}
+        >
+          Everything
+        </Link>
+        {segments.map((segment, index) => (
+          <Link
+            key={segment.question}
+            href={`${base}&q=${index}`}
+            title={segment.question}
+            aria-current={selected === index ? "page" : undefined}
+            className={cn(
+              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              selected === index
+                ? "border-brand/40 bg-brand/[0.08] text-brand"
+                : "border-border text-subtle hover:border-brand/25",
+            )}
+          >
+            Question {index + 1}
+            <span className="font-mono tabular-nums opacity-70">
+              {segment.score ?? "—"}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </nav>
   );
 }
