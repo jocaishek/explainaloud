@@ -22,9 +22,17 @@ const EASE = [0.23, 1, 0.32, 1] as const;
  */
 const MAX_MS = 10_000;
 
-/** The question. Chosen to satisfy four constraints at once; see the docs on
- * the step in `onboarding-form.tsx`. */
-export const WARMUP_QUESTION = "Why do we need to sleep?";
+/**
+ * The warm-up question.
+ *
+ * It has one job — get someone talking naturally for ten seconds — so it has
+ * to be something anyone can answer without preparation, that nobody can
+ * answer in three words, and that nobody feels tested by. "Why is sleep
+ * important?" invites reasons, which is what produces connected speech; the
+ * measurement wants a normal speaking rhythm, and a question answerable with
+ * a list of facts produces the wrong one.
+ */
+export const WARMUP_QUESTION = "Why is sleep important?";
 
 type Stage = "idle" | "recording" | "uploading" | "done" | "error";
 
@@ -217,7 +225,7 @@ export function VoiceWarmup({
   return (
     <div className="flex flex-col gap-5">
       {/* The reason comes before the ask.
-          A step that opens with "record 30 seconds" and explains itself only
+          A step that opens with "record yourself" and explains itself only
           afterwards is a step people skip, and the explanation then never gets
           read at all. What this buys them has to be legible before they decide. */}
       {stage !== "done" && (
@@ -241,7 +249,7 @@ export function VoiceWarmup({
             instead of just handing you a score.
           </p>
           <p className="mt-3 text-xs leading-5 text-subtle">
-            Takes 30 seconds, once. Skip it and we work your pace out from your
+            Takes ten seconds, once. Skip it and we work your pace out from your
             first few real sessions instead, which takes longer to get right.
           </p>
         </div>
@@ -256,7 +264,8 @@ export function VoiceWarmup({
         </p>
         <p className="mt-2 text-sm leading-6 text-subtle">
           Explain it like you&apos;re talking to a seven-year-old. There is no
-          right answer and nothing here is graded. Talk for about 30 seconds.
+          right answer and nothing here is graded — this is only so we know how
+          fast you normally talk. Ten seconds is plenty.
         </p>
       </div>
 
