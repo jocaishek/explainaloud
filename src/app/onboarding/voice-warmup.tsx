@@ -257,7 +257,7 @@ export function VoiceWarmup({
         </p>
         <p className="mt-2 text-sm leading-6 text-subtle">
           Explain it like you&apos;re talking to a seven-year-old. There is no
-          right answer and nothing here is graded — this is only so we know how
+          right answer and nothing here is graded. This is only so we know how
           fast you normally talk. Ten seconds is plenty.
         </p>
       </div>

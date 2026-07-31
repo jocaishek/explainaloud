@@ -180,8 +180,8 @@ export function SourceUploader({
             {atLimit
               ? "Delete a source to add another."
               : unlimited
-                ? "PDF, Word, or text — up to 5 MB each"
-                : `PDF, Word, or text — up to 5 MB each · ${sources.length} of ${sourceLimit} used`}
+                ? "PDF, Word, or text. Up to 5 MB each"
+                : `PDF, Word, or text. Up to 5 MB each · ${sources.length} of ${sourceLimit} used`}
           </p>
         </div>
 

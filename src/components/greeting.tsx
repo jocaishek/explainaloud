@@ -18,7 +18,7 @@ const TEMPLATES = [
   "Welcome back, {name}",
   "Good to see you, {name}",
   "Ready when you are, {name}",
-  "Hey {name} — {day} treating you well?",
+  "Hey {name}, {day} treating you well?",
   "Let's get into it, {name}",
   "{name}, what are we learning this {day}?",
   "Back at it, {name}",

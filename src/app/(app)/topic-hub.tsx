@@ -106,7 +106,7 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
                   <p className="mt-0.5 text-xs text-subtle">
                     {recorded
                       ? `Last recording · ${score ?? "—"}/100`
-                      : "Nothing recorded yet — explain it once to see this"}
+                      : "Nothing recorded yet. Explain it once to see this"}
                   </p>
                 </div>
                 {reachable ? (

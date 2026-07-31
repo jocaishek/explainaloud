@@ -61,7 +61,7 @@ export default async function SettingsPage() {
 
       <Section
         title="Your details"
-        description="Change these any time — the dashboard greets you by your first name."
+        description="Change these any time. The dashboard greets you by your first name."
       >
         <ProfileForm profile={profile} />
       </Section>

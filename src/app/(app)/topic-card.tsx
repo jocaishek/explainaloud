@@ -72,7 +72,7 @@ export function TopicCard({
         <>
           <Link
             href={courseHref(course)}
-            aria-label={`${title} — topic: ${course.topic}`}
+            aria-label={`${title}, topic: ${course.topic}`}
             className="glass glass-lift flex h-36 flex-col justify-between rounded-xl p-4"
           >
             <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">

@@ -104,7 +104,7 @@ export async function POST(
   const sections = course?.generated?.sections ?? [];
   if (!course || sections.length === 0) {
     return NextResponse.json(
-      { error: "Generate the course first — there is nothing to ask about." },
+      { error: "Generate the course first. There is nothing to ask about." },
       { status: 422 },
     );
   }

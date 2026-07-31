@@ -432,14 +432,14 @@ export function completeCoverageReport({
     : "course key points";
   const coverageVerdict =
     keyPoints.length === 0
-      ? "There was nothing to mark this against — the question arrived without any key points."
+      ? "There was nothing to mark this against. The question arrived without any key points."
       : !engaged
         ? "Nothing in this recording addressed the question."
         : missingCount === 0
           ? scoped
             ? `You covered everything this question was asking for.${partialNote}`
             : `You covered all ${keyPoints.length} course key points.${partialNote}`
-          : `You covered ${covered.size} of ${keyPoints.length} ${pointsNoun}.${partialNote} The other ${missingCount} you did not get to — that is not the same as getting them wrong.`;
+          : `You covered ${covered.size} of ${keyPoints.length} ${pointsNoun}.${partialNote} The other ${missingCount} you did not get to, which is not the same as getting them wrong.`;
   const accuracyVerdict =
     claimSpans.length > 0
       ? ` ${correctClaims} of ${claimSpans.length} checkable claim${claimSpans.length === 1 ? " was" : "s were"} accurate.`

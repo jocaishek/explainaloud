@@ -62,7 +62,7 @@ export default function TermsPage() {
         to anyone else.
       </p>
 
-      <h2>3. What the Service does — and what it does not</h2>
+      <h2>3. What the Service does, and what it does not</h2>
       <p>
         Explainaloud records you explaining a topic out loud, transcribes what
         you said, and uses automated systems, including third-party artificial
@@ -134,7 +134,7 @@ export default function TermsPage() {
       <p>
         You are responsible for having the rights to whatever you submit. Do not
         upload material you do not have permission to use, and do not record
-        another person&rsquo;s voice without their consent — some jurisdictions
+        another person&rsquo;s voice without their consent. Some jurisdictions
         make that a criminal matter, not merely a breach of these Terms.
       </p>
 
@@ -268,8 +268,8 @@ export default function TermsPage() {
       <h2>13. Changes to these Terms</h2>
       <p>
         We may update these Terms. When we do, we will change the effective date
-        at the top. If a change is material — for example, one that reduces your
-        rights or expands your obligations — we will give you reasonable notice
+        at the top. If a change is material (for example, one that reduces your
+        rights or expands your obligations), we will give you reasonable notice
         by email or in the app before it takes effect. Continuing to use the
         Service after that date means you accept the updated Terms. If you do
         not accept them, stop using the Service and delete your account.
