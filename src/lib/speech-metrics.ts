@@ -49,6 +49,16 @@ export const RATE_STRIDE_SECONDS = 2.5;
 const MIN_WORDS_PER_WINDOW = 3;
 
 /**
+ * Least voiced time in a window before its rate is trusted.
+ *
+ * Rate is words over the time actually spent speaking, so a window that is
+ * mostly silence has a tiny denominator and produces an absurdly high number
+ * from three words. This floor is what stops "…and… um… so" reading as 400
+ * words a minute.
+ */
+const MIN_VOICED_SECONDS = 3;
+
+/**
  * Least speech needed before a rate is worth reporting at all. Under this
  * there are too few windows for a median to mean anything.
  *
@@ -207,9 +217,32 @@ function rateWindows(words: TranscribedWord[]): RateWindow[] {
         count++;
       }
     }
-    if (count >= MIN_WORDS_PER_WINDOW) {
-      windows.push({ wpm: (count * 60) / RATE_WINDOW_SECONDS, from, to });
+    if (count < MIN_WORDS_PER_WINDOW || from === -1) continue;
+
+    // Silence inside the window, subtracted from its denominator.
+    //
+    // The rate used to be words divided by the window's ten wall-clock
+    // seconds, which is a different measurement wearing the same name: every
+    // pause between sentences counted as time spent talking slowly. Someone
+    // speaking briskly with ordinary gaps measured around 115, and told they
+    // were slow, because a third of their window was them drawing breath.
+    //
+    // What anyone means by "how fast do you talk" is the rate while talking.
+    // Gaps above the articulation floor come out of the denominator; the
+    // pauses are still measured, separately, where they belong.
+    let silence = 0;
+    for (let i = from; i < to; i++) {
+      const current = words[i];
+      const next = words[i + 1];
+      if (!current || !next) continue;
+      const gap = next.start - current.end;
+      if (gap * 1000 > PAUSE_FLOOR_MS) silence += gap;
     }
+
+    const voiced = Math.max(0, RATE_WINDOW_SECONDS - silence);
+    if (voiced < MIN_VOICED_SECONDS) continue;
+
+    windows.push({ wpm: (count * 60) / voiced, from, to });
   }
 
   return windows;
@@ -243,8 +276,19 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
   // With too little audio for a full window, fall back to the overall rate so
   // the field is never a misleading zero — `reliable` is what says not to
   // trust it.
+  // Same correction for the too-short-for-a-window fallback: total silence out
+  // of the denominator, so the two paths report the same kind of number.
+  let totalSilence = 0;
+  for (let i = 0; i < usable.length - 1; i++) {
+    const current = usable[i];
+    const next = usable[i + 1];
+    if (!current || !next) continue;
+    const gap = next.start - current.end;
+    if (gap * 1000 > PAUSE_FLOOR_MS) totalSilence += gap;
+  }
+  const voicedSeconds = Math.max(0, speakingSeconds - totalSilence);
   const overallWpm =
-    speakingSeconds > 0 ? (usable.length * 60) / speakingSeconds : 0;
+    voicedSeconds > 0 ? (usable.length * 60) / voicedSeconds : 0;
 
   return {
     wordCount: usable.length,
