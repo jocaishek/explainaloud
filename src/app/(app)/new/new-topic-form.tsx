@@ -4,6 +4,11 @@ import { useRouter } from "next/navigation";
 import { type DragEvent, type FormEvent, useRef, useState } from "react";
 import { createCourse } from "~/app/(app)/actions";
 import { LocalDayField } from "~/components/local-day-field";
+import {
+  SCOPE_OPTIONS,
+  SCOPE_QUESTION,
+  SourceScopeOption,
+} from "~/components/source-scope-choice";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { HOMEWORK_MESSAGE, looksLikeHomework } from "~/lib/homework";
@@ -51,6 +56,10 @@ export function NewTopicForm({
   const dragDepth = useRef(0);
   const [files, setFiles] = useState<File[]>([]);
   const [dragActive, setDragActive] = useState(false);
+  // Off by default: someone who uploads a single handout and expects a whole
+  // course should get one. Strictness is the deliberate choice, not the
+  // accidental one.
+  const [sourcesOnly, setSourcesOnly] = useState(false);
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
@@ -289,6 +298,44 @@ export function NewTopicForm({
             }}
           />
         </div>
+
+        {/* Only meaningful once something is queued: with no files there is
+            nothing to be strict about. Appears with the first upload rather
+            than sitting there greyed out, so the choice arrives at the moment
+            it starts to mean something. */}
+        {files.length > 0 && (
+          <fieldset
+            disabled={!!createdCourseId || pending}
+            className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 disabled:opacity-60"
+          >
+            <legend className="px-1 text-sm font-semibold text-strong">
+              {SCOPE_QUESTION}
+            </legend>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <SourceScopeOption
+                name="sourcesOnly"
+                value="off"
+                checked={!sourcesOnly}
+                onSelect={() => setSourcesOnly(false)}
+                {...SCOPE_OPTIONS.open}
+              />
+              <SourceScopeOption
+                name="sourcesOnly"
+                value="on"
+                checked={sourcesOnly}
+                onSelect={() => setSourcesOnly(true)}
+                {...SCOPE_OPTIONS.strict}
+              />
+            </div>
+            {sourcesOnly && (
+              <p className="text-xs leading-5 text-subtle">
+                Expect a shorter course. If your files only cover part of the
+                topic, that is what you will get — the rest is named instead of
+                filled in.
+              </p>
+            )}
+          </fieldset>
+        )}
 
         {files.length > 0 && (
           <ul className="flex flex-col gap-2">

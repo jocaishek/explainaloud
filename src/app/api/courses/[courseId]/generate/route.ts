@@ -9,10 +9,21 @@ import { createClient } from "~/lib/supabase/server";
 export const maxDuration = 120;
 
 export async function POST(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
+  // Sent when the course page rebuilds, so the switch there takes effect on
+  // this build. Absent on the first build from /new, where the choice was
+  // already written to the row. An empty body is normal, not an error.
+  const body = await request
+    .json()
+    .then((value: unknown) =>
+      value && typeof value === "object"
+        ? (value as { sourcesOnly?: unknown })
+        : {},
+    )
+    .catch(() => ({}) as { sourcesOnly?: unknown });
   const supabase = await createClient();
 
   const {
@@ -32,10 +43,15 @@ export async function POST(
   // clean 404 instead of an empty result further down.
   const { data: course } = await supabase
     .from("courses")
-    .select("id, topic, input_notes")
+    .select("id, topic, input_notes, sources_only")
     .eq("id", courseId)
     .eq("user_id", user.id)
-    .maybeSingle<{ id: string; topic: string; input_notes: string | null }>();
+    .maybeSingle<{
+      id: string;
+      topic: string;
+      input_notes: string | null;
+      sources_only: boolean;
+    }>();
 
   if (!course) {
     return NextResponse.json({ error: "Topic not found." }, { status: 404 });
@@ -49,11 +65,17 @@ export async function POST(
     .order("created_at", { ascending: true })
     .returns<SourceRow[]>();
 
+  const sourcesOnly =
+    typeof body.sourcesOnly === "boolean"
+      ? body.sourcesOnly
+      : course.sources_only === true;
+
   try {
     const result = await orchestrateCourse({
       topic: course.topic,
       notes: course.input_notes,
       sources: sources ?? [],
+      sourcesOnly,
     });
 
     const { error: saveError } = await supabase
@@ -63,6 +85,9 @@ export async function POST(
         generated_at: new Date().toISOString(),
         generated_by: result.primaryProvider,
         grounded: result.grounded,
+        // Written back so the page reopens showing the switch as it was
+        // actually built, not as it was first created.
+        sources_only: sourcesOnly,
         status: "ready",
         updated_at: new Date().toISOString(),
       })

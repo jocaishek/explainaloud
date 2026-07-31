@@ -9,7 +9,13 @@ type DisplayAgent = {
   id: string;
   role: string;
   summary: string;
-  status: "queued" | "running" | "completed" | "revised" | "degraded";
+  status:
+    | "queued"
+    | "running"
+    | "completed"
+    | "revised"
+    | "degraded"
+    | "skipped";
   provider?: "gemini" | "groq" | "local";
 };
 
@@ -56,6 +62,7 @@ const STATUS_LABELS: Record<DisplayAgent["status"], string> = {
   completed: "Complete",
   revised: "Revised",
   degraded: "Fallback",
+  skipped: "Not needed",
 };
 
 const PIPELINE_LABELS: Record<Pipeline, string> = {
@@ -197,6 +204,7 @@ export function AgentOrchestration({
                   agent.status === "completed" && "bg-emerald-500",
                   agent.status === "revised" && "bg-amber-500",
                   agent.status === "degraded" && "bg-amber-500",
+                  agent.status === "skipped" && "bg-muted-foreground/35",
                 )}
               />
               <div className="min-w-0 flex-1">
@@ -207,7 +215,8 @@ export function AgentOrchestration({
                   <span
                     className={cn(
                       "rounded-full px-2 py-0.5 text-[11px] font-medium",
-                      agent.status === "queued" &&
+                      (agent.status === "queued" ||
+                        agent.status === "skipped") &&
                         "bg-muted-foreground/10 text-subtle",
                       agent.status === "running" && "bg-brand/15 text-brand",
                       agent.status === "completed" &&

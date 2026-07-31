@@ -41,6 +41,31 @@ export const GROUNDING_RULE = `SOURCE GROUNDING — this overrides every other i
   SOURCES for each claim you make. Never cite a filename that is not present
   in SOURCES.`;
 
+/**
+ * Sources-only mode, layered on top of `GROUNDING_RULE`.
+ *
+ * Grounding alone asks the model to prefer the sources. In practice a model
+ * asked for "3-5 sections" from a two-page handout will write three sections,
+ * and the material for the third one has to come from somewhere — so it comes
+ * from what the model already knows, phrased carefully enough to look sourced.
+ * The instruction that actually changes the output is not a stronger ban but
+ * permission to produce less: a short course is a valid answer here, and the
+ * gap belongs in "uncovered" where the student can see it.
+ */
+export const SOURCES_ONLY_RULE = `SOURCES-ONLY MODE — the student turned OFF outside sources:
+- The SOURCES below are the entire world. Nothing you know from anywhere else
+  may appear in this course, no matter how basic, settled or obviously true.
+- A SHORT COURSE IS A CORRECT ANSWER. If the files support two sections, write
+  two. Never pad to reach a target length, and never round out a thin section
+  with background the files do not contain.
+- Everything the topic would normally include but the files do not cover goes
+  in "uncovered", named specifically. That list is the point of this mode: the
+  student is checking what their own material actually teaches.
+- Return an EMPTY "video_searches" array and an EMPTY "resources" array.
+  Both point away from the files, and the student asked not to be pointed away.
+- If the files barely address the topic at all, say exactly that in "summary"
+  and put the rest in "uncovered". Do not build a course out of the topic name.`;
+
 /** Accuracy guardrails shared by every call. */
 export const PRECISION_RULE = `PRECISION:
 - Prefer "I don't know" over a plausible guess. A wrong confident answer is
@@ -72,6 +97,8 @@ export function courseGenerationPrompt(
   topic: string,
   notes: string | null,
   grounded: boolean,
+  /** The student switched outside sources off; the files are the whole world. */
+  sourcesOnly = false,
 ) {
   return `ROLE: You are the Course Architect agent in a multi-agent teaching system.
 Your work will be audited by a separate Accuracy Reviewer agent.
@@ -79,7 +106,7 @@ Your work will be audited by a separate Accuracy Reviewer agent.
 ${TUTOR_SYSTEM}
 
 ${grounded ? GROUNDING_RULE : OPEN_KNOWLEDGE_RULE}
-
+${sourcesOnly ? `\n${SOURCES_ONLY_RULE}\n` : ""}
 ${PRECISION_RULE}
 
 Build a short course for the topic: "${topic}".
@@ -117,7 +144,13 @@ Return JSON with this exact shape:
 
 Always set "scope_note" to null. Topic breadth is judged separately.
 
-Produce 3-5 sections, 6-12 notes, 3-5 video searches and 2-4 resources.
+${
+  sourcesOnly
+    ? `Produce as many sections and notes as the SOURCES genuinely support — at
+most 5 sections and 12 notes, and as few as one of each. "video_searches" and
+"resources" must both be empty arrays.`
+    : `Produce 3-5 sections, 6-12 notes, 3-5 video searches and 2-4 resources.`
+}
 
 Each "quiz" is a question the student answers out loud, and it is marked on
 whether they explained the mechanism — so it must ask for one.
@@ -152,7 +185,7 @@ IMPORTANT about links: never output a URL. You cannot know whether a specific
 video or page exists, and a fabricated link is worse than no link. Output
 search phrases only; the app turns them into working searches.
 
-${grounded ? `"notes" must come from the SOURCES. "video_searches" and "resources" are the one exception to source grounding — they are pointers to material the student might go find, so they may name well-known topics or channels, but they must stay on the topic at hand and must not assert facts.` : `"notes" must contain settled, textbook-level facts. "video_searches" and "resources" are pointers to material the student might go find; they must stay on the topic at hand and must not assert facts.`}`;
+${sourcesOnly ? `"notes" must come from the SOURCES, and there is no exception: "video_searches" and "resources" stay empty.` : grounded ? `"notes" must come from the SOURCES. "video_searches" and "resources" are the one exception to source grounding — they are pointers to material the student might go find, so they may name well-known topics or channels, but they must stay on the topic at hand and must not assert facts.` : `"notes" must contain settled, textbook-level facts. "video_searches" and "resources" are pointers to material the student might go find; they must stay on the topic at hand and must not assert facts.`}`;
 }
 
 /**
@@ -195,6 +228,8 @@ Return JSON only:
 export function courseReviewPrompt(params: {
   topic: string;
   grounded: boolean;
+  /** Outside sources are off, so a short course and empty links are correct. */
+  sourcesOnly?: boolean;
   sourceNames: string[];
   sourceEvidence: string;
   draft: unknown;
@@ -230,7 +265,19 @@ Important: when grounding is required and the uploaded sources genuinely do
 not cover the requested topic, an honest refusal that marks the topic as
 uncovered is the correct result. Approve that behavior; never demand invented
 technical detail or quizzes that the evidence cannot support.
-
+${
+  params.sourcesOnly
+    ? `
+SOURCES-ONLY MODE: the student switched outside sources off. A two-section
+course, a long "uncovered" list, and empty "video_searches" and "resources"
+arrays are all EXPECTED here — never raise an issue asking for more sections,
+more notes, videos, or further reading. Judge only whether what is present is
+accurate and actually supported by the evidence. Do raise an issue if a claim
+appears that the evidence does not support: in this mode that is the only kind
+of failure that matters.
+`
+    : ""
+}
 Return ONLY JSON:
 {
   "approved": true | false,

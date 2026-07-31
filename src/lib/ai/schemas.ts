@@ -4,7 +4,10 @@ export const agentStepSchema = z.object({
   id: z.string().min(1),
   role: z.string().min(1),
   task: z.string().min(1),
-  status: z.enum(["completed", "revised", "degraded"]),
+  // "skipped" is a deliberate non-run, not a failure: a sources-only course
+  // never asks the researchers for anything. Kept distinct from "degraded" so
+  // the pipeline does not report a fallback the student did not hit.
+  status: z.enum(["completed", "revised", "degraded", "skipped"]),
   summary: z.string().min(1),
   provider: z.enum(["gemini", "groq", "local"]).optional(),
 });
