@@ -56,3 +56,32 @@ Production auth URLs are managed in the Supabase dashboard, under
 Authentication → URL Configuration. `config.toml` reads its values from the
 environment (see `.env.example`) so no hostname is committed, but that is a
 safeguard against the literal, not a licence to push the file.
+
+## The confirmation email template
+
+`/auth/confirm` verifies a token hash on the server. It only receives one if
+the project's **Authentication → Email Templates → Confirm signup** template
+sends it there:
+
+```html
+<a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=signup&next=/auth/confirmed">
+  Confirm your email
+</a>
+```
+
+The default template uses `{{ .ConfirmationURL }}`, which points at Supabase's
+own `/auth/v1/verify` endpoint and then redirects back. Two things break there,
+and both look identical to the person holding the link — they land on the
+landing page as if they had never clicked anything:
+
+- **Mail scanners.** Corporate filters follow every link in an email before
+  the recipient does. The token is single-use, so it is spent by the time it
+  is clicked.
+- **The fragment.** A project on the implicit flow returns the session in the
+  URL hash, which no server route can read.
+
+A token hash has neither problem: it is verified against the cookie store the
+request already owns, so the session exists before the page renders.
+
+Do the same for **Reset password** with `type=recovery` and
+`next=/auth/update-password`.

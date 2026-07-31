@@ -61,6 +61,12 @@ const AUTH_CALLBACK_ERRORS: Record<string, string> = {
   exchange_failed:
     "That sign-in link has already been used or has expired. Start again.",
   no_code: "The sign-in link was incomplete. Start again.",
+  // Distinct from `exchange_failed` on purpose: this one is frequently not the
+  // person's fault at all. Corporate mail scanners follow links before anyone
+  // clicks them, and the token is single-use — so the first thing to say is
+  // that a fresh link will work, not that they did something wrong.
+  link_expired:
+    "That confirmation link has expired or was already opened. Send yourself a new one and it will work.",
   default: "We couldn't finish signing you in. Please try again.",
 };
 

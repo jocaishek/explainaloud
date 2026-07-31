@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       host,
       url: request.url,
     });
-    return NextResponse.redirect(`${browserOrigin}/?auth_error=no_code`);
+    return NextResponse.redirect(`${browserOrigin}/login?auth_error=no_code`);
   }
 
   const supabase = await createClient();
@@ -84,6 +84,6 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.redirect(
-    `${browserOrigin}/?auth_error=${verifierMissing ? "origin_mismatch" : "exchange_failed"}`,
+    `${browserOrigin}/login?auth_error=${verifierMissing ? "origin_mismatch" : "exchange_failed"}`,
   );
 }

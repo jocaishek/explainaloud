@@ -50,14 +50,26 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url, 308);
   }
 
-  // Supabase falls back to the configured Site URL when a requested OAuth
-  // callback is missing from the hosted redirect allow-list. Recover that
-  // valid PKCE callback here so Google sign-in cannot strand the user on `/`
-  // with an unexchanged `?code=...`.
-  if (pathname === "/" && request.nextUrl.searchParams.has("code")) {
-    const callbackUrl = request.nextUrl.clone();
-    callbackUrl.pathname = "/auth/callback";
-    return NextResponse.redirect(callbackUrl);
+  // Supabase falls back to the configured Site URL whenever a requested
+  // redirect is missing from the hosted allow-list, so a link that should have
+  // opened the callback opens the landing page instead — with the credential
+  // still sitting unread in the query string. To the person holding the link
+  // this is "it just took me back to the start of the website".
+  //
+  // Recovered from any path rather than only from `/`, because Site URL is
+  // whatever the project has configured and need not be the root.
+  if (!pathname.startsWith("/auth/")) {
+    const params = request.nextUrl.searchParams;
+    if (params.has("code")) {
+      const callbackUrl = request.nextUrl.clone();
+      callbackUrl.pathname = "/auth/callback";
+      return NextResponse.redirect(callbackUrl);
+    }
+    if (params.has("token_hash") && params.has("type")) {
+      const confirmUrl = request.nextUrl.clone();
+      confirmUrl.pathname = "/auth/confirm";
+      return NextResponse.redirect(confirmUrl);
+    }
   }
 
   // Everything behind sign-in. `requireUser` redirects too, but doing it here
@@ -106,6 +118,15 @@ export async function proxy(request: NextRequest) {
 
   if (!authenticated && isProtected) {
     return NextResponse.redirect(new URL("/", request.url));
+  }
+
+  // A signed-in visitor asking for the landing page is asking for the app.
+  //
+  // The root is a sales pitch, and someone who already has a session reads
+  // arriving there as having been logged out — so they sign in again, which is
+  // the "why do I keep having to sign in" this fixes.
+  if (authenticated && pathname === "/") {
+    return NextResponse.redirect(new URL("/home", request.url));
   }
 
   return response;
