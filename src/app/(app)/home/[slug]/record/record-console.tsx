@@ -53,6 +53,34 @@ const INTERVIEW_QUESTIONS = 3;
 const BETWEEN_SECONDS = 5;
 
 /**
+ * How long a recording may hear nothing before it says so.
+ *
+ * Thirty seconds is far longer than any pause in speech — a long think, a
+ * cough, rereading the question — so reaching it means the microphone is not
+ * picking the person up at all: muted at the OS level, the wrong input
+ * selected, or they walked away. Sitting silently through three minutes of
+ * that and then charging them a recording for a blank transcript is the worst
+ * version of this, and it is what happened.
+ */
+const SILENCE_WARN_MS = 30_000;
+
+/** Grace after the warning before the take is stopped for them. */
+const SILENCE_STOP_MS = 10_000;
+
+/**
+ * Loudness, as RMS over a frame, above which someone is speaking.
+ *
+ * Measured off the audio graph rather than off the transcript, because the
+ * browser's caption service fails with `network` often enough that "no words
+ * yet" is at least as likely to mean the captions broke as it is to mean the
+ * room is quiet — and stopping a perfectly good recording because a remote
+ * service went down would be strictly worse than the problem being solved.
+ * Room tone sits near 0.002; speech at a normal distance is an order of
+ * magnitude above this.
+ */
+const SILENCE_RMS = 0.012;
+
+/**
  * How long to wait for the Examiner before falling back.
  *
  * Short on purpose: this runs inside the gap between two answers, and a
@@ -449,6 +477,15 @@ export function RecordConsole({
   const usedQuestionsRef = useRef<string[]>([]);
   /** Bank rows drawn this run — the draw's own do-not-repeat list. */
   const drawnIdsRef = useRef<string[]>([]);
+  /** The audio graph the silence watchdog listens to, and its scratch buffer. */
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const levelBufferRef = useRef<Float32Array<ArrayBuffer> | null>(null);
+  /** When speech was last actually heard. Null while nothing is being heard. */
+  const lastVoiceAtRef = useRef<number | null>(null);
+  /** Seconds left before a silent take is stopped. Null when not warning. */
+  const [silenceLeft, setSilenceLeft] = useState<number | null>(null);
+  const silenceLeftRef = useRef<number | null>(null);
   /** True while the next question is being written. */
   const [writing, setWriting] = useState(false);
   const writingRef = useRef(false);
@@ -558,6 +595,9 @@ export function RecordConsole({
       for (const track of mediaStreamRef.current?.getTracks() ?? []) {
         track.stop();
       }
+      void audioContextRef.current?.close().catch(() => {});
+      audioContextRef.current = null;
+      analyserRef.current = null;
     },
     [],
   );
@@ -1067,6 +1107,7 @@ export function RecordConsole({
       });
     }
 
+    stopWatching();
     for (const track of mediaStreamRef.current?.getTracks() ?? []) track.stop();
     mediaRecorderRef.current = null;
     mediaStreamRef.current = null;
@@ -1556,7 +1597,97 @@ export function RecordConsole({
         `${Math.round(maxRecordingMs / 60_000)}-minute limit reached — wrapping up.`,
       );
       stopRecording();
+      return;
     }
+    watchForSilence();
+  }
+
+  /**
+   * Stop a take that is not hearing anyone.
+   *
+   * Runs off the same 250ms interval as the clock rather than its own timer,
+   * so there is one thing to start, stop and tear down — and so a browser that
+   * throttles the tab throttles both together instead of leaving a watchdog
+   * running against a frozen clock.
+   *
+   * The warning is not a courtesy. A recording is spent the moment it starts,
+   * and someone whose microphone was muted the whole time has paid for a blank
+   * transcript. Ten seconds is enough to say something and keep the take.
+   */
+  function watchForSilence() {
+    const analyser = analyserRef.current;
+    const buffer = levelBufferRef.current;
+    if (!analyser || !buffer) return;
+
+    analyser.getFloatTimeDomainData(buffer);
+    let sum = 0;
+    for (const sample of buffer) sum += sample * sample;
+    const rms = Math.sqrt(sum / buffer.length);
+
+    const now = Date.now();
+    if (rms >= SILENCE_RMS) {
+      lastVoiceAtRef.current = now;
+      if (silenceLeftRef.current !== null) {
+        silenceLeftRef.current = null;
+        setSilenceLeft(null);
+        setNotice(null);
+      }
+      return;
+    }
+
+    // The window opens at the start of the take, so a recording that never
+    // hears anything is caught as surely as one that goes quiet halfway.
+    const since = now - (lastVoiceAtRef.current ?? now);
+    if (since < SILENCE_WARN_MS) return;
+
+    const left = Math.ceil((SILENCE_WARN_MS + SILENCE_STOP_MS - since) / 1000);
+    if (left <= 0) {
+      silenceLeftRef.current = null;
+      setSilenceLeft(null);
+      setNotice(
+        "Stopped — nothing was heard. Check your microphone is unmuted and that the right input is selected.",
+      );
+      stopRecording();
+      return;
+    }
+    // Only on the whole second, so this is not a state write every 250ms.
+    if (silenceLeftRef.current !== left) {
+      silenceLeftRef.current = left;
+      setSilenceLeft(left);
+    }
+  }
+
+  /** Start listening to the microphone's level, and reset the silence window. */
+  function watchStream(stream: MediaStream) {
+    stopWatching();
+    try {
+      const context = new AudioContext();
+      const analyser = context.createAnalyser();
+      // Small window: this measures loudness, not pitch, and a short buffer
+      // keeps the per-tick cost negligible.
+      analyser.fftSize = 512;
+      context.createMediaStreamSource(stream).connect(analyser);
+      audioContextRef.current = context;
+      analyserRef.current = analyser;
+      levelBufferRef.current = new Float32Array(
+        new ArrayBuffer(analyser.fftSize * Float32Array.BYTES_PER_ELEMENT),
+      );
+    } catch {
+      // No Web Audio, no watchdog. The recording is unaffected — this only
+      // ever stops a take early, so failing to set it up fails safe.
+    }
+    lastVoiceAtRef.current = Date.now();
+    silenceLeftRef.current = null;
+    setSilenceLeft(null);
+  }
+
+  function stopWatching() {
+    analyserRef.current = null;
+    levelBufferRef.current = null;
+    void audioContextRef.current?.close().catch(() => {});
+    audioContextRef.current = null;
+    silenceLeftRef.current = null;
+    setSilenceLeft(null);
   }
 
   /**
@@ -1638,6 +1769,10 @@ export function RecordConsole({
     for (const track of mediaStreamRef.current?.getAudioTracks() ?? []) {
       track.enabled = false;
     }
+    // Nothing is supposed to be heard between answers — the mic is muted on
+    // purpose — so the silence watchdog would stop the take for doing exactly
+    // what it was told to do.
+    stopWatching();
     const recorder = mediaRecorderRef.current;
     if (recorder?.state === "recording") {
       try {
@@ -1717,6 +1852,10 @@ export function RecordConsole({
     for (const track of mediaStreamRef.current?.getAudioTracks() ?? []) {
       track.enabled = true;
     }
+    // A fresh window per answer. Thirty seconds of nothing on question two is
+    // the same problem as thirty seconds of nothing on question one.
+    const stream = mediaStreamRef.current;
+    if (stream) watchStream(stream);
     const recorder = mediaRecorderRef.current;
     if (recorder?.state === "paused") {
       try {
@@ -1933,6 +2072,7 @@ export function RecordConsole({
     // makes the final transcript independent of that remote browser service.
     audioChunksRef.current = [];
     mediaStreamRef.current = stream;
+    watchStream(stream);
     mediaRecorderRef.current = recorder;
     audioReadyRef.current = new Promise((resolve) => {
       recorder.ondataavailable = (event) => {
@@ -2316,6 +2456,26 @@ export function RecordConsole({
             ? "Unlimited recordings"
             : `${remaining} of ${dailyLimit ?? 0} recordings left today · resets at midnight`}
         </p>
+
+        {/* A warning, not a status line. Someone who cannot be heard is not
+            reading the page — they are talking at a muted microphone — so this
+            is loud, says what is wrong, and says what it is about to do. */}
+        {silenceLeft !== null && (
+          <div
+            role="alert"
+            aria-live="assertive"
+            className="flex max-w-sm flex-col items-center gap-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3"
+          >
+            <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+              We can&apos;t hear you
+            </p>
+            <p className="text-xs leading-5 text-foreground">
+              Nothing has been picked up for 30 seconds. Check your microphone
+              is unmuted and that the right input is selected — this recording
+              stops in {silenceLeft}s, and it still counts against today&apos;s.
+            </p>
+          </div>
+        )}
 
         {notice && <p className="text-xs text-subtle">{notice}</p>}
 
