@@ -357,7 +357,18 @@ export async function completeJson<T>(
 
 const GROQ_TRANSCRIPTION_URL =
   "https://api.groq.com/openai/v1/audio/transcriptions";
-const GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3-turbo";
+/**
+ * The full model, not the turbo distillation.
+ *
+ * Turbo is roughly twice as fast and measurably worse on exactly what this
+ * app records: proper nouns, technical terms, and anyone who is thinking
+ * while they talk. That trade is wrong here — transcription runs after the
+ * recording has stopped, so nobody is watching the clock, and every word it
+ * gets wrong is graded as something the student said. A mistranscription is
+ * not a cosmetic error in this product; it is a wrong answer attributed to
+ * someone who gave a right one.
+ */
+const GROQ_TRANSCRIPTION_MODEL = "whisper-large-v3";
 
 /**
  * A transcript plus the word timings behind it.

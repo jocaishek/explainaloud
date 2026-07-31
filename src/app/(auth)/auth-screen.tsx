@@ -14,10 +14,10 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
   const signingUp = mode === "signup";
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-[#0b0f14] px-6 py-16 text-white">
+    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background px-6 py-16 text-strong">
       <Link
         href="/"
-        className="flex items-center gap-2 text-base font-semibold tracking-tight text-white transition-opacity hover:opacity-80"
+        className="flex items-center gap-2 text-base font-semibold tracking-tight text-strong transition-opacity hover:opacity-80"
       >
         <ExplainaloudMark className="size-6 shrink-0 text-brand" />
         Explainaloud
@@ -27,7 +27,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         <h1 className="text-3xl font-semibold tracking-tight text-balance">
           {signingUp ? "Create your account" : "Welcome back"}
         </h1>
-        <p className="mt-2 text-sm text-[#A1A1AA]">
+        <p className="mt-2 text-sm text-foreground">
           {signingUp
             ? "Explain what you're learning out loud and find the gaps."
             : "Pick up where you left off."}
@@ -38,8 +38,8 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         <AuthCard initialMode={mode} />
       </div>
 
-      <p className="mt-10 text-sm text-[#71717A]">
-        <Link href="/" className="transition-colors hover:text-white">
+      <p className="mt-10 text-sm text-subtle">
+        <Link href="/" className="transition-colors hover:text-strong">
           ← Back to home
         </Link>
       </p>

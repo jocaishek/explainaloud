@@ -290,13 +290,13 @@ export function AuthCard({
       {stage === "forgot-password" && (
         <form
           onSubmit={handleForgotPassword}
-          className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-[#171717] p-6"
+          className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-card p-6"
         >
           <div>
-            <h3 className="text-base font-semibold text-white">
+            <h3 className="text-base font-semibold text-strong">
               Reset your password
             </h3>
-            <p className="mt-1 text-sm text-[#71717A]">
+            <p className="mt-1 text-sm text-subtle">
               We&apos;ll email you a link to set a new password.
             </p>
           </div>
@@ -306,12 +306,12 @@ export function AuthCard({
             placeholder="you@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-11 border-[#333333] bg-[#1E1E1E] text-base text-white placeholder:text-[#71717A]"
+            className="h-11 border-input bg-muted text-base text-strong placeholder:text-subtle"
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
           {needsVerification && (
             <div className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-white/[0.03] p-3">
-              <p className="text-xs leading-5 text-[#A1A1AA]">
+              <p className="text-xs leading-5 text-foreground">
                 Didn&apos;t get it, or has the link expired? Signing up again
                 won&apos;t send another one — this will.
               </p>
@@ -319,12 +319,12 @@ export function AuthCard({
                 type="button"
                 onClick={handleResendVerification}
                 disabled={resending || !email.trim()}
-                className="w-fit text-xs font-semibold text-white underline underline-offset-2 disabled:opacity-50"
+                className="w-fit text-xs font-semibold text-strong underline underline-offset-2 disabled:opacity-50"
               >
                 {resending ? "Sending…" : "Send a new confirmation email"}
               </button>
               {resendStatus && (
-                <p className="text-xs text-[#A1A1AA]">{resendStatus}</p>
+                <p className="text-xs text-foreground">{resendStatus}</p>
               )}
             </div>
           )}
@@ -341,7 +341,7 @@ export function AuthCard({
               setStage("form");
               setError(null);
             }}
-            className="text-center text-xs font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+            className="text-center text-xs font-medium text-foreground underline underline-offset-2 hover:text-strong"
           >
             Back to log in
           </button>
@@ -349,7 +349,7 @@ export function AuthCard({
       )}
 
       {stage === "reset-sent" && (
-        <p className="text-sm text-[#A1A1AA]">
+        <p className="text-sm text-foreground">
           Check your email for a link to reset your password.
         </p>
       )}
@@ -357,7 +357,7 @@ export function AuthCard({
       {stage === "form" && (
         <form
           onSubmit={handleSubmit}
-          className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-[#171717] p-6"
+          className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-card p-6"
         >
           <div className="flex flex-col gap-2">
             <Button
@@ -365,7 +365,7 @@ export function AuthCard({
               variant="outline"
               disabled={oauthLoading !== null}
               onClick={() => handleOAuth("google")}
-              className="h-11 gap-2 rounded-full border-[#333333] bg-[#1E1E1E] font-medium text-white transition-transform duration-200 ease-out hover:bg-[#262626] active:scale-[0.98]"
+              className="h-11 gap-2 rounded-full border-input bg-muted font-medium text-strong transition-transform duration-200 ease-out hover:bg-accent active:scale-[0.98]"
             >
               <GoogleIcon className="size-4" />
               {oauthLoading === "google"
@@ -374,7 +374,7 @@ export function AuthCard({
             </Button>
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-[#71717A]">
+          <div className="flex items-center gap-3 text-xs text-subtle">
             <span className="h-px flex-1 bg-white/10" />
             or continue with email
             <span className="h-px flex-1 bg-white/10" />
@@ -387,7 +387,7 @@ export function AuthCard({
               placeholder="you@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-11 border-[#333333] bg-[#1E1E1E] text-base text-white placeholder:text-[#71717A]"
+              className="h-11 border-input bg-muted text-base text-strong placeholder:text-subtle"
             />
             <PasswordField
               value={password}
@@ -405,7 +405,7 @@ export function AuthCard({
                   setStage("forgot-password");
                   setError(null);
                 }}
-                className="self-end text-xs font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+                className="self-end text-xs font-medium text-foreground underline underline-offset-2 hover:text-strong"
               >
                 Forgot password?
               </button>
@@ -427,14 +427,14 @@ export function AuthCard({
                 : "Log in"}
           </Button>
           {mode === "signup" && <AcceptTerms />}
-          <p className="text-center text-xs text-[#71717A]">
+          <p className="text-center text-xs text-subtle">
             {mode === "signup" ? (
               <>
                 Already a member?{" "}
                 <button
                   type="button"
                   onClick={() => switchMode("login")}
-                  className="font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-strong"
                 >
                   Log in
                 </button>
@@ -445,7 +445,7 @@ export function AuthCard({
                 <button
                   type="button"
                   onClick={() => switchMode("signup")}
-                  className="font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+                  className="font-medium text-foreground underline underline-offset-2 hover:text-strong"
                 >
                   Sign up
                 </button>
@@ -456,26 +456,26 @@ export function AuthCard({
       )}
 
       {stage === "check-email" && (
-        <div className="glow-ring flex w-full flex-col gap-5 rounded-2xl bg-[#171717] p-6">
+        <div className="glow-ring flex w-full flex-col gap-5 rounded-2xl bg-card p-6">
           <div>
-            <h3 className="text-base font-semibold text-white">
+            <h3 className="text-base font-semibold text-strong">
               Verify your email
             </h3>
-            <p className="mt-2 text-sm leading-6 text-[#A1A1AA]">
+            <p className="mt-2 text-sm leading-6 text-foreground">
               We sent a verification link to{" "}
-              <span className="font-medium text-white">
+              <span className="font-medium text-strong">
                 {email.trim().toLowerCase()}
               </span>
               . Open it to continue to Explainaloud.
             </p>
           </div>
 
-          <p className="text-xs leading-5 text-[#71717A]">
+          <p className="text-xs leading-5 text-subtle">
             Didn&apos;t get it? Check spam, or resend the email after a minute.
           </p>
 
           {resendStatus && (
-            <p role="status" className="text-sm text-[#A1A1AA]">
+            <p role="status" className="text-sm text-foreground">
               {resendStatus}
             </p>
           )}
@@ -485,7 +485,7 @@ export function AuthCard({
             variant="outline"
             disabled={resending}
             onClick={handleResendVerification}
-            className="h-11 rounded-full border-[#333333] bg-[#1E1E1E] font-medium text-white transition-transform duration-200 ease-out hover:bg-[#262626] active:scale-[0.98]"
+            className="h-11 rounded-full border-input bg-muted font-medium text-strong transition-transform duration-200 ease-out hover:bg-accent active:scale-[0.98]"
           >
             {resending ? "Resending…" : "Resend verification email"}
           </Button>
@@ -497,7 +497,7 @@ export function AuthCard({
               setStage("form");
               setResendStatus(null);
             }}
-            className="text-center text-xs font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+            className="text-center text-xs font-medium text-foreground underline underline-offset-2 hover:text-strong"
           >
             Back to log in
           </button>
@@ -528,13 +528,13 @@ export function AuthCard({
  */
 function AcceptTerms() {
   return (
-    <p className="text-center text-xs leading-5 text-[#71717A]">
+    <p className="text-center text-xs leading-5 text-subtle">
       By signing up you agree to our{" "}
       <a
         href="/terms"
         target="_blank"
         rel="noopener noreferrer"
-        className="font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+        className="font-medium text-foreground underline underline-offset-2 hover:text-strong"
       >
         Terms of Service
       </a>{" "}
@@ -543,7 +543,7 @@ function AcceptTerms() {
         href="/privacy"
         target="_blank"
         rel="noopener noreferrer"
-        className="font-medium text-[#A1A1AA] underline underline-offset-2 hover:text-white"
+        className="font-medium text-foreground underline underline-offset-2 hover:text-strong"
       >
         Privacy Policy
       </a>
