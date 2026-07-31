@@ -104,7 +104,7 @@ export default async function ReTeachPage({
   return (
     <PageEnter>
       <div className="flex flex-col gap-6">
-        {(graded?.length ?? 0) > 1 && session && (
+        {(graded?.length ?? 0) > 0 && session && (
           <SessionPicker
             sessions={graded ?? []}
             current={session.id}
