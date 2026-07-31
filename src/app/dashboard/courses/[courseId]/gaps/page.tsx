@@ -5,6 +5,7 @@ import {
 } from "~/components/delivery-summary";
 import { KnowledgeScore } from "~/components/knowledge-score";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
+import { SessionPicker } from "~/components/session-picker";
 import type { GapReport, SpanStatus } from "~/lib/ai/schemas";
 import { PACE_DROP_FRACTION, type SpeechMetrics } from "~/lib/speech-metrics";
 import { requireUser } from "~/lib/supabase/server";
@@ -85,25 +86,59 @@ function relatedWeakness(text: string, index: number, weaknesses: GapRow[]) {
 
 export default async function GapReportPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ courseId: string }>;
+  /** `?session=` picks which recording to read. Absent means the newest. */
+  searchParams: Promise<{ session?: string }>;
 }) {
   const { courseId } = await params;
+  const { session: wanted } = await searchParams;
   const { supabase, user } = await requireUser();
+
+  // Every graded recording, newest first. The report used to be whichever was
+  // most recent with no way to reach the others, which made every earlier
+  // attempt unreadable the moment you recorded again — and the whole point of
+  // recording repeatedly is to compare.
+  const { data: graded } = await supabase
+    .from("course_sessions")
+    .select("id, started_at, score, mode")
+    .eq("course_id", courseId)
+    .eq("user_id", user.id)
+    .not("report", "is", null)
+    .order("started_at", { ascending: false })
+    .limit(30)
+    .returns<
+      Array<{
+        id: string;
+        started_at: string;
+        score: number | null;
+        mode: string | null;
+      }>
+    >();
 
   const [{ data: session }, { data: baseline }, { data: pastSessions }] =
     await Promise.all([
-      supabase
-        .from("course_sessions")
-        .select(
-          "id, transcript, score, spans, report, speech_metrics, question, gaps ( id, phrase, category, explanation, resolved, created_at )",
-        )
-        .eq("course_id", courseId)
-        .eq("user_id", user.id)
-        .not("report", "is", null)
-        .order("started_at", { ascending: false })
-        .limit(1)
-        .maybeSingle<SessionReport>(),
+      (wanted
+        ? supabase
+            .from("course_sessions")
+            .select(
+              "id, transcript, score, spans, report, speech_metrics, question, gaps ( id, phrase, category, explanation, resolved, created_at )",
+            )
+            .eq("course_id", courseId)
+            .eq("user_id", user.id)
+            .eq("id", wanted)
+        : supabase
+            .from("course_sessions")
+            .select(
+              "id, transcript, score, spans, report, speech_metrics, question, gaps ( id, phrase, category, explanation, resolved, created_at )",
+            )
+            .eq("course_id", courseId)
+            .eq("user_id", user.id)
+            .not("report", "is", null)
+            .order("started_at", { ascending: false })
+            .limit(1)
+      ).maybeSingle<SessionReport>(),
       // The warm-up's reference, if they recorded one.
       supabase
         .from("speech_baselines")
@@ -208,6 +243,15 @@ export default async function GapReportPage({
 
   return (
     <div className="flex flex-col gap-8">
+      {(graded?.length ?? 0) > 1 && (
+        <SessionPicker
+          sessions={graded ?? []}
+          current={session.id}
+          courseId={courseId}
+          basePath="gaps"
+        />
+      )}
+
       {/* A score means nothing without the question it answers. Ahead of it,
           because it is the thing the rest of the page is about. */}
       {session.question && (
