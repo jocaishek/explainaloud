@@ -105,6 +105,8 @@ export function AuthCard({
   const [submitting, setSubmitting] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
   const [resending, setResending] = useState(false);
+  /** Login failed because the address was never confirmed. Offer a new link. */
+  const [needsVerification, setNeedsVerification] = useState(false);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
   // Acceptance of the Terms and Privacy Policy. Required to create an account,
   // by either route. The value is deliberately not remembered across a page
@@ -137,6 +139,8 @@ export function AuthCard({
   function switchMode(next: AuthMode) {
     setMode(next);
     setError(null);
+    setNeedsVerification(false);
+    setResendStatus(null);
   }
 
   async function handleOAuth(provider: "google") {
@@ -234,6 +238,13 @@ export function AuthCard({
     if (signInError) {
       setSubmitting(false);
       setError(authErrorMessage(mode, signInError.message));
+      // The one failure with an action attached. Everything else is "try
+      // again"; this one needs a new email, and there was no way to ask for
+      // one without going back through signup — which does not resend for an
+      // address that already exists, so it looks like the mail is broken.
+      setNeedsVerification(
+        signInError.message.toLowerCase().includes("email not confirmed"),
+      );
       return;
     }
 
@@ -279,10 +290,20 @@ export function AuthCard({
     });
 
     setResending(false);
+    if (!resendError) {
+      setResendStatus("A new verification link is on its way.");
+      return;
+    }
+    // Say which wall was hit. "Try again later" for a rate limit sends people
+    // into a loop of trying again immediately, and the two limits behind this
+    // are different problems: one clears in a minute, the other is the
+    // project's mail quota and clears when the hour does — or when a real SMTP
+    // provider is configured, which is not something the visitor can do.
+    const reason = resendError.message.toLowerCase();
     setResendStatus(
-      resendError
-        ? "We couldn't resend the link yet. Wait a minute, then try again."
-        : "A new verification link is on its way.",
+      reason.includes("rate limit") || reason.includes("too many")
+        ? "Too many emails have gone out recently. Wait a few minutes and try once more — if it keeps failing, the site owner needs to look at the mail settings."
+        : "We couldn't send it just now. Wait a minute, then try again.",
     );
   }
 
@@ -310,6 +331,25 @@ export function AuthCard({
             className="h-11 border-[#333333] bg-[#1E1E1E] text-base text-white placeholder:text-[#71717A]"
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
+          {needsVerification && (
+            <div className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-white/[0.03] p-3">
+              <p className="text-xs leading-5 text-[#A1A1AA]">
+                Didn&apos;t get it, or has the link expired? Signing up again
+                won&apos;t send another one — this will.
+              </p>
+              <button
+                type="button"
+                onClick={handleResendVerification}
+                disabled={resending || !email.trim()}
+                className="w-fit text-xs font-semibold text-white underline underline-offset-2 disabled:opacity-50"
+              >
+                {resending ? "Sending…" : "Send a new confirmation email"}
+              </button>
+              {resendStatus && (
+                <p className="text-xs text-[#A1A1AA]">{resendStatus}</p>
+              )}
+            </div>
+          )}
           <Button
             type="submit"
             disabled={submitting}
