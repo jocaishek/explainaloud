@@ -8,6 +8,7 @@ import { AgentOrchestration } from "~/components/agent-orchestration";
 import { type SourceItem, SourceUploader } from "~/components/source-uploader";
 import { Button } from "~/components/ui/button";
 import type { CourseCitation, GeneratedCourse } from "~/lib/ai/schemas";
+import { requestJson } from "~/lib/api-client";
 import { courseSectionId } from "~/lib/course-sections";
 import {
   directLearningWebsite,
@@ -56,26 +57,19 @@ export function CourseBuilder({
   async function generate() {
     setGenerating(true);
     setError(null);
-    try {
-      const response = await fetch(`/api/courses/${courseId}/generate`, {
-        method: "POST",
-      });
-      const json = await response.json();
-      if (!response.ok) {
-        // `detail` is only present for admins — the server decides that, not
-        // the client. Appending it here means a failed build is diagnosable
-        // from the screen instead of the hosting provider's log viewer.
-        setError(
-          [json.error ?? "Course generation failed.", json.detail]
-            .filter(Boolean)
-            .join(" — "),
-        );
-      } else {
-        setCourse(json.course);
-        router.refresh();
-      }
-    } catch {
-      setError("Couldn't reach the server.");
+    const result = await requestJson<{
+      course: GeneratedCourse;
+      detail?: string;
+    }>(`/api/courses/${courseId}/generate`, { method: "POST" });
+
+    if (result.ok) {
+      setCourse(result.data.course);
+      router.refresh();
+    } else {
+      // `detail` is only present for admins — the server decides that, not the
+      // client. Appending it means a failed build is diagnosable from the
+      // screen instead of the hosting provider's log viewer.
+      setError(result.error);
     }
     setGenerating(false);
   }
