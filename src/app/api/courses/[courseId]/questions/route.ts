@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { interviewQuestionPrompt } from "~/lib/ai/prompts";
 import { AiUnavailableError, completeJson } from "~/lib/ai/provider";
-import { drawFromBank } from "~/lib/ai/question-bank";
+import { drawFromBank, warmQuestionBank } from "~/lib/ai/question-bank";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
@@ -27,6 +27,15 @@ const requestSchema = z.object({
   exclude: z.array(z.uuid()).max(12).default([]),
   /** Question text already asked this run — the follow-up's do-not-repeat list. */
   asked: z.array(z.string().max(400)).max(12).default([]),
+  /**
+   * Fill the bank if it is low and return nothing.
+   *
+   * Sent when the record screen opens, so the model call happens while the
+   * page is being read rather than after interview mode is clicked. Nothing is
+   * drawn and nothing is marked used — this only makes the later draw a
+   * database read.
+   */
+  warm: z.boolean().default(false),
 });
 
 const followUpSchema = z.object({
@@ -97,6 +106,17 @@ export async function POST(
   }
 
   try {
+    if (parsed.data.warm) {
+      const written = await warmQuestionBank({
+        supabase,
+        courseId,
+        userId: user.id,
+        topic: course.topic,
+        sections,
+      });
+      return NextResponse.json({ warmed: written });
+    }
+
     if (!parsed.data.weakness) {
       const drawn = await drawFromBank({
         supabase,

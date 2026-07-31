@@ -391,6 +391,17 @@ function normalizedTranscript(value: string) {
 export async function transcribeAudio(
   file: File,
   topic: string,
+  /**
+   * The course's own vocabulary — section titles and key-point terms.
+   *
+   * Whisper's prompt is a decoding hint, not an instruction: words in it are
+   * far likelier to come out spelled that way. Without it the model hears an
+   * unfamiliar proper noun and writes what it sounds like, which is how
+   * "Claude Code" was transcribed as "Clawd Code" and "Cloud Code" in the same
+   * recording. The terms come from the course the student is being graded
+   * against, so they are exactly the words that must not be mangled.
+   */
+  vocabulary: string[] = [],
 ): Promise<TranscriptionResult> {
   if (!env.GROQ_API_KEY) {
     throw new AiUnavailableError("groq: no API key configured");
@@ -405,10 +416,20 @@ export async function transcribeAudio(
   // `json`, and they are what makes pace and hesitation measurable at all.
   body.set("response_format", "verbose_json");
   body.set("timestamp_granularities[]", "word");
+  // Capped: the prompt is a decoding bias, and past a couple of hundred
+  // characters it starts steering the transcript towards its own wording
+  // rather than towards the student's.
+  const terms = [...new Set(vocabulary.map((term) => term.trim()))]
+    .filter((term) => term.length > 2)
+    .join(", ")
+    .slice(0, 400);
   const prompt =
     `A student is explaining ${topic}. ` +
-    "Preserve course terminology and punctuation.";
+    "Preserve course terminology and punctuation." +
+    (terms ? ` Terms used: ${terms}.` : "");
   body.set("prompt", prompt);
+  // Nothing here benefits from the model getting creative about what it heard.
+  body.set("temperature", "0");
 
   const response = await withTimeout((signal) =>
     fetch(GROQ_TRANSCRIPTION_URL, {
