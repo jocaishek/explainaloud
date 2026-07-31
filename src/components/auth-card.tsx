@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
+import { GoogleSignIn } from "~/components/google-sign-in";
 import { PasswordField } from "~/components/password-field";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -101,6 +102,16 @@ export function AuthCard({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [oauthLoading, setOauthLoading] = useState<"google" | null>(null);
+  /**
+   * Which Google button is on screen.
+   *
+   * Starts optimistic and drops to "redirect" the moment `GoogleSignIn` says
+   * it cannot run: no client id configured, or a script this network will not
+   * load. Sign-in must not depend on a third-party script arriving.
+   */
+  const [googleMode, setGoogleMode] = useState<"identity" | "redirect">(
+    "identity",
+  );
   const [resending, setResending] = useState(false);
   /** Login failed because the address was never confirmed. Offer a new link. */
   const [needsVerification, setNeedsVerification] = useState(false);
@@ -360,18 +371,34 @@ export function AuthCard({
           className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-card p-6"
         >
           <div className="flex flex-col gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={oauthLoading !== null}
-              onClick={() => handleOAuth("google")}
-              className="h-11 gap-2 rounded-full border-input bg-muted font-medium text-strong transition-transform duration-200 ease-out hover:bg-accent active:scale-[0.98]"
-            >
-              <GoogleIcon className="size-4" />
-              {oauthLoading === "google"
-                ? "Redirecting…"
-                : "Continue with Google"}
-            </Button>
+            {/* Google's own button when Identity Services is available, so
+                the handshake happens on this origin and the consent screen
+                names this domain rather than a Supabase project ref. The
+                styled button below is what everyone else gets. */}
+            {googleMode === "identity" ? (
+              <GoogleSignIn
+                disabled={submitting}
+                onUnavailable={() => setGoogleMode("redirect")}
+                onError={setError}
+                onStart={() => {
+                  if (mode === "signup") stashPendingConsent(newConsent());
+                  setOauthLoading("google");
+                }}
+              />
+            ) : (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={oauthLoading !== null}
+                onClick={() => handleOAuth("google")}
+                className="h-11 gap-2 rounded-full border-input bg-muted font-medium text-strong transition-transform duration-200 ease-out hover:bg-accent active:scale-[0.98]"
+              >
+                <GoogleIcon className="size-4" />
+                {oauthLoading === "google"
+                  ? "Redirecting…"
+                  : "Continue with Google"}
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center gap-3 text-xs text-subtle">
