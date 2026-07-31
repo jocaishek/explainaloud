@@ -955,6 +955,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
         partial,
         thorough,
         spans,
+        transcript: params.transcript,
       });
       finalProvider = coaching.provider;
     } catch (error) {

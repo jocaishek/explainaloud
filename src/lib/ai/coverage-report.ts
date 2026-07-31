@@ -57,6 +57,99 @@ const SCORE_COVERAGE = 0.4;
 const SCORE_DEPTH = 0.3;
 
 /**
+ * What a covered-but-not-elaborated point is worth on the depth axis.
+ *
+ * Thoroughness is deliberately hard to earn — it is the difference between
+ * memorising a label and understanding a mechanism — but zero is the wrong
+ * floor. Someone who reached a point and stated it correctly did more than
+ * someone who never mentioned it, and scoring both at nothing for depth is
+ * what made an accurate three-minute answer land in the fifties. Full marks
+ * still need real explanation; this only stops the axis collapsing.
+ */
+const DEPTH_FLOOR = 0.35;
+
+/**
+ * How much of a key point's substance has to appear in what was said before
+ * calling it "not covered" becomes a claim the transcript contradicts.
+ *
+ * A backstop, not the main path — the grader decides coverage, and it is right
+ * far more often than not. But its false negatives are the most damaging
+ * output this product has: a student reads "you didn't get to this" next to
+ * their own sentence saying exactly that, and stops trusting the number.
+ */
+const ECHO_FRACTION = 0.6;
+
+/** Words too common to be evidence that a concept was actually discussed. */
+const STOPWORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "are",
+  "as",
+  "at",
+  "be",
+  "because",
+  "but",
+  "by",
+  "can",
+  "for",
+  "from",
+  "has",
+  "have",
+  "how",
+  "in",
+  "into",
+  "is",
+  "it",
+  "its",
+  "of",
+  "on",
+  "or",
+  "that",
+  "the",
+  "their",
+  "them",
+  "then",
+  "there",
+  "these",
+  "they",
+  "this",
+  "to",
+  "was",
+  "were",
+  "what",
+  "when",
+  "which",
+  "while",
+  "who",
+  "why",
+  "will",
+  "with",
+  "you",
+  "your",
+]);
+
+function contentWords(value: string): string[] {
+  return normalizedConcept(value)
+    .split(" ")
+    .filter((word) => word.length > 2 && !STOPWORDS.has(word));
+}
+
+/**
+ * Whether the transcript plainly contains a key point's substance.
+ *
+ * Word overlap rather than substring, because a student says it in their own
+ * order and their own words — which is exactly the case the grader is supposed
+ * to accept and occasionally does not.
+ */
+function echoedInTranscript(keyPoint: string, transcriptWords: Set<string>) {
+  const words = contentWords(keyPoint);
+  if (words.length < 3) return false;
+  const hits = words.filter((word) => transcriptWords.has(word)).length;
+  return hits / words.length >= ECHO_FRACTION;
+}
+
+/**
  * Shortest phrase worth matching on. Below this, "the" or "and" would match
  * almost any key point and let anything through.
  */
@@ -110,6 +203,7 @@ export function completeCoverageReport({
   partial,
   thorough,
   spans,
+  transcript = "",
   scoped = false,
 }: {
   draft: CoachingReport;
@@ -120,6 +214,8 @@ export function completeCoverageReport({
   /** Covered points the student explained rather than merely named. */
   thorough: Set<number>;
   spans: EvaluatedSpan[];
+  /** What was actually said, for the not-covered backstop. */
+  transcript?: string;
   /**
    * Whether these key points are one question's worth rather than the whole
    * course. Changes only the wording: "the 3 course key points" is misleading
@@ -130,8 +226,25 @@ export function completeCoverageReport({
   // Partially covered points are not missing. Listing them as weaknesses is
   // what produced "Missing Step: the light-dependent reactions produce ATP and
   // NADPH" for a student who had just said the light reactions make ATP.
+  const transcriptWords = new Set(contentWords(transcript));
+  // Demoted, not promoted: a point the transcript plainly contains is at worst
+  // partial. It does not become fully covered — the grader may have withheld
+  // coverage because the substance was there but wrong — but it stops being
+  // reported as something they never reached.
+  const echoed = new Set(
+    keyPoints
+      .map((keyPoint, index) => ({ keyPoint, index }))
+      .filter(
+        ({ keyPoint, index }) =>
+          !covered.has(index) &&
+          !partial.has(index) &&
+          echoedInTranscript(keyPoint, transcriptWords),
+      )
+      .map(({ index }) => index),
+  );
   const missingKeyPoints = keyPoints.filter(
-    (_, index) => !covered.has(index) && !partial.has(index),
+    (_, index) =>
+      !covered.has(index) && !partial.has(index) && !echoed.has(index),
   );
   // Accuracy is right-against-wrong, so only spans that actually committed to
   // something count. Vague speech is neither: including it would make "I'm not
@@ -167,7 +280,9 @@ export function completeCoverageReport({
   const accuracy =
     claimSpans.length > 0 ? correctClaims / claimSpans.length : 0;
 
-  const partialOnly = [...partial].filter((index) => !covered.has(index));
+  const partialOnly = [...new Set([...partial, ...echoed])].filter(
+    (index) => !covered.has(index),
+  );
   const coverage =
     keyPoints.length > 0
       ? Math.min(
@@ -180,7 +295,11 @@ export function completeCoverageReport({
   const thoroughCount = [...thorough].filter((index) =>
     covered.has(index),
   ).length;
-  const depth = covered.size > 0 ? thoroughCount / covered.size : 0;
+  const depth =
+    covered.size > 0
+      ? (thoroughCount + DEPTH_FLOOR * (covered.size - thoroughCount)) /
+        covered.size
+      : 0;
 
   const understanding =
     SCORE_BASE + SCORE_COVERAGE * coverage + SCORE_DEPTH * depth;

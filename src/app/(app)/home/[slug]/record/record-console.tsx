@@ -68,6 +68,14 @@ export type CourseQuestion = {
   question: string;
   /** What a complete answer to this question contains, per the Examiner. */
   keyPoints?: string[];
+  /**
+   * Row id in the topic's question bank, when it came from there.
+   *
+   * Sent back on the next draw so one interview cannot ask the same banked
+   * question twice. Absent for a follow-up, which is written on the spot and
+   * never banked.
+   */
+  bankId?: string;
 };
 
 type Span = {
@@ -234,8 +242,10 @@ type ApiPayload = {
    * places would mean updating both every time a statistic is added.
    */
   metrics?: SpeechMetrics | null;
-  /** From the Examiner route: the next question, already written. */
+  /** From the Examiner route: drawn from the bank, or written on the spot. */
   questions?: Array<{
+    /** Bank row id. Absent on a follow-up, which is never banked. */
+    id?: string;
     question: string;
     section_index: number;
     section: string;
@@ -424,8 +434,21 @@ export function RecordConsole({
   const interviewRef = useRef(false);
   /** Seconds left to start the next answer yourself before it starts for you. */
   const [countdown, setCountdown] = useState<number | null>(null);
+  /**
+   * When the grace period ends, as a clock time.
+   *
+   * The count used to be a chain of one-second timeouts, each scheduling the
+   * next. A backgrounded tab throttles those to once a minute or stops them
+   * entirely, so switching away mid-count and coming back left the countdown
+   * frozen and the microphone never opened. A deadline is recomputed from the
+   * clock on every tick, so however long the tab was asleep, the first tick
+   * after it wakes has the right answer.
+   */
+  const graceDeadlineRef = useRef<number | null>(null);
   /** Every question asked this session, so the examiner never repeats one. */
   const usedQuestionsRef = useRef<string[]>([]);
+  /** Bank rows drawn this run — the draw's own do-not-repeat list. */
+  const drawnIdsRef = useRef<string[]>([]);
   /** True while the next question is being written. */
   const [writing, setWriting] = useState(false);
   const writingRef = useRef(false);
@@ -557,11 +580,22 @@ export function RecordConsole({
       resumeRecording();
       return;
     }
-    const timer = window.setTimeout(() => {
-      setCountdown((current) => (current === null ? null : current - 1));
-    }, 1000);
-    return () => window.clearTimeout(timer);
+    // Polled against the deadline rather than counted down, so a throttled or
+    // suspended tab cannot lose seconds — or stall on one forever.
+    const timer = window.setInterval(() => {
+      const deadline = graceDeadlineRef.current;
+      if (deadline === null) return;
+      const left = Math.max(0, Math.ceil((deadline - Date.now()) / 1000));
+      setCountdown((current) => (current === null ? null : left));
+    }, 250);
+    return () => window.clearInterval(timer);
   }, [countdown]);
+
+  /** Open the grace period: five seconds, from now, visible the whole way. */
+  const startGrace = useCallback(() => {
+    graceDeadlineRef.current = Date.now() + BETWEEN_SECONDS * 1000;
+    setCountdown(BETWEEN_SECONDS);
+  }, []);
 
   /** Forget the frozen head, so the next pass grades the transcript afresh. */
   const resetGradedHead = useCallback(() => {
@@ -1512,19 +1546,16 @@ export function RecordConsole({
   }
 
   /**
-   * Three questions, drawn at random from the ones the course actually asks.
+   * Get the next question, or the opening set.
    *
-   * Random so a second run is a different interview rather than the same three
-   * again, and drawn from the section questions so they are the ones the
-   * material was built around — the essential ones — rather than something
-   * invented on the spot to fill a slot.
-   */
-  /**
-   * Ask the Examiner for the next question.
+   * Without a weakness this is a draw from the topic's stored bank — the
+   * server picks the least-asked first, so nothing repeats until everything
+   * has been used. With one, it is written fresh out of the answer that just
+   * happened, which is the difference between a list and an examiner.
    *
-   * Falls back to a section question rather than failing: an interview that
-   * stops because a model was busy is worse than one whose third question is
-   * a shallower one. Returns null only when there is nothing at all to ask.
+   * Falls back to the course's own section questions rather than failing: an
+   * interview that stops because a model was busy is worse than one whose
+   * third question is shallower.
    */
   async function writeQuestion(
     weakness?: string,
@@ -1543,6 +1574,7 @@ export function RecordConsole({
           body: JSON.stringify({
             count,
             asked: already.slice(0, 12),
+            exclude: drawnIdsRef.current.slice(0, 12),
             ...(weakness ? { weakness } : {}),
           }),
         },
@@ -1554,12 +1586,17 @@ export function RecordConsole({
           ...usedQuestionsRef.current,
           ...written.map((item) => item.question),
         ];
+        drawnIdsRef.current = [
+          ...drawnIdsRef.current,
+          ...written.flatMap((item) => (item.id ? [item.id] : [])),
+        ];
         return written.map((item) => ({
           index: item.section_index ?? 0,
           section:
             item.section || questions[item.section_index ?? 0]?.section || "",
           question: item.question,
           keyPoints: item.key_points,
+          bankId: item.id,
         }));
       }
     } catch {
@@ -1568,22 +1605,6 @@ export function RecordConsole({
     return questions
       .filter((item) => !already.includes(item.question))
       .slice(0, count);
-  }
-
-  function drawQuestions() {
-    const pool = [...questions];
-    for (let i = pool.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      const a = pool[i];
-      const b = pool[j];
-      if (a && b) {
-        pool[i] = b;
-        pool[j] = a;
-      }
-    }
-    // Asked in course order once drawn: the sections build on each other, and
-    // being asked about the end before the beginning is a different exercise.
-    return pool.slice(0, INTERVIEW_QUESTIONS).sort((a, b) => a.index - b.index);
   }
 
   /**
@@ -1667,16 +1688,17 @@ export function RecordConsole({
           // Only start the clock once there is something to answer. Counting
           // down against a question nobody has written yet is how you open a
           // microphone on someone who is still reading.
-          setCountdown(BETWEEN_SECONDS);
+          startGrace();
         });
     } else {
       void gradeSegment(at, answer, current.index, current.keyPoints);
-      setCountdown(BETWEEN_SECONDS);
+      startGrace();
     }
   }
 
   /** Pick the take back up where it stopped, on the next question. */
   function resumeRecording() {
+    graceDeadlineRef.current = null;
     setCountdown(null);
     for (const track of mediaStreamRef.current?.getAudioTracks() ?? []) {
       track.enabled = true;
@@ -1786,12 +1808,13 @@ export function RecordConsole({
     // the grading that happens after it stops.
     const interview = mode === "interview" && questions.length > 0;
     interviewRef.current = interview;
-    // Already drawn when the mode was chosen; redrawn only if that never
-    // happened, so what was on screen is what gets asked.
+    // Drawn when the mode was chosen. Nothing is redrawn here: what was on
+    // screen when they pressed record is what they are answering, and the
+    // button is disabled until the draw lands, so this cannot be empty.
     const drawn = interview
       ? asking.length > 0
         ? asking
-        : drawQuestions()
+        : questions.slice(0, INTERVIEW_QUESTIONS)
       : [];
     askingRef.current = drawn;
     setAsking(drawn);
@@ -2108,8 +2131,17 @@ export function RecordConsole({
         : "";
   const outOfQuota = !unlimited && remaining === 0 && status !== "recording";
   const running = status === "recording" || status === "between";
-  const live =
-    mode === "interview" || interviewRef.current ? asking[segmentIndex] : asked;
+  const interviewing = mode === "interview" || interviewRef.current;
+  const live = interviewing ? asking[segmentIndex] : asked;
+  /**
+   * The examiner is still deciding what to ask, so there is nothing to show.
+   *
+   * Deliberately not "show the old one until the new one lands". A question
+   * that appears and then changes under the reader is the single thing this
+   * screen must never do: it is being read as an instruction, and an
+   * instruction that rewrites itself is worse than one that arrives late.
+   */
+  const drafting = interviewing && writing && (!live || status === "between");
   // The last question ends the whole recording; the others just end an answer.
   const lastQuestion =
     !interviewRef.current || segmentIndex >= asking.length - 1;
@@ -2121,19 +2153,21 @@ export function RecordConsole({
   const primaryLabel =
     status === "awaiting-mic"
       ? "Waiting for microphone…"
-      : status === "saving"
-        ? "Finishing…"
-        : status === "analyzing"
-          ? "Reading it back…"
-          : status === "between"
-            ? "Continue recording"
-            : status === "recording"
-              ? lastQuestion
-                ? "I'm done"
-                : "Next question"
-              : mode === "interview" && questions.length > 0
-                ? "Start the interview"
-                : "Start explaining";
+      : drafting
+        ? "Choosing your question…"
+        : status === "saving"
+          ? "Finishing…"
+          : status === "analyzing"
+            ? "Reading it back…"
+            : status === "between"
+              ? "Continue recording"
+              : status === "recording"
+                ? lastQuestion
+                  ? "I'm done"
+                  : "Next question"
+                : mode === "interview" && questions.length > 0
+                  ? "Start the interview"
+                  : "Start explaining";
   const primaryAction = () => {
     if (status === "between") return resumeRecording();
     if (status !== "recording") return void startRecording();
@@ -2158,24 +2192,26 @@ export function RecordConsole({
               setAsking([]);
               return;
             }
-            // Show a course question straight away so the card is never empty,
-            // then replace it with one the Examiner wrote. Two questions of
-            // latency would be a blank card; one is a card that sharpens.
-            const fallback = drawQuestions();
-            askingRef.current = fallback;
-            setAsking(fallback);
+            // Nothing is shown until the real questions are in hand.
+            //
+            // This used to display a course question immediately and replace
+            // it with the drawn one about half a second later. That is the
+            // question changing on its own while you read it, which reads as
+            // the app deciding it meant to ask something else. A card that
+            // says it is drawing is honest; a card that changes its mind is
+            // not. The draw is a database read now, so the wait is short.
+            askingRef.current = [];
+            setAsking([]);
+            drawnIdsRef.current = [];
             setWriting(true);
             void writeQuestion(undefined, INTERVIEW_QUESTIONS)
               .then((written) => {
-                // The recording may have started while this was in flight.
-                // Whatever was on screen when they pressed record is what they
-                // are answering, so a late arrival is dropped, not applied.
+                // The recording may have started while this was in flight —
+                // it cannot, with nothing on screen to start against, but a
+                // late arrival must never overwrite a live question.
                 if (written.length === 0 || interviewRef.current) return;
-                // Keep the fallbacks in the tail if fewer came back than asked
-                // for, so there is always something to ask.
-                const updated = fallback.map((item, i) => written[i] ?? item);
-                askingRef.current = updated;
-                setAsking(updated);
+                askingRef.current = written;
+                setAsking(written);
               })
               .finally(() => setWriting(false));
           }}
@@ -2184,15 +2220,25 @@ export function RecordConsole({
         />
       )}
 
-      {live && (mode === "interview" || running) && (
+      {drafting ? (
         <QuestionCard
-          asked={live}
-          position={mode === "interview" ? segmentIndex : askedAt}
-          total={mode === "interview" ? asking.length : questions.length}
+          asked={null}
+          position={segmentIndex}
+          total={Math.min(INTERVIEW_QUESTIONS, Math.max(asking.length, 1))}
           waiting={status === "between"}
-          writing={writing}
-          countdown={status === "between" ? countdown : null}
+          countdown={null}
         />
+      ) : (
+        live &&
+        (mode === "interview" || running) && (
+          <QuestionCard
+            asked={live}
+            position={mode === "interview" ? segmentIndex : askedAt}
+            total={mode === "interview" ? asking.length : questions.length}
+            waiting={status === "between"}
+            countdown={status === "between" ? countdown : null}
+          />
+        )
       )}
 
       <div className="flex flex-col items-center gap-4 text-center">
@@ -2200,7 +2246,7 @@ export function RecordConsole({
           type="button"
           aria-label={primaryLabel}
           onClick={primaryAction}
-          disabled={busy || outOfQuota}
+          disabled={busy || outOfQuota || drafting}
           className={cn(
             "glass flex size-20 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-50",
             status === "recording" && "border-brand/40 bg-brand/10",
@@ -2216,7 +2262,7 @@ export function RecordConsole({
         <Button
           type="button"
           onClick={primaryAction}
-          disabled={busy || outOfQuota}
+          disabled={busy || outOfQuota || drafting}
           className="h-11 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform hover:bg-brand/90 active:scale-[0.97]"
         >
           {primaryLabel}
@@ -2673,16 +2719,14 @@ function QuestionCard({
   position,
   total,
   waiting,
-  writing,
   countdown,
 }: {
-  asked: CourseQuestion;
+  /** Null while the examiner is still deciding. Never a stale question. */
+  asked: CourseQuestion | null;
   position: number;
   total: number;
   /** Between answers: this question is up next, and nothing is being heard. */
   waiting?: boolean;
-  /** The examiner is still writing this one, out of the last answer. */
-  writing?: boolean;
   /** Seconds until this question starts recording on its own. */
   countdown?: number | null;
 }) {
@@ -2690,45 +2734,51 @@ function QuestionCard({
     <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/[0.06] p-5">
       <div className="flex items-center justify-between gap-4">
         <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-          Question {position + 1} of {total} · {asked.section}
+          Question {position + 1} of {total}
+          {asked ? ` · ${asked.section}` : ""}
         </span>
       </div>
 
-      {/* Keyed on the question, so a change is an exit and an entrance rather
-          than text quietly mutating in place — in interview mode the question
-          changing IS the event, and it happens while the student is looking
-          at something else on the page. */}
+      {/* Keyed on the position, not the text.
+          A question only ever appears once now — it is never swapped out from
+          under the reader — so the animation marks moving to the next one. Key
+          on the text and an exit transition can be left half-finished by a
+          backgrounded tab, which strands the previous question on screen and
+          looks exactly like the app reverting. */}
       <AnimatePresence mode="wait" initial={false}>
         <motion.p
-          key={asked.question}
+          key={asked ? position : "drafting"}
           initial={{ opacity: 0, y: 12, filter: "blur(4px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: -12, filter: "blur(4px)" }}
           transition={{ duration: 0.34, ease: [0.23, 1, 0.32, 1] }}
-          className="text-lg leading-relaxed font-medium text-strong"
+          className={cn(
+            "text-lg leading-relaxed font-medium",
+            asked ? "text-strong" : "text-subtle",
+          )}
         >
-          {asked.question}
+          {asked ? asked.question : "Choosing your next question…"}
         </motion.p>
       </AnimatePresence>
 
-      {countdown !== null && countdown !== undefined ? (
+      {!asked ? (
+        <p className="text-xs leading-5 text-subtle">
+          Nothing is being recorded while this is written. The clock is stopped.
+        </p>
+      ) : countdown !== null && countdown !== undefined ? (
         <div className="flex items-center gap-3">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand/15 font-mono text-lg font-semibold text-brand tabular-nums">
             {countdown}
           </span>
           <p className="text-xs leading-5 text-subtle">
-            {writing
-              ? "Writing your next question from that answer…"
-              : `Recording starts in ${countdown}. The clock is stopped until it does.`}
+            Recording starts in {countdown}. The clock is stopped until it does.
           </p>
         </div>
       ) : (
         <p className="text-xs leading-5 text-subtle">
-          {writing
-            ? "Writing your next question from that answer…"
-            : waiting
-              ? "Take a second. The clock is stopped and the mic is off until you continue."
-              : "Answer just this. You are marked on the answer, not on everything else the course covers."}
+          {waiting
+            ? "Take a second. The clock is stopped and the mic is off until you continue."
+            : "Answer just this. You are marked on the answer, not on everything else the course covers."}
         </p>
       )}
     </div>
