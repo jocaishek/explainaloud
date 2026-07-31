@@ -8,13 +8,10 @@ import {
   useTransform,
 } from "framer-motion";
 import { ArrowRight } from "lucide-react";
-import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Fragment, useEffect, useRef, useState } from "react";
-import type { Example } from "~/components/example-carousel";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { Magnetic } from "~/components/magnetic";
-import { Marquee } from "~/components/marquee";
 import { ScrollProgress } from "~/components/scroll-progress";
 import { SmoothScroll } from "~/components/smooth-scroll";
 import { Spotlight } from "~/components/spotlight";
@@ -28,24 +25,6 @@ import { cn } from "~/lib/utils";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 const EASE_CSS = "ease-[cubic-bezier(0.23,1,0.32,1)]";
-
-/**
- * The ring is the single heaviest thing on the page — seven glass panels, each
- * with six scroll-driven transforms — and it is entirely below the fold. Held
- * back from the first load and from the prerendered HTML, so a phone paints
- * and becomes usable before any of it exists. Rendering client-side only also
- * frees the component to drop the 3D arc on small screens without a hydration
- * mismatch to correct.
- */
-const ExampleCarousel = dynamic(
-  () => import("~/components/example-carousel").then((m) => m.ExampleCarousel),
-  {
-    ssr: false,
-    // Close to the height it settles at, so the page below does not jump while
-    // the section is still on its way.
-    loading: () => <div className="h-[42rem] w-full" />,
-  },
-);
 
 function Reveal({
   children,
@@ -176,11 +155,21 @@ export default function Home() {
                 accent={["understand"]}
               />
             </h1>
+            {/* The thing the page was worst at saying: what actually happens
+                if you sign up. Rereading a chapter feels like learning and
+                isn't, and that gap is the whole product — so it is stated
+                plainly, in the order the student will live it, before any of
+                the machinery below gets described. */}
             <Reveal delay={100}>
-              <p className="max-w-2xl text-lg text-[#A1A1AA]">
-                A team of specialist AI agents builds from your sources, listens
-                to you explain the material, and independently checks the steps
-                you skipped.
+              <p className="max-w-2xl text-lg leading-relaxed text-[#A1A1AA]">
+                Rereading your notes feels like learning. Explaining the topic
+                out loud is where you find out.{" "}
+                <span className="text-white">
+                  Upload your material, talk through it for three minutes, and
+                  get back your own words marked sentence by sentence — what you
+                  had right, what was vague, and the steps you skipped without
+                  noticing.
+                </span>
               </p>
             </Reveal>
             <Reveal delay={140}>
@@ -205,139 +194,75 @@ export default function Home() {
             </Reveal>
           </div>
 
-          {/* Three-step flow, set as type rather than icon tiles. */}
+          {/* Three-step flow, set as type rather than icon tiles. Each label
+              names a concrete thing the student does or receives — "get the
+              gaps filled" was a promise, "a report of what you missed" is an
+              artefact. */}
           <Reveal delay={280} className="mt-20 w-full">
             <div className="mx-auto flex max-w-3xl flex-col items-stretch gap-4 sm:flex-row">
-              <FlowStep step="01" label="Upload your sources" />
-              <FlowStep step="02" label="Explain it out loud" />
-              <FlowStep step="03" label="Get the gaps filled" />
+              <FlowStep
+                step="01"
+                label="Upload notes, slides, or a recording"
+              />
+              <FlowStep
+                step="02"
+                label="Explain it out loud for three minutes"
+              />
+              <FlowStep step="03" label="Read back exactly what you missed" />
             </div>
           </Reveal>
         </section>
 
-        {/* ── Examples: what a real session looks like ──────────────── */}
-        <section className="relative w-full">
-          <ExampleCarousel
-            examples={EXAMPLES}
-            header={
-              <div className="relative mx-auto flex max-w-4xl flex-col items-center px-6 text-center">
-                <Eyebrow index="02" label="Today's board" className="mb-4" />
-                <h2 className="relative text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-                  <WordReveal
-                    text="What a session looks like"
-                    accent={["session"]}
-                  />
-                </h2>
-                <Reveal delay={120} className="mt-4">
-                  <p className="max-w-md text-[#A1A1AA]">
-                    A topic, an explanation scored on how well you actually said
-                    it, and the exact step you skipped. Swipe or drag sideways
-                    for the rest.
-                  </p>
-                </Reveal>
-              </div>
-            }
-          />
-        </section>
-
-        {/* Ticker + stat band: a beat of motion between the hero and the essay. */}
-        <div className="w-full border-y border-white/10 py-4">
-          <Marquee items={MARQUEE_ITEMS} />
-        </div>
-
-        {/* ── Section 2: Multi-agent orchestration ──────────────────── */}
-        <section className="relative w-full px-6 py-24">
-          <div className="relative mx-auto grid max-w-5xl gap-12 md:grid-cols-[0.8fr_1.2fr] md:items-center md:gap-16">
-            <div className="border-l-2 border-brand/40 pl-6">
-              <Eyebrow
-                index="03"
-                label="Multi-agent by design"
-                className="mb-4"
-              />
-              <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-                <WordReveal
-                  text="One lesson. Several specialists."
-                  accent={["specialists"]}
-                />
-              </h2>
-              <Reveal delay={120} className="mt-5">
-                <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
-                  Explainaloud does not ask one model to do everything. Each
-                  agent owns a specific job, passes its work forward, and leaves
-                  a visible trace so you can see how the result was made.
-                </p>
-              </Reveal>
-            </div>
-            <Reveal delay={160}>
-              <LandingAgentPipeline />
-            </Reveal>
-          </div>
-        </section>
-
-        {/* ── Section 4: What you see while you are still speaking ──── */}
-        <section className="w-full px-6 py-24">
-          <div className="mx-auto max-w-5xl">
-            <Eyebrow index="04" label="While you speak" className="mb-4" />
+        {/* ── 02 · How it works ───────────────────────────────────────
+            Promoted to the top of the page. It used to be seventh, which
+            meant the concrete answer to "what actually happens" sat below
+            five sections of atmosphere — and someone who bounced never
+            reached it. */}
+        <section id="how" className="relative w-full scroll-mt-24 px-6 py-24">
+          <div className="mx-auto mb-20 flex max-w-2xl flex-col items-center text-center">
+            <Eyebrow index="02" label="How it works" className="mb-4" />
             <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
               <WordReveal
-                text="The feedback arrives mid-sentence"
-                accent={["mid-sentence"]}
+                text="Three minutes, start to finish"
+                accent={["finish"]}
               />
             </h2>
-            <Reveal delay={120} className="mt-5">
-              <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
-                Your words colour themselves as you say them, and your pace is
-                measured against your own baseline. You do not have to finish
-                and wait for a verdict to find out something went wrong.
+            <Reveal delay={120} className="mt-4">
+              <p className="text-lg text-[#A1A1AA]">
+                One topic at a time. No videos to sit through and nothing to
+                type.
               </p>
             </Reveal>
-
-            <div className="mt-12 grid gap-4 md:grid-cols-[1.35fr_1fr]">
-              <Reveal>
-                <LiveColouringPanel />
-              </Reveal>
-              <Reveal delay={100}>
-                <PaceTrackerPanel />
-              </Reveal>
-            </div>
           </div>
-        </section>
 
-        {/* ── Section 5: The question at the end of each part ────────── */}
-        <section className="w-full px-6 py-24">
-          <div className="mx-auto max-w-5xl">
-            <Eyebrow
-              index="05"
-              label="An examiner, not a quiz"
-              className="mb-4"
+          <div className="relative mx-auto flex max-w-4xl flex-col gap-24">
+            <DeepDiveRow
+              step="Step 1"
+              title="Start with what you already have"
+              body="Drop in your textbook chapters, lecture recordings, and slides. The course is built from your actual material — and if you'd rather it used nothing else, say so and it won't."
+              mockup={<SourcesPanel />}
             />
-            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-              <WordReveal
-                text="It asks. You answer. Then it asks about what you missed."
-                accent={["missed."]}
-              />
-            </h2>
-            <Reveal delay={120} className="mt-5">
-              <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
-                Interview mode gives you one question at a time. You cannot see
-                the next one until you have answered this one — and the next one
-                is written out of what your last answer got wrong.
-              </p>
-            </Reveal>
-
-            <div className="mt-12 grid gap-4 md:grid-cols-2">
-              <Reveal>
-                <QuestionPanel />
-              </Reveal>
-              <Reveal delay={100}>
-                <AnswerPanel />
-              </Reveal>
-            </div>
+            <DeepDiveRow
+              reversed
+              step="Step 2"
+              title="Say it back, out loud"
+              body="Hit record and explain the concept like you're teaching a friend — or switch to interview mode and answer one question at a time. Your words colour themselves as you speak, so a shaky step shows up mid-sentence rather than in a verdict at the end."
+              mockup={<ExplainPanel />}
+            />
+            <DeepDiveRow
+              step="Step 3"
+              title="See exactly where you stand"
+              body="Every topic gets a score from what you actually said, with the missed steps written out in full. Weak areas become tomorrow's study plan."
+              mockup={<GapPanel />}
+            />
           </div>
         </section>
 
-        {/* ── Section 3: Feature grid ──────────────────────────────────── */}
-        <section className="relative w-full px-6 py-24">
+        {/* ── 03 · Feature grid ───────────────────────────────────────── */}
+        <section
+          id="features"
+          className="relative w-full scroll-mt-24 px-6 py-24"
+        >
           {/* The one orb left on the page below the hero. Glass only reads as
               glass with something coloured behind it to blur, so the feature
               row keeps its light source while the rest of the page switched to
@@ -345,7 +270,7 @@ export default function Home() {
           <GlowOrb className="top-16 left-1/2 h-80 w-[44rem] -translate-x-1/2 opacity-[0.12]" />
 
           <Eyebrow
-            index="06"
+            index="03"
             label="What you get"
             className="mx-auto mb-4 max-w-6xl"
           />
@@ -443,40 +368,35 @@ export default function Home() {
           </FeatureRow>
         </section>
 
-        {/* ── Section 4: How it works, in detail ──────────────────────── */}
-        <section className="relative w-full px-6 py-24">
-          <div className="mx-auto mb-20 flex max-w-2xl flex-col items-center text-center">
-            <Eyebrow index="07" label="The flow" className="mb-4" />
-            <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-              <WordReveal text="How it works" accent={["works"]} />
-            </h2>
-            <Reveal delay={120} className="mt-4">
-              <p className="text-lg text-[#A1A1AA]">
-                Click record, speak, learn.
-              </p>
+        {/* ── 04 · Multi-agent orchestration ─────────────────────────── */}
+        <section
+          id="agents"
+          className="relative w-full scroll-mt-24 px-6 py-24"
+        >
+          <div className="relative mx-auto grid max-w-5xl gap-12 md:grid-cols-[0.8fr_1.2fr] md:items-center md:gap-16">
+            <div className="border-l-2 border-brand/40 pl-6">
+              <Eyebrow
+                index="04"
+                label="Multi-agent by design"
+                className="mb-4"
+              />
+              <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
+                <WordReveal
+                  text="One lesson. Several specialists."
+                  accent={["specialists"]}
+                />
+              </h2>
+              <Reveal delay={120} className="mt-5">
+                <p className="max-w-prose text-lg leading-relaxed text-[#A1A1AA]">
+                  Explainaloud does not ask one model to do everything. Each
+                  agent owns a specific job, passes its work forward, and leaves
+                  a visible trace so you can see how the result was made.
+                </p>
+              </Reveal>
+            </div>
+            <Reveal delay={160}>
+              <LandingAgentPipeline />
             </Reveal>
-          </div>
-
-          <div className="relative mx-auto flex max-w-4xl flex-col gap-24">
-            <DeepDiveRow
-              step="Step 1"
-              title="Start with what you already have"
-              body="Drop in your textbook chapters, lecture recordings, and slides. The course is built from your actual material."
-              mockup={<SourcesPanel />}
-            />
-            <DeepDiveRow
-              reversed
-              step="Step 2"
-              title="Say it back, out loud"
-              body="Hit record and explain the concept like you're teaching a friend. Shaky steps get flagged as you say them."
-              mockup={<ExplainPanel />}
-            />
-            <DeepDiveRow
-              step="Step 3"
-              title="See exactly where you stand"
-              body="Every topic gets a confidence score from your explanation. Weak areas become tomorrow's study plan."
-              mockup={<GapPanel />}
-            />
           </div>
 
           <Reveal className="mt-20 flex justify-center">
@@ -485,30 +405,12 @@ export default function Home() {
         </section>
       </div>
 
-      {/* ── Section 8: The two ways to spend a recording ───────────── */}
-      <section className="relative flex w-full flex-col items-center px-6 pt-24 pb-14">
-        <div className="relative flex flex-col items-center text-center">
-          <Eyebrow index="08" label="Two modes" className="mb-4" />
-          <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
-            <WordReveal text="Explain it, or sit the exam" accent={["exam"]} />
-          </h2>
-          <p className="mt-4 max-w-lg text-[#A1A1AA]">
-            Same three minutes, same score, same gap report at the end. What
-            changes is whether anyone is asking.
-          </p>
-        </div>
-
-        <Reveal delay={120} className="relative mt-10 w-full max-w-3xl">
-          <ModeCards />
-        </Reveal>
-      </section>
-
-      {/* ── Section 6: Sign up ──────────────────────────────────────── */}
+      {/* ── 05 · Sign up ────────────────────────────────────────────── */}
       <section className="relative flex w-full flex-col items-center px-6 pt-4 pb-24">
         <AccentDivider />
 
         <div className="relative mt-10 flex flex-col items-center text-center">
-          <Eyebrow index="09" label="Get started" className="mb-4" />
+          <Eyebrow index="05" label="Get started" className="mb-4" />
           <h2 className="text-3xl font-semibold tracking-tight text-balance text-white sm:text-4xl">
             <WordReveal text="Create your account" accent={["account"]} />
           </h2>
@@ -565,15 +467,6 @@ export default function Home() {
     </main>
   );
 }
-
-const MARQUEE_ITEMS = [
-  "Specialist agents, visible handoffs",
-  "Explain it out loud",
-  "Recognition isn't recall",
-  "Gaps filled, not just flagged",
-  "Built from your own sources",
-  "Say it before you're sure",
-];
 
 const LANDING_AGENTS = [
   {
@@ -674,54 +567,6 @@ function LandingAgentPipeline() {
   );
 }
 
-/* Illustrative sessions, not real user data — nothing has shipped yet. The
-   copy is written so it reads as "here's what a session looks like" rather
-   than as a testimonial from someone who used it. */
-const EXAMPLES: Example[] = [
-  {
-    subject: "Biology",
-    topic: "Explain how the Calvin cycle fixes carbon",
-    confidence: 54,
-    gap: "Said energy becomes glucose “directly” — skipped the G3P intermediate entirely.",
-  },
-  {
-    subject: "Organic chemistry",
-    topic: "Walk through an SN2 reaction mechanism",
-    confidence: 71,
-    gap: "Got the backside attack right, never mentioned why bulky substrates kill the rate.",
-  },
-  {
-    subject: "Macroeconomics",
-    topic: "Why does raising rates slow inflation?",
-    confidence: 38,
-    gap: "Named the mechanism but couldn't connect it to borrowing cost or demand.",
-  },
-  {
-    subject: "Linear algebra",
-    topic: "What does an eigenvector actually mean?",
-    confidence: 82,
-    gap: "Strong geometric intuition, shaky on why the eigenvalue can be negative.",
-  },
-  {
-    subject: "Neuroscience",
-    topic: "Describe how an action potential propagates",
-    confidence: 61,
-    gap: "Skipped the refractory period, so the explanation allowed backward travel.",
-  },
-  {
-    subject: "Statistics",
-    topic: "What is a p-value actually telling you?",
-    confidence: 45,
-    gap: "Described it as the chance the hypothesis is true — that's the inverse.",
-  },
-  {
-    subject: "Computer science",
-    topic: "Why is quicksort O(n log n) on average?",
-    confidence: 76,
-    gap: "Explained the partitioning but never justified the log n recursion depth.",
-  },
-];
-
 /* Rotating examples typed out under the hero headline. */
 const HERO_TOPICS = [
   "the Calvin cycle.",
@@ -735,6 +580,18 @@ const PLAN_ITEMS: Array<{ label: string; status: string }> = [
   { label: "Calvin cycle", status: "Practice" },
   { label: "Light reactions", status: "Mastered" },
 ];
+
+/**
+ * The page's sections, in the order they appear.
+ *
+ * One list, used both for the header links and for the `id` on each section,
+ * so a renamed anchor cannot end up pointing at nothing.
+ */
+const SECTIONS = [
+  { id: "how", label: "How it works" },
+  { id: "features", label: "What you get" },
+  { id: "agents", label: "The agents" },
+] as const;
 
 /* Floating capsule nav that detaches from the page edge as you scroll: it
    narrows and lifts into a frosted pill rather than staying a full-bleed bar. */
@@ -754,13 +611,31 @@ function Nav() {
         className={cn(
           "mx-auto flex items-center justify-between gap-4 rounded-full py-2 pr-2 pl-5 transition-[max-width,background-color,box-shadow] duration-500",
           EASE_CSS,
-          scrolled ? "capsule max-w-2xl" : "max-w-4xl bg-transparent",
+          scrolled ? "capsule max-w-3xl" : "max-w-5xl bg-transparent",
         )}
       >
         <span className="flex items-center gap-2 text-base font-semibold tracking-tight text-white">
           <ExplainaloudMark className="size-6 shrink-0" />
           Explainaloud
         </span>
+
+        {/* Jump links. Hidden on a phone, where three more words either wrap
+            the capsule onto a second line or squeeze the sign-up button off
+            it — and where the page is one thumb-flick end to end anyway.
+            Lenis is mounted with `anchors: true`, so these scroll smoothly
+            instead of being fought and reverted on the next frame. */}
+        <div className="hidden items-center gap-1 sm:flex">
+          {SECTIONS.map((section) => (
+            <a
+              key={section.id}
+              href={`#${section.id}`}
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-[#A1A1AA] transition-colors duration-200 hover:bg-white/5 hover:text-white"
+            >
+              {section.label}
+            </a>
+          ))}
+        </div>
+
         <Magnetic strength={16}>
           <Button
             asChild
@@ -1211,297 +1086,6 @@ function LiveTranscript() {
   );
 }
 
-/* Written the way the course builder writes them: one question per section,
-   open-ended, answerable in a couple of sentences by someone who followed it. */
-const COURSE_QUESTIONS = [
-  { section: "Light reactions", done: true },
-  { section: "The Calvin cycle", done: false },
-  { section: "Limiting factors", done: false },
-];
-
-const ASKED =
-  "Why does the Calvin cycle need the light reactions to run first?";
-
-/** The question card, as it appears at the end of a section. */
-function QuestionPanel() {
-  return (
-    <div className="glass flex h-full flex-col rounded-2xl p-6">
-      <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
-        Question 2 of 3 · asked because of answer 1
-      </span>
-
-      <p className="mt-4 rounded-lg border border-brand/20 bg-brand/[0.07] p-4 text-lg leading-relaxed text-white">
-        {ASKED}
-      </p>
-
-      <p className="mt-3 text-xs leading-5 text-[#71717A]">
-        You could not see this one until you had answered the last one. Answer
-        just this; you are marked on the answer.
-      </p>
-
-      <div className="mt-6 flex flex-col gap-2 border-t border-white/10 pt-4">
-        {COURSE_QUESTIONS.map((item, i) => (
-          <div key={item.section} className="flex items-center gap-2.5 text-xs">
-            <span
-              className={cn(
-                "size-1.5 shrink-0 rounded-full",
-                item.done
-                  ? "bg-green-500"
-                  : i === 1
-                    ? "bg-brand"
-                    : "bg-white/20",
-              )}
-            />
-            <span className={i === 1 ? "text-white" : "text-[#A1A1AA]"}>
-              {item.section}
-            </span>
-            <span className="ml-auto shrink-0 font-mono text-[10px] tracking-[0.12em] text-[#71717A] uppercase">
-              {item.done ? "Answered" : i === 1 ? "Asking" : "Next"}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/**
- * What comes back from answering it. Deliberately shows a partial answer
- * scoring well: the whole point of asking one question is that you are marked
- * on the answer, not on everything you failed to mention.
- */
-function AnswerPanel() {
-  return (
-    <div className="glass flex h-full flex-col rounded-2xl p-6">
-      <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
-        Your answer, marked
-      </span>
-
-      <p className="mt-4 text-sm leading-relaxed text-[#A1A1AA] italic">
-        &ldquo;Because it needs the ATP and the NADPH — the light part makes
-        those, and the cycle spends them fixing the carbon.&rdquo;
-      </p>
-
-      <div className="mt-5 flex items-center gap-4">
-        <span className="font-mono text-3xl font-semibold text-white tabular-nums">
-          82
-        </span>
-        <span className="text-xs leading-5 text-[#A1A1AA]">
-          Answered the question that was asked, and got it right.
-        </span>
-      </div>
-
-      <div className="mt-auto flex flex-col gap-2 border-t border-white/10 pt-4 text-xs">
-        <span className="flex items-start gap-2.5 text-[#A1A1AA]">
-          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-green-500" />
-          Named both products and what spends them
-        </span>
-        <span className="flex items-start gap-2.5 text-[#A1A1AA]">
-          <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-amber-500" />
-          Did not say why NADPH specifically
-        </span>
-      </div>
-    </div>
-  );
-}
-
-/* The same three statuses the recording screen paints: right, missing a step,
-   and unjudged. Written as one continuous sentence so the colouring reads as
-   something happening to speech rather than as a list of verdicts. */
-const SPOKEN_WORDS: Array<{ text: string; status: "correct" | "gap" | null }> =
-  [
-    { text: "So the light reactions", status: "correct" },
-    { text: "split water", status: "correct" },
-    { text: "and that", status: null },
-    { text: "energy turns directly into glucose,", status: "gap" },
-    { text: "which the plant", status: null },
-    { text: "uses to grow.", status: "correct" },
-  ];
-
-/** How far the colouring trails the voice, in reveal steps. */
-const JUDGEMENT_LAG = 1;
-const REVEAL_MS = 620;
-/** Beats the finished sentence is held before the loop starts over. */
-const HOLD_STEPS = 4;
-
-/**
- * The live colouring, played back at speaking speed.
- *
- * The lag matters: the grader is shown catching up a beat behind the words,
- * because that is what actually happens and because colour landing on the
- * syllable would read as a scripted animation rather than as a judgement.
- */
-function LiveColouringPanel() {
-  const shouldReduceMotion = useReducedMotion();
-  const { ref, visible } = useInView<HTMLDivElement>();
-  const [spoken, setSpoken] = useState(0);
-
-  useEffect(() => {
-    if (shouldReduceMotion || !visible) return;
-    const loop = SPOKEN_WORDS.length + JUDGEMENT_LAG + HOLD_STEPS;
-    const timer = window.setInterval(
-      () => setSpoken((current) => (current >= loop ? 0 : current + 1)),
-      REVEAL_MS,
-    );
-    return () => window.clearInterval(timer);
-  }, [shouldReduceMotion, visible]);
-
-  // Under reduced motion the sentence is simply shown finished, which is the
-  // thing being advertised anyway.
-  const said = shouldReduceMotion ? SPOKEN_WORDS.length : spoken;
-  const judged = shouldReduceMotion
-    ? SPOKEN_WORDS.length
-    : spoken - JUDGEMENT_LAG;
-  const talking =
-    !shouldReduceMotion && spoken > 0 && said < SPOKEN_WORDS.length;
-
-  return (
-    <div ref={ref} className="glass flex h-full flex-col rounded-2xl p-6">
-      <div className="flex items-center justify-between gap-4">
-        <span className="flex items-center gap-2 text-xs font-medium text-[#A1A1AA]">
-          <span className="relative flex size-2">
-            {talking && (
-              <span className="absolute inline-flex size-full animate-ping rounded-full bg-red-500 opacity-75" />
-            )}
-            <span className="relative inline-flex size-2 rounded-full bg-red-500" />
-          </span>
-          Recording
-        </span>
-        <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
-          Colouring live
-        </span>
-      </div>
-
-      <p className="mt-5 min-h-[7.5rem] text-lg leading-relaxed text-balance">
-        {SPOKEN_WORDS.map((word, i) => (
-          <span
-            key={word.text}
-            className={cn(
-              "transition-all duration-500",
-              i >= said && "opacity-0",
-              i < said && i >= judged && "text-white",
-              i < judged && word.status === null && "text-[#71717A]",
-              i < judged && word.status === "correct" && "text-green-500",
-              i < judged &&
-                word.status === "gap" &&
-                "rounded bg-red-500/10 font-medium text-red-500",
-            )}
-          >
-            {word.text}{" "}
-          </span>
-        ))}
-      </p>
-
-      <div className="mt-auto flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-white/10 pt-4">
-        <Legend className="bg-green-500" label="Said it right" />
-        <Legend className="bg-red-500" label="Step missing" />
-        <Legend className="bg-white/25" label="Not a claim" />
-      </div>
-    </div>
-  );
-}
-
-function Legend({ className, label }: { className: string; label: string }) {
-  return (
-    <span className="flex items-center gap-2 text-xs text-[#A1A1AA]">
-      <span className={cn("size-1.5 rounded-full", className)} />
-      {label}
-    </span>
-  );
-}
-
-/* Illustrative figures. They match what the report actually shows: this
-   session's pace, the speaker's own baseline, and a difference only called
-   out when it is large enough to mean anything. */
-const PACE_WPM = 108;
-const PACE_USUAL = 142;
-
-/**
- * The pace tracker. Deliberately makes no claim on its own — the callout at
- * the bottom is conditioned on the grader having independently marked the
- * same stretch, which is the rule the real report follows.
- */
-function PaceTrackerPanel() {
-  const { ref, visible } = useInView<HTMLDivElement>();
-  const slower = Math.round(((PACE_USUAL - PACE_WPM) / PACE_USUAL) * 100);
-
-  return (
-    <div ref={ref} className="glass flex h-full flex-col rounded-2xl p-6">
-      <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
-        How you spoke
-      </span>
-
-      {/* Each figure carries its own bar. Stacking the two bars together read
-          as one bar with a stray line under it. */}
-      <div className="mt-4 grid grid-cols-2 gap-x-5">
-        <PaceFigure
-          label="This explanation"
-          value={PACE_WPM}
-          pct={(PACE_WPM / PACE_USUAL) * 100}
-          visible={visible}
-        />
-        <PaceFigure
-          label="Your usual"
-          value={PACE_USUAL}
-          pct={100}
-          visible={visible}
-          muted
-        />
-      </div>
-
-      <p className="mt-auto border-l-2 border-amber-500/50 pt-5 pl-3 text-sm leading-6 text-[#A1A1AA]">
-        <span className="font-medium text-amber-400">
-          {slower}% slower than usual
-        </span>{" "}
-        — and right where the explanation was marked weak. Worth re-teaching
-        first.
-      </p>
-    </div>
-  );
-}
-
-function PaceFigure({
-  label,
-  value,
-  pct,
-  visible,
-  muted,
-}: {
-  label: string;
-  value: number;
-  /** Width of this figure's bar, as a share of the larger of the two. */
-  pct: number;
-  visible: boolean;
-  muted?: boolean;
-}) {
-  return (
-    <div>
-      <p className="text-xs text-[#71717A]">{label}</p>
-      <p
-        className={cn(
-          "mt-0.5 font-mono text-2xl font-semibold tabular-nums",
-          muted ? "text-[#A1A1AA]" : "text-white",
-        )}
-      >
-        {value}
-        <span className="ml-1.5 font-sans text-[10px] font-normal text-[#71717A]">
-          wpm
-        </span>
-      </p>
-      <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/[0.06]">
-        <div
-          className={cn(
-            "h-full rounded-full transition-[width] duration-700",
-            EASE_CSS,
-            muted ? "bg-white/25" : "bg-amber-500",
-          )}
-          style={{ width: visible ? `${pct}%` : "0%" }}
-        />
-      </div>
-    </div>
-  );
-}
-
 function SourcesPanel() {
   return (
     <div className="flex flex-col gap-2 p-5">
@@ -1573,68 +1157,6 @@ function GapPanel() {
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-/**
- * The two ways to spend a recording.
- *
- * Deliberately not a pricing table wearing new labels: there is no better and
- * worse column, and no price. The only asymmetry worth showing is what the
- * clock is spent on, so the shared half — score, pace, gap report — is stated
- * once underneath rather than tick-marked twice down both sides.
- */
-function ModeCards() {
-  const modes = [
-    {
-      label: "Topic mode",
-      line: "Explain as much as you know.",
-      body: "Open-ended. One topic, three minutes, no prompting. What you reach for first and what you never get to are both the point.",
-      detail: "Marked against the whole course",
-    },
-    {
-      label: "Interview mode",
-      line: "Sit the oral exam.",
-      body: "Three questions inside the same three minutes, asked one at a time. Answer, and the clock carries straight on to a question written out of what you just missed.",
-      detail: "Marked question by question",
-    },
-  ];
-
-  return (
-    <div className="flex flex-col gap-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        {modes.map((mode, i) => (
-          <div
-            key={mode.label}
-            className={cn(
-              "flex flex-col rounded-2xl border p-6 text-left",
-              i === 1
-                ? "border-brand/30 bg-brand/[0.05]"
-                : "border-white/10 bg-white/[0.02]",
-            )}
-          >
-            <span className="font-mono text-[10px] tracking-[0.14em] text-[#71717A] uppercase">
-              {mode.label}
-            </span>
-            <h3 className="mt-3 text-xl font-semibold text-white">
-              {mode.line}
-            </h3>
-            <p className="mt-3 text-sm leading-relaxed text-[#A1A1AA]">
-              {mode.body}
-            </p>
-            <p className="mt-auto pt-5 text-xs font-medium text-brand">
-              {mode.detail}
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <p className="rounded-2xl border border-white/10 bg-white/[0.02] p-5 text-center text-sm leading-relaxed text-[#A1A1AA]">
-        Both cost one of the day's recordings, and both end the same way: a
-        score, your pace against your own baseline, the transcript coloured
-        where you were right and where you were not, and the gaps written out.
-      </p>
     </div>
   );
 }
