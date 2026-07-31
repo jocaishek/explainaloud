@@ -538,6 +538,30 @@ ${renderSources(evidenceSources)}`,
     ),
   );
 
+  /**
+   * Videos and further reading, started now and collected at the end.
+   *
+   * These used to run after the reviewer and the reviser had both finished,
+   * which put two web-search round trips at the end of a chain that already
+   * had three model calls in it — five stages in series, and a generation that
+   * took five minutes and outlived the platform's request ceiling.
+   *
+   * Nothing they need comes from the review. Videos are chosen from the search
+   * queries the architect wrote and further reading from its key points, and
+   * the reviser corrects claims rather than deciding which topics exist. So
+   * they overlap the review instead of queueing behind it, and one whole stage
+   * leaves the critical path.
+   */
+  const supplementary = Promise.all([
+    discoverCourseVideos(params.topic, architectCourse.video_searches),
+    grounded
+      ? discoverCourseResources(
+          params.topic,
+          architectCourse.sections.flatMap((section) => section.key_points),
+        )
+      : Promise.resolve(research),
+  ]);
+
   let review: CourseReview;
   let reviewerProvider: "gemini" | "groq" | "local" = "local";
   let reviewerStatus: AgentStep["status"] = "completed";
@@ -552,7 +576,12 @@ ${renderSources(evidenceSources)}`,
         draft: auditView(architectCourse),
       }),
       (value) => courseReviewSchema.parse(value),
-      { maxOutputTokens: REVIEW_OUTPUT_TOKENS },
+      // The small model, because this pass finds problems rather than writing
+      // prose: it returns four pass/fail checks and a list of issues, and it
+      // sits directly on the critical path of a build the student is watching.
+      // A missed issue costs one imperfect section; a slow reviewer costs
+      // everybody thirty seconds of staring at a spinner.
+      { fast: true, maxOutputTokens: REVIEW_OUTPUT_TOKENS },
     );
     review = reviewer.data;
     reviewerProvider = reviewer.provider;
@@ -643,15 +672,8 @@ ${renderSources(evidenceSources)}`,
     throw new CourseCitationError();
   }
 
-  const [videoDiscovery, resourceDiscovery] = await Promise.all([
-    discoverCourseVideos(params.topic, course.video_searches),
-    grounded
-      ? discoverCourseResources(
-          params.topic,
-          course.sections.flatMap((section) => section.key_points),
-        )
-      : Promise.resolve(research),
-  ]);
+  // Already in flight since the draft landed; by here it has usually settled.
+  const [videoDiscovery, resourceDiscovery] = await supplementary;
   course = {
     ...course,
     videos: videoDiscovery.videos,
