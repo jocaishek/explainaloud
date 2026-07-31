@@ -119,6 +119,18 @@ Always set "scope_note" to null. Topic breadth is judged separately.
 
 Produce 3-5 sections, 6-12 notes, 3-5 video searches and 2-4 resources.
 
+Each "quiz" is a question the student answers out loud, and it is marked on
+whether they explained the mechanism — so it must ask for one.
+- Ask for mechanism, cause, comparison or consequence: "why", "how", "what
+  would happen if", "what is the difference between".
+- BANNED OPENINGS: "What is", "What are", "Define", "Name", "List", "Which
+  of". A question starting that way asks for a label, and a label can be
+  produced with no understanding at all. It is also unanswerable in depth by
+  construction, so it marks the student down for answering exactly what was
+  asked: "What is the definition of equilibrium?" can only ever be a
+  definition. "Why does adding product shift a system back toward reactants?"
+  is the same material asked properly.
+
 Every section must contain at least one "key_points" entry. Each entry must be
 a single, concrete, checkable claim — these are what the student's spoken
 explanation is graded against later, so they must be specific enough to verify.
