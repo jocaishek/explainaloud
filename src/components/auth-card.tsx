@@ -376,15 +376,38 @@ export function AuthCard({
                 names this domain rather than a Supabase project ref. The
                 styled button below is what everyone else gets. */}
             {googleMode === "identity" ? (
-              <GoogleSignIn
-                disabled={submitting}
-                onUnavailable={() => setGoogleMode("redirect")}
-                onError={setError}
-                onStart={() => {
-                  if (mode === "signup") stashPendingConsent(newConsent());
-                  setOauthLoading("google");
-                }}
-              />
+              <>
+                <GoogleSignIn
+                  disabled={submitting}
+                  onUnavailable={() => setGoogleMode("redirect")}
+                  onError={setError}
+                  onStart={() => {
+                    if (mode === "signup") stashPendingConsent(newConsent());
+                    setOauthLoading("google");
+                  }}
+                />
+                {/*
+                  Identity Services signs people in through a popup, and a
+                  blocked popup is a dead button: Google reports it only to its
+                  own console logger, from inside an iframe this page cannot
+                  read, so there is nothing to catch and no way to fall back
+                  automatically. The click simply does nothing.
+
+                  Hence a way out that is always on screen. It is worded for
+                  the symptom rather than the cause, because "no window
+                  appeared" is the whole of what the person can observe.
+                */}
+                <button
+                  type="button"
+                  disabled={oauthLoading !== null || submitting}
+                  onClick={() => handleOAuth("google")}
+                  className="self-center text-xs text-subtle underline underline-offset-2 transition-colors hover:text-strong disabled:opacity-50"
+                >
+                  {oauthLoading === "google"
+                    ? "Redirecting…"
+                    : "No Google window appeared? Sign in this way instead"}
+                </button>
+              </>
             ) : (
               <Button
                 type="button"
