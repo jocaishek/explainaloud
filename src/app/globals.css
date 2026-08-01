@@ -459,12 +459,38 @@
      beside it setting at about thirty characters. */
   --gutter: 2.75rem;
 
+  /* The measure, expressed as padding rather than as a centred container.
+   *
+   * The page has no wrapper and cannot easily have one: every panel is
+   * full-bleed by design — the alternating stocks and the inverted closing
+   * region run edge to edge — so a `max-width` box around the content would
+   * have to sit inside each section, and the timecode ladder and the ghost
+   * numerals are positioned against the section itself. Padding that grows
+   * once the viewport passes the measure keeps one number in one place and
+   * every absolutely positioned thing can share it.
+   *
+   * Without this the page simply kept stretching. At 2000px the headline
+   * column and the take panel were the same size they are at 1400 with nine
+   * hundred pixels of nothing between them, and the running order's durations
+   * sat a screen's width from the rows they belonged to. Content islands
+   * drifting apart is the specific way an unconstrained layout looks broken
+   * on a large display.
+   *
+   * `100%` rather than `100vw`: a percentage resolves against the containing
+   * block, so it excludes the scrollbar. `100vw` includes it, which overshoots
+   * by however wide the scrollbar is and puts a horizontal scroll on the page.
+   * `max()` is what keeps the value from going negative below the measure —
+   * a negative padding is invalid and would drop the declaration entirely. */
+  --measure: 84rem;
+  --pad: 1rem;
+
   background: var(--stock);
   color: var(--ink);
 }
 @media (min-width: 768px) {
   .tx {
     --gutter: 5.5rem;
+    --pad: max(2rem, calc((100% - var(--measure)) / 2));
   }
 }
 @media (min-width: 1024px) {
