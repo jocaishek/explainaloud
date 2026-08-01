@@ -62,16 +62,32 @@ export function LevelMeter({
     const bars = Array.from(row.children) as HTMLElement[];
     const heights = new Array<number>(bars.length).fill(0);
 
-    if (!active || reduced) {
+    if (!active) {
       for (const bar of bars) bar.style.transform = "scaleY(0.08)";
       return;
     }
 
     let frame = 0;
+    let last = 0;
     let spectrum: Uint8Array<ArrayBuffer> | null = null;
 
-    const draw = () => {
+    const draw = (now: number) => {
       frame = requestAnimationFrame(draw);
+      /* Under `prefers-reduced-motion` the meter slows down; it does not stop.
+       *
+       * It used to stop, and that was a misreading of the setting. This row is
+       * not an animation, it is the only thing on the screen that says the
+       * microphone is working — held at its floor it looks exactly like a dead
+       * input, which is the one lie it exists to prevent. Somebody with the
+       * setting on would sing at it and watch nothing happen.
+       *
+       * Six frames a second still reads as a level and is far below the rate
+       * the setting is meant to protect against. The smoothing constants below
+       * are per-frame, so at this rate they land closer to a step than a
+       * glide — which is the point. */
+      if (reduced && now - last < 160) return;
+      last = now;
+
       const analyser = analyserRef.current;
       if (!analyser) return;
 

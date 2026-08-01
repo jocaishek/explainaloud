@@ -59,6 +59,29 @@ const MIN_WORDS_PER_WINDOW = 3;
 const MIN_VOICED_SECONDS = 3;
 
 /**
+ * Fastest rate that can be a measurement rather than an artefact.
+ *
+ * Conversational English runs 120–160 words a minute. Fast, fluent, rehearsed
+ * delivery reaches about 200. Competitive speed talkers and auctioneers touch
+ * 300 and are a spectacle for doing it. Nobody explaining mitosis is above
+ * this, so a window that reads higher is not a person talking quickly — it is
+ * arithmetic on timings that do not describe speech.
+ *
+ * That happens for a specific reason. When Whisper is handed audio it cannot
+ * transcribe — singing, music, a language it is not hearing well — it does not
+ * fail. It invents fluent text and gives it timings compressed into whatever
+ * audio it was looking at, and the rate computed from those is nonsense. A
+ * take of somebody singing came back with a window at 661 words a minute,
+ * drawn to scale on the gap report as though it were something they had done.
+ *
+ * Dropping the window rather than clamping it is the point: a clamped 300
+ * still asserts that a rate was measured there. If every window in a recording
+ * fails this, `rates` is empty and `reliable` is false, so the whole delivery
+ * is reported as unmeasurable instead of confidently wrong.
+ */
+const MAX_PLAUSIBLE_WPM = 300;
+
+/**
  * Least speech needed before a rate is worth reporting at all. Under this
  * there are too few windows for a median to mean anything.
  *
@@ -257,8 +280,11 @@ function rateWindows(words: TranscribedWord[]): RateWindow[] {
     const voiced = Math.max(0, RATE_WINDOW_SECONDS - silence);
     if (voiced < MIN_VOICED_SECONDS) continue;
 
+    const wpm = (count * 60) / voiced;
+    if (wpm > MAX_PLAUSIBLE_WPM) continue;
+
     windows.push({
-      wpm: (count * 60) / voiced,
+      wpm,
       atSeconds: start - first.start,
       from,
       to,
