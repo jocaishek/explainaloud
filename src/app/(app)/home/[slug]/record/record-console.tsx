@@ -13,6 +13,7 @@ import { localDay } from "~/lib/limits";
 import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
+import { LevelMeter } from "./level-meter";
 
 type Session = {
   id: string;
@@ -2566,6 +2567,14 @@ export function RecordConsole({
               </span>
             )}
           </div>
+
+          {/* The hero panel's level meter, on the screen where there is
+              actually something to meter. It reads the analyser the silence
+              watchdog already opened, so a muted microphone shows as a flat
+              row straight away instead of as a warning ten seconds in. */}
+          {status === "recording" && (
+            <LevelMeter analyserRef={analyserRef} active={true} />
+          )}
 
           <p className="min-h-[6rem] text-[1.02rem] leading-[1.6]">
             <ColouredTranscript

@@ -2,8 +2,7 @@
 
 # Explainaloud
 
-**Rereading your notes feels like learning. Explaining the topic out loud is where
-you find out.**
+**Say it out loud, and turn *sort of* into *certain*.**
 
 <br clear="left" />
 
@@ -11,8 +10,15 @@ Upload your material, talk through it for three minutes, and get back your own
 words marked sentence by sentence: what you had right, what was vague, and the
 steps you skipped without noticing. Nothing is typed and no audio is kept.
 
-[ARCHITECTURE.md](./ARCHITECTURE.md) describes the production data flow and the
-features that are actually implemented. This file is how to run it.
+Three files sit above this one, and each answers a different question:
+
+| | |
+|---|---|
+| [PRODUCT.md](./PRODUCT.md) | Who it is for, what it is for, and what may not be claimed about it |
+| [ARCHITECTURE.md](./ARCHITECTURE.md) | The production data flow, and which features are actually implemented |
+| [CLAUDE.md](./CLAUDE.md) | The working rules, indexed |
+
+This file is how to run it.
 
 ## What it does
 
@@ -30,9 +36,12 @@ features that are actually implemented. This file is how to run it.
 - **Colours your words as you speak them.** Green for right, red for a missing
   step, grey for anything that makes no checkable claim. You do not have to
   finish and wait for a verdict.
-- **Measures pace against your own baseline**, recorded during onboarding, using
-  articulation rate rather than gross words per minute, so thinking pauses do not
-  count against you.
+- **Measures pace against your own baseline**, recorded during onboarding.
+  Articulation rate, not gross words per minute: silence inside each window
+  comes out of that window's denominator, so the number is how fast you speak
+  rather than how long you took. The gap report draws it across the whole take,
+  window by window, and the home screen charts your last five sessions against
+  the same line.
 - **Interview mode.** One question at a time, drawn from a per-course bank, never
   repeating a question you have already been asked, with the next one written out
   of what the last answer missed.
@@ -44,7 +53,7 @@ features that are actually implemented. This file is how to run it.
 | | |
 |---|---|
 | Framework | Next.js (App Router), React 19, TypeScript |
-| Styling | Tailwind CSS v4 with OKLCH tokens, shadcn/ui, light and dark |
+| Styling | Tailwind CSS v4 with OKLCH tokens, shadcn/ui, light by default with dark as a choice |
 | Linter and formatter | Biome |
 | Data and auth | Supabase Postgres with row-level security |
 | AI | Gemini primary, Groq failover, validated local fallbacks for grading |
@@ -149,6 +158,36 @@ sign-in bouncing to the wrong origin.
 ## Repository conventions
 
 [CLAUDE.md](./CLAUDE.md) indexes the rules in `.claude/rules/`: environment
-variables, the stack, styling tokens, and the Supabase migration and auth
-workflow. They are worth reading before a first change, because most of them
-exist because something broke.
+variables, the stack, styling tokens, art direction, and the Supabase migration
+and auth workflow. They are worth reading before a first change, because most of
+them exist because something broke.
+
+## Design
+
+[`.claude/rules/design.md`](./.claude/rules/design.md) is the brief: the
+references, the shared traits worth copying, and the specific tells that make a
+page look AI-generated. Read it before changing anything visual. What follows is
+only the shape the brief took here.
+
+The landing page is laid out as an as-live broadcast script — a timecode
+gutter down the left, hairlines instead of card edges, sections numbered 01 to
+06. The rule the whole page follows is that the product marks you while you are
+still talking, so the page marks you while you are still reading it: the
+headline grades itself, the hero panel fills with a take as it arrives, and
+there is no screenshot of that happening anywhere on the site.
+
+Three things are load-bearing rather than decorative, and breaking them is the
+usual way a change here goes wrong:
+
+- **The three verdict colours are reserved.** `--ok`, `--miss` and `--vague`
+  mean right, missing a step, and said-but-not-checkable — everywhere, in the
+  marked transcript and on the charts alike. Nothing else may use them, so that
+  the green somebody is shown before signing up is the green they are graded
+  in afterwards.
+- **The gutter is a grid column.** Sections are
+  `grid-cols-[var(--gutter)_1fr]`, and an element inserted between a section
+  and its rows breaks the ruler running down the page.
+- **No invented proof.** There are no usage numbers, no testimonials, no
+  customer names and no press on the site, and none may be added — see
+  [PRODUCT.md](./PRODUCT.md). The demonstration material is authored, and it is
+  marked exactly as the grader would mark it.

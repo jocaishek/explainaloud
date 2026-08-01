@@ -4,6 +4,7 @@ import {
   SlowSpotCallout,
 } from "~/components/delivery-summary";
 import { KnowledgeScore } from "~/components/knowledge-score";
+import { PaceTrack } from "~/components/pace-track";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { SessionPicker } from "~/components/session-picker";
 import type { GapReport, SpanStatus } from "~/lib/ai/schemas";
@@ -360,6 +361,13 @@ export default async function GapReportPage({
               usualWpm={baselineWpm}
               recordingsSoFar={reliablePastWpm.length}
             />
+          )}
+
+          {/* The shape of the delivery, under the two numbers that summarise
+              it. Absent on sessions recorded before the window rates were
+              stored — see `SpeechMetrics.pace`. */}
+          {!focused && metrics?.reliable && metrics.pace && (
+            <PaceTrack pace={metrics.pace} baselineWpm={baselineWpm} />
           )}
 
           {!focused && slowSpot && slowSpotWeakness && baselineWpm && (

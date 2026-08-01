@@ -30,6 +30,10 @@ export type PaceSession = {
   id: string;
   topic: string;
   wpm: number;
+  /** Where the bar goes: this session's own gap report. */
+  href: string;
+  /** Short date under the bar, formatted on the server. */
+  when: string;
 };
 
 export function PacePanel({
@@ -64,21 +68,37 @@ export function PacePanel({
         </p>
       </div>
 
-      <div className="relative mt-6 flex h-32 items-end gap-[3px]">
+      {/* Two rows, not one.
+       *
+       * The bars and their labels are separate flex rows sharing the same gap
+       * and the same `flex-1` children, so the columns line up without the
+       * labels being inside the plotted area. They cannot be: the baseline is
+       * positioned as a percentage of its container's height, and a container
+       * that also held the labels would put the line in the wrong place. */}
+      <div className="relative mt-6 flex h-32 items-end gap-2">
         {sessions.map((session) => {
           const over = session.wpm > baselineWpm * RACING;
           return (
-            <div
+            <Link
               key={session.id}
-              title={`${session.topic}: ${session.wpm} wpm`}
-              className="flex-1 rounded-t-[4px]"
-              style={{
-                height: `${(session.wpm / peak) * 100}%`,
-                // The reserved amber, and it means here what it means inside a
-                // transcript: said, but not in a form worth trusting.
-                background: over ? "var(--vague)" : "var(--color-brand)",
-              }}
-            />
+              href={session.href}
+              aria-label={`${session.topic}, ${session.wpm} words per minute — open this session's gap report`}
+              className="press group flex flex-1 items-end self-stretch rounded-t-[4px] focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+            >
+              {/* The bar is inside the link rather than being it, so the
+                  whole column height is clickable — a 40 wpm bar is a
+                  thirty-pixel target otherwise, and the short bars are the
+                  ones worth reading about. */}
+              <span
+                className="w-full rounded-t-[4px] transition-[filter,transform] duration-200 ease-out group-hover:brightness-110 group-focus-visible:brightness-110"
+                style={{
+                  height: `${(session.wpm / peak) * 100}%`,
+                  // The reserved amber, and it means here what it means inside
+                  // a transcript: said, but not in a form worth trusting.
+                  background: over ? "var(--vague)" : "var(--color-brand)",
+                }}
+              />
+            </Link>
           );
         })}
 
@@ -91,6 +111,24 @@ export function PacePanel({
         />
       </div>
 
+      {/* What each bar is. Without this the chart is a row of coloured blocks
+          that happen to be clickable, and nothing says where a click goes. */}
+      <div className="mt-2 flex gap-2">
+        {sessions.map((session) => (
+          <div key={session.id} className="min-w-0 flex-1">
+            <p className="font-mono text-[0.7rem] text-strong tabular-nums">
+              {session.wpm}
+            </p>
+            <p className="truncate text-[0.75rem] text-subtle">
+              {session.topic}
+            </p>
+            <p className="truncate font-mono text-[0.65rem] text-subtle uppercase tracking-[0.08em]">
+              {session.when}
+            </p>
+          </div>
+        ))}
+      </div>
+
       <p className="mt-4 border-border border-t pt-3 text-[0.88rem] text-subtle leading-relaxed">
         {racing ? (
           <>
@@ -99,18 +137,31 @@ export function PacePanel({
               {latest?.wpm}
             </span>{" "}
             wpm, well over your baseline. Racing usually means reciting.{" "}
-            <Link href="/gapreport" className="text-brand-ink underline">
+            <Link
+              href={latest?.href ?? "/gapreport"}
+              className="text-brand-ink underline"
+            >
               See what you missed
             </Link>
             .
           </>
         ) : (
           <>
+            {/* Said from the measurement's side, not the reader's.
+             *
+             * This was "Thinking time is not counted against you", which
+             * people read as a warning that their thinking time was being
+             * watched — the sentence names the penalty first and the reprieve
+             * second, so the penalty is what lands. It is also not what the
+             * number does: silence inside each ten-second window is
+             * subtracted from that window's denominator, so the rate is words
+             * over time spent speaking. Pausing does not lower it because
+             * pausing is not in it. */}
             Your last session ran{" "}
             <span className="font-medium text-strong tabular-nums">
               {latest?.wpm}
             </span>{" "}
-            wpm. Thinking time is not counted against you.
+            wpm — how fast you speak, with the pauses left out.
           </>
         )}
       </p>

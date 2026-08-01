@@ -1,0 +1,247 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useMediaQuery } from "~/hooks/use-media-query";
+import { cn } from "~/lib/utils";
+
+/**
+ * Pace across one take — section 04 of the landing page, drawn from a real
+ * recording.
+ *
+ * `DeliverySummary` above it reports a median, and a median cannot show the
+ * two things worth seeing in a delivery: that someone raced the opening and
+ * then stalled, or that they held one rate the whole way through.
+ *
+ * This is a deliberate port rather than a chart that happens to resemble one.
+ * The landing page promises this exact picture before anybody signs up — bars
+ * to scale, the baseline ruled *across* them rather than under them so getting
+ * ahead of it reads as a crossing, its value pinned at the right-hand end of
+ * the rule, a hover that dims every other bar and puts the number above the
+ * one you are on, and a timecode axis underneath. Somebody who arrives here
+ * from the landing page should recognise the thing they were shown, down to
+ * the amber. A demo that promises one surface and delivers another is a small
+ * lie told at the worst possible moment.
+ *
+ * Two honest differences from the marketing version, both because this one is
+ * measured rather than authored:
+ *
+ * - The axis says what these windows actually are. Section 04 says
+ *   "eight-second windows" because its eight bars are a literal array; here
+ *   about seventy overlapping ten-second windows are averaged down to sixteen
+ *   bars, so claiming a window length would be false precision.
+ * - The baseline can be absent. Before a warm-up or a couple of measured
+ *   sessions there is nothing to rule across the bars, and the shape of the
+ *   delivery is still worth seeing on its own.
+ *
+ * Descriptive, like the summary above it. No verdict is attached to the shape:
+ * a slow stretch only becomes a claim about understanding in `SlowSpotCallout`,
+ * where a second, independent signal has to agree with it first.
+ */
+
+/** Above this multiple of the baseline, a stretch counts as racing. */
+const RACING = 1.15;
+
+/**
+ * Most bars drawn, whatever the recording's length.
+ *
+ * Windows are sampled every 2.5 seconds, so three minutes produces about
+ * seventy of them — at panel width that is a texture, not a chart. Adjacent
+ * windows are averaged down to this many, which also smooths the overlap
+ * between them.
+ */
+const MAX_BARS = 16;
+
+/** Below this there is no shape to look at, only a couple of readings. */
+const MINIMUM_WINDOWS = 4;
+
+/** The house ease, the same one the landing page uses. */
+const EASE = "cubic-bezier(0.23, 1, 0.32, 1)";
+
+export type PacePoint = { atSeconds: number; wpm: number };
+
+function clock(seconds: number) {
+  const total = Math.round(seconds);
+  const minutes = Math.floor(total / 60);
+  return `${minutes}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** Average each run of windows down to one bar, keeping the first one's time. */
+function bucket(points: PacePoint[]): PacePoint[] {
+  if (points.length <= MAX_BARS) return points;
+  const per = Math.ceil(points.length / MAX_BARS);
+  const out: PacePoint[] = [];
+  for (let i = 0; i < points.length; i += per) {
+    const run = points.slice(i, i + per);
+    const sum = run.reduce((n, p) => n + p.wpm, 0);
+    out.push({
+      atSeconds: run[0]?.atSeconds ?? 0,
+      wpm: Math.round(sum / run.length),
+    });
+  }
+  return out;
+}
+
+/** The landing page's mono slug, in the app's tokens. */
+function Slug({
+  children,
+  className,
+  style,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <span
+      style={style}
+      className={cn(
+        "font-mono text-[0.65rem] text-subtle uppercase tracking-[0.09em]",
+        className,
+      )}
+    >
+      {children}
+    </span>
+  );
+}
+
+export function PaceTrack({
+  pace,
+  baselineWpm,
+}: {
+  pace: PacePoint[];
+  /** The speaker's own reference. Null before there is one to compare against. */
+  baselineWpm: number | null;
+}) {
+  const [hover, setHover] = useState<number | null>(null);
+  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
+  /* Bars grow from the floor on arrival, as they do on the landing page. Set
+     on the frame after mount so there is an unmarked frame to grow from —
+     started synchronously it is finished before the browser has painted. */
+  const [grown, setGrown] = useState(false);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setGrown(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
+
+  if (pace.length < MINIMUM_WINDOWS) return null;
+
+  const bars = bucket(pace);
+  const last = pace[pace.length - 1];
+  const peak = Math.max(...bars.map((p) => p.wpm), baselineWpm ?? 0) * 1.15;
+  if (peak <= 0) return null;
+
+  const shown = grown || reduced;
+
+  return (
+    <section
+      aria-labelledby="pace-track-heading"
+      className="flex flex-col gap-5 rounded-xl border border-border bg-surface p-5"
+    >
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2
+          id="pace-track-heading"
+          className="font-medium text-subtle text-xs uppercase tracking-[0.14em]"
+        >
+          Pace through the take
+        </h2>
+        <Slug>{bars.length} windows</Slug>
+      </div>
+
+      {/* A label column on the left, where the landing page runs its timecode
+          gutter. Fixed rather than `var(--gutter)`, which only exists inside
+          the marketing page's own type world. */}
+      <div className="grid grid-cols-[2.25rem_1fr] gap-x-3 sm:grid-cols-[3rem_1fr]">
+        <Slug className="pt-1">wpm</Slug>
+        <div className="min-w-0">
+          <div className="relative flex h-[clamp(8rem,22vw,12rem)] items-end gap-[3px]">
+            {bars.map((point, i) => {
+              const over = baselineWpm
+                ? point.wpm > baselineWpm * RACING
+                : false;
+              return (
+                <button
+                  type="button"
+                  key={point.atSeconds}
+                  onMouseEnter={() => setHover(i)}
+                  onMouseLeave={() => setHover(null)}
+                  onFocus={() => setHover(i)}
+                  onBlur={() => setHover(null)}
+                  aria-label={`${clock(point.atSeconds)}: ${point.wpm} words per minute${
+                    over ? ", racing" : ""
+                  }`}
+                  className="relative block flex-1 self-end rounded-t-[4px] focus:outline-none"
+                  style={{
+                    height: shown ? `${(point.wpm / peak) * 100}%` : "0%",
+                    // The reserved amber, meaning what it means everywhere
+                    // else: said, but not in a form worth trusting.
+                    background: over ? "var(--vague)" : "var(--color-brand)",
+                    // Dimming the rest is what makes one bar readable in a row
+                    // of sixteen; without it the hover only moves a tooltip.
+                    opacity: hover === null || hover === i ? 1 : 0.3,
+                    transition: reduced
+                      ? "opacity 180ms ease-out"
+                      : `height 720ms ${EASE} ${i * 40}ms, opacity 180ms ease-out`,
+                  }}
+                >
+                  <span
+                    className={cn(
+                      "-translate-x-1/2 absolute bottom-full left-1/2 mb-2 font-mono text-[0.6rem] text-strong tabular-nums transition-opacity duration-150",
+                      hover === i ? "opacity-100" : "opacity-0",
+                    )}
+                  >
+                    {point.wpm}
+                  </span>
+                </button>
+              );
+            })}
+
+            {baselineWpm && (
+              <div
+                className="pointer-events-none absolute inset-x-0 border-foreground/50 border-t border-dashed"
+                style={{
+                  bottom: `${(baselineWpm / peak) * 100}%`,
+                  opacity: shown ? 1 : 0,
+                  transition: reduced
+                    ? undefined
+                    : `opacity 500ms ${EASE} 720ms`,
+                }}
+              >
+                {/* Pinned to the rule itself, on an opaque chip, so neither
+                    the dashed line nor a bar behind it runs through the
+                    words.
+
+                    `bg-surface` is wrong here and was the first attempt:
+                    it is `rgba(9, 9, 11, 0.04)`, a tint meant to be laid over
+                    something, so the chip stayed transparent and the bars read
+                    straight through the label.
+
+                    `color-mix` was the second, and it fails differently — it
+                    averages the two colours *including their alpha*, landing
+                    on 52% opaque rather than solid. The tint has to be
+                    composited over the page colour, not blended with it,
+                    which is what a flat gradient layered on an opaque base
+                    does. The result is exactly the card's own appearance, so
+                    the chip cannot drift from the panel it sits on. */}
+                <Slug
+                  className="absolute right-0 bottom-1.5 px-2 text-strong"
+                  style={{
+                    background:
+                      "linear-gradient(var(--color-surface), var(--color-surface)), var(--color-background)",
+                  }}
+                >
+                  Your baseline {baselineWpm}
+                </Slug>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-3 flex items-baseline justify-between gap-3 border-border border-t pt-2">
+            <Slug className="tabular-nums">0:00</Slug>
+            <Slug className="truncate">Speaking rate, pauses left out</Slug>
+            <Slug className="tabular-nums">{clock(last?.atSeconds ?? 0)}</Slug>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
