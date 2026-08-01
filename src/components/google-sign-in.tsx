@@ -109,6 +109,23 @@ export function GoogleSignIn({
         },
       });
 
+      /**
+       * Draw the plain button, not the personalised card.
+       *
+       * Once somebody has signed in here once, Google starts rendering their
+       * avatar, name and address in place of "Continue with Google". It is
+       * meant as a convenience and it is one, but it puts a returning
+       * visitor's email address on screen on a shared or borrowed machine,
+       * and the variant quietly ignores the `theme` and `shape` passed below
+       * — so on a dark form it arrives as a white rectangle.
+       *
+       * `disableAutoSelect` is the documented way to clear the returning-user
+       * state the personalised card keys off. Its usual home is a sign-out
+       * handler; called here it simply means this button never personalises.
+       * It does not sign anyone out of Google and does not affect the token.
+       */
+      api.disableAutoSelect();
+
       // Redrawing on a theme switch means clearing what is already there;
       // renderButton appends rather than replacing.
       host.current.replaceChildren();
@@ -143,13 +160,21 @@ export function GoogleSignIn({
   return (
     <div
       ref={host}
-      // Google draws into this node. Held at the button's height before it
-      // arrives so the form does not jump, and blocked from interaction while
-      // an email submit is in flight.
+      /*
+       * Google draws into this node, and what it draws is not fully ours to
+       * control: `shape` and `theme` are requests, and at least one variant
+       * ignores both. So the container clips to the same pill the rest of the
+       * form uses, which keeps a square white card from appearing on a dark
+       * rounded form no matter what Google decides to render.
+       *
+       * `min-h-11` holds the button's height before it arrives so the form
+       * does not jump, and pointer events are off while an email submit is in
+       * flight.
+       */
       className={
         disabled
-          ? "pointer-events-none flex min-h-11 justify-center opacity-60"
-          : "flex min-h-11 justify-center"
+          ? "pointer-events-none flex min-h-11 justify-center overflow-hidden rounded-full opacity-60"
+          : "flex min-h-11 justify-center overflow-hidden rounded-full"
       }
       aria-busy={!ready}
     />
