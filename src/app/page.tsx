@@ -570,7 +570,7 @@ function PanelDecor({ n, side }: { n: string; side: "left" | "right" }) {
   return (
     <div
       aria-hidden="true"
-      className="-z-10 pointer-events-none absolute inset-0 overflow-hidden"
+      className="-z-10 pointer-events-none absolute inset-y-0 right-[var(--pad)] left-[var(--pad)] overflow-hidden"
     >
       {/* Alternating sides down the page.
        *
@@ -602,7 +602,7 @@ function Ladder() {
   return (
     <div
       aria-hidden="true"
-      className="ladder -z-10 pointer-events-none absolute top-0 bottom-0 left-4 hidden w-[var(--gutter)] md:left-8 md:block"
+      className="ladder -z-10 pointer-events-none absolute top-0 bottom-0 left-[var(--pad)] hidden w-[var(--gutter)] md:block"
     />
   );
 }
@@ -713,7 +713,7 @@ function Masthead() {
 
   return (
     <header className="sticky top-0 z-50 bg-white">
-      <div className="rule-b flex items-center gap-4 px-4 py-3 md:px-8">
+      <div className="rule-b flex items-center gap-4 px-[var(--pad)] py-3">
         <Link
           href="/"
           className="press flex shrink-0 items-center gap-2.5"
@@ -878,7 +878,7 @@ function Hero() {
        * empty space — and every attempt to fix it was an attempt to fill the
        * gap rather than to stop making one. Sized by what is in it, with real
        * padding round it, there is nothing left over. */}
-      <section className="paper accent-blue overflow-hidden px-4 py-10 md:px-8 md:py-14">
+      <section className="paper accent-blue overflow-hidden px-[var(--pad)] py-10 md:py-14">
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
           <span className="inline-flex items-center rounded-full border border-[var(--rule)] px-3 py-1.5 font-mono text-[0.66rem] uppercase tracking-[0.09em]">
             <span className="tally-lamp mr-2 inline-block h-[6px] w-[6px] rounded-full bg-[var(--miss)]" />
@@ -1143,7 +1143,7 @@ function RunningOrder() {
   return (
     <section
       id="order"
-      className="paper-grey accent-violet relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper-grey accent-violet relative isolate rule-b scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
     >
       <PanelDecor n="02" side="right" />
       <Ladder />
@@ -1286,7 +1286,7 @@ function LiveMarking() {
     <section
       ref={ref}
       id="marking"
-      className="paper accent-blue relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper accent-blue relative isolate rule-b scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
     >
       <PanelDecor n="03" side="left" />
       <Ladder />
@@ -1416,7 +1416,7 @@ function Pace() {
     <section
       ref={ref}
       id="pace"
-      className="paper-grey accent-magenta relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper-grey accent-magenta relative isolate rule-b scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
     >
       <PanelDecor n="04" side="right" />
       <Ladder />
@@ -1509,7 +1509,7 @@ function SourcesOnly() {
   return (
     <section
       id="sources"
-      className="paper accent-violet relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper accent-violet relative isolate rule-b scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
     >
       <PanelDecor n="05" side="left" />
       <Ladder />
@@ -1656,7 +1656,7 @@ function Chain() {
     <section
       ref={ref}
       id="chain"
-      className="paper-grey accent-blue relative isolate scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper-grey accent-blue relative isolate scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
     >
       <PanelDecor n="06" side="right" />
       <Ladder />
@@ -1800,7 +1800,7 @@ function Chain() {
 
 function Close() {
   return (
-    <section className="tx-invert ribbon px-4 py-28 md:px-8 md:py-36">
+    <section className="tx-invert ribbon px-[var(--pad)] py-28 md:py-36">
       <div data-rise="" className="grid grid-cols-[var(--gutter)_1fr] gap-x-4">
         <div className="pt-3">
           <span className="font-mono text-[0.68rem] uppercase tracking-[0.09em]">
@@ -1838,7 +1838,7 @@ function Close() {
 
 function Footer() {
   return (
-    <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-8 md:px-8">
+    <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 px-[var(--pad)] py-8">
       <span className="flex items-center gap-2">
         <ExplainaloudMark className="h-5 w-5 text-brand" />
         <Slug className="opacity-100">Explainaloud</Slug>
