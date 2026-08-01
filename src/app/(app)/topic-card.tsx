@@ -73,9 +73,9 @@ export function TopicCard({
           <Link
             href={courseHref(course)}
             aria-label={`${title}, topic: ${course.topic}`}
-            className="glass glass-lift flex h-36 flex-col justify-between rounded-xl p-4"
+            className="press flex h-36 flex-col justify-between rounded-xl border border-border p-4 transition-colors duration-200 hover:border-brand/50 hover:bg-surface"
           >
-            <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+            <span className="font-mono text-[0.66rem] tracking-[0.08em] text-subtle uppercase">
               {course.status}
             </span>
             <span>
@@ -137,7 +137,7 @@ function RenameCard({
   useEffect(() => inputRef.current?.select(), []);
 
   return (
-    <div className="glass flex min-h-36 flex-col gap-2 rounded-xl p-3">
+    <div className="flex min-h-36 flex-col gap-2 rounded-xl border border-border bg-card p-3">
       <form action={formAction} className="flex flex-col gap-2">
         <input type="hidden" name="id" value={course.id} />
         <Input

@@ -64,15 +64,12 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
   if (!courses?.length) {
     return (
       <Shell title={title} lede={lede}>
-        <Card className="glass flex flex-col items-start gap-4 rounded-2xl border-0 bg-transparent p-6">
+        <Card className="flex flex-col items-start gap-4 rounded-xl border border-border bg-card p-6">
           <p className="text-sm text-subtle">
             You don&apos;t have any topics yet. Start one, and everything here
             fills in as you explain it.
           </p>
-          <Button
-            asChild
-            className="h-10 rounded-full bg-brand-deep px-5 text-white"
-          >
+          <Button asChild className="h-10 bg-brand-deep px-5 text-white">
             <Link href="/new">Start a topic</Link>
           </Button>
         </Card>
@@ -95,8 +92,9 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
             <Link key={course.id} href={href} className="group">
               <Card
                 className={cn(
-                  "glass glass-lift flex flex-row items-center justify-between gap-4",
-                  "rounded-2xl border-0 bg-transparent p-4",
+                  "press flex flex-row items-center justify-between gap-4",
+                  "rounded-xl border border-border bg-card p-4",
+                  "transition-colors duration-200 hover:border-brand/50 hover:bg-surface",
                 )}
               >
                 <div className="min-w-0">
@@ -135,10 +133,10 @@ function Shell({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-16">
       <div>
-        <h1 className="text-3xl font-semibold tracking-tight text-strong">
+        <h1 className="font-semibold text-[clamp(1.45rem,3vw,2rem)] text-strong leading-[1.1] tracking-[-0.025em]">
           {title}
         </h1>
-        <p className="mt-2 text-foreground">{lede}</p>
+        <p className="mt-3 text-foreground leading-[1.6]">{lede}</p>
       </div>
       {children}
     </div>

@@ -96,9 +96,12 @@ export function TopicGrid({
 
   return (
     <div className="flex flex-col gap-10">
-      <div className="flex items-center justify-between gap-4">
-        <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
+      <div className="flex items-center justify-between gap-4 border-border border-b pb-3">
+        <h2 className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.09em]">
           Your topics
+          <span className="ml-3 text-strong tabular-nums">
+            {courses.length}
+          </span>
         </h2>
         <NewFolderButton />
       </div>
@@ -180,13 +183,24 @@ export function TopicGrid({
             onDragOver={zone.onDragOver}
             onDragLeave={zone.onDragLeave}
             onDrop={zone.onDrop}
+            /* The drop highlight is an outline, not a border and padding.
+             *
+             * This used to be `border border-transparent p-4`, which inset
+             * every loose card seventeen pixels from the "Your topics" rule
+             * directly above it — a margin nobody asked for, in service of a
+             * highlight that is only visible while something is mid-drag. An
+             * outline with an offset draws in the same place and costs no
+             * layout, so the cards start exactly where the heading does.
+             *
+             * A folder keeps its padding: that one is a real container and is
+             * meant to look like one. */
             className={cn(
-              "flex flex-col gap-4 rounded-2xl border border-transparent p-4 transition-colors duration-200",
-              zone.active && "border-brand bg-brand/[0.04]",
+              "flex flex-col gap-4 rounded-2xl outline-2 outline-transparent outline-offset-8 transition-colors duration-200",
+              zone.active && "bg-brand/[0.04] outline-brand",
             )}
           >
             {folders.length > 0 && (
-              <h3 className="text-sm font-semibold text-strong">
+              <h3 className="font-semibold text-sm text-strong">
                 Loose topics
                 {dragging && (
                   <span className="ml-2 font-normal text-subtle">
@@ -219,7 +233,7 @@ function NewTopicTile({ folderId }: { folderId?: string }) {
   return (
     <Link
       href={folderId ? `/new?folder=${folderId}` : "/new"}
-      className="glass glass-lift flex h-36 flex-col items-center justify-center gap-1.5 rounded-xl border border-dashed border-border bg-transparent text-subtle transition-colors hover:text-strong"
+      className="press flex h-36 flex-col items-center justify-center gap-1.5 rounded-xl border border-border border-dashed text-subtle transition-colors duration-200 hover:border-brand hover:text-brand-ink"
     >
       <Plus className="size-4" />
       <span className="text-xs font-medium">New topic</span>

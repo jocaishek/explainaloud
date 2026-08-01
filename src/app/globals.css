@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
-/* Light theme. Applies to the signed-in app; the marketing page opts back
-   into dark explicitly via a `.dark` wrapper, since its glass-and-glow
-   treatment only reads on a dark canvas. */
+/* Light theme. The default everywhere, marketing page included: the
+   transmission-script world it is built in is printed paper with hard rules,
+   and it only reads on a light ground. */
 :root {
   --background: #fbfbfb;
   --foreground: #3f3f46;
@@ -21,10 +21,11 @@
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
   --destructive: oklch(0.577 0.245 27.325);
-  --ring: #c13e1b;
-  /* Brand text on a near-white surface. The hero colour reaches only 3.3:1
-     here, so words are set in the deeper stop. */
-  --brand-ink: #c13e1b;
+  --ring: #3b37e6;
+  /* Brand text on a near-white surface. The hero stop is dark enough to be
+     its own ink here — 6.5:1 against the page — so the light theme sets words
+     in it rather than in the deeper one. */
+  --brand-ink: #3b37e6;
 
   /* Strong/among-text pairs used across the app so a component never has to
      hardcode a hex to get "brighter than body copy" or "dimmer than it". */
@@ -32,6 +33,20 @@
   --subtle: #71717a;
   --surface: rgba(9, 9, 11, 0.04);
   --surface-border: rgba(9, 9, 11, 0.08);
+
+  /* The three verdicts, and the only colours in the product that are neither
+     brand nor ink. They are reserved: green means the claim was correct, red
+     means a step was missed, amber means it was said but not in a checkable
+     form. Each clears 4.5:1 as text on both the app background and the
+     landing page's stock.
+
+     Declared at the root rather than inside the landing page's own block,
+     because they mean the same thing on both sides of the sign-in and a pace
+     chart in the app has to be able to say "racing" in the same amber the
+     transcript uses for "vague". */
+  --ok: #0f7a3d;
+  --miss: #c4271c;
+  --vague: #96600a;
 }
 
 /* Dark theme — the original #121212 canvas. */
@@ -53,14 +68,14 @@
   --accent: #1e1e1e;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.637 0.237 25.331);
-  --ring: #c13e1b;
+  --ring: #3b37e6;
   /* Brand text on a near-black surface, lightened.
 
-     The deep stop is dark enough to carry a white label and therefore too
+     The hero stop is dark enough to carry a white label and therefore too
      dark to be one: as small text on #121212 it is the wrong side of the
-     4.5:1 a paragraph needs. This tint of the same hue clears 8.5:1 without
+     4.5:1 a paragraph needs. This tint of the same hue clears 6.5:1 without
      reading as a different colour. */
-  --brand-ink: #ff8a65;
+  --brand-ink: #8f8bff;
 
   --strong: #ffffff;
   --subtle: #71717a;
@@ -99,15 +114,16 @@
      the logo, the dots, the rules and the translucent washes — everything
      that carries no text and is therefore free to be bright.
 
-     `brand-deep` is the same hue darkened until white 14px type on it clears
-     4.5:1. A hero colour bright enough to be a good hero is rarely dark
-     enough to carry a white label, so every filled button uses this instead.
+     `brand-deep` is the same hue darkened again, for a filled surface that
+     has to sit next to the hero stop and still read as behind it. Both clear
+     4.5:1 under white 14px type — 7.3:1 and 11.1:1 — so either can carry a
+     label; the deep stop is the pressed, hovered and secondary one.
 
      `brand-ink` is what words are set in, and is the only one that changes
      between themes: the deep stop on a near-white page, a bright tint on a
      near-black one. A single value cannot clear 4.5:1 against both. */
-  --color-brand: #e2542c;
-  --color-brand-deep: #c13e1b;
+  --color-brand: #3b37e6;
+  --color-brand-deep: #241fb0;
   --color-brand-ink: var(--brand-ink);
   --color-brand-foreground: #ffffff;
   --radius-sm: 0.25rem;
@@ -126,11 +142,66 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* Kerning and the discretionary pairs Archivo ships. Free, and the whole
+       difference between type that is set and type that is merely displayed —
+       which is most of what "this looks like an expensive tool" actually
+       is. */
+    font-kerning: normal;
+    font-feature-settings:
+      "kern" 1,
+      "calt" 1;
+    text-rendering: optimizeLegibility;
   }
   html {
     scroll-behavior: smooth;
     color-scheme: light;
   }
+
+  /* Every figure that can change is tabular.
+   *
+   * A clock, a score or a word count set in proportional figures reflows a
+   * pixel or two on every tick, and the eye reads that wobble as the number
+   * being unreliable. Instruments do not wobble. Applied to the mono face and
+   * to anything explicitly marked, so a paragraph's figures stay
+   * proportional. */
+  .font-mono,
+  [class*="tabular"] {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* One focus ring, everywhere, in the brand.
+   *
+   * The app had at least three: a 3px translucent ring, a 2px outline, and in
+   * places nothing at all. Keyboard users navigate by this, and an indicator
+   * that changes shape between controls is one they have to re-find on every
+   * press. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+    color: inherit;
+  }
+
+  /* The scrollbar is the browser's, not ours.
+   *
+   * There was a hairline one here — `scrollbar-width: thin` plus a set of
+   * `::-webkit-scrollbar` rules — on the theory that the page's own rules
+   * should be the heaviest vertical lines on screen. It had the opposite
+   * effect, and the cost was invisible from the CSS.
+   *
+   * macOS scrollbars are overlays: they float above the content, fade out
+   * when you stop, and take no layout width. Styling `::-webkit-scrollbar`
+   * at all opts out of that and gets you a classic scrollbar instead —
+   * permanent, and occupying a ten-pixel gutter that the page cannot paint
+   * into. So every full-bleed dark panel ended up with a strip of the light
+   * body background running down its right edge, which is the one thing the
+   * rule was meant to prevent. `scrollbar-width` does the same in Chrome.
+   *
+   * Left alone: an overlay on macOS, and on Windows the scrollbar people
+   * already have in every other application. */
   html.dark {
     color-scheme: dark;
   }
@@ -364,6 +435,399 @@
 .waveform-bar {
   transform-origin: bottom;
   animation: waveform 900ms ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   The transmission script
+   ---------------------------------------------------------------------------
+   The landing page is built as an as-live broadcast script: a printed running
+   order with a timecode gutter, hard rules instead of card edges, and text
+   that gets cued in time rather than fading in. These are the primitives that
+   world needs and the app does not. Everything above this line belongs to the
+   signed-in app.
+   -------------------------------------------------------------------------- */
+
+/* Script stock. Not paper-cream and not pure white — the cool grey a running
+   order is photocopied onto, so black rules sit on it without vibrating. */
+.tx {
+  --stock: #f2f2f0;
+  --ink: #0c0c0d;
+  --rule: rgba(12, 12, 13, 0.16);
+  --rule-strong: rgba(12, 12, 13, 0.5);
+  /* The timecode column. Narrow on a phone, where 5.5rem was a seventh of
+     the screen given over to a two-character label and left every paragraph
+     beside it setting at about thirty characters. */
+  --gutter: 2.75rem;
+
+  background: var(--stock);
+  color: var(--ink);
+}
+@media (min-width: 768px) {
+  .tx {
+    --gutter: 5.5rem;
+  }
+}
+@media (min-width: 1024px) {
+  .tx {
+    --gutter: 8rem;
+  }
+}
+
+/* A drenched region: the same script, printed the other way up.
+ *
+ * The brand is meant to hold whole regions rather than sit in a button, and
+ * that only works if the rules, the labels and the type all re-derive from the
+ * new ground instead of being restated in white one by one. Redefining the
+ * three variables the world is built from does the whole section at once.
+ *
+ * Reserved for regions with no verdict colour in them. Green on ultramarine is
+ * unreadable and, worse, stops meaning "correct" — the marking always stays on
+ * the grey stock. */
+.tx-invert {
+  --stock: var(--color-brand);
+  --ink: #ffffff;
+  --rule: rgba(255, 255, 255, 0.3);
+  --rule-strong: rgba(255, 255, 255, 0.65);
+  background: var(--stock);
+  color: var(--ink);
+}
+
+/* The cue wipe.
+ *
+ * A word is not faded in when it is marked — a wipe travels across it, left to
+ * right, the way a caption fills.
+ *
+ * Both the wash and the rule under it are backgrounds on the text span itself,
+ * not a positioned element behind it, and that is the whole trick. A headline
+ * wraps, and a marked phrase can therefore be two line fragments rather than
+ * one rectangle. Anything absolutely positioned inside it gets the union of
+ * those fragments — a single block that overhangs the end of the first line
+ * and runs under the start of the second. `box-decoration-break: clone` gives
+ * each fragment its own background box instead, so the mark follows the words
+ * wherever the line happens to break.
+ *
+ * A rule under the words and nothing behind them. The first version filled the
+ * box with a tinted wash as well, and at headline size that is a solid colour
+ * block per phrase — the marking stopped being marking and became a stack of
+ * coloured bricks. The line alone says the same thing and lets the words stay
+ * words.
+ *
+ * `.cue-idle` is the unmarked state and needs no JavaScript to reach: a page
+ * whose script never runs is a page of plain readable sentences, not a blank
+ * one. */
+@keyframes cue-wipe {
+  from {
+    background-size: 0% 0.085em;
+  }
+  to {
+    background-size: 100% 0.085em;
+  }
+}
+.cue-idle,
+.cue-mark {
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  padding-bottom: 0.06em;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.cue-idle {
+  background-size: 0% 0.085em;
+}
+.cue-mark {
+  background-size: 100% 0.085em;
+  animation: cue-wipe 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* The node that is currently working.
+ *
+ * A ring that grows out of the node and fades, on a slow repeat: the shape
+ * that means "something is happening here" on every piece of equipment that
+ * has ever had a status light, and it is drawn geometry rather than a glow, so
+ * it survives the rule against blurred halos. Only ever one at a time — two
+ * things pinging at once reads as an error state. */
+@keyframes work-ping {
+  0% {
+    transform: scale(1);
+    opacity: 0.55;
+  }
+  70%,
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+.work-ping {
+  animation: work-ping 1.6s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .work-ping {
+    animation: none;
+  }
+}
+
+/* The timecode ladder down the left margin.
+ *
+ * Sections 03 to 06 are tall, and their gutter carried a two-character label
+ * and then several hundred pixels of nothing. On a real running order that
+ * margin is never blank: it is a ruled scale, because the whole document is
+ * indexed against time.
+ *
+ * Two layers of ticks against the gutter's right edge, minor every 28px and
+ * major every 140px, drawn from the same hairline value as every other rule on
+ * the page. A repeating gradient is normally a wallpaper tell; it earns its
+ * place here because there is an actual measuring tool under it and the ticks
+ * line up with the timecodes the sections are indexed by.
+ *
+ * Desktop only. On a phone the gutter is 2.75rem and a ruler in it is lint. */
+.ladder {
+  background-image:
+    repeating-linear-gradient(
+      to bottom,
+      var(--rule) 0 1px,
+      transparent 1px 140px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--rule) 55%, transparent) 0 1px,
+      transparent 1px 28px
+    );
+  background-size:
+    22px 100%,
+    9px 100%;
+  background-position:
+    right top,
+    right top;
+  background-repeat: repeat-y, repeat-y;
+}
+
+/* Two papers, alternating, and a colour per panel.
+ *
+ * The page runs light the whole way down and the panels alternate between
+ * white and the grey stock. That alternation is doing what a dark plate was
+ * trying to do and failing at: it gives the scroll a beat, so each section
+ * arrives as its own sheet rather than as more of the last one, and it costs
+ * nothing in legibility.
+ *
+ * On top of that, each panel carries an accent — on its index, its rules and
+ * whatever one element in it can take colour. The accents are deliberately
+ * clear of green, red and amber, which are spoken for: those three mean
+ * correct, missing and vague inside a transcript and cannot also mean
+ * "section four". Every accent clears 4.5:1 as text on both papers.
+ */
+.paper {
+  --stock: #ffffff;
+  background: var(--stock);
+}
+.paper-grey {
+  --stock: #f2f2f0;
+  background: var(--stock);
+}
+
+/* The accents, in the order the page uses them. */
+.accent-blue {
+  --accent: #3b37e6;
+}
+.accent-violet {
+  --accent: #6d3aec;
+}
+.accent-magenta {
+  --accent: #b81a86;
+}
+.accent-ink {
+  --accent: #0c0c0d;
+}
+
+/* The gradient, on the closing block and nowhere else.
+ *
+ * It was tried behind the first viewport and it was the wrong place: a
+ * saturated field under the headline fought the marked words, which are the
+ * one thing on this page that cannot be allowed to go quiet, and it is the
+ * treatment `.claude/rules/design.md` rules out by name for looking generated.
+ *
+ * The close is where it earns its keep. There is no marking on it, nothing to
+ * read but one line and two buttons, and a page that has been disciplined for
+ * six sections can afford to end on colour.
+ *
+ * Animating `background-position` rather than the colour stops: positions are
+ * cheap to interpolate and the browser slides an already-painted gradient,
+ * where animating stops re-rasterises the whole thing every frame. Twenty-six
+ * seconds a cycle, so nothing in it ever appears to arrive.
+ *
+ * Declared after `.tx-invert` on purpose — that class paints the flat brand
+ * ground this replaces, and at equal specificity the later rule wins. */
+@keyframes ribbon-drift {
+  0%,
+  100% {
+    background-position:
+      0% 0%,
+      100% 0%,
+      50% 100%,
+      0% 100%;
+  }
+  50% {
+    background-position:
+      35% 25%,
+      65% 35%,
+      25% 65%,
+      70% 90%;
+  }
+}
+.ribbon {
+  background-color: #1b1585;
+  background-image:
+    radial-gradient(62% 72% at 18% 18%, #4b23c8 0%, transparent 62%),
+    radial-gradient(58% 66% at 88% 12%, #8f1a72 0%, transparent 62%),
+    radial-gradient(72% 62% at 62% 92%, #0f5fd8 0%, transparent 62%),
+    radial-gradient(52% 56% at 8% 88%, #2a1298 0%, transparent 62%);
+  background-size:
+    180% 180%,
+    160% 160%,
+    200% 200%,
+    170% 170%;
+  animation: ribbon-drift 26s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ribbon {
+    animation: none;
+  }
+}
+
+/* The level meter running through the on-air strip.
+ *
+ * The track holds two copies of a seamless tile, so translating exactly -50%
+ * lands copy two where copy one began and the loop has no landing point.
+ *
+ * Only the on-air strip uses this now. A larger version of the same drawing
+ * ran behind the first viewport for one revision and it was the wrong idea in
+ * the right clothes: a moving thing behind a sentence competes with the
+ * sentence however faint it is. Fifteen pixels of it inside a band that is
+ * already there does not. */
+@keyframes wave-drift {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+.wave-drift {
+  animation-name: wave-drift;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+.wave-field {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 30%,
+    transparent 88%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    black 30%,
+    transparent 88%
+  );
+}
+@media (prefers-reduced-motion: reduce) {
+  .wave-drift {
+    animation: none;
+  }
+}
+
+/* The tally lamp. On-air indicators do not pulse smoothly; they are lit or
+   they are not, and the eye reads the hard edge as "live". */
+@keyframes tally {
+  0%,
+  62% {
+    opacity: 1;
+  }
+  63%,
+  100% {
+    opacity: 0.25;
+  }
+}
+.tally-lamp {
+  animation: tally 1.4s steps(1, end) infinite;
+}
+
+/* Timecode digits must not reflow as they count. Tabular figures do that
+   without a fixed width per character, which would break at every size. */
+.tc {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+/* Rules are the only container on this page. Cards were the thing being
+   replaced, so nothing here draws a box: a row is defined by the hairline
+   above it and the one below the block it belongs to. */
+.rule-t {
+  border-top: 1px solid var(--rule);
+}
+.rule-b {
+  border-bottom: 1px solid var(--rule);
+}
+.rule-strong-t {
+  border-top: 1px solid var(--rule-strong);
+}
+
+/* Scroll reveal. Driven by `ScrollReveal`, which toggles the attribute.
+   See that component for why the state lives on the element.
+
+   The revealed state is `transform: none`, not `translateY(0)`: a settled
+   block must not be left holding a transform, because a transform makes an
+   element the containing block for anything absolutely positioned inside it,
+   and several of these blocks contain hairlines and tooltips pinned to
+   ancestors. `none` interpolates as the identity, so the transition is
+   unaffected.
+
+   750ms sounds long written down. It is not doing the work of an entrance;
+   it is doing the work of the page feeling like it has weight, which needs
+   the tail of the exponential ease to be long enough to notice. */
+[data-rise] {
+  transition:
+    opacity 750ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 750ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+[data-rise="out"] {
+  opacity: 0;
+  transform: translateY(1.15rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-rise] {
+    transition: none;
+  }
+  /* Belt and braces: the observer never runs under this setting, so nothing
+     is ever marked `out`. This is here in case that guard is ever lost. */
+  [data-rise="out"] {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Press feedback, on everything pressable. 160ms is short enough that the
+   scale reads as the surface answering rather than as an animation. */
+.press {
+  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.press:active {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cue-mark,
+  .tally-lamp {
+    animation: none;
+  }
+  .cue-mark {
+    clip-path: none;
+  }
+  .press {
+    transition: none;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

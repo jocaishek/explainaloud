@@ -114,6 +114,19 @@ export type SpeechMetrics = {
    */
   slowestStretch: { text: string; wpm: number } | null;
   /**
+   * Speaking rate across the take, window by window, in document order.
+   *
+   * Kept so the gap report can draw the shape of a delivery rather than only
+   * its median — the landing page promises exactly this chart, and a single
+   * number cannot show that someone raced the first minute and then stalled.
+   *
+   * Optional because it was added after sessions had already been recorded.
+   * Anything stored before this exists has no series and draws no chart; it
+   * is not backfillable, because the word timings it would be derived from
+   * are not kept.
+   */
+  pace?: { atSeconds: number; wpm: number }[];
+  /**
    * False when there was too little speech for the rates to mean anything.
    * The numbers are still returned — they are just not worth acting on.
    */
@@ -177,6 +190,8 @@ function pauseStats(words: TranscribedWord[]): PauseStats {
 
 type RateWindow = {
   wpm: number;
+  /** Seconds from the first word, so a window can be placed on a time axis. */
+  atSeconds: number;
   /** Indices into the word list, inclusive, that this window covers. */
   from: number;
   to: number;
@@ -242,7 +257,12 @@ function rateWindows(words: TranscribedWord[]): RateWindow[] {
     const voiced = Math.max(0, RATE_WINDOW_SECONDS - silence);
     if (voiced < MIN_VOICED_SECONDS) continue;
 
-    windows.push({ wpm: (count * 60) / voiced, from, to });
+    windows.push({
+      wpm: (count * 60) / voiced,
+      atSeconds: start - first.start,
+      from,
+      to,
+    });
   }
 
   return windows;
@@ -297,6 +317,14 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
     capableWpm: Math.round(
       rates.length ? percentile(rates, CAPABLE_PACE_PERCENTILE) : overallWpm,
     ),
+    /* Rounded on the way in. These go straight into a jsonb column and are
+       read back only to set a bar's height and its position on a time axis,
+       where a tenth of a second and a whole word per minute are already finer
+       than anything anybody can see. */
+    pace: windows.map((w) => ({
+      atSeconds: Number(w.atSeconds.toFixed(1)),
+      wpm: Math.round(w.wpm),
+    })),
     pauses: pauseStats(usable),
     fillerPer100: Number(((fillers / usable.length) * 100).toFixed(1)),
     slowestStretch: slowestStretch(usable, windows),

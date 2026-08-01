@@ -55,14 +55,16 @@ export function Greeting({ name }: { name: string }) {
     <div className="min-h-[2.5rem] sm:min-h-[2.75rem]">
       {greeting && (
         <motion.h1
-          initial={
-            shouldReduceMotion
-              ? { opacity: 0 }
-              : { opacity: 0, y: 8, filter: "blur(6px)" }
-          }
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          transition={{ duration: 0.6, ease: EASE }}
-          className="text-3xl font-semibold tracking-tight text-balance text-strong"
+          /* A fade and a short rise, and nothing else.
+           *
+           * This used to blur in from six pixels of Gaussian, which is the
+           * per-word reveal the rest of the app was rebuilt to get rid of: it
+           * makes the first thing you read every session momentarily
+           * unreadable, in exchange for a flourish nobody asked for. */
+          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: EASE }}
+          className="text-balance font-medium text-[clamp(1.6rem,3.4vw,2.2rem)] text-strong leading-[1.1] tracking-[-0.03em]"
         >
           {greeting}
         </motion.h1>
