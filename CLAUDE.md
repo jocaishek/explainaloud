@@ -4,6 +4,7 @@
 
 Detailed rules live in `.claude/rules/`. When adding, updating, or deleting a rules file, keep this index in sync.
 
+- [design.md](.claude/rules/design.md) — Art direction, and the specific tells that make a page look AI-generated
 - [env-vars.md](.claude/rules/env-vars.md) — Environment variable access patterns
 - [stack.md](.claude/rules/stack.md) — Framework, language, and tooling overview
 - [styling.md](.claude/rules/styling.md) — Tailwind CSS and design token conventions
