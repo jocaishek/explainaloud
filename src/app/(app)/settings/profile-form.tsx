@@ -117,7 +117,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         <Button
           type="submit"
           disabled={pending}
-          className="h-10 rounded-full bg-brand px-5 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+          className="h-10 rounded-full bg-brand-deep px-5 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
         >
           {pending ? "Saving…" : "Save changes"}
         </Button>
@@ -129,7 +129,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
               animate={{ opacity: 1, scale: 1, x: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
               transition={{ duration: 0.25, ease: EASE }}
-              className="flex items-center gap-1.5 text-sm font-medium text-brand"
+              className="flex items-center gap-1.5 text-sm font-medium text-brand-ink"
             >
               <Check className="size-4" />
               Saved

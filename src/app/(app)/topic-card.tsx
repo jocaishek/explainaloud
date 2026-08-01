@@ -153,7 +153,7 @@ function RenameCard({
             type="submit"
             size="sm"
             disabled={pending}
-            className="h-7 flex-1 rounded-md bg-brand px-2 text-xs font-semibold text-white hover:bg-brand/90"
+            className="h-7 flex-1 rounded-md bg-brand-deep px-2 text-xs font-semibold text-white hover:bg-brand-deep/90"
           >
             {pending ? "Saving…" : "Save"}
           </Button>

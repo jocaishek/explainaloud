@@ -23,7 +23,7 @@ export default async function DashboardLayout({
             href="/home"
             className="flex items-center gap-2 text-base font-semibold tracking-tight text-strong"
           >
-            <ExplainaloudMark className="size-6 shrink-0 text-brand" />
+            <ExplainaloudMark className="size-6 shrink-0 text-brand-ink" />
             Explainaloud
           </Link>
           <DashboardNav showAdmin={isAdminEmail(user.email)} />
@@ -32,7 +32,7 @@ export default async function DashboardLayout({
           <Button
             asChild
             size="sm"
-            className="gap-1.5 rounded-full bg-brand font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+            className="gap-1.5 rounded-full bg-brand-deep font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
           >
             <Link href="/new" aria-label="New topic">
               <Plus className="size-4" />

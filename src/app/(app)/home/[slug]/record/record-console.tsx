@@ -2450,9 +2450,9 @@ export function RecordConsole({
           )}
         >
           {status === "recording" ? (
-            <Square className="size-7 fill-brand text-brand" />
+            <Square className="size-7 fill-brand text-brand-ink" />
           ) : (
-            <Mic className="size-8 text-brand" />
+            <Mic className="size-8 text-brand-ink" />
           )}
         </button>
 
@@ -2460,7 +2460,7 @@ export function RecordConsole({
           type="button"
           onClick={primaryAction}
           disabled={busy || outOfQuota || drafting}
-          className="h-11 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform hover:bg-brand/90 active:scale-[0.97]"
+          className="h-11 rounded-full bg-brand-deep px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-brand-deep/90 active:scale-[0.97]"
         >
           {primaryLabel}
           {status === "between" && countdown !== null && (
@@ -2541,7 +2541,7 @@ export function RecordConsole({
               <span className="size-2 rounded-full bg-red-500" /> Gap
             </span>
             {status === "recording" && (
-              <span className="ml-auto text-brand">
+              <span className="ml-auto text-brand-ink">
                 Listening. Nothing interrupts you
               </span>
             )}
@@ -2608,7 +2608,7 @@ export function RecordConsole({
                 each — and there was no way to reach it from here. */}
             <Button
               asChild
-              className="mt-1 h-11 w-fit gap-2 rounded-full bg-brand px-6 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+              className="mt-1 h-11 w-fit gap-2 rounded-full bg-brand-deep px-6 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
             >
               <Link href={`/home/${slug}/gaps`}>
                 See the full gap report
@@ -2645,7 +2645,7 @@ export function RecordConsole({
                     className={cn(
                       "rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] uppercase",
                       session.mode === "interview"
-                        ? "bg-brand/12 text-brand"
+                        ? "bg-brand/12 text-brand-ink"
                         : "bg-foreground/10 text-subtle",
                     )}
                   >
@@ -2859,7 +2859,7 @@ function ModeChooser({
                 aria-hidden
                 className={cn(
                   "size-4",
-                  selected ? "text-brand" : "text-subtle",
+                  selected ? "text-brand-ink" : "text-subtle",
                 )}
               />
               <span className="text-sm font-semibold text-strong">
@@ -2991,7 +2991,7 @@ function QuestionCard({
         </p>
       ) : countdown !== null && countdown !== undefined ? (
         <div className="flex items-center gap-3">
-          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand/15 font-mono text-lg font-semibold text-brand tabular-nums">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-brand/15 font-mono text-lg font-semibold text-brand-ink tabular-nums">
             {countdown}
           </span>
           <p className="text-xs leading-5 text-subtle">

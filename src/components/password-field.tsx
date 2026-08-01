@@ -62,7 +62,7 @@ export function PasswordField({
             onChange(generateSecurePassword());
             setVisible(true);
           }}
-          className="flex w-fit items-center gap-1.5 text-xs font-medium text-brand hover:text-[#7FB3F0]"
+          className="flex w-fit items-center gap-1.5 text-xs font-medium text-brand-ink hover:text-[#7FB3F0]"
         >
           <Sparkles className="size-3.5" />
           Generate a secure password

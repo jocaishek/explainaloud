@@ -99,7 +99,7 @@ function Section({
   return (
     <section className="flex flex-col gap-4">
       <div>
-        <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+        <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
           {title}
         </h2>
         <p className="mt-1.5 text-sm text-subtle">{description}</p>

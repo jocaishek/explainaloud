@@ -21,7 +21,10 @@
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
   --destructive: oklch(0.577 0.245 27.325);
-  --ring: #4a90e2;
+  --ring: #c13e1b;
+  /* Brand text on a near-white surface. The hero colour reaches only 3.3:1
+     here, so words are set in the deeper stop. */
+  --brand-ink: #c13e1b;
 
   /* Strong/among-text pairs used across the app so a component never has to
      hardcode a hex to get "brighter than body copy" or "dimmer than it". */
@@ -50,7 +53,14 @@
   --accent: #1e1e1e;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.637 0.237 25.331);
-  --ring: #4a90e2;
+  --ring: #c13e1b;
+  /* Brand text on a near-black surface, lightened.
+
+     The deep stop is dark enough to carry a white label and therefore too
+     dark to be one: as small text on #121212 it is the wrong side of the
+     4.5:1 a paragraph needs. This tint of the same hue clears 8.5:1 without
+     reading as a different colour. */
+  --brand-ink: #ff8a65;
 
   --strong: #ffffff;
   --subtle: #71717a;
@@ -83,8 +93,22 @@
   --color-surface: var(--surface);
   --color-surface-border: var(--surface-border);
 
-  /* Brand — identical in both themes, it's the one fixed point. */
-  --color-brand: #4a90e2;
+  /* Brand: one hue, three stops, because one value cannot do three jobs.
+
+     `brand` is the identity colour and the loudest of the three. It paints
+     the logo, the dots, the rules and the translucent washes — everything
+     that carries no text and is therefore free to be bright.
+
+     `brand-deep` is the same hue darkened until white 14px type on it clears
+     4.5:1. A hero colour bright enough to be a good hero is rarely dark
+     enough to carry a white label, so every filled button uses this instead.
+
+     `brand-ink` is what words are set in, and is the only one that changes
+     between themes: the deep stop on a near-white page, a bright tint on a
+     near-black one. A single value cannot clear 4.5:1 against both. */
+  --color-brand: #e2542c;
+  --color-brand-deep: #c13e1b;
+  --color-brand-ink: var(--brand-ink);
   --color-brand-foreground: #ffffff;
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
@@ -201,11 +225,14 @@
 /* Accent ring plus outer bloom, for the one element on a section that should
    look lit from within. Used sparingly — it stops meaning "important" the
    moment two of them share a screen. */
+/* Derived from the brand token rather than a copy of it. The old rule had the
+   previous blue written out three times in rgba(), which is why the sign-in
+   card kept a blue halo for a while after the brand had stopped being blue. */
 .glow-ring {
-  border: 1px solid rgba(74, 144, 226, 0.45);
+  border: 1px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
   box-shadow:
-    0 0 0 1px rgba(74, 144, 226, 0.1),
-    0 0 60px -12px rgba(74, 144, 226, 0.5),
+    0 0 0 1px color-mix(in srgb, var(--color-brand) 10%, transparent),
+    0 0 60px -12px color-mix(in srgb, var(--color-brand) 50%, transparent),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -292,7 +319,7 @@
     border-color: color-mix(in srgb, var(--color-brand) 35%, transparent);
     box-shadow:
       inset 0 1px 1px var(--glass-highlight),
-      0 12px 32px -16px rgba(74, 144, 226, 0.35);
+      0 12px 32px -16px color-mix(in srgb, var(--color-brand) 35%, transparent);
   }
 }
 

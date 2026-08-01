@@ -134,7 +134,7 @@ export function NewFolderButton() {
                   type="submit"
                   size="sm"
                   disabled={pending}
-                  className="h-8 flex-1 rounded-full bg-brand text-xs font-semibold text-white hover:bg-brand/90"
+                  className="h-8 flex-1 rounded-full bg-brand-deep text-xs font-semibold text-white hover:bg-brand-deep/90"
                 >
                   {pending ? "Creating…" : "Create folder"}
                 </Button>
@@ -250,7 +250,7 @@ function FolderEditRow({
           type="submit"
           size="sm"
           disabled={pending}
-          className="h-8 rounded-full bg-brand px-3 text-xs font-semibold text-white hover:bg-brand/90"
+          className="h-8 rounded-full bg-brand-deep px-3 text-xs font-semibold text-white hover:bg-brand-deep/90"
         >
           {pending ? "Saving…" : "Save"}
         </Button>

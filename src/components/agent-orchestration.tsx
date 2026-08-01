@@ -134,7 +134,7 @@ export function AgentOrchestration({
 
   const heading = (
     <>
-      <h2 className="font-mono text-[10px] tracking-[0.16em] text-brand uppercase">
+      <h2 className="font-mono text-[10px] tracking-[0.16em] text-brand-ink uppercase">
         Agent orchestration
       </h2>
       <span className="min-w-0 truncate text-xs text-subtle">
@@ -218,7 +218,8 @@ export function AgentOrchestration({
                       (agent.status === "queued" ||
                         agent.status === "skipped") &&
                         "bg-muted-foreground/10 text-subtle",
-                      agent.status === "running" && "bg-brand/15 text-brand",
+                      agent.status === "running" &&
+                        "bg-brand/15 text-brand-ink",
                       agent.status === "completed" &&
                         "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
                       (agent.status === "revised" ||

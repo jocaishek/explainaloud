@@ -17,7 +17,7 @@ export const contentType = "image/png";
 export const alt =
   "Explainaloud: explain it back out loud and know exactly when you actually understand it.";
 
-const BRAND = "#4a90e2";
+const BRAND = "#e2542c";
 
 /** The same path as `icon.svg` and `apple-icon.tsx`. */
 const MARK =
@@ -38,8 +38,7 @@ export default function OpengraphImage() {
         // across the layout, which reads as a bug rather than a glow. A radial
         // gradient is the one form of soft falloff it does render.
         backgroundColor: "#0b0f14",
-        backgroundImage:
-          "radial-gradient(760px 620px at 88% -12%, rgba(74,144,226,0.30), rgba(74,144,226,0.06) 45%, rgba(74,144,226,0) 70%)",
+        backgroundImage: `radial-gradient(760px 620px at 88% -12%, ${BRAND}4d, ${BRAND}0f 45%, ${BRAND}00 70%)`,
         padding: "80px",
       }}
     >

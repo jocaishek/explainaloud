@@ -316,7 +316,7 @@ export function VoiceWarmup({
             className="rounded-xl border border-brand/30 bg-brand/[0.06] p-5"
           >
             <p className="flex items-center gap-2 text-sm font-semibold text-strong">
-              <Check className="size-4 text-brand" />
+              <Check className="size-4 text-brand-ink" />
               Got it. You speak at about {Math.round(result.medianWpm)} words a
               minute.
             </p>
@@ -372,7 +372,7 @@ export function VoiceWarmup({
               "h-11 gap-2 rounded-full px-5 font-semibold transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none",
               stage === "done"
                 ? "border-border bg-surface text-strong"
-                : "bg-brand text-white shadow-[0_0_30px_-8px_var(--color-brand)] hover:bg-brand/90",
+                : "bg-brand-deep text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] hover:bg-brand-deep/90",
             )}
           >
             <Mic className="size-4" />

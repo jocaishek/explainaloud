@@ -23,7 +23,7 @@ export default function AppleIcon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#4a90e2",
+        background: "#e2542c",
       }}
     >
       {/* Full-bleed square: iOS applies its own corner mask. */}

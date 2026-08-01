@@ -24,7 +24,7 @@ export default function LegalLayout({
           href="/"
           className="flex w-fit items-center gap-2 text-base font-semibold tracking-tight text-white transition-opacity hover:opacity-80"
         >
-          <ExplainaloudMark className="size-6 shrink-0 text-brand" />
+          <ExplainaloudMark className="size-6 shrink-0 text-brand-ink" />
           Explainaloud
         </Link>
 
@@ -40,7 +40,7 @@ export default function LegalLayout({
             "[&_li]:mt-2 [&_li]:text-sm [&_li]:leading-7 [&_li]:text-[#A1A1AA]",
             "[&_ul]:mt-4 [&_ul]:list-disc [&_ul]:pl-5",
             "[&_strong]:font-semibold [&_strong]:text-white",
-            "[&_a]:text-brand [&_a]:underline [&_a]:underline-offset-2",
+            "[&_a]:text-brand-ink [&_a]:underline [&_a]:underline-offset-2",
           ].join(" ")}
         >
           {children}

@@ -97,7 +97,7 @@ export function TopicGrid({
   return (
     <div className="flex flex-col gap-10">
       <div className="flex items-center justify-between gap-4">
-        <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+        <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
           Your topics
         </h2>
         <NewFolderButton />

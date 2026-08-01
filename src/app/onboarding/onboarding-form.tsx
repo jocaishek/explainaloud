@@ -188,7 +188,7 @@ export function OnboardingForm({ email }: { email: string }) {
             className="flex flex-col gap-5"
           >
             <div>
-              <p className="mb-2 text-sm font-medium text-brand">
+              <p className="mb-2 text-sm font-medium text-brand-ink">
                 Step {step + 1} of {STEPS.length}
               </p>
               <h2 className="text-3xl font-semibold tracking-tight text-strong text-balance">
@@ -251,7 +251,7 @@ export function OnboardingForm({ email }: { email: string }) {
                 </div>
 
                 <div className="flex items-center gap-2 text-xs text-subtle">
-                  <CheckCircle2 className="size-4 text-brand" />
+                  <CheckCircle2 className="size-4 text-brand-ink" />
                   <span className="truncate">{email} verified</span>
                 </div>
               </div>
@@ -365,7 +365,7 @@ export function OnboardingForm({ email }: { email: string }) {
             key="finish"
             type="submit"
             disabled={pending}
-            className="shine group h-11 gap-1.5 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 active:scale-[0.97] motion-reduce:transition-none"
+            className="shine group h-11 gap-1.5 rounded-full bg-brand-deep px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97] motion-reduce:transition-none"
           >
             {pending ? "Setting up…" : "Finish setup"}
             {!pending && <Check className="size-4" />}
@@ -375,7 +375,7 @@ export function OnboardingForm({ email }: { email: string }) {
             key="continue"
             type="button"
             onClick={next}
-            className="shine group h-11 gap-1.5 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 active:scale-[0.97] motion-reduce:transition-none"
+            className="shine group h-11 gap-1.5 rounded-full bg-brand-deep px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97] motion-reduce:transition-none"
           >
             Continue
             <ArrowRight className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />
@@ -414,7 +414,7 @@ function StepIndicator({
                 active
                   ? "text-strong"
                   : complete
-                    ? "text-brand hover:text-strong"
+                    ? "text-brand-ink hover:text-strong"
                     : "text-subtle",
               )}
             >
@@ -475,8 +475,8 @@ function UseTypeOption({
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 motion-reduce:transition-none",
           selected
-            ? "bg-brand text-white"
-            : "bg-card text-subtle group-hover:text-brand",
+            ? "bg-brand-deep text-white"
+            : "bg-card text-subtle group-hover:text-brand-ink",
         )}
       >
         <Icon className="size-5" />

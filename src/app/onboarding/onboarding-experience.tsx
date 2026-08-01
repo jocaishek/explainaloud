@@ -48,7 +48,7 @@ export function OnboardingExperience({ email }: { email: string }) {
                 {LEARNING_LOOP.map(({ icon: Icon, title, body }) => (
                   <li key={title} className="flex gap-3.5">
                     <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary-foreground/10">
-                      <Icon className="size-4 text-brand" />
+                      <Icon className="size-4 text-brand-ink" />
                     </span>
                     <span>
                       <span className="block text-sm font-medium">{title}</span>

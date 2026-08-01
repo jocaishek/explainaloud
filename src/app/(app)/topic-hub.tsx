@@ -71,7 +71,7 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
           </p>
           <Button
             asChild
-            className="h-10 rounded-full bg-brand px-5 text-white"
+            className="h-10 rounded-full bg-brand-deep px-5 text-white"
           >
             <Link href="/new">Start a topic</Link>
           </Button>
@@ -110,7 +110,7 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
                   </p>
                 </div>
                 {reachable ? (
-                  <ArrowRight className="size-4 shrink-0 text-brand transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
+                  <ArrowRight className="size-4 shrink-0 text-brand-ink transition-transform duration-200 ease-out group-hover:translate-x-0.5" />
                 ) : (
                   <Mic className="size-4 shrink-0 text-subtle" />
                 )}

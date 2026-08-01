@@ -174,7 +174,13 @@ export function GoogleSignIn({
       ref={host}
       className={cn(
         "flex min-h-11 justify-center overflow-hidden rounded-full",
-        resolvedTheme === "dark" && "[clip-path:inset(2px_round_9999px)]",
+        // The `dark:` variant rather than a `resolvedTheme === "dark"` branch.
+        // next-themes cannot know the theme on the server, so branching in JS
+        // here rendered one className on the server and another on the client,
+        // and React reported a hydration mismatch on every sign-in page load.
+        // The variant is decided by CSS from the class on <html>, which is
+        // already correct in the first paint.
+        "dark:[clip-path:inset(2px_round_9999px)]",
         disabled && "pointer-events-none opacity-60",
       )}
       aria-busy={!ready}
