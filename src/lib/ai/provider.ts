@@ -2,6 +2,7 @@ import "server-only";
 
 import { env } from "~/env";
 import type { TranscribedWord } from "~/lib/speech-metrics";
+import { stripHallucinations } from "./transcript-cleanup";
 
 /**
  * Two-provider JSON completion: Gemini first, Groq as failover.
@@ -459,7 +460,23 @@ export async function transcribeAudio(
   if (typeof json?.text !== "string") {
     throw new AiUnavailableError("groq transcription: empty response");
   }
-  const transcript = json.text.trim();
+
+  /* Whisper's answer to silence, removed before anybody is graded on it.
+   *
+   * The checks below catch a transcript that is nothing but an artefact. They
+   * cannot catch the common case, which is real speech with caption
+   * boilerplate looping through the gaps in it — see `transcript-cleanup.ts`.
+   * Cleaning first means the emptiness checks then run against what was
+   * actually said, so a recording that was only silence still ends up at
+   * `NoSpeechDetectedError` rather than passing as five words of "thank you". */
+  const cleaned = stripHallucinations(json.text.trim(), parseWords(json));
+  if (cleaned.removed > 0) {
+    console.warn(
+      `groq transcription: dropped ${cleaned.removed} hallucinated sentence(s)`,
+    );
+  }
+
+  const transcript = cleaned.transcript.trim();
   const normalized = normalizedTranscript(transcript);
   const promptEcho =
     normalized === normalizedTranscript(prompt) ||
@@ -473,7 +490,7 @@ export async function transcribeAudio(
   ) {
     throw new NoSpeechDetectedError();
   }
-  return { transcript, words: parseWords(json) };
+  return { transcript, words: cleaned.words };
 }
 
 /**
