@@ -47,7 +47,7 @@ export default async function CoursePage({
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
       {course.input_notes && (
         <div>
-          <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+          <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
             Your notes
           </h2>
           <p className="mt-2 text-sm whitespace-pre-wrap text-foreground">

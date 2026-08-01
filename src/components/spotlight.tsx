@@ -32,7 +32,9 @@ export function Spotlight({
   const x = useMotionValue(-9999);
   const y = useMotionValue(-9999);
   const opacity = useSpring(0, { stiffness: 200, damping: 30 });
-  const background = useMotionTemplate`radial-gradient(${radius}px circle at ${x}px ${y}px, rgba(74, 144, 226, 0.20), transparent 70%)`;
+  // Reads the brand token rather than repeating a hex. A spotlight in last
+  // season's colour is the kind of thing nobody notices and everybody feels.
+  const background = useMotionTemplate`radial-gradient(${radius}px circle at ${x}px ${y}px, color-mix(in srgb, var(--color-brand) 20%, transparent), transparent 70%)`;
 
   function handlePointerMove(e: PointerEvent<HTMLDivElement>) {
     const rect = ref.current?.getBoundingClientRect();

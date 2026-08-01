@@ -98,7 +98,7 @@ function WordReveal({
               // sits smaller on the same point size, so it gets nudged up to
               // keep the baseline optically level with the sans around it.
               accent.includes(word.replace(/[.,]/g, "")) &&
-                "font-display text-[1.12em] leading-[0.9] font-normal text-brand italic",
+                "font-display text-[1.12em] leading-[0.9] font-normal text-brand-ink italic",
             )}
             variants={{
               hidden: shouldReduceMotion
@@ -175,7 +175,7 @@ export default function Home() {
             <Reveal delay={140}>
               <p className="font-mono text-sm text-[#71717A]">
                 Try it on{" "}
-                <TypedText phrases={HERO_TOPICS} className="text-brand" />
+                <TypedText phrases={HERO_TOPICS} className="text-brand-ink" />
               </p>
             </Reveal>
             <Reveal delay={180} className="mt-2">
@@ -183,7 +183,7 @@ export default function Home() {
                 <Button
                   asChild
                   size="lg"
-                  className="shine group h-12 rounded-full bg-brand px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_64px_-8px_var(--color-brand)] active:scale-[0.97]"
+                  className="shine group h-12 rounded-full bg-brand-deep px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 hover:shadow-[0_0_64px_-8px_var(--color-brand-deep)] active:scale-[0.97]"
                 >
                   <Link href="/signup">
                     Sign up free
@@ -339,7 +339,7 @@ export default function Home() {
               </p>
               <p className="mt-auto rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-[#A1A1AA]">
                 the Calvin cycle{" "}
-                <span className="font-medium text-brand">
+                <span className="font-medium text-brand-ink">
                   fixes CO₂ into glucose
                 </span>
               </p>
@@ -458,7 +458,7 @@ export default function Home() {
             <Button
               asChild
               size="lg"
-              className="shine group h-12 rounded-full bg-brand px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_64px_-8px_var(--color-brand)] active:scale-[0.97]"
+              className="shine group h-12 rounded-full bg-brand-deep px-8 font-semibold text-white shadow-[0_0_40px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 hover:shadow-[0_0_64px_-8px_var(--color-brand-deep)] active:scale-[0.97]"
             >
               <Link href="/signup">
                 Sign up free
@@ -473,7 +473,7 @@ export default function Home() {
             Already have an account?{" "}
             <Link
               href="/login"
-              className="font-medium text-white transition-colors hover:text-brand"
+              className="font-medium text-white transition-colors hover:text-brand-ink"
             >
               Log in
             </Link>
@@ -578,7 +578,7 @@ function LandingAgentPipeline() {
                   <span
                     className={cn(
                       "font-mono text-[9px] tracking-[0.1em] uppercase",
-                      isActive ? "text-brand" : "text-[#71717A]",
+                      isActive ? "text-brand-ink" : "text-[#71717A]",
                     )}
                   >
                     {isActive
@@ -675,7 +675,7 @@ function Nav() {
           <Button
             asChild
             size="sm"
-            className="shine group h-9 rounded-full bg-brand px-5 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97]"
+            className="shine group h-9 rounded-full bg-brand-deep px-5 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
           >
             <Link href="/signup">
               Sign up
@@ -702,7 +702,7 @@ function Eyebrow({
   return (
     <Reveal className={className}>
       <p className="flex items-center gap-3 font-mono text-[11px] tracking-[0.18em] text-[#71717A] uppercase">
-        <span className="text-brand">{index}</span>
+        <span className="text-brand-ink">{index}</span>
         <span aria-hidden className="h-px w-6 bg-white/15" />
         {label}
       </p>
@@ -985,7 +985,7 @@ function SignUpLead() {
 function FlowStep({ step, label }: { step: string; label: string }) {
   return (
     <div className="group flex-1 border-t border-white/10 pt-4 transition-colors duration-200 ease-out hover:border-brand/50">
-      <p className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+      <p className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
         {step}
       </p>
       <p className="mt-2 text-left text-sm font-medium text-[#A1A1AA] transition-colors duration-200 group-hover:text-white">
@@ -1046,7 +1046,7 @@ function DeepDiveRow({
         {/* A brand rule down the side of the step, in place of the glow that
             used to sit behind it. */}
         <div className="relative flex-1 border-l-2 border-brand/50 pl-5">
-          <p className="text-sm font-semibold text-brand">{step}</p>
+          <p className="text-sm font-semibold text-brand-ink">{step}</p>
           <h3 className="mt-2 text-2xl font-semibold tracking-tight text-balance text-white">
             {title}
           </h3>

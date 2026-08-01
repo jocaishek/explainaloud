@@ -342,7 +342,7 @@ export function AuthCard({
           <Button
             type="submit"
             disabled={submitting}
-            className="shine h-11 rounded-full bg-brand font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_44px_-8px_var(--color-brand)] active:scale-[0.97]"
+            className="shine h-11 rounded-full bg-brand-deep font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 hover:shadow-[0_0_44px_-8px_var(--color-brand-deep)] active:scale-[0.97]"
           >
             {submitting ? "Sending…" : "Send reset link"}
           </Button>
@@ -466,7 +466,7 @@ export function AuthCard({
             type="submit"
             size="default"
             disabled={submitting || oauthLoading !== null}
-            className="shine h-11 rounded-full bg-brand font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_44px_-8px_var(--color-brand)] active:scale-[0.97]"
+            className="shine h-11 rounded-full bg-brand-deep font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 hover:shadow-[0_0_44px_-8px_var(--color-brand-deep)] active:scale-[0.97]"
           >
             {submitting
               ? mode === "signup"

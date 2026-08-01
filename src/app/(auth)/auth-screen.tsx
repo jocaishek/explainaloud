@@ -19,7 +19,7 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
         href="/"
         className="flex items-center gap-2 text-base font-semibold tracking-tight text-strong transition-opacity hover:opacity-80"
       >
-        <ExplainaloudMark className="size-6 shrink-0 text-brand" />
+        <ExplainaloudMark className="size-6 shrink-0 text-brand-ink" />
         Explainaloud
       </Link>
 

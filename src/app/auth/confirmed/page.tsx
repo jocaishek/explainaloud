@@ -48,13 +48,13 @@ export default async function EmailConfirmedPage() {
         href="/"
         className="flex items-center gap-2 text-base font-semibold tracking-tight text-white transition-opacity hover:opacity-80"
       >
-        <ExplainaloudMark className="size-6 shrink-0 text-brand" />
+        <ExplainaloudMark className="size-6 shrink-0 text-brand-ink" />
         Explainaloud
       </Link>
 
       <div className="mt-10 flex w-full max-w-md flex-col items-center text-center">
         <span className="flex size-14 items-center justify-center rounded-full bg-brand/10">
-          <CheckCircle2 className="size-7 text-brand" aria-hidden />
+          <CheckCircle2 className="size-7 text-brand-ink" aria-hidden />
         </span>
 
         <h1 className="mt-6 text-3xl font-semibold tracking-tight text-balance">
@@ -71,7 +71,7 @@ export default async function EmailConfirmedPage() {
 
         <Link
           href={destination}
-          className="shine mt-8 inline-flex h-11 items-center justify-center rounded-full bg-brand px-7 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand/90 hover:shadow-[0_0_44px_-8px_var(--color-brand)] active:scale-[0.97] motion-reduce:transition-none"
+          className="shine mt-8 inline-flex h-11 items-center justify-center rounded-full bg-brand-deep px-7 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 hover:shadow-[0_0_44px_-8px_var(--color-brand-deep)] active:scale-[0.97] motion-reduce:transition-none"
         >
           {signedIn ? "Continue to Explainaloud" : "Log in"}
         </Link>

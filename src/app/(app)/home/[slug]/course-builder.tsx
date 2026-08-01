@@ -140,7 +140,7 @@ export function CourseBuilder({
     <div className="flex flex-col gap-8">
       <section className="flex flex-col gap-3">
         <div>
-          <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+          <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
             Your sources
           </h2>
           <p className="mt-1.5 text-sm text-subtle">
@@ -199,7 +199,7 @@ export function CourseBuilder({
           type="button"
           onClick={generate}
           disabled={generating}
-          className="h-11 gap-2 rounded-full bg-brand px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand)] transition-transform duration-200 ease-out hover:bg-brand/90 active:scale-[0.97] disabled:opacity-50"
+          className="h-11 gap-2 rounded-full bg-brand-deep px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97] disabled:opacity-50"
         >
           {generating
             ? "Reading your sources…"
@@ -278,7 +278,7 @@ export function CourseBuilder({
 
             {course.notes.length > 0 && (
               <section className="flex flex-col gap-3">
-                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
                   Notes
                 </h2>
                 <ul className="flex flex-col gap-2">
@@ -287,7 +287,7 @@ export function CourseBuilder({
                       key={note}
                       className="flex gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
                     >
-                      <span aria-hidden className="text-brand">
+                      <span aria-hidden className="text-brand-ink">
                         —
                       </span>
                       {note}
@@ -310,7 +310,7 @@ export function CourseBuilder({
                 className="flex scroll-mt-24 flex-col gap-3"
               >
                 <h3 className="flex items-baseline gap-3 text-lg font-semibold text-strong">
-                  <span className="font-mono text-[11px] text-brand">
+                  <span className="font-mono text-[11px] text-brand-ink">
                     {String(i + 1).padStart(2, "0")}
                   </span>
                   {section.title}
@@ -332,7 +332,7 @@ export function CourseBuilder({
 
             {englishVideos.length > 0 ? (
               <section className="flex flex-col gap-3">
-                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
                   Watch
                 </h2>
                 <div className="flex flex-col gap-2">
@@ -369,7 +369,7 @@ export function CourseBuilder({
               </section>
             ) : course.video_searches.length > 0 ? (
               <section className="flex flex-col items-start gap-2">
-                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
                   Watch
                 </h2>
                 <p className="text-sm text-subtle">
@@ -391,7 +391,7 @@ export function CourseBuilder({
 
             {directResources.length > 0 ? (
               <section className="flex flex-col gap-3">
-                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
                   Go deeper
                 </h2>
                 <div className="flex flex-col gap-2">
@@ -425,7 +425,7 @@ export function CourseBuilder({
               </section>
             ) : course.resources.length > 0 ? (
               <section className="flex flex-col items-start gap-2">
-                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
                   Go deeper
                 </h2>
                 <p className="text-sm text-subtle">
@@ -465,7 +465,7 @@ export function CourseBuilder({
 
             {sources.length > 0 && citationEntries.length === 0 && (
               <section className="rounded-xl border border-border bg-surface p-4">
-                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase">
+                <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
                   Citations
                 </h2>
                 <p className="mt-2 text-sm text-subtle">
@@ -530,7 +530,7 @@ function CitationMarks({
             key={citationKey(citation)}
             href={`#course-source-${number}`}
             title={`${citation.source}: ${citation.quote}`}
-            className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-brand/25 bg-brand/[0.07] px-1.5 font-mono text-[10px] font-semibold text-brand transition-colors hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-brand/25 bg-brand/[0.07] px-1.5 font-mono text-[10px] font-semibold text-brand-ink transition-colors hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           >
             [{number}]
           </a>
@@ -549,7 +549,7 @@ function CitationList({ citations }: { citations: CourseCitation[] }) {
       <div>
         <h2
           id="course-citations-heading"
-          className="font-mono text-[11px] tracking-[0.18em] text-brand uppercase"
+          className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase"
         >
           Sources & citations
         </h2>
@@ -566,7 +566,7 @@ function CitationList({ citations }: { citations: CourseCitation[] }) {
             className="scroll-mt-24 rounded-xl border border-border bg-surface p-4 target:border-brand/50 target:bg-brand/[0.04]"
           >
             <div className="flex items-baseline gap-2">
-              <span className="font-mono text-[10px] font-semibold text-brand">
+              <span className="font-mono text-[10px] font-semibold text-brand-ink">
                 [{index + 1}]
               </span>
               {citation.url ? (
@@ -574,7 +574,7 @@ function CitationList({ citations }: { citations: CourseCitation[] }) {
                   href={citation.url}
                   target="_blank"
                   rel="noreferrer noopener"
-                  className="break-all text-sm font-semibold text-strong transition-colors hover:text-brand"
+                  className="break-all text-sm font-semibold text-strong transition-colors hover:text-brand-ink"
                 >
                   {citation.source} ↗
                 </a>

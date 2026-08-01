@@ -181,7 +181,7 @@ export default async function GapReportPage({
         </p>
         <Link
           href={`/home/${slug}/record`}
-          className="w-fit rounded-full bg-brand px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-fit rounded-full bg-brand-deep px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-deep/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Start explaining
         </Link>
@@ -618,7 +618,7 @@ function WeaknessList({
                   answer arrived before the student had registered the gap. */}
               <Link
                 href={`/home/${slug}/re-teach#gap-${item.id}`}
-                className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Re-teach this
               </Link>
@@ -669,7 +669,7 @@ function QuestionTabs({
           className={cn(
             "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
             selected === null
-              ? "border-brand/40 bg-brand/[0.08] text-brand"
+              ? "border-brand/40 bg-brand/[0.08] text-brand-ink"
               : "border-border text-subtle hover:border-brand/25",
           )}
         >
@@ -684,7 +684,7 @@ function QuestionTabs({
             className={cn(
               "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
               selected === index
-                ? "border-brand/40 bg-brand/[0.08] text-brand"
+                ? "border-brand/40 bg-brand/[0.08] text-brand-ink"
                 : "border-border text-subtle hover:border-brand/25",
             )}
           >
