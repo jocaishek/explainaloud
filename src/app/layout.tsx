@@ -1,35 +1,78 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Geist_Mono, Instrument_Serif, Poppins } from "next/font/google";
+import { Archivo, Martian_Mono } from "next/font/google";
 import { AuthHashRescue } from "~/components/auth-hash-rescue";
 import { siteUrl } from "~/lib/site";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 
-/* Three weights, not four. Nothing in the app uses `font-bold`, so 700 was a
-   whole extra face fetched on every first load and never drawn. */
-const poppins = Poppins({
+/* Archivo, on both its axes, is the whole sans.
+ *
+ * It replaces Poppins, which was the previous display face and half the reason
+ * four people read this site as machine-made: a geometric sans off the same
+ * shortlist as Inter and Roboto, drawn to have no opinion.
+ *
+ * Archivo is a grotesque built for print at small sizes and for signage at
+ * large ones, and its variable release carries a width axis as well as a
+ * weight one. That is why it can be the only sans here: display type sets
+ * condensed and heavy, running text sets normal and light, and the distance
+ * between those two is a real typographic contrast rather than two weights of
+ * the same picture. One family, one request, both jobs.
+ *
+ * `axes: ["wdth"]` is what keeps the width axis; without it Next ships the
+ * weight axis alone and every condensed heading silently sets at normal
+ * width. The italic is loaded because the headline uses it as a second voice:
+ * the phrases the page marks are set italic as well as coloured, so the
+ * emphasis survives being read in greyscale. */
+const archivo = Archivo({
   subsets: ["latin"],
-  weight: ["400", "500", "600"],
+  style: ["normal", "italic"],
+  axes: ["wdth"],
   variable: "--font-sans",
 });
 
-/* Mono is used only for section eyebrows and stat labels — the small tracked
-   uppercase type that gives the page its editorial rhythm. */
-const geistMono = Geist_Mono({
+/* Martian Mono carries the timecodes, cue labels and status lines.
+ *
+ * A monospace here is not a costume for "technical" — the page is laid out as
+ * a broadcast running order, and every figure in it is a measurement that has
+ * to stay in column as it counts: elapsed time, duration, word position. That
+ * is the job monospace exists for. Martian Mono is drawn wide and slightly
+ * mechanical, which reads as instrument rather than as code editor. */
+const martianMono = Martian_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 });
 
-/* Display serif, used only for the accented word in a headline. One italic
-   serif word against the geometric sans is the whole contrast — using it for
-   more than that would flatten the effect. */
-const instrumentSerif = Instrument_Serif({
-  subsets: ["latin"],
-  weight: "400",
-  style: ["normal", "italic"],
-  variable: "--font-display",
-});
+const DIRECTION_CONTRACT = `<!--
+seed 8e7cc5c5
+
+THESIS: this product marks you while you are still talking, so the page marks
+you while you are still reading it. It refuses the category arrangement — hero
+claim, three feature cards, a screenshot — because a screenshot of live
+marking is the one thing that cannot show live marking.
+
+OWN-WORLD: the as-live broadcast script. Photocopy-grey stock, hard black
+hairlines and no card edges anywhere, a monospaced timecode gutter running the
+full height, Archivo condensed and heavy for display against Archivo light for
+running text, ultramarine at page scale rather than as an accent, and green /
+red / grey reserved for what they mean inside a transcript.
+
+STORY: you arrive mid-transmission. Something is being said and marked in
+front of you before you have read a word of copy. You understand that speaking
+is the input and that the marking is claim by claim, you believe it because you
+watched it happen rather than being told, and you cue your own.
+
+FIRST VIEWPORT: full-bleed script. Timecode column hard left, spoken lines
+arriving right of it at display scale and being wiped green, red or grey as
+they land. The product name sits small in the masthead rule; the primary
+action is an ultramarine cue block inline in the script, not floating above it.
+
+FORM: the as-live transmission script, candidate 3 of the grounded list,
+seed key 8e7cc5c5.
+
+FINISH: unreviewed and undocumented is unfinished; this build ends with the
+finish review, the verdict, and DESIGN.md
+-->`;
 
 const TITLE = "Explainaloud";
 const DESCRIPTION =
@@ -71,9 +114,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body
-        className={`${poppins.variable} ${geistMono.variable} ${instrumentSerif.variable} font-sans`}
-      >
+      <body className={`${archivo.variable} ${martianMono.variable} font-sans`}>
+        {/* The direction this design is under contract to, emitted as a real
+            HTML comment so it survives the production build and can be read
+            off the served page rather than taken on trust from a source file
+            nobody opens. `hidden` keeps the wrapper out of the layout; the
+            comment inside it is the payload. */}
+        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: a fixed
+            string constant with no interpolation, and the only way React
+            renders a comment node at all. */}
+        <div hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
         <ThemeProvider>{children}</ThemeProvider>
         {/* At the root because an emailed link lands wherever the project's
             Site URL points, and a session in the URL fragment is invisible to

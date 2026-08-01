@@ -2445,7 +2445,7 @@ export function RecordConsole({
           onClick={primaryAction}
           disabled={busy || outOfQuota || drafting}
           className={cn(
-            "glass flex size-20 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-50",
+            "flex size-20 items-center justify-center rounded-full transition-transform active:scale-95 disabled:opacity-50",
             status === "recording" && "border-brand/40 bg-brand/10",
           )}
         >
@@ -2531,23 +2531,43 @@ export function RecordConsole({
         className="w-full max-w-2xl"
       />
 
+      {/* The same panel the landing page demonstrates.
+       *
+       * Rounded to the same radius, the same header row, the same mono
+       * voice at the same size, and the same two verdict dots — drawn from
+       * `--ok` and `--miss` rather than from Tailwind's palette, so the
+       * green here is the exact green somebody was shown before they signed
+       * up. A demo that promises one surface and delivers another is a small
+       * lie told at the worst possible moment. */}
       {(status === "recording" || transcript) && (
-        <div className="w-full max-w-2xl rounded-xl border border-border bg-surface p-4">
-          <div className="mb-3 flex items-center gap-4 font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-green-500" /> On track
+        <div className="w-full max-w-2xl rounded-2xl border border-border p-6">
+          <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-border border-b pb-3 font-mono text-[0.68rem] text-subtle uppercase tracking-[0.09em]">
+            <span className="flex items-center gap-2">
+              <span
+                className="size-[10px] rounded-full"
+                style={{ background: "var(--ok)" }}
+              />
+              On track
             </span>
-            <span className="flex items-center gap-1.5">
-              <span className="size-2 rounded-full bg-red-500" /> Gap
+            <span className="flex items-center gap-2">
+              <span
+                className="size-[10px] rounded-full"
+                style={{ background: "var(--miss)" }}
+              />
+              Gap
             </span>
             {status === "recording" && (
-              <span className="ml-auto text-brand-ink">
-                Listening. Nothing interrupts you
+              <span className="ml-auto flex items-center gap-2 text-brand-ink">
+                <span
+                  className="tally-lamp size-[10px] rounded-full"
+                  style={{ background: "var(--miss)" }}
+                />
+                Live. Nothing interrupts you
               </span>
             )}
           </div>
 
-          <p className="min-h-16 text-sm leading-relaxed">
+          <p className="min-h-[6rem] text-[1.02rem] leading-[1.6]">
             <ColouredTranscript
               spans={spans}
               fallback={transcript}

@@ -301,7 +301,7 @@ export function AuthCard({
       {stage === "forgot-password" && (
         <form
           onSubmit={handleForgotPassword}
-          className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-card p-6"
+          className="flex w-full flex-col gap-4 rounded-2xl border border-border bg-card p-6"
         >
           <div>
             <h3 className="text-base font-semibold text-strong">
@@ -342,7 +342,7 @@ export function AuthCard({
           <Button
             type="submit"
             disabled={submitting}
-            className="shine h-11 rounded-full bg-brand-deep font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 hover:shadow-[0_0_44px_-8px_var(--color-brand-deep)] active:scale-[0.97]"
+            className="h-11 bg-brand-deep font-semibold text-white transition-colors duration-200 hover:bg-brand"
           >
             {submitting ? "Sending…" : "Send reset link"}
           </Button>
@@ -368,7 +368,7 @@ export function AuthCard({
       {stage === "form" && (
         <form
           onSubmit={handleSubmit}
-          className="glow-ring flex w-full flex-col gap-4 rounded-2xl bg-card p-6"
+          className="flex w-full flex-col gap-4 rounded-2xl border border-border bg-card p-6"
         >
           <div className="flex flex-col gap-2">
             {/* Google's own button when Identity Services is available, so
@@ -414,7 +414,7 @@ export function AuthCard({
                 variant="outline"
                 disabled={oauthLoading !== null}
                 onClick={() => handleOAuth("google")}
-                className="h-11 gap-2 rounded-full border-input bg-muted font-medium text-strong transition-transform duration-200 ease-out hover:bg-accent active:scale-[0.98]"
+                className="h-11 gap-2 border-input bg-muted font-medium text-strong transition-colors duration-200 hover:bg-accent"
               >
                 <GoogleIcon className="size-4" />
                 {oauthLoading === "google"
@@ -466,7 +466,7 @@ export function AuthCard({
             type="submit"
             size="default"
             disabled={submitting || oauthLoading !== null}
-            className="shine h-11 rounded-full bg-brand-deep font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 hover:shadow-[0_0_44px_-8px_var(--color-brand-deep)] active:scale-[0.97]"
+            className="h-11 bg-brand-deep font-semibold text-white transition-colors duration-200 hover:bg-brand"
           >
             {submitting
               ? mode === "signup"
@@ -506,7 +506,7 @@ export function AuthCard({
       )}
 
       {stage === "check-email" && (
-        <div className="glow-ring flex w-full flex-col gap-5 rounded-2xl bg-card p-6">
+        <div className="flex w-full flex-col gap-5 rounded-2xl border border-border bg-card p-6">
           <div>
             <h3 className="text-base font-semibold text-strong">
               Verify your email
@@ -535,7 +535,7 @@ export function AuthCard({
             variant="outline"
             disabled={resending}
             onClick={handleResendVerification}
-            className="h-11 rounded-full border-input bg-muted font-medium text-strong transition-transform duration-200 ease-out hover:bg-accent active:scale-[0.98]"
+            className="h-11 border-input bg-muted font-medium text-strong transition-colors duration-200 hover:bg-accent"
           >
             {resending ? "Resending…" : "Resend verification email"}
           </Button>

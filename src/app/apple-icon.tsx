@@ -11,8 +11,15 @@ import { ImageResponse } from "next/og";
 export const size = { width: 180, height: 180 };
 export const contentType = "image/png";
 
-const MARK =
-  "M 40.5 11.2 C 22.7 8.2, 11 22.5, 22.4 29.6 C 26.9 31.9, 33 31.8, 37.9 31 C 44.8 29.7, 47.9 30.2, 45.1 25.6 C 42.4 22, 34.9 25.4, 31.4 34.1 C 27.7 41.9, 20.2 40.2, 21.5 47.1 C 22.8 54.9, 35.4 56.8, 47.9 47.5";
+/* The two paths, copied rather than imported.
+ *
+ * `explainaloud-mark.tsx` is a client component, and importing it here would
+ * pull React's client runtime into a build-time image route. The shapes are
+ * literals in both places and must be kept in step; the doc comment on the
+ * component says the same thing from the other side. */
+const EYE =
+  "M 19.1 13.9 L 33.9 20.6 Q 38 22.5 33.9 24.4 L 19.1 31.1 Q 15 33 15 28.5 L 15 16.5 Q 15 12 19.1 13.9 Z";
+const SMILE = "M 17.5 39.5 A 18 18 0 0 0 42.5 50.5";
 
 export default function AppleIcon() {
   return new ImageResponse(
@@ -23,27 +30,30 @@ export default function AppleIcon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#e2542c",
+        background: "#1f2aff",
       }}
     >
-      {/* Full-bleed square: iOS applies its own corner mask. */}
+      {/* Full-bleed square. iOS applies its own mask to this one whatever we
+          draw, which is why it is the only tile in the set that is not a
+          circle — every other surface uses `icon.svg`, where the circle is
+          real. */}
       {/* Rasterised to PNG, so the label is inert here — but the lint rule is
           right in general, and `role`/`aria-label` satisfy it without a
           <title> child, which Satori does not render. */}
       <svg
-        width="150"
-        height="150"
+        width="128"
+        height="128"
         viewBox="0 0 64 64"
         fill="none"
         role="img"
         aria-label="Explainaloud"
       >
+        <path d={EYE} fill="#ffffff" />
         <path
-          d={MARK}
+          d={SMILE}
           stroke="#ffffff"
           strokeWidth="5"
           strokeLinecap="round"
-          strokeLinejoin="round"
         />
       </svg>
     </div>,
