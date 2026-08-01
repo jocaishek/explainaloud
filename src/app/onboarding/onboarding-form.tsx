@@ -365,7 +365,7 @@ export function OnboardingForm({ email }: { email: string }) {
             key="finish"
             type="submit"
             disabled={pending}
-            className="shine group h-11 gap-1.5 rounded-full bg-brand-deep px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97] motion-reduce:transition-none"
+            className="group h-11 gap-1.5 bg-brand-deep px-6 font-semibold text-white transition-colors duration-200 hover:bg-brand"
           >
             {pending ? "Setting up…" : "Finish setup"}
             {!pending && <Check className="size-4" />}
@@ -375,7 +375,7 @@ export function OnboardingForm({ email }: { email: string }) {
             key="continue"
             type="button"
             onClick={next}
-            className="shine group h-11 gap-1.5 rounded-full bg-brand-deep px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-[transform,box-shadow] duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97] motion-reduce:transition-none"
+            className="group h-11 gap-1.5 bg-brand-deep px-6 font-semibold text-white transition-colors duration-200 hover:bg-brand"
           >
             Continue
             <ArrowRight className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />

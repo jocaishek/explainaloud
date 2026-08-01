@@ -19,12 +19,18 @@ export default async function DashboardLayout({
     <div className="flex min-h-screen flex-col bg-background text-foreground">
       <header className="flex w-full items-center justify-between gap-3 border-b border-border px-3 py-4 sm:px-6 lg:px-8 lg:py-5">
         <div className="flex min-w-0 items-center gap-2 lg:gap-8">
+          {/* Set exactly as the masthead on the landing page: same mark,
+              same size, same uppercase wordmark at the same width and
+              tracking. Signing in should not feel like arriving at a
+              different product. */}
           <Link
             href="/home"
-            className="flex items-center gap-2 text-base font-semibold tracking-tight text-strong"
+            className="press flex shrink-0 items-center gap-2.5 text-strong"
           >
-            <ExplainaloudMark className="size-6 shrink-0 text-brand-ink" />
-            Explainaloud
+            <ExplainaloudMark className="size-7 shrink-0 text-brand-ink" />
+            <span className="font-semibold text-[0.92rem] uppercase tracking-[0.04em] [font-stretch:87%]">
+              Explainaloud
+            </span>
           </Link>
           <DashboardNav showAdmin={isAdminEmail(user.email)} />
         </div>
@@ -32,7 +38,7 @@ export default async function DashboardLayout({
           <Button
             asChild
             size="sm"
-            className="gap-1.5 rounded-full bg-brand-deep font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
+            className="gap-1.5 bg-brand-deep font-semibold text-white hover:bg-brand"
           >
             <Link href="/new" aria-label="New topic">
               <Plus className="size-4" />
