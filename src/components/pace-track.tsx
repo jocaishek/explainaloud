@@ -104,11 +104,32 @@ function Slug({
   );
 }
 
+/**
+ * Stands in for the chart, quietly.
+ *
+ * Deliberately not a card and not a warning colour: nothing has gone wrong,
+ * and a bordered panel saying "no chart" occupies as much of the page as the
+ * chart would have. One paragraph, the same voice as the rest of the report.
+ */
+function Note({ children }: { children: React.ReactNode }) {
+  return (
+    <p className="max-w-prose text-[0.82rem] text-subtle leading-6">
+      {children}
+    </p>
+  );
+}
+
 export function PaceTrack({
   pace,
   baselineWpm,
 }: {
-  pace: PacePoint[];
+  /**
+   * Missing on anything recorded before the window rates were stored, and
+   * short on a take that ended before there was a shape to draw. Both are
+   * handled here rather than by the caller, so there is one place that knows
+   * why a chart is absent and can say so.
+   */
+  pace: PacePoint[] | null | undefined;
   /** The speaker's own reference. Null before there is one to compare against. */
   baselineWpm: number | null;
 }) {
@@ -123,7 +144,33 @@ export function PaceTrack({
     return () => cancelAnimationFrame(id);
   }, []);
 
-  if (pace.length < MINIMUM_WINDOWS) return null;
+  /* Say why, rather than render nothing.
+   *
+   * An absent chart is indistinguishable from a broken one: "How you spoke"
+   * draws directly above, so the measurement is evidently working, and the
+   * picture the landing page promised is just missing. Two different reasons,
+   * and the difference matters — one is fixed by recording again, the other
+   * by talking for longer. */
+  if (!pace) {
+    return (
+      <Note>
+        Pace through the take was not recorded for this session. It is measured
+        from word-level timings, which are not kept after a recording is graded,
+        so it cannot be filled in afterwards — the chart will be here on your
+        next one.
+      </Note>
+    );
+  }
+
+  if (pace.length < MINIMUM_WINDOWS) {
+    return (
+      <Note>
+        This take was too short to chart a pace through. Rate is measured over
+        ten-second windows, so a shape needs about twenty seconds of speech. The
+        figures above still hold.
+      </Note>
+    );
+  }
 
   const bars = bucket(pace);
   const last = pace[pace.length - 1];

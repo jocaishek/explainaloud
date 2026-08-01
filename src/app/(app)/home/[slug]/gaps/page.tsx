@@ -364,9 +364,16 @@ export default async function GapReportPage({
           )}
 
           {/* The shape of the delivery, under the two numbers that summarise
-              it. Absent on sessions recorded before the window rates were
-              stored — see `SpeechMetrics.pace`. */}
-          {!focused && metrics?.reliable && metrics.pace && (
+              it.
+
+              `pace` is passed through even when it is missing, rather than
+              guarded on here, so that the component can say why there is no
+              chart instead of silently rendering nothing. A recording made
+              before the window rates were stored looks identical to a bug
+              from the outside — the summary above it draws, so the feature
+              is evidently on, and the chart the landing page promised simply
+              is not there. */}
+          {!focused && metrics?.reliable && (
             <PaceTrack pace={metrics.pace} baselineWpm={baselineWpm} />
           )}
 
