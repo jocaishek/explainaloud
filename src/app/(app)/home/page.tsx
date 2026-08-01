@@ -6,8 +6,15 @@ import { TopicGrid } from "../topic-grid";
 import { PacePanel, type PaceSession } from "./pace-panel";
 import { QuickActions } from "./quick-actions";
 
-/** How many recent sessions the pace chart draws. */
-const PACE_WINDOW = 12;
+/**
+ * How many bars the pace chart draws, and how many rows it reads to find them.
+ *
+ * The window is wider than the chart because a session with too little speech
+ * to measure is dropped rather than drawn faintly — reading exactly five rows
+ * would mean two unusable ones left the chart three bars long.
+ */
+const PACE_BARS = 5;
+const PACE_WINDOW = 20;
 
 export default async function DashboardPage() {
   const { supabase, user, profile } = await requireProfile();
@@ -41,7 +48,7 @@ export default async function DashboardPage() {
       .maybeSingle<{ median_wpm: number; capable_wpm: number }>(),
     supabase
       .from("course_sessions")
-      .select("id, speech_metrics, started_at, courses ( topic )")
+      .select("id, speech_metrics, started_at, courses ( topic, slug )")
       .eq("user_id", user.id)
       .not("speech_metrics", "is", null)
       .order("started_at", { ascending: false })
@@ -51,7 +58,7 @@ export default async function DashboardPage() {
           id: string;
           speech_metrics: SpeechMetrics | null;
           started_at: string;
-          courses: { topic: string } | null;
+          courses: { topic: string; slug: string } | null;
         }>
       >(),
   ]);
@@ -61,16 +68,29 @@ export default async function DashboardPage() {
    * `reliable` is false when there was too little speech for the windowed
    * rates to mean anything, and a bar computed from four seconds of talking is
    * not a quieter version of the truth — it is a number that should not be on
-   * a chart at all. Reversed because the query is newest-first and the chart
+   * a chart at all.
+   *
+   * A session whose course has no slug is dropped too: every bar is a link to
+   * the session it stands for, and one that cannot be opened is a control
+   * that does nothing.
+   *
+   * Sliced before the reverse, because the query is newest-first and it is
+   * the five most recent that are wanted; reversed after, because the chart
    * reads left to right in time. */
   const paceSessions: PaceSession[] = (recent ?? [])
-    .filter((row) => row.speech_metrics?.reliable)
+    .filter((row) => row.speech_metrics?.reliable && row.courses?.slug)
     .map((row) => ({
       id: row.id,
       topic: row.courses?.topic ?? "Untitled",
       wpm: Math.round(row.speech_metrics?.medianWpm ?? 0),
+      href: `/home/${row.courses?.slug}/gaps?session=${row.id}`,
+      when: new Date(row.started_at).toLocaleDateString("en-GB", {
+        day: "numeric",
+        month: "short",
+      }),
     }))
     .filter((row) => row.wpm > 0)
+    .slice(0, PACE_BARS)
     .reverse();
 
   return (

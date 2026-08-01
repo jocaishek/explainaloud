@@ -183,9 +183,20 @@ export function TopicGrid({
             onDragOver={zone.onDragOver}
             onDragLeave={zone.onDragLeave}
             onDrop={zone.onDrop}
+            /* The drop highlight is an outline, not a border and padding.
+             *
+             * This used to be `border border-transparent p-4`, which inset
+             * every loose card seventeen pixels from the "Your topics" rule
+             * directly above it — a margin nobody asked for, in service of a
+             * highlight that is only visible while something is mid-drag. An
+             * outline with an offset draws in the same place and costs no
+             * layout, so the cards start exactly where the heading does.
+             *
+             * A folder keeps its padding: that one is a real container and is
+             * meant to look like one. */
             className={cn(
-              "flex flex-col gap-4 rounded-2xl border border-transparent p-4 transition-colors duration-200",
-              zone.active && "border-brand bg-brand/[0.04]",
+              "flex flex-col gap-4 rounded-2xl outline-2 outline-transparent outline-offset-8 transition-colors duration-200",
+              zone.active && "bg-brand/[0.04] outline-brand",
             )}
           >
             {folders.length > 0 && (
