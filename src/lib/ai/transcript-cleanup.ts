@@ -76,6 +76,33 @@ const CAPTION_ARTEFACTS = new Set([
  */
 const LOOP_THRESHOLD = 3;
 
+/**
+ * Length, in words, at which repeating a clause verbatim stops being speech.
+ *
+ * The run rule above only sees repetition it can count, and it counts
+ * sentences — so it is blind to the shape a loop actually takes most of the
+ * time, which is comma-spliced and non-adjacent:
+ *
+ *   "Claude Code is a tool that can be used to create code, Claude Code can be
+ *    used to create code, The language needs to be set up, The language needs
+ *    to be set up, Claude Codes are used to create code, Claude Codes are used
+ *    to create code, Claude Code is a tool that can be used to create code,
+ *    Claude Code can be used to create code,"
+ *
+ * That is one sentence by the old split — there is no full stop anywhere in
+ * it — so nothing repeated and nothing was removed. It came from a recording
+ * of somebody singing. They did not say a word of it.
+ *
+ * Six words is the line because of how people actually repeat themselves. We
+ * restate an idea and paraphrase it while doing so; reproducing six words in
+ * the same order twice is a decoder conditioning on its own output. Below six
+ * the run rule still applies, so "no, no, no" needs three before it counts.
+ *
+ * The first occurrence always survives. If the repetition was real, what they
+ * said is still there once.
+ */
+const ECHO_WORDS = 6;
+
 /** Lowercased, stripped of punctuation and collapsed whitespace. */
 function normalize(sentence: string) {
   return sentence
@@ -86,17 +113,28 @@ function normalize(sentence: string) {
 }
 
 /**
- * Split on sentence ends, keeping the punctuation with the sentence it closes.
+ * Split into clauses, keeping the punctuation with the clause it closes.
  *
- * Hallucinations are punctuated — "Thank you for watching!" arrives with its
- * exclamation mark — so sentence boundaries are reliable here in a way they
- * would not be for, say, dictated prose.
+ * Commas as well as full stops. This used to split on `[.!?]` only, on the
+ * reasoning that hallucinations arrive punctuated — "Thank you for watching!"
+ * comes with its exclamation mark — which is true of that particular artefact
+ * and false of the more common one. A decoding loop over unintelligible audio
+ * comes back comma-spliced, one long run-on with no sentence end in it at all,
+ * and a splitter looking for full stops sees a single sentence that repeats
+ * nothing.
+ *
+ * A clause is the right unit anyway: it is what the loop repeats.
  */
-function splitSentences(transcript: string): string[] {
+function splitClauses(transcript: string): string[] {
   return transcript
-    .split(/(?<=[.!?])\s+/)
+    .split(/(?<=[.!?,])\s+/)
     .map((part) => part.trim())
     .filter(Boolean);
+}
+
+/** Words in an already-normalised clause. */
+function wordCount(normalised: string) {
+  return normalised ? normalised.split(" ").length : 0;
 }
 
 export type CleanedTranscript = {
@@ -119,16 +157,15 @@ export function stripHallucinations(
   transcript: string,
   words: TranscribedWord[],
 ): CleanedTranscript {
-  const sentences = splitSentences(transcript);
+  const sentences = splitClauses(transcript);
   if (sentences.length === 0) return { transcript, words, removed: 0 };
 
   const normalized = sentences.map(normalize);
-
-  /* Which sentences are part of a run of three or more identical ones. The
-     whole run goes, including the first: a loop that begins by echoing
-     something real is still a loop, and the real instance is somewhere in the
-     speech before it. */
   const looping = new Array<boolean>(sentences.length).fill(false);
+
+  /* Runs of three or more identical clauses. The whole run goes, including the
+     first: a loop that begins by echoing something real is still a loop, and
+     the real instance is somewhere in the speech before it. */
   for (let i = 0; i < sentences.length; ) {
     let j = i;
     while (j + 1 < sentences.length && normalized[j + 1] === normalized[i]) j++;
@@ -136,6 +173,18 @@ export function stripHallucinations(
       for (let k = i; k <= j; k++) looping[k] = true;
     }
     i = j + 1;
+  }
+
+  /* Verbatim echoes of a long clause, adjacent or not. Separate from the run
+     rule because a loop rarely repeats back to back — it wanders through two
+     or three phrases and comes round again, which no count of consecutive
+     matches will ever see. The first occurrence is kept; only later copies of
+     something already said go. */
+  const seen = new Set<string>();
+  for (const [i, phrase] of normalized.entries()) {
+    if (looping[i] || wordCount(phrase as string) < ECHO_WORDS) continue;
+    if (seen.has(phrase as string)) looping[i] = true;
+    else seen.add(phrase as string);
   }
 
   const keptSentences: string[] = [];
