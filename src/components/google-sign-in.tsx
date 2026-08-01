@@ -8,6 +8,7 @@ import {
   loadGoogleIdentity,
 } from "~/lib/google-identity";
 import { createClient } from "~/lib/supabase/client";
+import { cn } from "~/lib/utils";
 
 /**
  * The Google button, rendered by Google, on our origin.
@@ -109,23 +110,6 @@ export function GoogleSignIn({
         },
       });
 
-      /**
-       * Draw the plain button, not the personalised card.
-       *
-       * Once somebody has signed in here once, Google starts rendering their
-       * avatar, name and address in place of "Continue with Google". It is
-       * meant as a convenience and it is one, but it puts a returning
-       * visitor's email address on screen on a shared or borrowed machine,
-       * and the variant quietly ignores the `theme` and `shape` passed below
-       * — so on a dark form it arrives as a white rectangle.
-       *
-       * `disableAutoSelect` is the documented way to clear the returning-user
-       * state the personalised card keys off. Its usual home is a sign-out
-       * handler; called here it simply means this button never personalises.
-       * It does not sign anyone out of Google and does not affect the token.
-       */
-      api.disableAutoSelect();
-
       // Redrawing on a theme switch means clearing what is already there;
       // renderButton appends rather than replacing.
       host.current.replaceChildren();
@@ -158,24 +142,41 @@ export function GoogleSignIn({
   }, [resolvedTheme]);
 
   return (
+    /*
+     * Google's button is not ours to style.
+     *
+     * `shape` and `theme` are requests rather than instructions, and the
+     * personalised card a returning visitor gets honours neither: it arrives
+     * with a pale outline that reads as a white halo on a dark form. The
+     * border lives inside Google's own tree, where no selector of ours
+     * reaches it.
+     *
+     * The edge of the box does reach it. `clip-path` shaves two pixels off
+     * every side and rounds what is left, which takes the outline with it.
+     * Scaling the node instead was the first attempt and the wrong shape of
+     * fix: four per cent of a 400-pixel-wide button crops eight pixels
+     * horizontally and one vertically, so it started shaving the Google badge
+     * before it had finished removing the ring. An inset is even on all four
+     * sides by construction.
+     *
+     * Dark only. In light mode the button is themed `outline`, and that same
+     * hairline is the thing separating a white button from a white card —
+     * clipping it there left an edgeless smudge. The ring is only ever a
+     * problem against a dark form.
+     *
+     * `overflow-hidden rounded-full` stays as the coarser guard, for a
+     * variant that ignores `shape` and draws square corners.
+     *
+     * `min-h-11` holds the height before the button arrives so the form does
+     * not jump, and pointer events are off while an email submit is in flight.
+     */
     <div
       ref={host}
-      /*
-       * Google draws into this node, and what it draws is not fully ours to
-       * control: `shape` and `theme` are requests, and at least one variant
-       * ignores both. So the container clips to the same pill the rest of the
-       * form uses, which keeps a square white card from appearing on a dark
-       * rounded form no matter what Google decides to render.
-       *
-       * `min-h-11` holds the button's height before it arrives so the form
-       * does not jump, and pointer events are off while an email submit is in
-       * flight.
-       */
-      className={
-        disabled
-          ? "pointer-events-none flex min-h-11 justify-center overflow-hidden rounded-full opacity-60"
-          : "flex min-h-11 justify-center overflow-hidden rounded-full"
-      }
+      className={cn(
+        "flex min-h-11 justify-center overflow-hidden rounded-full",
+        resolvedTheme === "dark" && "[clip-path:inset(2px_round_9999px)]",
+        disabled && "pointer-events-none opacity-60",
+      )}
       aria-busy={!ready}
     />
   );
