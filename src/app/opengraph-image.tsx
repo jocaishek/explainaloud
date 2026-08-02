@@ -19,14 +19,14 @@ import { ImageResponse } from "next/og";
  */
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt =
-  "Explainaloud: rereading feels like learning, saying it out loud is where you find out.";
+export const alt = "Explainaloud: find the gaps you didn't know you had.";
 
 const BRAND = "#c2410c";
+const SUN = "#f59e0b";
 const INK = "#0c0c0d";
 const STOCK = "#f2f2f0";
 const OK = "#0f7a3d";
-const VAGUE = "#96600a";
+const MISS = "#c4271c";
 
 /** The same two paths as `icon.svg` and `apple-icon.tsx`. */
 const EYE =
@@ -68,7 +68,9 @@ export default function OpengraphImage() {
         backgroundColor: STOCK,
         color: INK,
         padding: "64px 72px",
-        borderTop: `10px solid ${BRAND}`,
+        /* The current accent. The rule was the deep stop, which is the hover
+           and pressed colour, not the one the product leads with. */
+        borderTop: `10px solid ${SUN}`,
       }}
     >
       <div
@@ -120,38 +122,74 @@ export default function OpengraphImage() {
         </span>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: "26px" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "30px" }}>
+        {/* The headline the landing actually runs, in sentence case.
+         *
+         * This card was still carrying "Rereading feels like learning. Saying
+         * it out loud is where you find out" — a line the landing tried and
+         * rejected, for reasons written out at `HEADLINE` in `page.tsx`: two
+         * sentences where one would do, and amber on "feels like", which is
+         * not a claim anybody would grade. A share card is the first thing
+         * most people ever see of this product, and it was showing copy the
+         * page itself had moved on from. */}
+        <span
+          style={{
+            display: "flex",
+            fontSize: "82px",
+            fontWeight: 600,
+            lineHeight: 1.05,
+            letterSpacing: "-0.03em",
+            maxWidth: "980px",
+          }}
+        >
+          Find the gaps you didn&apos;t know you had.
+        </span>
+
+        {/* The verdicts, used as verdicts.
+         *
+         * The old card painted green on "Saying it out loud" and tan on
+         * "feels like" — decoration in the costume of a verdict, which
+         * `design.md` bans outright: those three colours mean *correct*,
+         * *missing a step* and *vague*, and nothing else may wear them. The
+         * green somebody is shown before signing up has to be the green they
+         * are graded in afterwards.
+         *
+         * So the card marks a real clause instead, the same authored physics
+         * take the hero runs: one claim the grader would pass, one it would
+         * record as never reached. Same colours, doing their actual job. */}
         <div
           style={{
             display: "flex",
-            flexWrap: "wrap",
-            gap: "0 16px",
-            fontSize: "86px",
-            fontWeight: 600,
-            lineHeight: 1.02,
-            letterSpacing: "-0.04em",
-            textTransform: "uppercase",
-            maxWidth: "1000px",
-          }}
-        >
-          <span style={{ display: "flex" }}>Rereading</span>
-          <Mark tone={VAGUE}>feels like</Mark>
-          <span style={{ display: "flex" }}>learning.</span>
-          <Mark tone={OK}>Saying it out loud</Mark>
-          <span style={{ display: "flex" }}>is where you</span>
-          <Mark tone={OK}>find out.</Mark>
-        </div>
-        <span
-          style={{
+            flexDirection: "column",
+            gap: "14px",
             fontSize: "30px",
             lineHeight: 1.35,
-            opacity: 0.7,
-            maxWidth: "820px",
+            maxWidth: "980px",
           }}
         >
-          Talk through what you are studying for three minutes and get your own
-          words back, marked sentence by sentence.
-        </span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: "0 12px" }}>
+            <span style={{ display: "flex", opacity: 0.7 }}>
+              Forces come in pairs,
+            </span>
+            <Mark tone={OK}>equal and opposite</Mark>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: "0 16px" }}>
+            <span
+              style={{
+                display: "flex",
+                fontSize: "20px",
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                color: MISS,
+              }}
+            >
+              Not said
+            </span>
+            <span style={{ display: "flex", color: MISS }}>
+              the two forces act on different objects
+            </span>
+          </div>
+        </div>
       </div>
     </div>,
     size,
