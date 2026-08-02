@@ -389,98 +389,6 @@ function MarkedLine({
 }
 
 /* -------------------------------------------------------------------------
- * The field behind the first viewport
- * ---------------------------------------------------------------------- */
-
-/**
- * A waveform tile that repeats without a seam.
- *
- * Every term is a whole number of cycles across the tile width, so the last
- * sample lands exactly where the first one starts and two tiles laid side by
- * side join invisibly. That is the entire reason the drift below can be a
- * single linear translate rather than a simulation.
- *
- * Computed at module scope from a fixed formula — no randomness anywhere, so
- * the server and the browser draw the same path and hydration has nothing to
- * argue about.
- */
-const TILE_W = 1200;
-const TILE_H = 220;
-
-function wavePath(amplitude: number, phase: number) {
-  const points: string[] = [];
-  for (let x = 0; x <= TILE_W; x += 8) {
-    const t = (x / TILE_W) * Math.PI * 2;
-    const y =
-      TILE_H / 2 +
-      amplitude *
-        (Math.sin(3 * t + phase) +
-          0.55 * Math.sin(7 * t + phase * 1.7) +
-          0.3 * Math.sin(11 * t + phase * 2.3));
-    points.push(`${x},${y.toFixed(1)}`);
-  }
-  return `M ${points.join(" L ")}`;
-}
-
-/* Two layers, and both close to invisible.
- *
- * The first version ran three at up to half opacity and it took the page over:
- * the sentence in front of it was the thing you stopped being able to read,
- * which is the opposite of the job. At 0.14 and 0.08 the field registers as
- * texture in the corner of the eye and disappears the moment you look at a
- * word, and the drift is slow enough that nothing in it ever catches. */
-const WAVES = [
-  { d: wavePath(52, 0), opacity: 0.14, seconds: 90, width: 1 },
-  { d: wavePath(78, 2.4), opacity: 0.08, seconds: 140, width: 1 },
-] as const;
-
-/**
- * The signal running through the on-air strip.
- *
- * Stripe's version of "a thing that runs on the page" is an animated gradient
- * mesh behind the hero, and that is the one shape of background this page's
- * rules refuse outright. This is the same intent taken somewhere it belongs: a
- * transmission strip carries a level meter, the meter never stops, and because
- * it is fifteen pixels tall inside a band that is already there it cannot
- * compete with anything.
- *
- * Same seamless tile as the field below, stroked in white and running faster,
- * because a meter that crawls reads as broken.
- */
-function SignalStrip() {
-  return (
-    <div
-      aria-hidden="true"
-      className="relative ml-auto hidden h-4 w-40 overflow-hidden md:block lg:w-72"
-    >
-      <div
-        className="wave-drift absolute inset-y-0 left-0 flex w-[200%]"
-        style={{ animationDuration: "9s" }}
-      >
-        {[0, 1].map((copy) => (
-          <svg
-            key={copy}
-            className="h-full w-1/2 shrink-0"
-            viewBox={`0 0 ${TILE_W} ${TILE_H}`}
-            preserveAspectRatio="none"
-            fill="none"
-            role="presentation"
-          >
-            <path
-              d={WAVES[0].d}
-              stroke="#ffffff"
-              strokeWidth={1}
-              strokeOpacity={0.7}
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------
  * Chrome
  * ---------------------------------------------------------------------- */
 
@@ -701,6 +609,39 @@ const TAKE_OFFSETS = TAKE.reduce<number[]>((acc, _line, i) => {
   return acc;
 }, []);
 
+/**
+ * A fragment of real output, floated beside the headline.
+ *
+ * Steep's hero scatters product UI around the sentence rather than framing one
+ * screenshot beside it, and these are the smallest honest unit of what this
+ * product returns: a marked clause, and a claim that was never reached. Both
+ * are authored demonstration material, marked exactly as the grader would mark
+ * them.
+ *
+ * A real shadow, unlike anything else on the page. It is the one place the
+ * system allows elevation, because these are the only elements that overlap
+ * the text they belong to and need to read as sitting above it.
+ */
+function Artifact({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        "rounded-[20px] border border-[var(--rule)] bg-white p-5 text-left",
+        "shadow-[0_20px_25px_-5px_rgba(0,0,0,0.06),0_8px_10px_-6px_rgba(0,0,0,0.05)]",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
 function Hero() {
   const [cued, setCued] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -755,101 +696,82 @@ function Hero() {
        * empty space — and every attempt to fix it was an attempt to fill the
        * gap rather than to stop making one. Sized by what is in it, with real
        * padding round it, there is nothing left over. */}
-      <section className="paper accent-blue overflow-hidden px-4 py-10 md:px-8 md:py-14">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <span className="inline-flex items-center rounded-full border border-[var(--rule)] px-3 py-1.5 font-mono text-[0.66rem] uppercase tracking-[0.09em]">
-            <span className="tally-lamp mr-2 inline-block h-[6px] w-[6px] rounded-full bg-[var(--miss)]" />
-            Rec 00:{String(elapsed).padStart(2, "0")} of 03:00
-          </span>
-          <Slug>Marked as you speak</Slug>
-          <SignalStrip />
-        </div>
+      {/* A centred editorial hero, with the product floating around it.
+       *
+       * The previous composition was a two-column split: claim on the left,
+       * demonstration panel on the right. It is the arrangement every SaaS
+       * landing page uses, and swapping the typeface into it did not change
+       * that - the page still read as the same page in different clothes.
+       *
+       * This one puts the sentence in the middle at full width and lets real
+       * product output orbit it. The reference set does this consistently:
+       * the headline is the composition, and the interface fragments are
+       * scattered evidence rather than one framed screenshot. It also suits
+       * what is being said. A sentence about explaining something out loud
+       * should be set the way a sentence is set, not squeezed into a column
+       * beside a picture. */}
+      <section className="paper accent-blue px-[var(--pad)] pt-14 pb-20 md:pt-16 md:pb-28">
+        <div className="relative mx-auto max-w-[46rem] text-center">
+          <h1 className="mx-auto max-w-[24ch] pb-1 font-display font-normal text-[clamp(2.3rem,5.4vw,4.1rem)] leading-[1.14] tracking-[-0.015em]">
+            <MarkedLine
+              runs={HEADLINE}
+              cued={cued}
+              baseDelay={350}
+              step={340}
+            />
+          </h1>
 
-        {/* The headline at the size a name is set on a building. `[text-wrap:balance]`
-            is deliberately off — the line breaks are part of the composition at
-            this scale and balancing them evens the block into a paragraph. */}
-        {/* The claim on the left, the thing being tested on the right.
-         *
-         * One grid of two rows rather than two grids stacked: the headline and
-         * the copy take the left column in turn, and the take spans both, so
-         * the panel runs the full height of the viewport and there is no
-         * bottom-right corner left over to fill.
-         *
-         * A legend of the three verdict colours was tried in that corner and
-         * removed: section 03 already carries exactly that list, and a hero
-         * that explains its own colour code before anybody has scrolled is
-         * answering a question nobody has asked yet. The corner itself then
-         * went, with the fixed height that created it. */}
-        <div className="grid items-start gap-x-12 gap-y-10 py-10 md:py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,31rem)]">
-          {/* One column, not two rows.
-           *
-           * The headline and the copy used to be separate rows of the outer
-           * grid, which meant row one's height was set by whichever was taller
-           * — the take panel — and the difference fell out as a hole under the
-           * headline. Nested, they flow, and the two columns simply end where
-           * their own content ends. */}
-          <div className="flex flex-col">
-            <h1 className="max-w-[28ch] pb-1 font-display font-normal text-[clamp(2.2rem,4.6vw,3.7rem)] leading-[1.12] tracking-[-0.015em]">
-              <MarkedLine
-                runs={HEADLINE}
-                cued={cued}
-                baseDelay={350}
-                step={340}
-              />
-            </h1>
+          <p className="mx-auto mt-7 max-w-[46ch] text-[1.05rem] leading-[1.65] opacity-70">
+            Upload your notes, talk through them for three minutes, and read
+            back which claims you got right, which were vague, and what you
+            skipped.
+          </p>
 
-            <div className="mt-9">
-              {/* What the product does, in one sentence, before anything
-                  else. The old line described the experience ("get your own
-                  words back, marked") to somebody who did not yet know what
-                  was being marked or why. Upload, talk, read back: the three
-                  steps in order, and the reason at the end. */}
-              <p className="max-w-[34ch] text-[1.05rem] leading-[1.65] opacity-75">
-                Upload your notes, talk through them for three minutes, and read
-                back exactly which claims you got right, which were vague, and
-                what you skipped.
-              </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Cue href="/signup" className="justify-center sm:justify-start">
-                  Start a session
-                </Cue>
-                {/* A link, not a second button.
-                 *
-                 * Two pills side by side read as a choice between two equal
-                 * things, and these were never equal: one starts the product,
-                 * the other scrolls down the page. Same label problem too —
-                 * "See it mark" sounded like an alternative way in rather than
-                 * a jump to the section that explains the marking. */}
-                <a
-                  href="#marking"
-                  className="press inline-flex items-center justify-center py-3.5 font-medium text-[0.95rem] underline decoration-[var(--rule-strong)] underline-offset-4 transition-colors hover:decoration-current sm:justify-start"
-                >
-                  See how the marking works
-                </a>
-              </div>
-            </div>
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Cue href="/signup">Start a session</Cue>
+            <Cue href="#marking" tone="outline">
+              See how the marking works
+            </Cue>
           </div>
 
-          {/* The take, beside the headline.
-           *
-           * The right of the first viewport went through a constellation, a
-           * drawn figure and a gradient panel before this, and all three were
-           * the same mistake: something invented to fill a space. The proof
-           * was already on the page, sitting in a strip along the foot where
-           * nobody arriving would read it. It belongs here — you read the
-           * claim on the left and watch it being tested on the right, in one
-           * movement, which is the product. */}
-          {/* Sized to finish level with the button beside it.
-           *
-           * The panel used to overhang the left column by about eighty pixels,
-           * which read as the composition having been assembled rather than
-           * measured — the eye lines up two columns that start together and
-           * expects them to end together. Nothing was removed to close that
-           * gap; the spacing inside was simply tightened a notch throughout,
-           * and the one floor that was reserving room it never needed came
-           * out. The reserved height on the three take lines stays exactly as
-           * it was, because that is what stops the page stepping down as the
-           * words arrive. */}
+          {/* Two fragments of real output, floated either side of the
+           * headline on a wide screen and folded back into the flow below it
+           * on a narrow one. `lg:absolute` is what does the folding: they are
+           * ordinary blocks until there is room to orbit. */}
+          <Artifact className="mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]">
+            <p className="text-[0.95rem] leading-[1.6]">
+              <span
+                style={{ color: "var(--ok)" }}
+                className="italic underline decoration-1 underline-offset-[3px]"
+              >
+                two identical daughter cells
+              </span>
+              , and it starts with the DNA{" "}
+              <span
+                style={{ color: "var(--ok)" }}
+                className="italic underline decoration-1 underline-offset-[3px]"
+              >
+                being copied
+              </span>
+              .
+            </p>
+            <p className="mt-3 text-[0.8rem] opacity-55">
+              Marked as you said it
+            </p>
+          </Artifact>
+
+          <Artifact className="mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]">
+            <p className="text-[0.95rem] leading-[1.6]">
+              <span style={{ color: "var(--miss)" }} className="italic">
+                the spindle fibres attach at the centromere
+              </span>
+            </p>
+            <p className="mt-3 text-[0.8rem] opacity-55">Never said</p>
+          </Artifact>
+        </div>
+
+        {/* The take itself, centred under the sentence rather than beside it. */}
+        <div className="mx-auto mt-14 max-w-[42rem]">
           <div className="rounded-[20px] border border-[var(--rule)] p-5">
             {/* What is being explained, and what it was built from.
              *
@@ -1255,9 +1177,21 @@ function LiveMarking() {
                   <dt>
                     <Slug>{VERDICT_LABEL[v]}</Slug>
                   </dt>
+                  {/* The missing claim arrives at the end, not at the start.
+                   *
+                   * This read `v === "miss" ? 1 : ...` - a literal, so the row
+                   * said "missing a step: 1" at every scrubber position
+                   * including zero, and never once changed while you dragged
+                   * it. Two things wrong with that. It is the only number on a
+                   * panel built entirely on numbers that move, so it reads as
+                   * broken. And it is not true yet: at the start of a take
+                   * nothing has been skipped, because nothing has been said.
+                   * You cannot miss a step you have not reached. */}
                   <dd className="tc ml-auto font-mono text-[0.72rem] tabular-nums">
                     {v === "miss"
-                      ? 1
+                      ? counted.length === SCRUB.length
+                        ? 1
+                        : 0
                       : counted.filter((r) => r[1] === v).length}
                   </dd>
                 </div>
