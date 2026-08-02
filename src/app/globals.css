@@ -1025,7 +1025,26 @@
  * therefore still mark. */
 .ground-warm {
   --stock: #f2ede6;
-  background-color: var(--stock);
+  /* The region arrives and leaves. It does not start and stop.
+   *
+   * A `background-color` paints edge to edge, so the section met the white
+   * above and below it on two hard lines — a block of colour dropped into the
+   * page, which is exactly what "it doesn't flow" describes. The brief asks
+   * for sections to bleed into each other, and this is the mechanism: the
+   * stock is a vertical gradient that *begins and ends at the colour of its
+   * neighbours*, so there is no edge to see.
+   *
+   * White at both ends specifically, not `transparent`. The page root is
+   * `#f2f2f0` and the sections either side are `#ffffff`; fading to
+   * transparent would reveal the root and leave a faint grey seam exactly
+   * where the join was supposed to disappear. */
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    var(--stock) 15%,
+    var(--stock) 80%,
+    #ffffff 100%
+  );
   /* Golden hour, raked across the section rather than pooled in a corner.
    *
    * Two soft radials at 22% and 12% gave a flat beige field with a smudge in
@@ -1051,6 +1070,30 @@
       rgba(194, 65, 12, 0.16) 0%,
       rgba(249, 115, 22, 0) 70%
     );
+}
+
+/* The light fades out where the stock does.
+ *
+ * Without this the gradient above dissolves the warm ground into white while
+ * the sunset field carries straight on to the section boundary and redraws
+ * the hard edge in gold — a worse version of the problem, because now the
+ * seam is the brightest thing on the page. Masked to the same envelope, the
+ * whole region arrives and leaves as one. */
+.ground-warm::before {
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 17%,
+    #000 78%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 17%,
+    #000 78%,
+    transparent 100%
+  );
 }
 
 /* The two tints. Light enough that a red or a tan verdict on top still clears
@@ -1206,6 +1249,24 @@
  * flat rectangle. Any stronger and it competes with the white type on it. */
 .ribbon {
   background-color: #14100c;
+  /* Dusk, not a trapdoor.
+   *
+   * The page's one inversion still met the white above it on a hard line, so
+   * the ending arrived as a cut. This drops from the white of section 05
+   * through the warm stock into carbon across the top of the band — the sun
+   * going down rather than the lights going off.
+   *
+   * The whole fall happens inside the band's own top padding (`py-28`, and
+   * `py-36` from `md`), so it is finished well above the "on air" slug and
+   * the heading; no white type is ever set on a light part of it. */
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f2ede6 4%,
+    #6d4423 9%,
+    #14100c 15%
+  );
+  background-repeat: no-repeat;
   --ground-field:
     radial-gradient(
       70% 80% at 12% 88%,
