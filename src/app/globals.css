@@ -422,16 +422,42 @@
     /* Kerning and the discretionary pairs Archivo ships. Free, and the whole
        difference between type that is set and type that is merely displayed —
        which is most of what "this looks like an expensive tool" actually
-       is. */
+       is.
+
+       These two properties are the whole of that intent, and they are the
+       cheap way to ask for it: `font-kerning` and `font-feature-settings`
+       name the exact features wanted.
+
+       `text-rendering: optimizeLegibility` used to sit under them and has
+       been removed. It is not free — it is a hint that pushes the whole
+       document onto a slower text-shaping path, inherited from `body` by
+       every element on every page, and it is re-paid on every repaint. What
+       it buys is kerning and ligatures, which the two lines above already
+       switch on explicitly. So it was the same result at a cost paid
+       continuously, and on a long scrolling page that cost shows up as
+       exactly the symptom reported: scrolling that feels throttled. */
     font-kerning: normal;
     font-feature-settings:
       "kern" 1,
       "calt" 1;
-    text-rendering: optimizeLegibility;
   }
   html {
-    scroll-behavior: smooth;
     color-scheme: light;
+  }
+  /* Smooth scrolling, only where something scrolls to an anchor.
+   *
+   * This was on `html` unconditionally, so it applied inside the app too —
+   * where there are no in-page anchors and nothing to travel to, and where
+   * its only effect is that keyboard scrolling (space, Page Down, arrows) is
+   * animated by the browser instead of jumping. An animated scroll that drops
+   * frames feels far worse than an instant one, and it is the other half of
+   * "like low battery mode".
+   *
+   * `:has()` is what lets this stay on the scrolling element while still
+   * being conditional: the landing's root carries `.tx`, so only a document
+   * containing the landing gets it. */
+  html:has(.tx) {
+    scroll-behavior: smooth;
   }
 
   /* Every figure that can change is tabular.
@@ -490,7 +516,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html {
+  /* Both selectors on purpose. Smooth scrolling is now set by
+     `html:has(.tx)`, which is more specific than a bare `html` — so this
+     override has to match that specificity or somebody who has asked the
+     operating system for less motion silently keeps getting it. */
+  html,
+  html:has(.tx) {
     scroll-behavior: auto;
   }
 }

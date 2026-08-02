@@ -4,7 +4,9 @@ import { motion, useReducedMotion, useScroll, useSpring } from "framer-motion";
 
 /**
  * Hairline progress bar pinned to the top of the viewport. Spring-smoothed so
- * it trails the (already inertial) Lenis scroll instead of snapping.
+ * it trails the scroll instead of snapping. (This once said "the already
+ * inertial Lenis scroll". Lenis was removed before it was ever wired up; the
+ * scroll here is the browser's own.)
  */
 export function ScrollProgress() {
   const shouldReduceMotion = useReducedMotion();
