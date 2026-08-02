@@ -182,7 +182,7 @@ export function PaceTrack({
   return (
     <section
       aria-labelledby="pace-track-heading"
-      className="flex flex-col gap-5 rounded-xl border border-border bg-surface p-5"
+      className="flex flex-col gap-5 rounded-card border border-border bg-card p-5 shadow-rest"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2
@@ -258,22 +258,19 @@ export function PaceTrack({
                     words.
 
                     `bg-surface` is wrong here and was the first attempt:
-                    it is `rgba(9, 9, 11, 0.04)`, a tint meant to be laid over
-                    something, so the chip stayed transparent and the bars read
-                    straight through the label.
+                    it is a tint meant to be laid over something, so the chip
+                    stayed transparent and the bars read straight through the
+                    label. `color-mix` was the second, and failed differently —
+                    it averages the two colours *including* their alpha,
+                    landing on 52% opaque rather than solid.
 
-                    `color-mix` was the second, and it fails differently — it
-                    averages the two colours *including their alpha*, landing
-                    on 52% opaque rather than solid. The tint has to be
-                    composited over the page colour, not blended with it,
-                    which is what a flat gradient layered on an opaque base
-                    does. The result is exactly the card's own appearance, so
-                    the chip cannot drift from the panel it sits on. */}
+                    Now that the panel itself is the card colour, the chip can
+                    simply be that: one opaque token, shared with the surface
+                    it sits on, so the two cannot drift apart. */}
                 <Slug
                   className="absolute right-0 bottom-1.5 px-2 text-strong"
                   style={{
-                    background:
-                      "linear-gradient(var(--color-surface), var(--color-surface)), var(--color-background)",
+                    background: "var(--color-card)",
                   }}
                 >
                   Your baseline {baselineWpm}

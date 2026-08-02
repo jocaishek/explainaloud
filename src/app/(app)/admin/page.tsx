@@ -54,7 +54,7 @@ export default async function AdminPage() {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-8 px-6 py-12">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-stack px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-strong">
           User activity
@@ -65,7 +65,7 @@ export default async function AdminPage() {
         </p>
       </div>
 
-      <dl className="flex flex-wrap divide-x divide-border overflow-hidden rounded-xl border border-border bg-card">
+      <dl className="flex flex-wrap divide-x divide-border overflow-hidden rounded-card border border-border bg-card shadow-rest">
         {[
           ["Users", users.length],
           ["Topics", totalTopics],
@@ -90,7 +90,7 @@ export default async function AdminPage() {
           </p>
         </div>
 
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
+        <div className="overflow-hidden rounded-card border border-border bg-card shadow-rest">
           <div className="hidden grid-cols-[minmax(0,1.7fr)_0.55fr_0.65fr_0.8fr_1.5rem] gap-4 border-b border-border bg-surface px-5 py-3 text-xs font-medium text-subtle md:grid">
             <span>User</span>
             <span>Topics</span>

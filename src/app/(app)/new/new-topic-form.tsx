@@ -206,7 +206,7 @@ export function NewTopicForm({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-5 rounded-2xl border border-border bg-card p-6 shadow-xl shadow-black/40"
+      className="flex flex-col gap-5 rounded-card border border-border bg-card p-6 shadow-float"
     >
       {/* A folder's New topic tile carries its destination into creation.
           Owner-scoped RLS still rejects another user's folder id. */}
@@ -306,7 +306,7 @@ export function NewTopicForm({
         {files.length > 0 && (
           <fieldset
             disabled={!!createdCourseId || pending}
-            className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 disabled:opacity-60"
+            className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4 disabled:opacity-60"
           >
             <legend className="px-1 text-sm font-semibold text-strong">
               {SCOPE_QUESTION}

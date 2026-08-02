@@ -578,8 +578,13 @@ function SectionHead({
          * most of what reads as professional rather than promotional. The type
          * is still Archivo and still heavier and tighter than the body; it has
          * simply stopped performing. */}
-        <h2 className="max-w-[24ch] font-display font-normal text-[clamp(1.9rem,3.8vw,3rem)] leading-[1.15] tracking-[-0.015em]">
-          {title}
+        {/* `mask-line` reveals the heading from behind its own baseline as the
+            block arrives: the line is a window with `overflow: hidden` and the
+            words start below it, so nothing fades — the sentence is not there
+            and then it is. It costs nothing here because the rule keys off the
+            `data-rise` state this block already has. */}
+        <h2 className="mask-line max-w-[24ch] font-display font-normal text-[clamp(1.9rem,3.8vw,3rem)] leading-[1.15] tracking-[-0.015em]">
+          <span>{title}</span>
         </h2>
         <p className="mt-5 max-w-[54ch] text-[1.05rem] leading-[1.65] opacity-80">
           {lede}
@@ -644,10 +649,60 @@ function Artifact({
   );
 }
 
+/**
+ * The hero's own scroll progress, 0 to 1 across the first viewport.
+ *
+ * Written as a custom property onto the section element once per frame, and
+ * read from CSS by the wordmark and the two floating panels. Two deliberate
+ * choices behind that:
+ *
+ * - **A property on one element, not React state.** Setting state per frame
+ *   re-renders the whole hero — the take, the level meter, every artifact —
+ *   sixty times a second to move two things.
+ * - **Scoped to the hero rather than the document.** An inherited variable on
+ *   `:root` invalidates style for every node on the page on every frame, which
+ *   is the version of this that shows up as jank on a phone.
+ *
+ * It stops updating once the hero is fully behind you, and never starts under
+ * `prefers-reduced-motion`.
+ */
+function useHeroScroll<T extends HTMLElement>() {
+  const ref = useRef<T>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        /* Against the viewport rather than the section's own height: the
+           gesture people make is "scroll past the first screen", and tying it
+           to a section that is taller than the window means the effect is only
+           half finished by the time the section has left. */
+        const t = Math.min(1, Math.max(0, window.scrollY / window.innerHeight));
+        el.style.setProperty("--hero-t", t.toFixed(4));
+      });
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
+    };
+  }, []);
+
+  return ref;
+}
+
 function Hero() {
   const [cued, setCued] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const take = useTakeArriving(TAKE_RUNS);
+  const heroRef = useHeroScroll<HTMLElement>();
 
   /* Cue on the next frame rather than during mount, so the wipe has one
      unmarked frame to travel across. Started synchronously it is already
@@ -712,7 +767,10 @@ function Hero() {
        * what is being said. A sentence about explaining something out loud
        * should be set the way a sentence is set, not squeezed into a column
        * beside a picture. */}
-      <section className="paper [container-type:inline-size] px-4 pt-14 pb-20 md:px-8 md:pt-16 md:pb-28">
+      <section
+        ref={heroRef}
+        className="hero-scroll paper [container-type:inline-size] px-4 pt-14 pb-20 md:px-8 md:pt-16 md:pb-28"
+      >
         {/* The name, at the size the name should be.
          *
          * Set in Archivo at the top of its width axis rather than in the
@@ -731,10 +789,16 @@ function Hero() {
          * Tracking goes positive, against everything else on the page. A
          * wordmark is read as letters in sequence rather than as a word
          * shape, and letters need air to be read that way. */}
+        {/* It also reacts to the scroll: settling back a little and thinning
+            out as you leave the first screen, so the name hands the page over
+            to the sentence rather than sitting at full strength above content
+            it has stopped introducing. The ink fades down the glyphs for the
+            same reason — the word emerges from the stock instead of being
+            printed on top of it. */}
         <p
           aria-hidden="true"
           style={{ fontSize: "min(9.4cqw, 8.5rem)" }}
-          className="select-none whitespace-nowrap text-center font-semibold leading-[0.95] tracking-[0.01em] [font-stretch:125%]"
+          className="hero-mark fill-fade-ink select-none whitespace-nowrap text-center font-semibold leading-[0.95] tracking-[0.01em] [font-stretch:125%]"
         >
           EXPLAINALOUD
         </p>
@@ -765,10 +829,15 @@ function Hero() {
           {/* Two fragments of real output, floated either side of the
            * headline on a wide screen and folded back into the flow below it
            * on a narrow one. `lg:absolute` is what does the folding: they are
-           * ordinary blocks until there is room to orbit. */}
+           * ordinary blocks until there is room to orbit.
+           *
+           * They also drift as the hero scrolls, and at different rates — the
+           * left one about twice as fast as the right. That difference is the
+           * whole of parallax: matched rates would just be the page moving,
+           * and it is the disagreement between them that reads as depth. */}
           <Artifact
             accent="var(--ok)"
-            className="mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
+            className="hero-drift-near mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span
@@ -793,7 +862,7 @@ function Hero() {
 
           <Artifact
             accent="var(--miss)"
-            className="mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
+            className="hero-drift-far mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
@@ -1004,8 +1073,8 @@ function RunningOrder() {
           >
             <Slug className="tc pt-2.5">{row.n}</Slug>
             <div>
-              <h3 className="font-display font-normal text-[clamp(1.35rem,3vw,2rem)] leading-[1.15] tracking-[-0.01em]">
-                {row.item}
+              <h3 className="mask-line font-display font-normal text-[clamp(1.35rem,3vw,2rem)] leading-[1.15] tracking-[-0.01em]">
+                <span>{row.item}</span>
               </h3>
               <p className="max-w-[58ch] pt-3 leading-[1.6] opacity-80">
                 {row.detail}
@@ -1461,8 +1530,8 @@ function Close() {
           </span>
         </div>
         <div>
-          <h2 className="max-w-[18ch] font-display font-normal text-[clamp(2.1rem,4.4vw,3.4rem)] leading-[1.12] tracking-[-0.015em]">
-            Find out before it matters.
+          <h2 className="mask-line max-w-[18ch] font-display font-normal text-[clamp(2.1rem,4.4vw,3.4rem)] leading-[1.12] tracking-[-0.015em]">
+            <span>Find out before it matters.</span>
           </h2>
           <p className="mt-8 max-w-[32ch] text-[1.15rem] leading-[1.55] opacity-90">
             Free to start. Nothing you say is stored.

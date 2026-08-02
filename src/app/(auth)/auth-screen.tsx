@@ -14,7 +14,20 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
   const signingUp = mode === "signup";
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-background px-6 py-16 text-strong">
+    /* The app register, not the landing's.
+     *
+     * Sign-in is the seam between the two worlds, and it belongs on the app
+     * side of it: this screen is a card with a form in it, and the landing
+     * page has neither cards nor forms — its whole world is flat rules on
+     * photocopy stock. Rendering it against the monument's tokens gave a
+     * square-cornered, shadowless panel that looked like an unstyled fallback
+     * rather than a deliberate flat one.
+     *
+     * Putting it here also means somebody arriving from the landing page meets
+     * the app's look one screen *before* they are asked for a password, so the
+     * change of register reads as arriving somewhere rather than as the site
+     * breaking on submit. */
+    <main className="register-app flex min-h-screen w-full flex-col items-center justify-center px-6 py-16 text-strong">
       <Link
         href="/"
         className="flex items-center gap-2 text-base font-semibold tracking-tight text-strong transition-opacity hover:opacity-80"

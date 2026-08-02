@@ -73,7 +73,7 @@ export function TopicCard({
           <Link
             href={courseHref(course)}
             aria-label={`${title}, topic: ${course.topic}`}
-            className="press flex h-36 flex-col justify-between rounded-xl border border-border p-4 transition-colors duration-200 hover:border-brand/50 hover:bg-surface"
+            className="press flex h-36 flex-col justify-between rounded-card border border-border bg-card p-4 shadow-rest transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-hover"
           >
             <span className="font-mono text-[0.66rem] tracking-[0.08em] text-subtle uppercase">
               {course.status}
@@ -95,7 +95,7 @@ export function TopicCard({
             aria-label={`Rename ${title}`}
             onClick={() => setEditing(true)}
             className={cn(
-              "absolute top-2 right-2 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase",
+              "absolute top-2 right-2 rounded-full px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase",
               "opacity-0 transition-[opacity,color,background-color] duration-200 group-hover:opacity-100 focus-visible:opacity-100",
               "hover:bg-surface hover:text-strong",
             )}
@@ -137,7 +137,7 @@ function RenameCard({
   useEffect(() => inputRef.current?.select(), []);
 
   return (
-    <div className="flex min-h-36 flex-col gap-2 rounded-xl border border-border bg-card p-3">
+    <div className="flex min-h-36 flex-col gap-2 rounded-card border border-border bg-card p-3 shadow-rest">
       <form action={formAction} className="flex flex-col gap-2">
         <input type="hidden" name="id" value={course.id} />
         <Input
@@ -153,7 +153,7 @@ function RenameCard({
             type="submit"
             size="sm"
             disabled={pending}
-            className="h-7 flex-1 rounded-md bg-brand-deep px-2 text-xs font-semibold text-white hover:bg-brand-deep/90"
+            className="h-7 flex-1 rounded-full bg-brand-deep px-2 font-semibold text-white text-xs hover:bg-brand"
           >
             {pending ? "Saving…" : "Save"}
           </Button>
@@ -162,7 +162,7 @@ function RenameCard({
             size="sm"
             variant="ghost"
             onClick={onDone}
-            className="h-7 rounded-md px-2 text-xs"
+            className="h-7 rounded-full px-2 text-xs"
           >
             Cancel
           </Button>
@@ -204,7 +204,7 @@ function MoveSelect({
         aria-label="Move to folder"
         defaultValue={course.folder_id ?? ""}
         onChange={() => formRef.current?.requestSubmit()}
-        className="w-full rounded-md border border-input bg-surface px-2 py-1 text-[11px] text-subtle"
+        className="w-full rounded-control border border-input bg-card px-2 py-1 text-[11px] text-subtle"
       >
         <option value="">No folder</option>
         {folders.map((folder) => (
@@ -260,7 +260,7 @@ function DeleteTopic({ course }: { course: Course }) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-md bg-destructive px-2 py-1 text-[11px] font-semibold text-white"
+        className="rounded-full bg-destructive px-2 py-1 font-semibold text-[11px] text-white"
       >
         {pending ? "Deleting…" : "Yes"}
       </button>

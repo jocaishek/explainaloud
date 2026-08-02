@@ -57,8 +57,23 @@ export function ScrollReveal() {
       { rootMargin: "0px 0px -12% 0px" },
     );
 
-    for (const el of targets) observer.observe(el);
+    /* Stagger comes from document order, not from the call site.
+     *
+     * A row of cards should arrive left to right, and the alternative — every
+     * card being told its own index by whatever renders it — puts presentation
+     * state into data. `% 6` caps the run so a long list does not end with a
+     * card half a second late; after six the group starts over. */
+    targets.forEach((el, i) => {
+      el.style.setProperty("--rise-index", String(i % 6));
+      observer.observe(el);
+    });
     return () => observer.disconnect();
+    /* Mount-time only, and that is enough because of where this is mounted.
+     *
+     * Inside the app it lives in `(app)/template.tsx`, and a template — unlike
+     * a layout — re-mounts on every navigation, so this effect re-queries for
+     * the blocks on the screen somebody just arrived at. Watching `pathname`
+     * as well would only re-run it a second time for the same reason. */
   }, []);
 
   return null;

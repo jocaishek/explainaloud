@@ -1,117 +1,109 @@
 # Design
 
-Four people independently described this site as looking AI-generated. They
-were right, and the reasons are specific and fixable. This file is
-prescriptive on purpose: "never use a glow orb" is enforceable, "use beautiful
-typography" is not.
+The product has **two visual registers**, and knowing which one you are in is
+the first thing to establish before touching anything. It is a deliberate
+decision rather than drift, and every other rule here depends on it.
 
-## The references
+| | Landing (`src/app/page.tsx`) | App (`.register-app`) |
+|---|---|---|
+| Canvas | `#fbfbfb` photocopy stock | `#fafafb`, cards in white |
+| Panels | Hairline, **no shadow**, ruled against the stock | 20px radius, soft tinted shadow |
+| Accent | Ink. Colour only where it means something | Blue `#4f7cff` |
+| Display | Source Serif 4, weight 400, never bold | Inter, 600, size does the rest |
+| Body | Archivo | Inter |
+| Rhythm | Compact, ruled | `--stack`, everything breathes |
 
-Ten sites and app screens were chosen as the target: Discience (Study App),
-Audemars Piguet, Guillaume Tomasi, Impossible Bureau, Magic Spoon, mymind,
-Apotheke zur Triumphpforte, The Roots, AR—CO, and a NASA projects page.
+The landing page is a monument. It has three seconds to be memorable, its only
+content is type, and a serif headline reads as a sentence somebody wrote rather
+than as an announcement — which is the right voice for a page arguing that you
+should explain things aloud.
 
-They differ wildly in mood. What they share is what matters:
+The app is a tool somebody sits inside for twenty minutes, where legibility and
+calm beat impact. A neutral grotesque at 13px for twenty minutes is a feature.
+Those are genuinely different jobs and one system serving both serves neither.
 
-- **Flat colour and hard edges.** Not one has a glow, a blurred radial
-  gradient, or a frosted-glass panel.
-- **Type is the design.** Display type is enormous, tightly tracked, and the
-  jump from heading to body is 3x or more, not 1.5x.
-- **Editorial structure.** Rules, numbers, sidebars, asymmetric grids,
-  deliberate white space. Not a centred column of rounded cards.
-- **A committed canvas.** Paper white, or true black, or one saturated flat
-  colour. Never near-black with a coloured halo.
-- **Real content.** Photography, illustration, or generative art. Never a
-  gradient standing in for an image.
-- **Restraint in motion.** One considered page-load reveal beats a dozen
-  scattered micro-interactions.
+**The accepted risk:** the sign-in is a visible seam. Somebody arriving from the
+landing page meets a different-looking product. That was taken knowingly, and
+two things keep it from reading as two products — the next section, and the fact
+that the sign-in screen itself is in the *app* register, so the change happens
+one screen before anybody is asked for a password.
 
-## A second, much wider set
+## How the two registers are built
 
-Eleken's fifty-site roundup was read against the ten. It is worth being honest
-about what it says, because roughly half of those fifty are dark UIs with neon
-gradients, glowing CTAs, blurred-glass cards and 3D washes — the exact list
-banned below.
+`src/app/globals.css`. `:root` holds the landing's answers; `.register-app`
+re-points the same tokens at the app's. One class on the app shell switches the
+whole product over, and **neither side may hardcode the other's values**.
 
-That is not a contradiction, and the resolution is the whole point:
+The important consequence: `--elev-rest` is `none` outside the app, and
+`--r-card` is `0px`. A shared component written as `rounded-card border
+border-border shadow-rest` is therefore correct in *both* registers without
+knowing which one it is rendering in — flat and ruled on the landing, raised and
+soft in the app. That is why there is one `Card`, one `Button` and one `Input`
+rather than two sets, and why a `className` override at a call site deciding the
+register is always a bug.
 
-- **They commit.** Rebellion is an orange field with all-caps sans and nothing
-  else. Kovalska is red, black and white. Overrrides is a black terminal with
-  pixel type. Each picks one extreme and goes all the way. The failure mode
-  here is not "dark and glowing", it is a thin decorative layer of glow and
-  glass applied over a layout that would be a generic centred column without
-  it.
-- **There is craft underneath.** The neon sites earn it with custom typefaces,
-  real 3D, commissioned illustration, cinematic photography. A gradient is the
-  finish on something, never the thing itself. We have none of that, so we do
-  not get to use the finish.
-- **Everything memorable has one signature device** carried through the whole
-  site: Hydra's duck, GRIDS' grid, Abetka's letter cards, Stripe Press's
-  floating books. Not a different effect per section.
-- **Serif display against sans body recurs constantly** — MORAL, SEBTO,
-  Gemnote, Ellipsus, Art+Tech Report, Arrow Dynamics. It is the single most
-  reliable way to look designed rather than defaulted.
-- **Colour is identity, not accent.** The palette is stated in the first
-  screen and never apologised for.
-- **The first three seconds decide.** One idea, at size, above the fold.
+The landing's own artifact panels set `rounded-[20px]` directly, and that is the
+one sanctioned exception: they are a bespoke composition on a single page rather
+than instances of the shared card. It stays an exception. The moment a second
+page needs that panel, it becomes a component and reads the token.
 
-So the rules below stand. They are not an argument that restraint is the only
-good aesthetic; they are what is available to a site whose content is text.
+`--brand`, `--brand-deep` and `--brand-ink` are indirections for the same
+reason. They name what a colour is *for*, so the files across the app can keep
+asking for `bg-brand-deep` and get the right answer on either side.
 
-## Banned
+## What crosses the seam unchanged
 
-These are the tells. Every one of them is currently in `src/app/page.tsx`.
+Three things are identical in both registers, and they are what make this one
+product:
 
-- `GlowOrb`, or any blurred radial gradient used as a background
-- `.glass`, frosted panels, `backdrop-filter` as decoration
-- `Spotlight` (cursor-following radial wash)
-- `TiltCard` (3D tilt on hover)
-- `Magnetic` (buttons that chase the cursor)
-- `WordReveal`'s per-word blur-in on headlines
-- `ScrollSquiggle`, and decorative scroll-drawn paths generally
-- Typewriter effects in a headline
-- Numbered mono eyebrows (`01 —— WHAT YOU GET`) on every section
-- Glowing box-shadows in the brand colour under buttons
-- A centred column of equal rounded cards as the default layout
+- **The three verdict colours.** `--ok` green, `--miss` red, `--vague` tan.
+  Correct, missing a step, said but not checkably. Nothing else may use them,
+  anywhere — so the green somebody is shown before signing up is the green they
+  are graded in afterwards. They are declared once, at `:root`, and deliberately
+  do not appear in `.register-app`.
+- **The mono voice.** Martian Mono, uppercase, small, tracked, for metadata,
+  timecodes and labels only.
+- **The mark and the wordmark.** Same size, same tracking, both mastheads.
 
-Deleting a component is better than keeping it unused. Git remembers.
+## Banned, both registers
 
-## Type
+- Blurred radial gradients as backgrounds. This has now been removed twice.
+- Glassmorphism and `backdrop-filter` as decoration. Blur is for a bar floating
+  over scrolling content, and nothing else.
+- A colour that is neither a verdict nor the register's single accent.
+- Cursor-following effects, 3D tilt, magnetic buttons, typewriter headlines.
+- Pure-black shadows. Elevation is tinted with the text hue or it reads as dirt.
+- Spring or overshoot easing.
+- A hex or a pixel radius written into a component. Tokens, always.
 
-The current stack is Poppins with Instrument Serif and Geist Mono. Poppins is
-a geometric sans on the same shortlist as Inter and Roboto, and it is half the
-reason the page reads as generated.
+## Banned on the landing only
 
-- **Never** Inter, Roboto, Open Sans, Lato, Poppins, Montserrat, or a system
-  stack, for display.
-- Pick a display face with a point of view and a body face that disappears.
-  Weight extremes, 200 against 800, not 400 against 600.
-- Size jumps of 3x or more between levels.
-- Set headlines tight: negative tracking at display sizes.
+- A centred column of equal rounded cards as the layout. The landing's panels
+  are real product output — a marked clause, a claim never reached — not a
+  feature grid wearing a card.
+- Photography of people, stock imagery, or a gradient standing in for an image.
+- **No invented proof.** No usage numbers, no testimonials, no customer names,
+  no press. See PRODUCT.md. Demonstration material is authored, and is marked
+  exactly as the grader would mark it.
 
-## Colour
+## On Inter
 
-One dominant colour, one sharp accent, and nothing else. The brand is a
-three-stop ramp of a single hue in `globals.css`; read the tokens, never
-write a hex into a component.
+The previous version of this file banned Inter outright. That ban is retired,
+and the distinction matters: it was written when the app had no type system at
+all, so Inter was the *symptom* of everything being default rather than the
+cause. With a real weight and size scale under it, a neutral grotesque is the
+correct choice for a working interface.
 
-Green, red and amber are reserved. They mean *correct*, *missing* and *vague*
-inside a transcript, and the brand must stay clear of all three.
+It stays banned for **display** — the landing page never sets a word in it.
 
-## Layout
-
-The marketing page is currently pinned to dark because the glass-and-glow
-treatment only worked on a dark canvas. Once that treatment is gone, that
-constraint goes with it, and a paper-light landing page is the single most
-effective way to stop looking like every other AI-generated site.
+A rules file that contradicts the code is worse than no rules file, because the
+next person to read it undoes working work.
 
 ## Working method
 
-1. **Always work from a reference image.** Pasting a visual produces
-   visual-shaped output; describing one in words produces text-shaped output.
-2. **Screenshot and compare.** Build, screenshot, list the specific deltas
-   against the reference (type scale, colour, spacing, structure), then fix
-   those. Two passes is usually right; past three there are diminishing
-   returns and it is better to restart with a sharper prompt.
-3. **Reject vague language.** "Modern" and "clean" carry no information.
-   "Editorial layout, serif display, asymmetric grid" does.
+1. Work from a reference image. Describing one in words produces text-shaped
+   output.
+2. Build, screenshot, list the specific deltas, fix those. Two passes is usually
+   right.
+3. Reject vague language. "Modern" and "clean" carry no information; "serif
+   display, ruled columns, no card edges" does.

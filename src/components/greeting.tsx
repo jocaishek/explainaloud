@@ -1,9 +1,8 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { useEffect, useState } from "react";
-
-const EASE = [0.23, 1, 0.32, 1] as const;
+import { cn } from "~/lib/utils";
 
 /**
  * Templates keyed on the local day of week. `{day}` is the weekday name,
@@ -34,7 +33,22 @@ const TEMPLATES = [
  * renders nothing until mounted, then fades the greeting in — a swap from a
  * server-guessed day to the real one would be a visible, jarring correction.
  */
-export function Greeting({ name }: { name: string }) {
+export function Greeting({
+  name,
+  className,
+}: {
+  name: string;
+  /**
+   * Replaces the type treatment, not just an addition to it.
+   *
+   * The dashboard masthead sets this line at display scale in Archivo with a
+   * gradient fill, and every screen that is not the masthead wants the default
+   * below. Passing the whole treatment in is the honest shape — the
+   * alternative is a `variant` union here that has to be edited every time a
+   * second screen wants a third size.
+   */
+  className?: string;
+}) {
   const shouldReduceMotion = useReducedMotion();
   const [greeting, setGreeting] = useState<string | null>(null);
 
@@ -50,25 +64,28 @@ export function Greeting({ name }: { name: string }) {
   }, [name]);
 
   return (
-    // Reserve the line's height so the rest of the page doesn't jump when the
-    // greeting arrives a frame later.
-    <div className="min-h-[2.5rem] sm:min-h-[2.75rem]">
-      {greeting && (
-        <motion.h1
-          /* A fade and a short rise, and nothing else.
-           *
-           * This used to blur in from six pixels of Gaussian, which is the
-           * per-word reveal the rest of the app was rebuilt to get rid of: it
-           * makes the first thing you read every session momentarily
-           * unreadable, in exchange for a flourish nobody asked for. */
-          initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: EASE }}
-          className="text-balance font-medium text-[clamp(1.6rem,3.4vw,2.2rem)] text-strong leading-[1.1] tracking-[-0.03em]"
-        >
-          {greeting}
-        </motion.h1>
+    /* One element, always rendered.
+     *
+     * The greeting is only known after mount — the weekday has to come from
+     * the reader's own clock, not from whatever zone the server runs in — so
+     * something has to hold the line's height in the meantime or the whole
+     * page jumps a frame later. A fixed `min-height` on a wrapper cannot do
+     * that now that the size is passed in from the call site: the masthead
+     * sets this at 7rem and every other screen at 2rem.
+     *
+     * A non-breaking space in the real element reserves exactly the right
+     * height at whatever size it has been given, and `mask-enter` is withheld
+     * until there are words, so the reveal plays on the greeting rather than
+     * silently on the placeholder. */
+    <h1
+      className={cn(
+        "mask-line text-balance",
+        className ??
+          "font-semibold text-[clamp(1.9rem,4.6vw,3.1rem)] text-strong leading-[1.05] tracking-[-0.035em]",
+        greeting && !shouldReduceMotion && "mask-enter",
       )}
-    </div>
+    >
+      <span>{greeting ?? "\u00A0"}</span>
+    </h1>
   );
 }
