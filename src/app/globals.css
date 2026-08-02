@@ -779,6 +779,239 @@
   background: var(--stock);
 }
 
+/* ---------------------------------------------------------------------------
+ * Section grounds.
+ *
+ * The middle of this page was four sections alternating between two greys, and
+ * "quiet" was the accurate description: nothing about arriving at 04 felt
+ * different from arriving at 03, so the whole middle read as one long ruled
+ * document that could be skimmed at speed.
+ *
+ * The reference alternates full-bleed saturated fields against near-black —
+ * and that rhythm is what makes a long page
+ * feel like it has chapters rather than paragraphs.
+ *
+ * **The one hard constraint, and it decides which section gets what.** Green,
+ * red and tan mean *correct*, *missed* and *vague* on a word somebody said,
+ * and nowhere else. A verdict has to stay legible and has to keep meaning a
+ * verdict, so any section that marks a transcript keeps a light ground and
+ * takes a wash rather than a field. Only 02 — which shows the four steps and
+ * marks nothing — can carry the saturated dark. That is why the colour is not
+ * simply alternated down the page.
+ *
+ * The grounds also move. `--ground-t` runs 0 to 1 across each section via
+ * `animation-timeline: view()`, drifting the field's centre as the section
+ * passes, so the colour is doing something while you read rather than sitting
+ * behind you. No JavaScript, off the main thread, and it degrades to a static
+ * ground where the timeline is unsupported.
+ * ------------------------------------------------------------------------- */
+.ground {
+  position: relative;
+  isolation: isolate;
+}
+.ground::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--ground-field, none);
+  /* Anchored to the section and slid a little as it passes. A large soft field
+     moving 6% of its own width is a slow shift in where the light is, not a
+     drifting blob — the thing on the banned list is a blurred orb used *as*
+     decoration, and this is the ground of a full-bleed region. */
+  background-position: 50% 44%;
+  background-size: 140% 160%;
+  background-repeat: no-repeat;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    /* `background-position` directly, rather than a registered `<number>`
+       property that the field's gradient then reads.
+       
+       The indirection was the first version and it bought nothing: a custom
+       property has to be registered with `@property` before it will
+       interpolate at all, and animating the position is one declaration that
+       needs no registration and no second moving part. */
+    @keyframes ground-pass {
+      from {
+        background-position: 50% 38%;
+      }
+      to {
+        background-position: 50% 56%;
+      }
+    }
+    /* On the pseudo-element, since that is what carries the field. `view()`
+       inside a pseudo resolves against its originating element, so the range
+       is still the section's own pass through the viewport. */
+    .ground::before {
+      animation: ground-pass linear both;
+      animation-timeline: view();
+      animation-range: cover 0% cover 100%;
+    }
+  }
+}
+
+/* One hue, four values.
+ *
+ * The first pass at this reached for the reference's own palette — indigo,
+ * violet, cyan, lilac — which is four hues doing the job of one and reads as
+ * randomness rather than as a scheme. Everything below is the brand
+ * ultramarine `#3b37e6` at a different value: a deep field, two tints, and a
+ * band on white. What separates one section from the next is how dark it is,
+ * not what colour it is, and that is what makes a long page feel composed
+ * rather than decorated.
+ *
+ * It also keeps the count honest. The product has four colours — one brand hue
+ * and the three verdicts — and a fifth introduced as scenery is how a reserved
+ * palette stops being reserved. */
+
+/* The deep field. Dark enough that white body copy clears AA everywhere on it,
+   and hued toward the brand rather than to neutral black. Two stops of the one
+   colour lit from opposite corners, so the field has a direction without a
+   second hue appearing. */
+.ground-deep {
+  --stock: #14133a;
+  --ink: #ffffff;
+  --rule: rgba(255, 255, 255, 0.26);
+  --rule-strong: rgba(255, 255, 255, 0.6);
+  background-color: var(--stock);
+  color: var(--ink);
+  --ground-field:
+    radial-gradient(
+      62% 70% at 20% 16%,
+      rgba(59, 55, 230, 0.85) 0%,
+      rgba(59, 55, 230, 0) 64%
+    ),
+    radial-gradient(
+      52% 60% at 86% 90%,
+      rgba(59, 55, 230, 0.45) 0%,
+      rgba(59, 55, 230, 0) 68%
+    );
+}
+
+/* The two tints. Light enough that a red or a tan verdict on top still clears
+   4.5:1, which is the whole reason these sections take a tint and not a field.
+   Same hue, one value apart — deeper first, lifting as the page runs out. */
+.ground-tint {
+  --stock: #e9ebff;
+  background-color: var(--stock);
+  --ground-field: radial-gradient(
+    70% 60% at 78% 10%,
+    rgba(59, 55, 230, 0.16) 0%,
+    rgba(59, 55, 230, 0) 70%
+  );
+}
+.ground-tint-soft {
+  --stock: #f4f5ff;
+  background-color: var(--stock);
+  --ground-field: radial-gradient(
+    64% 62% at 16% 14%,
+    rgba(59, 55, 230, 0.14) 0%,
+    rgba(59, 55, 230, 0) 68%
+  );
+}
+
+/* White, but not blank. The marking section keeps a pure ground so the three
+   verdict colours read exactly as they will inside the product, and gets its
+   colour from one soft band at the top edge instead. */
+.ground-aura {
+  --stock: #ffffff;
+  background-color: var(--stock);
+  --ground-field: radial-gradient(
+    80% 40% at 50% 0%,
+    rgba(59, 55, 230, 0.13) 0%,
+    rgba(59, 55, 230, 0) 72%
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * The scroll-driven set.
+ *
+ * All of these are welded to the scrollbar rather than fired at a threshold,
+ * so they run backwards when you scroll up and they are exactly as far along
+ * as you have pushed them. That is the difference between a page that responds
+ * and a page that plays cutscenes at you.
+ *
+ * All of them are also CSS. `animation-timeline: view()` needs no observer, no
+ * scroll listener and no rAF loop, and it runs off the main thread — so this
+ * whole set costs less per frame than the one `useHeroScroll` listener that
+ * predates it. Everything sits inside `@supports` and degrades to the finished
+ * state.
+ * ------------------------------------------------------------------------- */
+
+/* A row that slides in from the side, alternating direction down a list.
+ *
+ * Used on the four steps in 02. A ladder of rows all rising by the same amount
+ * is one gesture repeated four times; alternating the side they come from
+ * makes the list read as being dealt out. */
+.deal-in {
+  --deal-from: -2.5rem;
+}
+.deal-in:nth-child(even) {
+  --deal-from: 2.5rem;
+}
+
+/* A word wiped in the colour of its verdict, the way the product marks it.
+   The wipe is the page doing to its own copy exactly what the recorder does to
+   yours, which is the one animation here that is also an argument. */
+.wipe-mark {
+  background-image: linear-gradient(
+    var(--wipe-colour, currentColor),
+    var(--wipe-colour, currentColor)
+  );
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  background-size: 0% 2px;
+}
+
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes deal-in {
+      from {
+        transform: translate3d(var(--deal-from), 0, 0);
+        opacity: 0;
+      }
+      to {
+        transform: none;
+        opacity: 1;
+      }
+    }
+    .deal-in {
+      animation: deal-in linear both;
+      animation-timeline: view();
+      animation-range: entry 8% entry 62%;
+    }
+
+    @keyframes wipe-mark {
+      from {
+        background-size: 0% 2px;
+      }
+      to {
+        background-size: 100% 2px;
+      }
+    }
+    .wipe-mark {
+      animation: wipe-mark linear both;
+      animation-timeline: view();
+      animation-range: entry 25% entry 70%;
+    }
+  }
+}
+
+/* Without the timeline, the marked words are simply underlined. The point of
+   the wipe is the colour, and the colour has to be there either way. */
+@supports not (animation-timeline: view()) {
+  .wipe-mark {
+    background-size: 100% 2px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wipe-mark {
+    background-size: 100% 2px;
+  }
+}
+
 /* The accents, in the order the page uses them. */
 .accent-blue {
   --accent: #3b37e6;

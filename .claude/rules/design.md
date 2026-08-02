@@ -67,10 +67,23 @@ product:
 
 ## Banned, both registers
 
-- Blurred radial gradients as backgrounds. This has now been removed twice.
+- **Floating blurred orbs.** A soft radial shape sitting over a layout as
+  decoration — removed twice, still banned. This is *not* the same as a section
+  ground: `.ground-deep` and the two tints are full-bleed fields that define a
+  region and carry its type, which is what the reference set does and what
+  makes a long page read as chapters. The test is whether removing it changes
+  the section's identity or just removes a smudge.
 - Glassmorphism and `backdrop-filter` as decoration. Blur is for a bar floating
   over scrolling content, and nothing else.
-- A colour that is neither a verdict nor the register's single accent.
+- A colour that is neither a verdict nor the register's single accent. The
+  landing's grounds are the brand ultramarine `#3b37e6` at four values — a deep
+  field, two tints, and a band on white — and adding a fifth hue as scenery is
+  how a reserved palette stops being reserved.
+- **A saturated ground under a marked transcript.** Green, red and tan have to
+  stay legible and keep meaning *correct*, *missed* and *vague*. Sections that
+  mark anything take a light tint; only a section that marks nothing can carry
+  the deep field. This is why the colour is not simply alternated down the
+  page.
 - Cursor-following effects, 3D tilt, magnetic buttons, typewriter headlines.
 - Pure-black shadows. Elevation is tinted with the text hue or it reads as dirt.
 - Spring or overshoot easing.

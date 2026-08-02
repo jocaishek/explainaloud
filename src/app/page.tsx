@@ -985,7 +985,7 @@ function RunningOrder() {
   return (
     <section
       id="order"
-      className="paper-grey relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="tx-invert ground ground-deep rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="02"
@@ -1005,7 +1005,10 @@ function RunningOrder() {
              * selected rather than pointed at — a highlight on something that
              * is not a control and does nothing when you click it. The
              * detail is already there to read. */
-            className="rule-t grid grid-cols-[var(--gutter)_1fr_auto] items-start gap-x-4 py-7"
+            /* Dealt out rather than raised: `deal-in` alternates which side
+               each row arrives from, so four rows read as a list being laid
+               down instead of one gesture repeated four times. */
+            className="deal-in rule-t grid grid-cols-[var(--gutter)_1fr_auto] items-start gap-x-4 py-7"
           >
             <Slug className="tc pt-2.5">{row.n}</Slug>
             <div>
@@ -1126,7 +1129,7 @@ function LiveMarking() {
     <section
       ref={ref}
       id="marking"
-      className="paper relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="ground ground-aura rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="03"
@@ -1266,7 +1269,7 @@ function Pace() {
     <section
       ref={ref}
       id="pace"
-      className="paper-grey relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="ground ground-tint rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="04"
@@ -1356,7 +1359,7 @@ function SourcesOnly() {
   return (
     <section
       id="sources"
-      className="paper relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="ground ground-tint-soft rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="05"
@@ -1467,7 +1470,19 @@ function Close() {
         </div>
         <div>
           <h2 className="mask-line max-w-[18ch] font-display font-normal text-[clamp(2.1rem,4.4vw,3.4rem)] leading-[1.12] tracking-[-0.015em]">
-            <span>Find out before it matters.</span>
+            {/* The page marking its own copy, with the same wipe the recorder
+                uses on yours — the one animation here that is also an
+                argument. */}
+            <span>
+              Find out{" "}
+              <span
+                className="wipe-mark"
+                style={{ "--wipe-colour": "#ffffff" } as React.CSSProperties}
+              >
+                before it matters
+              </span>
+              .
+            </span>
           </h2>
           <p className="mt-8 max-w-[32ch] text-[1.15rem] leading-[1.55] opacity-90">
             Free to start. Nothing you say is stored.
