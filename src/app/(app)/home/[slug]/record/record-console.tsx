@@ -503,6 +503,18 @@ export function RecordConsole({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [loadingCheckId, setLoadingCheckId] = useState<string | null>(null);
+  /**
+   * A reopened session that has words but was never graded.
+   *
+   * Held as the transcript rather than just the id so running the check needs
+   * no second round trip — `viewSession` has already fetched it.
+   */
+  const [pendingCheck, setPendingCheck] = useState<{
+    id: string;
+    transcript: string;
+    /** The section it was answering, or null for a free-form take. */
+    sectionIndex: number | null;
+  } | null>(null);
 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -1496,7 +1508,26 @@ export function RecordConsole({
     );
   }
 
-  async function analyzeSession(text: string, sessionId: string) {
+  async function analyzeSession(
+    text: string,
+    sessionId: string,
+    /**
+     * Which course section this transcript was answering, when the caller
+     * already knows.
+     *
+     * Defaults to `answeringRef`, which is right for a recording that has
+     * just finished. It is wrong for a session being graded after the fact:
+     * that ref holds whatever was last recorded in this tab and survives the
+     * recording ending, so grading a reopened free-form session straight
+     * after an interview answer would have marked it against the interview's
+     * section. Pass `null` to mean "no section", explicitly.
+     */
+    sectionIndex?: number | null,
+  ) {
+    const section =
+      sectionIndex === undefined
+        ? (answeringRef.current?.index ?? null)
+        : sectionIndex;
     try {
       const { response, json } = await fetchJson(
         `/api/courses/${courseId}/analyze`,
@@ -1507,9 +1538,7 @@ export function RecordConsole({
             transcript: text,
             mode: "final",
             sessionId,
-            ...(answeringRef.current
-              ? { sectionIndex: answeringRef.current.index }
-              : {}),
+            ...(section !== null ? { sectionIndex: section } : {}),
           }),
         },
         ANALYZE_TIMEOUT_MS,
@@ -1561,13 +1590,15 @@ export function RecordConsole({
     const supabase = createClient();
     const { data, error: loadError } = await supabase
       .from("course_sessions")
-      .select("id, transcript, spans, report")
+      .select("id, transcript, spans, report, question_section")
       .eq("id", session.id)
       .maybeSingle<{
         id: string;
         transcript: string | null;
         spans: Span[] | null;
         report: Report | null;
+        /** Set when this session was an interview answer. */
+        question_section: number | null;
       }>();
 
     setLoadingCheckId(null);
@@ -1585,10 +1616,71 @@ export function RecordConsole({
     setSpansCover(data.transcript ?? "");
     setReport(data.report ?? null);
     setAgentRun(null);
-    if (!data.report) {
-      setError(
-        "This session was saved without a check. Record it again to have it graded.",
+
+    /* An ungraded session is unfinished work, not a failure and not a loss.
+     *
+     * This used to set an *error* reading "This session was saved without a
+     * check. Record it again to have it graded." Three things wrong with it,
+     * and the third is the one that mattered.
+     *
+     * It was styled as a failure. `error` renders red, under `role="alert"`,
+     * and nothing here has gone wrong — the recording saved exactly as it was
+     * meant to. What happened is that Gap Coach timed out or was unreachable
+     * afterwards, which the two messages in `analyzeSession` already describe
+     * accurately as "the session is saved, so retry when you're ready".
+     *
+     * It blamed the reader for something the app did.
+     *
+     * And it was wrong. The transcript was fetched three lines above and is
+     * already on screen; grading needs no new audio. Telling somebody to
+     * explain a topic out loud for another three minutes to recover work they
+     * have already done is the worst advice this screen could give, and the
+     * machinery to do it properly — `analyzeSession` — was already here.
+     *
+     * The doc comment above says reopening must not re-grade. That rule is
+     * about not spending a model call to re-answer a question already
+     * answered, and about not letting a score be farmed. Neither applies to a
+     * session that was never graded once. */
+    setPendingCheck(
+      !data.report && (data.transcript ?? "").trim().length > 0
+        ? {
+            id: data.id,
+            transcript: data.transcript ?? "",
+            // Carried from the row, so the check marks it against the section
+            // it was actually answering — or against nothing, if it was a
+            // free-form take.
+            sectionIndex: data.question_section,
+          }
+        : null,
+    );
+
+    /* The one case where there is genuinely nothing to work with. No report
+       and no words either, so there is nothing to grade and re-recording is
+       honestly the only way forward — which is why it is worth saying only
+       here, rather than to everybody. */
+    if (!data.report && (data.transcript ?? "").trim().length === 0) {
+      setNotice(
+        "No words were saved for this session, so there is nothing to check. Recording it again is the only way to grade it.",
       );
+    }
+  }
+
+  /** Grade a session that was saved but never checked. */
+  async function runPendingCheck() {
+    const pending = pendingCheck;
+    if (!pending) return;
+    setError(null);
+    setNotice(null);
+    setPendingCheck(null);
+    setStatus("analyzing");
+    try {
+      await analyzeSession(
+        pending.transcript,
+        pending.id,
+        pending.sectionIndex,
+      );
+    } finally {
+      setStatus("idle");
     }
   }
 
@@ -1624,6 +1716,9 @@ export function RecordConsole({
       setSpansCover("");
       setReport(null);
       setAgentRun(null);
+      // The session it referred to has just been deleted, so the offer to
+      // grade it would fail on a row that is gone.
+      setPendingCheck(null);
       transcriptRef.current = "";
     }
   }
@@ -2106,6 +2201,10 @@ export function RecordConsole({
     setAgentRun(null);
     setDisplayedSessionId(null);
     setNotice(null);
+    // The offer belonged to the session being looked at, which is no longer
+    // on screen. Left set, it would invite grading an old session's words
+    // from a screen now showing a new recording.
+    setPendingCheck(null);
     transcriptRef.current = "";
     lastGradedTextRef.current = "";
     browserTranscriptRef.current = "";
@@ -2554,6 +2653,29 @@ export function RecordConsole({
         )}
 
         {notice && <p className="text-xs text-subtle">{notice}</p>}
+
+        {/* Saved but never checked. Stated plainly, with the action attached.
+         *
+         * Deliberately not `error` styling: nothing failed here that the
+         * reader did, and a red alert over a recording that saved correctly
+         * reads as "you lost it". The words are still there and the check is
+         * one press away. */}
+        {pendingCheck && status !== "analyzing" && (
+          <div className="flex max-w-sm flex-col items-center gap-2">
+            <p className="text-xs text-subtle leading-5">
+              This one was saved but never checked — the grader didn&apos;t
+              finish last time. Your words are all here, so it can be graded
+              now.
+            </p>
+            <Button
+              type="button"
+              onClick={runPendingCheck}
+              className="press h-9 rounded-full bg-accent-solid px-4 font-semibold text-[0.85rem] text-accent-contrast hover:bg-accent-solid-hover"
+            >
+              Check this session
+            </Button>
+          </div>
+        )}
 
         {!courseReady && (
           <p className="max-w-sm text-xs text-subtle">
