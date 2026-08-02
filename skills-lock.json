@@ -6,6 +6,12 @@
       "sourceType": "well-known",
       "computedHash": "b8abf90cf095a94c2b3973ceb6739da82c1d7dc782ef9340bebfe2a09d54365c"
     },
+    "framer-motion-animator": {
+      "source": "patricio0312rev/skills",
+      "sourceType": "github",
+      "skillPath": "frontend/framer-motion-animator/SKILL.md",
+      "computedHash": "d0137ba04049bf8926bc80f6a5e2b82d94b5633b6445a85dbfb26ab4f1b104c6"
+    },
     "skill-creator": {
       "source": "anthropics/skills",
       "sourceType": "github",

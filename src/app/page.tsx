@@ -639,8 +639,7 @@ function Artifact({
     <div
       style={accent ? { borderLeft: `3px solid ${accent}` } : undefined}
       className={cn(
-        "panel-live rounded-[20px] border border-[var(--rule)] bg-white p-5 text-left",
-        "shadow-[0_20px_25px_-5px_rgba(0,0,0,0.06),0_8px_10px_-6px_rgba(0,0,0,0.05)]",
+        "panel-live glass-panel rounded-[20px] p-5 text-left",
         className,
       )}
     >
@@ -837,7 +836,7 @@ function Hero() {
            * and it is the disagreement between them that reads as depth. */}
           <Artifact
             accent="var(--ok)"
-            className="hero-drift-near lay-in-soft mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
+            className="hero-drift-near lay-in-soft float-slow mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span
@@ -862,7 +861,7 @@ function Hero() {
 
           <Artifact
             accent="var(--miss)"
-            className="hero-drift-far lay-in-soft mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
+            className="hero-drift-far lay-in-soft float-slower mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
@@ -875,7 +874,7 @@ function Hero() {
 
         {/* The take itself, centred under the sentence rather than beside it. */}
         <div className="mx-auto mt-14 max-w-[42rem]">
-          <div className="lay-in panel-live rounded-[20px] border border-[var(--rule)] bg-white p-5">
+          <div className="lay-in panel-live glass-panel rounded-[20px] p-5">
             {/* What is being explained, and what it was built from.
              *
              * The panel used to open straight into three marked sentences with
