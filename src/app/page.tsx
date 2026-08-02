@@ -67,11 +67,16 @@ const HEADLINE: readonly Run[] = [
 /**
  * A real explanation, marked the way the product marks one.
  *
- * Authored demonstration material, not a recording of anybody: the topic is
- * mitosis because it is the kind of thing people are sure they understand
- * until they have to say it in order. Every verdict is one the grader would
- * actually reach — the missed step is genuinely missed, and the vague run is
- * vague rather than wrong.
+ * Authored demonstration material, not a recording of anybody. Physics here,
+ * chemistry in section 03 and American history in section 05 — one subject
+ * repeated down the page reads as "this is a biology tool", and the product is
+ * not one. Every verdict is one the grader would actually reach: the missed
+ * step is genuinely missed, and the vague run is vague rather than wrong.
+ *
+ * Deliberately short lines. Long enough to be a real explanation, short enough
+ * that nobody skims them as prose addressed to *them* — a paragraph of
+ * second-person sentences on a landing page reads as instructions, and these
+ * are somebody else's answer being marked.
  */
 const TAKE: readonly {
   readonly at: string;
@@ -80,27 +85,25 @@ const TAKE: readonly {
   {
     at: "00:00:04",
     runs: [
-      ["So mitosis is how one cell becomes ", "plain"],
-      ["two identical daughter cells", "ok"],
-      [", and it starts with the DNA ", "plain"],
-      ["being copied", "ok"],
+      ["Newton's third law: forces come in pairs, ", "plain"],
+      ["equal and opposite", "ok"],
       [".", "plain"],
     ],
   },
   {
-    at: "00:00:12",
+    at: "00:00:11",
     runs: [
-      ["Then the chromosomes ", "plain"],
-      ["sort of line up in the middle", "vague"],
-      [" and get pulled apart.", "plain"],
+      ["So push a wall and the wall ", "plain"],
+      ["kind of pushes back", "vague"],
+      [".", "plain"],
     ],
   },
   {
-    at: "00:00:21",
+    at: "00:00:17",
     runs: [
-      ["After that the cell ", "plain"],
-      ["splits down the middle", "ok"],
-      [" and you have two of them.", "plain"],
+      ["That is why ", "plain"],
+      ["you feel it in your hand", "ok"],
+      [".", "plain"],
     ],
   },
 ];
@@ -117,7 +120,7 @@ const LEVELS = [
 ].map((height, i) => ({ height, delay: i * 90 }));
 
 /** What was never said. Shown after the take, in its own register. */
-const NOT_SAID = "the spindle fibres attach at the centromere";
+const NOT_SAID = "the two forces act on different objects";
 
 /* Lettered, not numbered.
  *
@@ -841,18 +844,12 @@ function Hero() {
             className="hero-drift-near lay-in-soft float-slow hero-orbit-left mt-10"
           >
             <p className="text-[0.95rem] leading-[1.6]">
+              Forces come in pairs,{" "}
               <span
                 style={{ color: "var(--ok)" }}
                 className="italic underline decoration-1 underline-offset-[3px]"
               >
-                two identical daughter cells
-              </span>
-              , and it starts with the DNA{" "}
-              <span
-                style={{ color: "var(--ok)" }}
-                className="italic underline decoration-1 underline-offset-[3px]"
-              >
-                being copied
+                equal and opposite
               </span>
               .
             </p>
@@ -867,7 +864,7 @@ function Hero() {
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
-                the spindle fibres attach at the centromere
+                {NOT_SAID}
               </span>
             </p>
             <p className="mt-3 text-[0.8rem] opacity-55">Never said</p>
@@ -885,12 +882,23 @@ function Hero() {
              * rest of it. */}
             <div className="rule-b flex items-baseline justify-between gap-4 pb-3">
               <div className="min-w-0">
-                <p className="truncate font-semibold text-[1.02rem]">Mitosis</p>
+                <p className="truncate font-semibold text-[1.02rem]">
+                  Newton&apos;s laws
+                </p>
                 <Slug className="mt-0.5 block truncate">
-                  From cell-division.pdf
+                  From forces-notes.pdf
                 </Slug>
               </div>
-              <Slug className="tc shrink-0 opacity-100">Live</Slug>
+              {/* Named as a sample, not just as live.
+               *
+               * Everything in this panel is second-person — "so push a wall",
+               * "you feel it in your hand" — and second-person sentences on a
+               * landing page are read as instructions unless something says
+               * otherwise. This is what says otherwise. */}
+              <div className="flex shrink-0 items-baseline gap-3">
+                <Slug className="opacity-55">Example</Slug>
+                <Slug className="tc opacity-100">Live</Slug>
+              </div>
             </div>
 
             {/* The level, while it is still being said.
@@ -1032,8 +1040,42 @@ function RunningOrder() {
  * 03 — Live marking, scrubbable
  * ---------------------------------------------------------------------- */
 
-/** Every markable run in the take, flattened, so a scrubber can index it. */
-const SCRUB = TAKE.flatMap((line) => line.runs).filter((r) => r[1] !== "plain");
+/**
+ * A second take, in a different subject.
+ *
+ * Chemistry rather than the hero's physics, because the same explanation
+ * marked twice down one page reads as one demo shown from two angles — and
+ * because a study tool that only ever demonstrates itself on one subject looks
+ * like a tool for that subject.
+ */
+const MARKING_TAKE: readonly {
+  readonly at: string;
+  readonly runs: readonly Run[];
+}[] = [
+  {
+    at: "00:00:06",
+    runs: [
+      ["An ionic bond is one atom ", "plain"],
+      ["giving an electron to another", "ok"],
+      [".", "plain"],
+    ],
+  },
+  {
+    at: "00:00:14",
+    runs: [
+      ["They end up ", "plain"],
+      ["with opposite charges", "ok"],
+      [" and ", "plain"],
+      ["stick together somehow", "vague"],
+      [".", "plain"],
+    ],
+  },
+];
+
+/** Every markable run in that take, flattened, so a scrubber can index it. */
+const SCRUB = MARKING_TAKE.flatMap((line) => line.runs).filter(
+  (r) => r[1] !== "plain",
+);
 const SCORED = SCRUB.filter((r) => r[1] === "ok").length;
 
 /**
@@ -1148,6 +1190,9 @@ function LiveMarking() {
         <div />
         <div className="grid gap-10 lg:grid-cols-[1fr_15rem]">
           <div>
+            <Slug className="mb-4 block opacity-55">
+              Example take — chemistry
+            </Slug>
             <p className="text-[clamp(1.15rem,2.9vw,1.9rem)] leading-[1.5]">
               {/* The take read as one continuous paragraph rather than as
                   timed lines, because here it is a piece of speech being
@@ -1156,7 +1201,7 @@ function LiveMarking() {
                   between them or they run together at the join. */}
               {(() => {
                 let seen = 0;
-                return TAKE.flatMap((line, li) => [
+                return MARKING_TAKE.flatMap((line, li) => [
                   li > 0 ? <span key={`gap-${line.at}`}> </span> : null,
                   ...line.runs.map((run) => {
                     const marked = run[1] !== "plain";
@@ -1349,13 +1394,16 @@ function Pace() {
  * 05 — Sources only
  * ---------------------------------------------------------------------- */
 
+/* A third subject. Physics in the hero, chemistry in 03, American history
+   here — the page demonstrates itself on the range of things people actually
+   study rather than on one of them three times. */
 const COURSE = [
-  { point: "How the two daughter cells end up identical", inSource: true },
-  { point: "The four phases, in order", inSource: true },
-  { point: "Where the spindle fibres attach", inSource: true },
-  { point: "Checkpoint control, and what p53 does", inSource: false },
-  { point: "What happens when mitosis goes wrong", inSource: false },
-  { point: "Meiosis, and how it differs", inSource: false },
+  { point: "What the Stamp Act actually taxed", inSource: true },
+  { point: "Why representation was the objection", inSource: true },
+  { point: "The road from Boston to Lexington", inSource: true },
+  { point: "Why the Articles of Confederation failed", inSource: false },
+  { point: "Federalists against Anti-Federalists", inSource: false },
+  { point: "How the Bill of Rights was added", inSource: false },
 ] as const;
 
 const IN_SOURCE = COURSE.filter((r) => r.inSource).length;
@@ -1383,6 +1431,9 @@ function SourcesOnly() {
       >
         <div />
         <div>
+          <Slug className="mb-5 block opacity-55">
+            Example course — American history
+          </Slug>
           {/* A working switch, not a picture of one. */}
           <button
             type="button"

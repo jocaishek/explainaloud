@@ -40,11 +40,13 @@
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
   --destructive: oklch(0.577 0.245 27.325);
-  --ring: #3b37e6;
-  /* Brand text on a near-white surface. The hero stop is dark enough to be
-     its own ink here — 6.5:1 against the page — so the light theme sets words
-     in it rather than in the deeper one. */
-  --brand-ink: #fbbf24;
+  --ring: #f97316;
+  /* Brand text on a near-white surface, in the deep stop rather than the
+     luminous one. This was `#fbbf24` — amber, carried over from the dark
+     register, and about 1.7:1 on white, so any word set in it was very nearly
+     invisible. The deep stop clears 4.8:1 and is the same colour the app
+     register already answers this token with. */
+  --brand-ink: #c2410c;
   /* The three stops as variables rather than as literals in `@theme`.
      Twenty-five files across the app already ask for `bg-brand-deep` or
      `text-brand-ink` and are right to — those names say what the colour is
@@ -99,14 +101,15 @@
   --accent: #1e1e1e;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.637 0.237 25.331);
-  --ring: #3b37e6;
+  --ring: #f97316;
   /* Brand text on a near-black surface, lightened.
 
-     The hero stop is dark enough to carry a white label and therefore too
+     The deep stop is dark enough to carry a white label and therefore too
      dark to be one: as small text on #121212 it is the wrong side of the
-     4.5:1 a paragraph needs. This tint of the same hue clears 6.5:1 without
-     reading as a different colour. */
-  --brand-ink: #8f8bff;
+     4.5:1 a paragraph needs. This tint of the same hue clears it without
+     reading as a different colour. `#8f8bff` was the ultramarine version of
+     exactly this decision, left behind when the accent changed. */
+  --brand-ink: #fb923c;
 
   --strong: #ffffff;
   --subtle: #71717a;
@@ -1028,16 +1031,13 @@
   }
 }
 
-/* The accents, in the order the page uses them. */
-.accent-blue {
-  --accent: #3b37e6;
-}
-.accent-violet {
-  --accent: #6d3aec;
-}
-.accent-magenta {
-  --accent: #b81a86;
-}
+/* The one accent left standing.
+ *
+ * There were four here — blue, violet, magenta, ink — from when the landing
+ * ran a different section colour down the page. Nothing has referenced the
+ * first three since the palette became one hue at four values, and leaving
+ * three unreachable brand colours in the stylesheet is how the next person
+ * concludes the product has four. */
 .accent-ink {
   --accent: #0c0c0d;
 }

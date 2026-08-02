@@ -22,7 +22,7 @@ export const contentType = "image/png";
 export const alt =
   "Explainaloud: rereading feels like learning, saying it out loud is where you find out.";
 
-const BRAND = "#1f2aff";
+const BRAND = "#c2410c";
 const INK = "#0c0c0d";
 const STOCK = "#f2f2f0";
 const OK = "#0f7a3d";

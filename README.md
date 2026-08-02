@@ -47,13 +47,18 @@ This file is how to run it.
   of what the last answer missed.
 - **Turns the gap report into a plan.** Every topic lands as review, practice, or
   mastered.
+- **Shows a new account around, once.** Three steps on the first visit to the
+  dashboard — material in, explain it out loud, read back what you missed —
+  which is the whole loop and the whole tour. It rings the thing it is talking
+  about rather than dimming the page, so the app stays usable throughout, and
+  Escape or *Skip* ends it for good.
 
 ## Stack
 
 | | |
 |---|---|
 | Framework | Next.js (App Router), React 19, TypeScript |
-| Styling | Tailwind CSS v4 with OKLCH tokens, shadcn/ui, light by default with dark as a choice |
+| Styling | Tailwind CSS v4 with OKLCH tokens, shadcn/ui, one sunset accent across landing and app |
 | Linter and formatter | Biome |
 | Data and auth | Supabase Postgres with row-level security |
 | AI | Gemini primary, Groq failover, validated local fallbacks for grading |
@@ -176,7 +181,16 @@ still talking, so the page marks you while you are still reading it: the
 headline grades itself, the hero panel fills with a take as it arrives, and
 there is no screenshot of that happening anywhere on the site.
 
-Three things are load-bearing rather than decorative, and breaking them is the
+**One register, both sides of the sign-in.** The landing page and the signed-in
+app are the same world — same warm stock, same sunset accent, same frosted
+panels, same type. `.register-app` still exists and still re-points radii,
+spacing and type scale, because a screen somebody sits inside for twenty
+minutes is not a screen they read for three seconds. What it does not change is
+colour or typeface. A visitor should not be able to tell they have crossed a
+seam, so the same `glass-panel`, `panel-live` and `data-rise` primitives carry
+product output, hover and arrival on both sides.
+
+Four things are load-bearing rather than decorative, and breaking them is the
 usual way a change here goes wrong:
 
 - **The three verdict colours are reserved.** `--ok`, `--miss` and `--vague`
@@ -184,10 +198,19 @@ usual way a change here goes wrong:
   marked transcript and on the charts alike. Nothing else may use them, so that
   the green somebody is shown before signing up is the green they are graded
   in afterwards.
+- **One accent, one hue.** Sunset `#f97316` over `#c2410c`, at four values, and
+  a fifth colour introduced as scenery is how a reserved palette stops being
+  reserved. Ask for `--brand`, `--brand-deep` or `--brand-ink` and never a
+  literal — the whole product changed accent twice in one afternoon because
+  those names exist.
 - **The gutter is a grid column.** Sections are
   `grid-cols-[var(--gutter)_1fr]`, and an element inserted between a section
   and its rows breaks the ruler running down the page.
 - **No invented proof.** There are no usage numbers, no testimonials, no
   customer names and no press on the site, and none may be added — see
-  [PRODUCT.md](./PRODUCT.md). The demonstration material is authored, and it is
-  marked exactly as the grader would mark it.
+  [PRODUCT.md](./PRODUCT.md). The demonstration material is authored, marked
+  exactly as the grader would mark it, and labelled *Example* wherever it is
+  written in the second person so nobody reads a sample take as an instruction.
+  It also spans subjects on purpose — physics in the hero, chemistry in 03,
+  American history in 05 — because one subject demonstrated three times reads
+  as a tool for that subject.
