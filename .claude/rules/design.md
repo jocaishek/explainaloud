@@ -79,9 +79,16 @@ product:
   codebase it is a leftover, not a decision.)
 - **A saturated ground under a marked transcript.** Green, red and tan have to
   stay legible and keep meaning *correct*, *missed* and *vague*. Every section
-  that marks anything takes a light ground, and `#f2ede6` is the floor: it is
-  the deepest warm stock on which all three verdicts still clear 4.5:1. One
-  step below it the tan fails.
+  that marks anything takes a light ground, and `#f2ede6` is the floor for the
+  bare stock: it is the deepest warm value on which all three verdicts still
+  clear 4.5:1. One step below it the tan fails.
+
+  **Count the ground field, not just the stock.** A wash is laid *over* the
+  stock, so the number that matters is the blend at its heaviest point, not
+  the hex in `background-color`. `.ground-warm` carries a strong sunset rake
+  and lands the tan near 3.9:1 where the light is brightest — fine, because
+  section 02 marks nothing, and disqualifying for any section that does. A
+  section that marks takes a light stock *and* a light field.
 - **More than one inversion on a page.** Light to dark and back is a full eye
   adaptation, and a reader who does it twice in six sections reports the page
   as flashing at them — which is exactly what happened. A page gets at most one

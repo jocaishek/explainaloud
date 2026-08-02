@@ -1025,18 +1025,75 @@
  * therefore still mark. */
 .ground-warm {
   --stock: #f2ede6;
-  background-color: var(--stock);
+  /* The region arrives and leaves. It does not start and stop.
+   *
+   * A `background-color` paints edge to edge, so the section met the white
+   * above and below it on two hard lines — a block of colour dropped into the
+   * page, which is exactly what "it doesn't flow" describes. The brief asks
+   * for sections to bleed into each other, and this is the mechanism: the
+   * stock is a vertical gradient that *begins and ends at the colour of its
+   * neighbours*, so there is no edge to see.
+   *
+   * White at both ends specifically, not `transparent`. The page root is
+   * `#f2f2f0` and the sections either side are `#ffffff`; fading to
+   * transparent would reveal the root and leave a faint grey seam exactly
+   * where the join was supposed to disappear. */
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    var(--stock) 15%,
+    var(--stock) 80%,
+    #ffffff 100%
+  );
+  /* Golden hour, raked across the section rather than pooled in a corner.
+   *
+   * Two soft radials at 22% and 12% gave a flat beige field with a smudge in
+   * it — the reading was "dull", and fairly: beige is what warm looks like
+   * with the light taken out. A single directional gradient falling from the
+   * top-left reads as *light on a surface*, which is the same idea the brand
+   * is named after, and it costs one declaration.
+   *
+   * The strength is only available because this section marks nothing. Even
+   * the old 22% amber put the tan verdict at 4.16 where the wash was
+   * heaviest — under the 4.5 a marked word needs. So this is the ground for
+   * sections that carry no verdicts, and the bare `#f2ede6` floor is what a
+   * marking section may use. */
   --ground-field:
-    radial-gradient(
-      68% 72% at 14% 12%,
-      rgba(251, 191, 36, 0.22) 0%,
-      rgba(249, 115, 22, 0) 66%
+    linear-gradient(
+      164deg,
+      rgba(251, 191, 36, 0.5) 0%,
+      rgba(249, 115, 22, 0.15) 38%,
+      rgba(249, 115, 22, 0) 72%
     ),
     radial-gradient(
-      56% 64% at 88% 92%,
-      rgba(249, 115, 22, 0.12) 0%,
+      58% 70% at 96% 100%,
+      rgba(194, 65, 12, 0.16) 0%,
       rgba(249, 115, 22, 0) 70%
     );
+}
+
+/* The light fades out where the stock does.
+ *
+ * Without this the gradient above dissolves the warm ground into white while
+ * the sunset field carries straight on to the section boundary and redraws
+ * the hard edge in gold — a worse version of the problem, because now the
+ * seam is the brightest thing on the page. Masked to the same envelope, the
+ * whole region arrives and leaves as one. */
+.ground-warm::before {
+  -webkit-mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 17%,
+    #000 78%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    180deg,
+    transparent 0%,
+    #000 17%,
+    #000 78%,
+    transparent 100%
+  );
 }
 
 /* The two tints. Light enough that a red or a tan verdict on top still clears
@@ -1192,6 +1249,24 @@
  * flat rectangle. Any stronger and it competes with the white type on it. */
 .ribbon {
   background-color: #14100c;
+  /* Dusk, not a trapdoor.
+   *
+   * The page's one inversion still met the white above it on a hard line, so
+   * the ending arrived as a cut. This drops from the white of section 05
+   * through the warm stock into carbon across the top of the band — the sun
+   * going down rather than the lights going off.
+   *
+   * The whole fall happens inside the band's own top padding (`py-28`, and
+   * `py-36` from `md`), so it is finished well above the "on air" slug and
+   * the heading; no white type is ever set on a light part of it. */
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 0%,
+    #f2ede6 4%,
+    #6d4423 9%,
+    #14100c 15%
+  );
+  background-repeat: no-repeat;
   --ground-field:
     radial-gradient(
       70% 80% at 12% 88%,
@@ -1819,34 +1894,14 @@
     );
 }
 
-/* The hero fragments' idle drift.
+/* The hero fragments' idle drift, deleted.
  *
- * CSS rather than Framer Motion: these two panels already carry a scroll-linked
- * parallax transform written from a rAF loop, and a second library animating
- * the same property would fight it every frame. A keyframe on a wrapper class
- * composes instead.
+ * Two panels bobbing on out-of-phase seven- and nine-second loops, on top of
+ * the scroll-linked parallax they already carry. The reasoning for the phase
+ * offset was sound and the effect worked; the problem is that it never stops.
+ * The first viewport was already running a take arriving word by word, twelve
+ * level bars, a caret and a lamp — and two more things moving for no reason
+ * except to be moving is what tipped it from alive to busy.
  *
- * Different cycle lengths on purpose. Matched loops read as one mechanism
- * moving two objects, and the illusion dies within about four seconds of
- * watching; falling out of phase is the whole effect. */
-@keyframes float-drift {
-  0%,
-  100% {
-    translate: 0 0;
-  }
-  50% {
-    translate: 0 -10px;
-  }
-}
-.float-slow {
-  animation: float-drift 7s cubic-bezier(0.44, 0, 0.56, 1) infinite;
-}
-.float-slower {
-  animation: float-drift 9.5s cubic-bezier(0.44, 0, 0.56, 1) infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .float-slow,
-  .float-slower {
-    animation: none;
-  }
-}
+ * The panels still drift, at different rates, when you scroll. That is the
+ * parallax doing the same job in response to something the reader did. */

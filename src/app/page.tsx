@@ -841,7 +841,7 @@ function Hero() {
            * and it is the disagreement between them that reads as depth. */}
           <Artifact
             accent="var(--ok)"
-            className="hero-drift-near lay-in-soft float-slow hero-orbit-left mt-10"
+            className="hero-drift-near lay-in-soft hero-orbit-left mt-10"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               Forces come in pairs,{" "}
@@ -860,7 +860,7 @@ function Hero() {
 
           <Artifact
             accent="var(--miss)"
-            className="hero-drift-far lay-in-soft float-slower hero-orbit-right mt-4"
+            className="hero-drift-far lay-in-soft hero-orbit-right mt-4"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
@@ -1001,7 +1001,11 @@ function RunningOrder() {
        * top of the page adapted to near-black and back inside a few seconds.
        * The close still inverts, and is now the only thing that does, which
        * is what makes it read as an ending rather than as one more section. */
-      className="ground ground-warm rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      /* No `rule-b`. The section now fades into the white below it, and a
+         hairline drawn across that fade is a line where the whole point was
+         that there is no line — the brief's "bleed rather than cut apart",
+         undone by one border. */
+      className="ground ground-warm scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="02"
