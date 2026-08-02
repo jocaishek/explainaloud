@@ -10,7 +10,7 @@ they have crossed one.
 | | Both sides |
 |---|---|
 | Canvas | `#f2f2f0` warm stock, cards in white |
-| Accent | Sunset `#f97316` over `#c2410c`, dark ink on the fill |
+| Accent | Amber `#f59e0b` over `#b45309`, `#fbbf24` for the lit edge and glow. Dark ink on the fill, never white |
 | Panels | Frosted glass over a warm field, or a ruled card |
 | Elevation | Tinted with `rgba(124, 45, 18, …)`, never neutral |
 | Display | Source Serif 4, weight 400, never bold |
@@ -72,9 +72,11 @@ product:
 - Glassmorphism and `backdrop-filter` as decoration. Blur is for a bar floating
   over scrolling content, and nothing else.
 - A colour that is neither a verdict nor the register's single accent. The
-  landing's grounds are the brand ultramarine `#3b37e6` at four values — a deep
-  field, two tints, and a band on white — and adding a fifth hue as scenery is
-  how a reserved palette stops being reserved.
+  landing's grounds are the one warm ramp at four values — a deep field, two
+  tints, and a band on white — and adding a second hue as scenery is how a
+  reserved palette stops being reserved. (This line named `#3b37e6`
+  ultramarine until the sunset landed; if you find another ultramarine in the
+  codebase it is a leftover, not a decision.)
 - **A saturated ground under a marked transcript.** Green, red and tan have to
   stay legible and keep meaning *correct*, *missed* and *vague*. Sections that
   mark anything take a light tint; only a section that marks nothing can carry

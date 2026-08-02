@@ -40,11 +40,13 @@
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
   --destructive: oklch(0.577 0.245 27.325);
-  --ring: #3b37e6;
-  /* Brand text on a near-white surface. The hero stop is dark enough to be
-     its own ink here — 6.5:1 against the page — so the light theme sets words
-     in it rather than in the deeper one. */
-  --brand-ink: #fbbf24;
+  --ring: #f97316;
+  /* Brand text on a near-white surface, in the deep stop rather than the
+     luminous one. This was `#fbbf24` — amber, carried over from the dark
+     register, and about 1.7:1 on white, so any word set in it was very nearly
+     invisible. The deep stop clears 4.8:1 and is the same colour the app
+     register already answers this token with. */
+  --brand-ink: #c2410c;
   /* The three stops as variables rather than as literals in `@theme`.
      Twenty-five files across the app already ask for `bg-brand-deep` or
      `text-brand-ink` and are right to — those names say what the colour is
@@ -53,6 +55,10 @@
      why there is no mass find-and-replace in this change. */
   --brand: #f97316;
   --brand-deep: #c2410c;
+  /* The gold at the top of the ramp. It is what the landing's glass edges and
+     ground glows are made of, and the app now reads its accent from this end
+     of the ramp rather than the red end — so it needs a name on both sides. */
+  --brand-high: #fbbf24;
   /* Dark ink on the sunset, not white. #f97316 is a light, luminous colour —
      white type on it sits at 2.6:1, and the label on the one button somebody
      is meant to press cannot be the least readable text on the page. */
@@ -99,14 +105,15 @@
   --accent: #1e1e1e;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.637 0.237 25.331);
-  --ring: #3b37e6;
+  --ring: #f97316;
   /* Brand text on a near-black surface, lightened.
 
-     The hero stop is dark enough to carry a white label and therefore too
+     The deep stop is dark enough to carry a white label and therefore too
      dark to be one: as small text on #121212 it is the wrong side of the
-     4.5:1 a paragraph needs. This tint of the same hue clears 6.5:1 without
-     reading as a different colour. */
-  --brand-ink: #8f8bff;
+     4.5:1 a paragraph needs. This tint of the same hue clears it without
+     reading as a different colour. `#8f8bff` was the ultramarine version of
+     exactly this decision, left behind when the accent changed. */
+  --brand-ink: #fb923c;
 
   --strong: #ffffff;
   --subtle: #71717a;
@@ -198,21 +205,37 @@
 
   /* One accent, and it means "you can act on this": primary buttons, links,
      focus, the active nav item, progress. Never decoration, and never a
-     surface larger than a control. */
-  --accent-solid: #f97316;
-  --accent-solid-hover: #c2410c;
-  /* Dark ink on the sunset. #f97316 is luminous — a white label on it sits
-     at 2.6:1, the same reason the landing's CTA is inked. */
+     surface larger than a control.
+
+     **Amber, not the red end of the ramp.** The app used to sit on `#f97316`
+     over `#c2410c`, which is the bottom two stops of the landing's warm ramp
+     and the two least like it: `#c2410c` as a button fill is a brick red that
+     reads as brown next to the landing's gold, and it was the fill on every
+     primary control in the product. The landing's warmth comes from the *top*
+     of that ramp — `#fbbf24` in the glass edges and the ground glow — so the
+     app now runs `#f59e0b` over `#b45309` and carries `#fbbf24` as its own
+     high stop. Same ramp, read from the gold end.
+
+     The one thing this must not do is collide with `--vague` (`#96600a`),
+     which means "said, but not checkably" and is the same hue family. It
+     clears it on value and saturation — but see `pace-panel.tsx`, where the
+     two used to be plotted against each other and are no longer. */
+  --accent-solid: #f59e0b;
+  --accent-solid-hover: #b45309;
+  /* Dark ink on the sunset. The fill is luminous — a white label on it sits
+     at 2.2:1, the same reason the landing's CTA is inked. */
   --accent-contrast: #1a1206;
-  --accent-ring: rgba(249, 115, 22, 0.38);
-  --accent-wash: rgba(249, 115, 22, 0.1);
-  --ring: #f97316;
+  --accent-ring: rgba(245, 158, 11, 0.38);
+  --accent-wash: rgba(245, 158, 11, 0.1);
+  --ring: #f59e0b;
 
   /* The brand stops, answered in the app's accent. `brand-deep` is the
-     pressed and hovered one, `brand-ink` is what words are set in. */
-  --brand: #f97316;
-  --brand-deep: #c2410c;
-  --brand-ink: #c2410c;
+     pressed and hovered one and the fill under a white label, `brand-ink` is
+     what words are set in, `brand-high` is the lit edge and the glow. */
+  --brand: #f59e0b;
+  --brand-deep: #b45309;
+  --brand-high: #fbbf24;
+  --brand-ink: #b45309;
   --brand-foreground: #1a1206;
 
   /* Three radii. Panels at 20, controls at 12, pills round. A fourth value is
@@ -290,6 +313,7 @@
      near-black one. A single value cannot clear 4.5:1 against both. */
   --color-brand: var(--brand);
   --color-brand-deep: var(--brand-deep);
+  --color-brand-high: var(--brand-high);
   --color-brand-ink: var(--brand-ink);
   --color-brand-foreground: var(--brand-foreground);
   --radius-sm: 0.25rem;
@@ -1028,16 +1052,13 @@
   }
 }
 
-/* The accents, in the order the page uses them. */
-.accent-blue {
-  --accent: #3b37e6;
-}
-.accent-violet {
-  --accent: #6d3aec;
-}
-.accent-magenta {
-  --accent: #b81a86;
-}
+/* The one accent left standing.
+ *
+ * There were four here — blue, violet, magenta, ink — from when the landing
+ * ran a different section colour down the page. Nothing has referenced the
+ * first three since the palette became one hue at four values, and leaving
+ * three unreachable brand colours in the stylesheet is how the next person
+ * concludes the product has four. */
 .accent-ink {
   --accent: #0c0c0d;
 }

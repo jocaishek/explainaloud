@@ -365,7 +365,7 @@ export function OnboardingForm({ email }: { email: string }) {
             key="finish"
             type="submit"
             disabled={pending}
-            className="group h-11 gap-1.5 bg-brand-deep px-6 font-semibold text-white transition-colors duration-200 hover:bg-brand"
+            className="group h-11 gap-1.5 bg-accent-solid px-6 font-semibold text-accent-contrast transition-colors duration-200 hover:bg-accent-solid-hover"
           >
             {pending ? "Setting up…" : "Finish setup"}
             {!pending && <Check className="size-4" />}
@@ -375,7 +375,7 @@ export function OnboardingForm({ email }: { email: string }) {
             key="continue"
             type="button"
             onClick={next}
-            className="group h-11 gap-1.5 bg-brand-deep px-6 font-semibold text-white transition-colors duration-200 hover:bg-brand"
+            className="group h-11 gap-1.5 bg-accent-solid px-6 font-semibold text-accent-contrast transition-colors duration-200 hover:bg-accent-solid-hover"
           >
             Continue
             <ArrowRight className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />
@@ -475,7 +475,7 @@ function UseTypeOption({
         className={cn(
           "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 motion-reduce:transition-none",
           selected
-            ? "bg-brand-deep text-white"
+            ? "bg-accent-solid text-accent-contrast"
             : "bg-card text-subtle group-hover:text-brand-ink",
         )}
       >

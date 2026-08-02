@@ -92,7 +92,7 @@ export default async function ReTeachPage({
           </p>
           <Link
             href={`/home/${slug}/record`}
-            className="w-fit rounded-full bg-brand-deep px-5 py-2 text-sm font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
+            className="w-fit rounded-full bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
           >
             Start explaining
           </Link>
@@ -166,7 +166,7 @@ export default async function ReTeachPage({
 
         <Link
           href={`/home/${slug}/record`}
-          className="w-fit rounded-full bg-brand-deep px-5 py-2 text-sm font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
+          className="w-fit rounded-full bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
         >
           Record another explanation
         </Link>

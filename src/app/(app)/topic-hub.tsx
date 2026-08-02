@@ -69,7 +69,10 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
             You don&apos;t have any topics yet. Start one, and everything here
             fills in as you explain it.
           </p>
-          <Button asChild className="h-10 bg-brand-deep px-5 text-white">
+          <Button
+            asChild
+            className="h-10 bg-accent-solid px-5 text-accent-contrast"
+          >
             <Link href="/new">Start a topic</Link>
           </Button>
         </Card>

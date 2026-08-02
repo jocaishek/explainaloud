@@ -30,32 +30,52 @@ export default function AppleIcon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "#1f2aff",
+        /* The warm stock the whole product stands on, so the corners around
+           the disc are the page colour rather than a white or black box.
+           Opaque on purpose: an Apple touch icon has no alpha channel, and a
+           transparent PNG is composited onto black by iOS. */
+        background: "#f2f2f0",
       }}
     >
-      {/* Full-bleed square. iOS applies its own mask to this one whatever we
-          draw, which is why it is the only tile in the set that is not a
-          circle — every other surface uses `icon.svg`, where the circle is
-          real. */}
-      {/* Rasterised to PNG, so the label is inert here — but the lint rule is
+      {/* A real circle, matching `icon.svg`.
+       *
+       * This was a full-bleed square on the reasoning that iOS masks the tile
+       * anyway — true, but it made this the one surface in the set where the
+       * mark sat in a square, and it is the tile that ends up on a home
+       * screen. Drawing the disc means the icon is circular everywhere it is
+       * seen, and iOS's own squircle mask only ever crops stock it would have
+       * cropped regardless. */}
+      <div
+        style={{
+          width: 164,
+          height: 164,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: "50%",
+          background: "#c2410c",
+        }}
+      >
+        {/* Rasterised to PNG, so the label is inert here — but the lint rule is
           right in general, and `role`/`aria-label` satisfy it without a
           <title> child, which Satori does not render. */}
-      <svg
-        width="128"
-        height="128"
-        viewBox="0 0 64 64"
-        fill="none"
-        role="img"
-        aria-label="Explainaloud"
-      >
-        <path d={EYE} fill="#ffffff" />
-        <path
-          d={SMILE}
-          stroke="#ffffff"
-          strokeWidth="5"
-          strokeLinecap="round"
-        />
-      </svg>
+        <svg
+          width="128"
+          height="128"
+          viewBox="0 0 64 64"
+          fill="none"
+          role="img"
+          aria-label="Explainaloud"
+        >
+          <path d={EYE} fill="#ffffff" />
+          <path
+            d={SMILE}
+            stroke="#ffffff"
+            strokeWidth="5"
+            strokeLinecap="round"
+          />
+        </svg>
+      </div>
     </div>,
     size,
   );

@@ -52,6 +52,7 @@ export function QuickActions() {
   return (
     <nav
       aria-label="What would you like to do"
+      data-tour="actions"
       className="grid gap-3 sm:grid-cols-3"
     >
       {ACTIONS.map((action) => (

@@ -2,6 +2,7 @@ import type { Course, Folder } from "~/lib/folders";
 import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { requireProfile } from "~/lib/supabase/server";
 import { TopicGrid } from "../topic-grid";
+import { FirstRunTour } from "./first-run";
 import { Masthead } from "./masthead";
 import { PacePanel, type PaceSession } from "./pace-panel";
 import { QuickActions } from "./quick-actions";
@@ -136,9 +137,13 @@ export default async function DashboardPage() {
           <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
         </div>
 
-        <div data-rise="">
+        <div data-rise="" data-tour="topics">
           <TopicGrid folders={folders ?? []} courses={courses ?? []} />
         </div>
+
+        {/* Three steps, once, for somebody who has just arrived. Renders
+            nothing at all for everybody else. */}
+        <FirstRunTour />
       </div>
     </div>
   );

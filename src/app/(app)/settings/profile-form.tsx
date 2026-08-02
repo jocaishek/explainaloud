@@ -117,7 +117,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         <Button
           type="submit"
           disabled={pending}
-          className="h-10 rounded-full bg-brand-deep px-5 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
+          className="h-10 rounded-full bg-accent-solid px-5 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
         >
           {pending ? "Saving…" : "Save changes"}
         </Button>
