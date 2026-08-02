@@ -477,28 +477,6 @@
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
-/* Infinite ticker. The track holds two identical copies of the content, so
-   translating exactly -50% lands copy two where copy one began — seamless. */
-@keyframes marquee-track {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.marquee-track {
-  animation: marquee-track 36s linear infinite;
-}
-.marquee:hover .marquee-track {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none;
-  }
-}
-
 /* Specular sweep across a button on hover. Purely decorative, so it's gated
    to pointer devices and disabled under reduced motion. */
 .shine {
@@ -1032,6 +1010,108 @@
   );
   background-clip: text;
   color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+ * Panels that come into play as you scroll to them.
+ *
+ * Scroll-*driven* rather than scroll-*triggered*, and the difference is the
+ * whole point. `data-rise` fires once when a block crosses a line and then
+ * plays a 900ms transition on its own clock; this is welded to the scrollbar,
+ * so a panel is exactly as far in as you have scrolled it and it runs backwards
+ * when you scroll back up. It reads as direct manipulation instead of as a
+ * cutscene, which is most of what "interactive" means on a page with no
+ * controls in it.
+ *
+ * `animation-timeline: view()` does it with no JavaScript at all — no observer,
+ * no scroll listener, no rAF loop, and it runs off the main thread. The whole
+ * block is inside `@supports`, so a browser without it simply gets the panel,
+ * finished and static, which is the correct fallback rather than a degraded
+ * one.
+ *
+ * The gesture is ours rather than borrowed. The reference scales a photograph
+ * up to fill the screen; this product has no photographs — its imagery is its
+ * own output, and it is a thing that marks a line *while you are still saying
+ * it*. So a panel is uncovered from the top down, the way its own transcript
+ * fills: `clip-path` opens, the panel settles the last few percent of its
+ * size, and the shadow arrives last so it lifts off the stock as it finishes
+ * rather than floating the whole way in.
+ * ------------------------------------------------------------------------- */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes panel-lay {
+      from {
+        /* Held slightly back and slightly down. Small numbers: a panel that
+           arrives from 0.7 scale reads as a modal opening, not as a page. */
+        transform: scale(0.94) translateY(2.5rem);
+        opacity: 0;
+        clip-path: inset(28% 0 0 0 round var(--panel-round, 20px));
+      }
+      to {
+        transform: none;
+        opacity: 1;
+        clip-path: inset(0 0 0 0 round var(--panel-round, 20px));
+      }
+    }
+
+    .lay-in {
+      animation: panel-lay linear both;
+      animation-timeline: view();
+      /* Finished well before the panel reaches the middle of the screen. Run
+         to `entry 100%` and the panel is still assembling when it is already
+         the thing you are reading. */
+      animation-range: entry 5% entry 70%;
+      will-change: transform, opacity, clip-path;
+    }
+
+    /* Half the travel and none of the clip, for the small fragments orbiting
+       the headline. They are already in the first viewport, so a full arrival
+       would mean the page assembling itself in front of somebody who has not
+       scrolled yet. */
+    @keyframes panel-lay-soft {
+      from {
+        transform: scale(0.96) translateY(1.25rem);
+        opacity: 0;
+      }
+      to {
+        transform: none;
+        opacity: 1;
+      }
+    }
+    .lay-in-soft {
+      animation: panel-lay-soft linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
+}
+
+/* Panels answer the cursor.
+ *
+ * Not a tilt and not a magnet — both are banned, and both make a page feel
+ * like a toy. This is the same lift the app's cards use, which is the point:
+ * the thing you hover on the marketing page behaves like the thing you will
+ * hover once you are inside. */
+.panel-live {
+  transition:
+    transform var(--dur-ui) var(--ease-exit),
+    box-shadow var(--dur-ui) var(--ease-exit);
+}
+@media (hover: hover) {
+  .panel-live:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 24px 32px -8px rgba(0, 0, 0, 0.09),
+      0 10px 14px -8px rgba(0, 0, 0, 0.06);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-live {
+    transition: none;
+  }
+  .panel-live:hover {
+    transform: none;
+  }
 }
 
 /* The hero, reacting to its own scroll.
