@@ -1,38 +1,34 @@
 # Design
 
-The product has **two visual registers**, and knowing which one you are in is
-the first thing to establish before touching anything. It is a deliberate
-decision rather than drift, and every other rule here depends on it.
+**One register.** The landing page and the signed-in app are the same world:
+same stock, same ink, same sunset accent, same shapes, same type. This file
+previously described two — a serif monument on paper and a calm blue tool —
+and that split is retired. It was a defensible call and it produced a visible
+seam at sign-in; the decision now is that a person should not be able to tell
+they have crossed one.
 
-| | Landing (`src/app/page.tsx`) | App (`.register-app`) |
-|---|---|---|
-| Canvas | `#fbfbfb` photocopy stock | `#fafafb`, cards in white |
-| Panels | Hairline, **no shadow**, ruled against the stock | 20px radius, soft tinted shadow |
-| Accent | Ink. Colour only where it means something | Blue `#4f7cff` |
-| Display | Source Serif 4, weight 400, never bold | Inter, 600, size does the rest |
-| Body | Archivo | Inter |
-| Rhythm | Compact, ruled | `--stack`, everything breathes |
+| | Both sides |
+|---|---|
+| Canvas | `#f2f2f0` warm stock, cards in white |
+| Accent | Sunset `#f97316` over `#c2410c`, dark ink on the fill |
+| Panels | Frosted glass over a warm field, or a ruled card |
+| Elevation | Tinted with `rgba(124, 45, 18, …)`, never neutral |
+| Display | Source Serif 4, weight 400, never bold |
+| Body | Archivo |
+| Labels | Martian Mono, uppercase, tracked |
 
-The landing page is a monument. It has three seconds to be memorable, its only
-content is type, and a serif headline reads as a sentence somebody wrote rather
-than as an announcement — which is the right voice for a page arguing that you
-should explain things aloud.
-
-The app is a tool somebody sits inside for twenty minutes, where legibility and
-calm beat impact. A neutral grotesque at 13px for twenty minutes is a feature.
-Those are genuinely different jobs and one system serving both serves neither.
-
-**The accepted risk:** the sign-in is a visible seam. Somebody arriving from the
-landing page meets a different-looking product. That was taken knowingly, and
-two things keep it from reading as two products — the next section, and the fact
-that the sign-in screen itself is in the *app* register, so the change happens
-one screen before anybody is asked for a password.
+`.register-app` still exists, and still exists for a reason: the app needs its
+own radii, its own spacing rhythm and its own denser type scale, because a
+screen somebody sits inside for twenty minutes is not a screen they read for
+three seconds. What it no longer does is answer a different question about
+*colour* or *typeface*. It re-points shape and density, and nothing else.
 
 ## How the two registers are built
 
-`src/app/globals.css`. `:root` holds the landing's answers; `.register-app`
-re-points the same tokens at the app's. One class on the app shell switches the
-whole product over, and **neither side may hardcode the other's values**.
+`src/app/globals.css`. `:root` holds the answers; `.register-app` re-points the
+shape-and-density subset for the app. **Neither side may hardcode a value the
+other owns** — that indirection is what let the whole product change accent
+twice in one afternoon by editing four lines.
 
 The important consequence: `--elev-rest` is `none` outside the app, and
 `--r-card` is `0px`. A shared component written as `rounded-card border

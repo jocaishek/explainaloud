@@ -172,46 +172,48 @@
   /* Surfaces. The page is not white; the cards are. That single step of
      separation is what lets a card read as raised without a heavy shadow
      doing the work — and it is why the canvas is #fafafb rather than #fff. */
-  --background: #fafafb;
+  --background: #f2f2f0;
   --card: #ffffff;
   --popover: #ffffff;
-  --muted: #f4f4f6;
-  --secondary: #f4f4f6;
+  --muted: #eceae7;
+  --secondary: #eceae7;
 
   /* Two weights of voice and no more: what you read, and what you read only
      if you want to. A third grey is where hierarchy turns into mud. */
-  --foreground: #111827;
-  --card-foreground: #111827;
-  --popover-foreground: #111827;
-  --secondary-foreground: #111827;
-  --muted-foreground: #6b7280;
-  --strong: #111827;
-  --subtle: #6b7280;
+  --foreground: #0c0c0d;
+  --card-foreground: #0c0c0d;
+  --popover-foreground: #0c0c0d;
+  --secondary-foreground: #0c0c0d;
+  --muted-foreground: #5b5a58;
+  --strong: #0c0c0d;
+  --subtle: #5b5a58;
 
   /* Borders carry the separating, not shadows. At 8% of the text colour they
      read as an edge rather than as a drawn box, and tinting them with the ink
      rather than using a grey keeps them from going cold against the canvas. */
-  --border: rgba(17, 24, 39, 0.08);
-  --input: rgba(17, 24, 39, 0.12);
+  --border: #cecac8;
+  --input: #b9b4b1;
   --surface: rgba(17, 24, 39, 0.03);
   --surface-border: rgba(17, 24, 39, 0.08);
 
   /* One accent, and it means "you can act on this": primary buttons, links,
      focus, the active nav item, progress. Never decoration, and never a
      surface larger than a control. */
-  --accent-solid: #4f7cff;
-  --accent-solid-hover: #3f6cf0;
-  --accent-contrast: #ffffff;
-  --accent-ring: rgba(79, 124, 255, 0.35);
-  --accent-wash: rgba(79, 124, 255, 0.08);
-  --ring: #4f7cff;
+  --accent-solid: #f97316;
+  --accent-solid-hover: #c2410c;
+  /* Dark ink on the sunset. #f97316 is luminous — a white label on it sits
+     at 2.6:1, the same reason the landing's CTA is inked. */
+  --accent-contrast: #1a1206;
+  --accent-ring: rgba(249, 115, 22, 0.38);
+  --accent-wash: rgba(249, 115, 22, 0.1);
+  --ring: #f97316;
 
   /* The brand stops, answered in the app's accent. `brand-deep` is the
      pressed and hovered one, `brand-ink` is what words are set in. */
-  --brand: #4f7cff;
-  --brand-deep: #3f6cf0;
-  --brand-ink: #4f7cff;
-  --brand-foreground: #ffffff;
+  --brand: #f97316;
+  --brand-deep: #c2410c;
+  --brand-ink: #c2410c;
+  --brand-foreground: #1a1206;
 
   /* Three radii. Panels at 20, controls at 12, pills round. A fourth value is
      how a system starts drifting, so there is deliberately nowhere to put
@@ -222,12 +224,15 @@
   /* Elevation, tinted with the text hue rather than pure black — a neutral
      shadow on a slightly warm canvas reads as dirt. Three steps and no more:
      at rest, under the cursor, and floating over the page. */
+  /* Warm elevation, as on the landing. A neutral shadow under a panel on warm
+     stock reads as dirt; tinted with the sunset it reads as the card sitting
+     in the same light as everything around it. */
   --elev-rest:
-    0 1px 2px rgba(17, 24, 39, 0.04), 0 4px 12px rgba(17, 24, 39, 0.04);
+    0 1px 2px rgba(124, 45, 18, 0.05), 0 12px 30px -18px rgba(124, 45, 18, 0.3);
   --elev-hover:
-    0 2px 4px rgba(17, 24, 39, 0.05), 0 12px 28px rgba(17, 24, 39, 0.08);
+    0 2px 6px rgba(124, 45, 18, 0.07), 0 22px 48px -22px rgba(124, 45, 18, 0.42);
   --elev-float:
-    0 1px 2px rgba(17, 24, 39, 0.04), 0 8px 24px rgba(17, 24, 39, 0.08);
+    0 1px 3px rgba(124, 45, 18, 0.06), 0 20px 45px -22px rgba(124, 45, 18, 0.4);
 
   --stack: 2.75rem;
   --measure: 74rem;
@@ -236,8 +241,10 @@
      Serif — a serif headline reads as a sentence somebody wrote, which is
      right for a page whose whole content is an argument, and wrong for a
      screen of controls that has to stay legible at 13px for twenty minutes. */
-  font-family:
-    var(--font-ui), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  /* One voice. Inter was the app's own face, from when this was two products
+     with a seam between them; it is one product now, so the app sets its type
+     in the landing's sans. */
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   background-color: var(--background);
   color: var(--foreground);
 }
