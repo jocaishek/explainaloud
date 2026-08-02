@@ -40,19 +40,23 @@
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
   --destructive: oklch(0.577 0.245 27.325);
-  --ring: #3b37e6;
+  --ring: #2b59d1;
   /* Brand text on a near-white surface. The hero stop is dark enough to be
      its own ink here — 6.5:1 against the page — so the light theme sets words
      in it rather than in the deeper one. */
-  --brand-ink: #3b37e6;
+  --brand-ink: #242424;
   /* The three stops as variables rather than as literals in `@theme`.
      Twenty-five files across the app already ask for `bg-brand-deep` or
      `text-brand-ink` and are right to — those names say what the colour is
      for. Making them indirect is what lets the app register answer with its
      own accent without a rename touching every one of those files, and it is
      why there is no mass find-and-replace in this change. */
-  --brand: #3b37e6;
-  --brand-deep: #241fb0;
+  --brand: #2b59d1;
+  --brand-deep: #1f43a3;
+  /* White on the blue. #2b59d1 is dark enough to carry a white label at
+     7.4:1, which the vivid green it replaced was not — that one needed
+     black type, and a black label on a bright fill is a different, louder
+     kind of button. */
   --brand-foreground: #ffffff;
 
   /* Strong/among-text pairs used across the app so a component never has to
@@ -598,9 +602,9 @@
 /* Script stock. Not paper-cream and not pure white — the cool grey a running
    order is photocopied onto, so black rules sit on it without vibrating. */
 .tx {
-  --stock: #f2f2f0;
-  --ink: #0c0c0d;
-  --rule: rgba(12, 12, 13, 0.16);
+  --stock: #f6f3f1;
+  --ink: #242424;
+  --rule: #cecac8;
   --rule-strong: rgba(12, 12, 13, 0.5);
   /* The timecode column. Narrow on a phone, where 5.5rem was a seventh of
      the screen given over to a two-character label and left every paragraph
@@ -639,8 +643,8 @@
    * monotone now - paper, grey stock, ink - and the only colour anywhere is a
    * verdict on a word somebody said. A saturated field this size was
    * competing with the three colours the whole product runs on. */
-  --stock: #101012;
-  --ink: #ffffff;
+  --stock: #121613;
+  --ink: #fafffa;
   --rule: rgba(255, 255, 255, 0.3);
   --rule-strong: rgba(255, 255, 255, 0.65);
   background: var(--stock);
@@ -771,11 +775,11 @@
  * "section four". Every accent clears 4.5:1 as text on both papers.
  */
 .paper {
-  --stock: #ffffff;
+  --stock: #faf8f7;
   background: var(--stock);
 }
 .paper-grey {
-  --stock: #f2f2f0;
+  --stock: #f6f3f1;
   background: var(--stock);
 }
 
@@ -871,7 +875,7 @@
    colour lit from opposite corners, so the field has a direction without a
    second hue appearing. */
 .ground-deep {
-  --stock: #14133a;
+  --stock: #121613;
   --ink: #ffffff;
   --rule: rgba(255, 255, 255, 0.26);
   --rule-strong: rgba(255, 255, 255, 0.6);
@@ -880,35 +884,46 @@
   --ground-field:
     radial-gradient(
       62% 70% at 20% 16%,
-      rgba(59, 55, 230, 0.85) 0%,
-      rgba(59, 55, 230, 0) 64%
+      rgba(43, 89, 209, 0.85) 0%,
+      rgba(43, 89, 209, 0) 64%
     ),
     radial-gradient(
       52% 60% at 86% 90%,
-      rgba(59, 55, 230, 0.45) 0%,
-      rgba(59, 55, 230, 0) 68%
+      rgba(43, 89, 209, 0.45) 0%,
+      rgba(43, 89, 209, 0) 68%
     );
 }
 
-/* The two tints. Light enough that a red or a tan verdict on top still clears
-   4.5:1, which is the whole reason these sections take a tint and not a field.
-   Same hue, one value apart — deeper first, lifting as the page runs out. */
+/* The two light sections stay on the canvas.
+ *
+ * They were a pale blue wash, and a wash is the worst of both: too weak to
+ * read as a decision, strong enough to look like the page is dirty. It also
+ * broke the rule the references all state — the accent means "you can act on
+ * this", and a whole section painted in a faint version of it means nothing at
+ * all.
+ *
+ * So the colour on these sections is carried by the one thing that *is*
+ * meaningful: the baseline rule and the marked bars. The ground is the same
+ * parchment as the rest of the page, and the only difference between the two
+ * is a hairline shift in value — enough to feel like a new chapter, not enough
+ * to be a colour. The tan that means "racing" needs a light ground to clear
+ * 4.5:1 anyway, which is why neither of these can take the deep field. */
 .ground-tint {
-  --stock: #e9ebff;
+  --stock: #f2efed;
   background-color: var(--stock);
   --ground-field: radial-gradient(
     70% 60% at 78% 10%,
-    rgba(59, 55, 230, 0.16) 0%,
-    rgba(59, 55, 230, 0) 70%
+    rgba(43, 89, 209, 0.05) 0%,
+    rgba(43, 89, 209, 0) 70%
   );
 }
 .ground-tint-soft {
-  --stock: #f4f5ff;
+  --stock: #f6f3f1;
   background-color: var(--stock);
   --ground-field: radial-gradient(
     64% 62% at 16% 14%,
-    rgba(59, 55, 230, 0.14) 0%,
-    rgba(59, 55, 230, 0) 68%
+    rgba(43, 89, 209, 0.04) 0%,
+    rgba(43, 89, 209, 0) 68%
   );
 }
 
@@ -916,12 +931,12 @@
    verdict colours read exactly as they will inside the product, and gets its
    colour from one soft band at the top edge instead. */
 .ground-aura {
-  --stock: #ffffff;
+  --stock: #faf8f7;
   background-color: var(--stock);
   --ground-field: radial-gradient(
     80% 40% at 50% 0%,
-    rgba(59, 55, 230, 0.13) 0%,
-    rgba(59, 55, 230, 0) 72%
+    rgba(43, 89, 209, 0.13) 0%,
+    rgba(43, 89, 209, 0) 72%
   );
 }
 
@@ -1038,7 +1053,7 @@
  * only colour anywhere is a verdict on a word somebody said, and a saturated
  * field this size was competing with the three colours the product runs on. */
 .ribbon {
-  background-color: #101012;
+  background-color: #121613;
 }
 /* The level meter running through the on-air strip.
  *
