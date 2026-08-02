@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="96" height="96" role="img" aria-label="Explainaloud">
   <title>Explainaloud</title>
-  <circle cx="32" cy="32" r="32" fill="#1f2aff" />
+  <circle cx="32" cy="32" r="32" fill="#c2410c" />
   <g transform="translate(32 32) scale(0.78) translate(-30 -33)">
     <path
       d="M 19.1 13.9 L 33.9 20.6 Q 38 22.5 33.9 24.4 L 19.1 31.1 Q 15 33 15 28.5 L 15 16.5 Q 15 12 19.1 13.9 Z"

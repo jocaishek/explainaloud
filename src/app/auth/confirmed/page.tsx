@@ -71,7 +71,7 @@ export default async function EmailConfirmedPage() {
 
         <Link
           href={destination}
-          className="press mt-8 inline-flex h-11 items-center justify-center rounded-full bg-brand-deep px-7 font-semibold text-white transition-colors duration-200 hover:bg-brand"
+          className="press mt-8 inline-flex h-11 items-center justify-center rounded-full bg-accent-solid px-7 font-semibold text-accent-contrast transition-colors duration-200 hover:bg-accent-solid-hover"
         >
           {signedIn ? "Continue to Explainaloud" : "Log in"}
         </Link>

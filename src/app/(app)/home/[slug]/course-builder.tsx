@@ -199,7 +199,7 @@ export function CourseBuilder({
           type="button"
           onClick={generate}
           disabled={generating}
-          className="h-11 gap-2 rounded-full bg-brand-deep px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97] disabled:opacity-50"
+          className="h-11 gap-2 rounded-full bg-accent-solid px-6 font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97] disabled:opacity-50"
         >
           {generating
             ? "Reading your sources…"

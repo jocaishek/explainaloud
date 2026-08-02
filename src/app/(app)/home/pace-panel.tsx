@@ -95,9 +95,16 @@ export function PacePanel({
                 className="w-full rounded-t-[4px] transition-[filter,transform] duration-200 ease-out group-hover:brightness-110 group-focus-visible:brightness-110"
                 style={{
                   height: `${(session.wpm / peak) * 100}%`,
-                  // The reserved amber, and it means here what it means inside
-                  // a transcript: said, but not in a form worth trusting.
-                  background: over ? "var(--vague)" : "var(--color-brand)",
+                  /* Ink for an ordinary session, the reserved amber for a
+                     racing one — exactly as the landing's chart plots it.
+
+                     The ordinary bar used to be `--color-brand`, which was
+                     fine while the accent was red-orange and is not now the
+                     accent is gold: brand amber against `--vague` ochre is
+                     one hue at two values, and this chart exists to make that
+                     one distinction legible at a glance. Ink is what the
+                     landing already used, so the two charts now match. */
+                  background: over ? "var(--vague)" : "var(--foreground)",
                 }}
               />
             </Link>

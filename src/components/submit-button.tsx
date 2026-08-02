@@ -20,7 +20,7 @@ export function SubmitButton({
       type="submit"
       disabled={pending}
       className={cn(
-        "bg-brand-deep font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-brand-deep/90 active:scale-[0.98]",
+        "bg-accent-solid font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-accent-solid-hover active:scale-[0.98]",
         className,
       )}
     >

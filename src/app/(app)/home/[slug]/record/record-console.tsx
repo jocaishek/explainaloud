@@ -2507,7 +2507,7 @@ export function RecordConsole({
           type="button"
           onClick={primaryAction}
           disabled={busy || outOfQuota || drafting}
-          className="h-11 rounded-full bg-brand-deep px-6 font-semibold text-white shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-brand-deep/90 active:scale-[0.97]"
+          className="h-11 rounded-full bg-accent-solid px-6 font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-accent-solid-hover active:scale-[0.97]"
         >
           {primaryLabel}
           {status === "between" && countdown !== null && (
@@ -2675,7 +2675,7 @@ export function RecordConsole({
                 each — and there was no way to reach it from here. */}
             <Button
               asChild
-              className="mt-1 h-11 w-fit gap-2 rounded-full bg-brand-deep px-6 font-semibold text-white transition-transform duration-200 ease-out hover:bg-brand-deep/90 active:scale-[0.97]"
+              className="mt-1 h-11 w-fit gap-2 rounded-full bg-accent-solid px-6 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
             >
               <Link href={`/home/${slug}/gaps`}>
                 See the full gap report

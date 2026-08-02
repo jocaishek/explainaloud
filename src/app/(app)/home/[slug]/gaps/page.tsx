@@ -182,7 +182,7 @@ export default async function GapReportPage({
         </p>
         <Link
           href={`/home/${slug}/record`}
-          className="w-fit rounded-full bg-brand-deep px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-deep/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-fit rounded-full bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-solid-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Start explaining
         </Link>

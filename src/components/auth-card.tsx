@@ -342,7 +342,7 @@ export function AuthCard({
           <Button
             type="submit"
             disabled={submitting}
-            className="press h-11 bg-brand-deep font-semibold text-white transition-colors duration-200 hover:bg-brand"
+            className="press h-11 bg-accent-solid font-semibold text-accent-contrast transition-colors duration-200 hover:bg-accent-solid-hover"
           >
             {submitting ? "Sending…" : "Send reset link"}
           </Button>
@@ -470,7 +470,7 @@ export function AuthCard({
             type="submit"
             size="default"
             disabled={submitting || oauthLoading !== null}
-            className="press h-11 bg-brand-deep font-semibold text-white transition-colors duration-200 hover:bg-brand"
+            className="press h-11 bg-accent-solid font-semibold text-accent-contrast transition-colors duration-200 hover:bg-accent-solid-hover"
           >
             {submitting
               ? mode === "signup"
