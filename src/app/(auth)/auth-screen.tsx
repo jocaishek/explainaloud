@@ -14,45 +14,62 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
   const signingUp = mode === "signup";
 
   return (
-    /* The app register, not the landing's.
+    /* The app register, on the landing's ground.
      *
-     * Sign-in is the seam between the two worlds, and it belongs on the app
-     * side of it: this screen is a card with a form in it, and the landing
-     * page has neither cards nor forms — its whole world is flat rules on
-     * photocopy stock. Rendering it against the monument's tokens gave a
-     * square-cornered, shadowless panel that looked like an unstyled fallback
-     * rather than a deliberate flat one.
+     * The controls stay in the app register — this screen is a card with a
+     * form in it, and rendering those against the landing's tokens gives
+     * square-cornered shadowless inputs that read as an unstyled fallback. But
+     * the *room* they stand in is the landing's: warm stock, a sunset lifting
+     * off the corner, the display serif on the heading, a mono kicker above
+     * it. The previous version put app controls in an app room and the seam
+     * landed here, one screen before the password field — a flat grey page
+     * with a plain white box on it, which is every sign-in page ever made.
      *
-     * Putting it here also means somebody arriving from the landing page meets
-     * the app's look one screen *before* they are asked for a password, so the
-     * change of register reads as arriving somewhere rather than as the site
-     * breaking on submit. */
-    <main className="register-app flex min-h-screen w-full flex-col items-center justify-center px-6 py-16 text-strong">
+     * `ground-tint-soft` is the same field the landing's last light section
+     * carries, so arriving here reads as the next page of the same document
+     * rather than as the site handing you to a different product. */
+    <main className="register-app ground ground-tint-soft flex min-h-screen w-full flex-col items-center justify-center px-6 py-16 text-strong">
       <Link
         href="/"
-        className="flex items-center gap-2 text-base font-semibold tracking-tight text-strong transition-opacity hover:opacity-80"
+        className="press flex items-center gap-2.5 font-semibold text-[0.92rem] uppercase tracking-[0.04em] text-strong transition-opacity hover:opacity-80"
       >
-        <ExplainaloudMark className="size-6 shrink-0 text-brand-ink" />
+        <ExplainaloudMark className="size-7 shrink-0 text-brand-ink" />
         Explainaloud
       </Link>
 
-      <div className="mt-10 flex w-full max-w-md flex-col items-center text-center">
-        <h1 className="text-3xl font-semibold tracking-tight text-balance">
-          {signingUp ? "Create your account" : "Welcome back"}
+      <div
+        data-rise=""
+        className="mt-12 flex w-full max-w-md flex-col items-center text-center"
+      >
+        {/* The mono kicker, the landing's only label voice. It says which of
+            the two doors this is, so the serif line underneath can be a
+            sentence rather than a form title. */}
+        <span className="font-mono text-[0.68rem] uppercase leading-[1.5] tracking-[0.09em] text-subtle">
+          {signingUp ? "New account" : "Welcome back"}
+        </span>
+        {/* Source Serif at display size, weight 400 — the landing's headline
+            voice. A bold grotesque here was the single loudest tell that this
+            screen belonged to a different product. */}
+        <h1 className="mask-line mt-3 text-balance font-display font-normal text-[clamp(1.9rem,5vw,2.6rem)] leading-[1.15] tracking-[-0.015em]">
+          <span>
+            {signingUp
+              ? "Find the gaps you didn't know you had."
+              : "Pick up where you left off."}
+          </span>
         </h1>
-        <p className="mt-2 text-sm text-foreground">
+        <p className="mt-4 max-w-[34ch] text-[0.95rem] leading-[1.6] text-subtle">
           {signingUp
-            ? "Explain what you're learning out loud and find the gaps."
-            : "Pick up where you left off."}
+            ? "Upload your notes, talk through them for three minutes, and read back what you missed."
+            : "Your topics and everything you have explained are where you left them."}
         </p>
       </div>
 
-      <div className="mt-8 w-full max-w-md">
+      <div data-rise="" className="mt-9 w-full max-w-md">
         <AuthCard initialMode={mode} />
       </div>
 
-      <p className="mt-10 text-sm text-subtle">
-        <Link href="/" className="transition-colors hover:text-strong">
+      <p className="mt-10 font-mono text-[0.68rem] uppercase tracking-[0.09em] text-subtle">
+        <Link href="/" className="press transition-colors hover:text-strong">
           ← Back to home
         </Link>
       </p>

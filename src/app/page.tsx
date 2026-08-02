@@ -536,10 +536,12 @@ function Masthead() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1 lg:ml-7">
+          {/* "Log in", not "Sign in". The form it opens is labelled "Log in",
+              its own toggle says "Already a member? Log in", and every error
+              message says logging in — one name for one action, or the pair
+              reads as two different doors. */}
           <Link href="/login" className="press px-3 py-2">
-            <Slug className="transition-opacity hover:opacity-100">
-              Sign in
-            </Slug>
+            <Slug className="transition-opacity hover:opacity-100">Log in</Slug>
           </Link>
           <Cue href="/signup">Start</Cue>
         </div>
@@ -1468,7 +1470,7 @@ function SourcesOnly() {
 
 function Close() {
   return (
-    <section className="tx-invert ribbon px-4 py-28 md:px-8 md:py-36">
+    <section className="tx-invert ground ribbon px-4 py-28 md:px-8 md:py-36">
       <div data-rise="" className="grid grid-cols-[var(--gutter)_1fr] gap-x-4">
         <div className="pt-3">
           <span className="font-mono text-[0.68rem] uppercase tracking-[0.09em]">
@@ -1498,7 +1500,9 @@ function Close() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Cue
               href="/signup"
-              className="justify-center bg-white text-[#1b1585] hover:bg-white/90 sm:justify-start"
+              /* Sunset ink, not the ultramarine this button kept from the
+                 palette before last. It was the only blue left on the page. */
+              className="justify-center bg-white text-[var(--brand-deep)] hover:bg-white/90 sm:justify-start"
             >
               Start a session
             </Cue>
@@ -1507,7 +1511,7 @@ function Close() {
               tone="outline"
               className="justify-center hover:bg-white/10 sm:justify-start"
             >
-              Sign in
+              Log in
             </Cue>
           </div>
         </div>
