@@ -435,7 +435,7 @@ function Cue({
         "press inline-flex items-center rounded-full px-6 py-3.5 font-medium text-[0.95rem] transition-colors duration-200",
         "focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2",
         tone === "solid"
-          ? "bg-brand text-white hover:bg-brand-deep"
+          ? "bg-[var(--ink)] text-[var(--stock)] hover:opacity-85"
           : "border border-[var(--rule-strong)] hover:bg-[rgba(12,12,13,0.06)]",
         className,
       )}
@@ -525,7 +525,7 @@ function Masthead() {
                   rather than appearing, so moving between sections reads as
                   one mark travelling along the row. */}
               <span
-                className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-brand"
+                className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-[var(--ink)]"
                 style={{
                   transform: `scaleX(${current === s.id ? 1 : 0})`,
                   transition: `transform 280ms ${EASE}`,
@@ -547,7 +547,7 @@ function Masthead() {
       <div className="h-[2px] w-full bg-[rgba(12,12,13,0.08)]">
         <div
           ref={tape}
-          className="h-full w-full origin-left bg-brand"
+          className="h-full w-full origin-left bg-[var(--ink)]"
           style={{ transform: "scaleX(0)" }}
         />
       </div>
@@ -708,7 +708,7 @@ function Hero() {
        * what is being said. A sentence about explaining something out loud
        * should be set the way a sentence is set, not squeezed into a column
        * beside a picture. */}
-      <section className="paper accent-blue px-4 pt-14 pb-20 md:px-8 md:pt-16 md:pb-28">
+      <section className="paper accent-blue [container-type:inline-size] px-4 pt-14 pb-20 md:px-8 md:pt-16 md:pb-28">
         {/* The name, at the size the name should be.
          *
          * Set in Archivo at the top of its width axis rather than in the
@@ -729,8 +729,8 @@ function Hero() {
          * shape, and letters need air to be read that way. */}
         <p
           aria-hidden="true"
-          style={{ fontSize: "min(11.5vw, 10.5rem)" }}
-          className="select-none text-center font-semibold leading-[0.92] tracking-[0.01em] [font-stretch:125%]"
+          style={{ fontSize: "min(9.4cqw, 8.5rem)" }}
+          className="select-none whitespace-nowrap text-center font-semibold leading-[0.95] tracking-[0.01em] [font-stretch:125%]"
         >
           EXPLAINALOUD
         </p>
@@ -810,9 +810,7 @@ function Hero() {
                   From cell-division.pdf
                 </Slug>
               </div>
-              <Slug className="tc shrink-0 text-[var(--accent)] opacity-100">
-                Live
-              </Slug>
+              <Slug className="tc shrink-0 opacity-100">Live</Slug>
             </div>
 
             {/* The level, while it is still being said.
@@ -828,7 +826,7 @@ function Hero() {
                 <span
                   key={delay}
                   className={cn(
-                    "flex-1 rounded-[1px] bg-[var(--accent)]",
+                    "flex-1 rounded-[1px] bg-[var(--ink)] opacity-25",
                     !take.done && "waveform-bar",
                   )}
                   style={{
@@ -1174,7 +1172,7 @@ function LiveMarking() {
                   posRef.current = Number(e.target.value);
                   setScrub(posRef.current);
                 }}
-                className="mt-3 h-[5px] w-full cursor-ew-resize appearance-none rounded-full accent-[var(--color-brand)]"
+                className="mt-3 h-[5px] w-full cursor-ew-resize appearance-none rounded-full accent-[var(--ink)]"
                 style={{
                   background: `linear-gradient(to right, var(--color-brand) ${(scrub / SCRUB_MAX) * 100}%, rgba(12,12,13,0.16) ${(scrub / SCRUB_MAX) * 100}%)`,
                 }}
@@ -1369,7 +1367,7 @@ function SourcesOnly() {
             <span
               className={cn(
                 "relative block h-7 w-[3.25rem] shrink-0 rounded-full transition-colors duration-200",
-                strict ? "bg-brand" : "bg-[rgba(12,12,13,0.18)]",
+                strict ? "bg-[var(--ink)]" : "bg-[rgba(12,12,13,0.18)]",
               )}
             >
               <span
