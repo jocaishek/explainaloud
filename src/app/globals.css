@@ -484,7 +484,14 @@
  * unreadable and, worse, stops meaning "correct" — the marking always stays on
  * the grey stock. */
 .tx-invert {
-  --stock: var(--color-brand);
+  /* Ink, not the brand hue.
+   *
+   * This region was a full-bleed ultramarine panel, which made the largest
+   * single colour on the page a colour that means nothing. The base is
+   * monotone now - paper, grey stock, ink - and the only colour anywhere is a
+   * verdict on a word somebody said. A saturated field this size was
+   * competing with the three colours the whole product runs on. */
+  --stock: #101012;
   --ink: #ffffff;
   --rule: rgba(255, 255, 255, 0.3);
   --rule-strong: rgba(255, 255, 255, 0.65);
@@ -638,61 +645,20 @@
   --accent: #0c0c0d;
 }
 
-/* The gradient, on the closing block and nowhere else.
+/* The closing field: ink, flat.
  *
- * It was tried behind the first viewport and it was the wrong place: a
- * saturated field under the headline fought the marked words, which are the
- * one thing on this page that cannot be allowed to go quiet, and it is the
- * treatment `.claude/rules/design.md` rules out by name for looking generated.
+ * This was four radial gradients in violet, magenta and blue, drifting on a
+ * 26-second loop. It was the largest colour on the site and it meant nothing —
+ * and a blurred radial gradient used as a background is the first thing on the
+ * banned list in `.claude/rules/design.md`, which this predated and then
+ * quietly outlived.
  *
- * The close is where it earns its keep. There is no marking on it, nothing to
- * read but one line and two buttons, and a page that has been disciplined for
- * six sections can afford to end on colour.
- *
- * Animating `background-position` rather than the colour stops: positions are
- * cheap to interpolate and the browser slides an already-painted gradient,
- * where animating stops re-rasterises the whole thing every frame. Twenty-six
- * seconds a cycle, so nothing in it ever appears to arrive.
- *
- * Declared after `.tx-invert` on purpose — that class paints the flat brand
- * ground this replaces, and at equal specificity the later rule wins. */
-@keyframes ribbon-drift {
-  0%,
-  100% {
-    background-position:
-      0% 0%,
-      100% 0%,
-      50% 100%,
-      0% 100%;
-  }
-  50% {
-    background-position:
-      35% 25%,
-      65% 35%,
-      25% 65%,
-      70% 90%;
-  }
-}
+ * Flat ink instead. The base of this page is paper, grey stock and ink; the
+ * only colour anywhere is a verdict on a word somebody said, and a saturated
+ * field this size was competing with the three colours the product runs on. */
 .ribbon {
-  background-color: #1b1585;
-  background-image:
-    radial-gradient(62% 72% at 18% 18%, #4b23c8 0%, transparent 62%),
-    radial-gradient(58% 66% at 88% 12%, #8f1a72 0%, transparent 62%),
-    radial-gradient(72% 62% at 62% 92%, #0f5fd8 0%, transparent 62%),
-    radial-gradient(52% 56% at 8% 88%, #2a1298 0%, transparent 62%);
-  background-size:
-    180% 180%,
-    160% 160%,
-    200% 200%,
-    170% 170%;
-  animation: ribbon-drift 26s ease-in-out infinite;
+  background-color: #101012;
 }
-@media (prefers-reduced-motion: reduce) {
-  .ribbon {
-    animation: none;
-  }
-}
-
 /* The level meter running through the on-air strip.
  *
  * The track holds two copies of a seamless tile, so translating exactly -50%

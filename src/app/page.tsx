@@ -623,12 +623,16 @@ const TAKE_OFFSETS = TAKE.reduce<number[]>((acc, _line, i) => {
 function Artifact({
   children,
   className,
+  accent,
 }: {
   children: React.ReactNode;
   className?: string;
+  /** The verdict this fragment carries, drawn as an edge. */
+  accent?: string;
 }) {
   return (
     <div
+      style={accent ? { borderLeft: `3px solid ${accent}` } : undefined}
       className={cn(
         "rounded-[20px] border border-[var(--rule)] bg-white p-5 text-left",
         "shadow-[0_20px_25px_-5px_rgba(0,0,0,0.06),0_8px_10px_-6px_rgba(0,0,0,0.05)]",
@@ -762,7 +766,10 @@ function Hero() {
            * headline on a wide screen and folded back into the flow below it
            * on a narrow one. `lg:absolute` is what does the folding: they are
            * ordinary blocks until there is room to orbit. */}
-          <Artifact className="mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]">
+          <Artifact
+            accent="var(--ok)"
+            className="mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
+          >
             <p className="text-[0.95rem] leading-[1.6]">
               <span
                 style={{ color: "var(--ok)" }}
@@ -784,7 +791,10 @@ function Hero() {
             </p>
           </Artifact>
 
-          <Artifact className="mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]">
+          <Artifact
+            accent="var(--miss)"
+            className="mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
+          >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
                 the spindle fibres attach at the centromere
