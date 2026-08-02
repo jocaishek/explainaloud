@@ -598,9 +598,9 @@
 /* Script stock. Not paper-cream and not pure white — the cool grey a running
    order is photocopied onto, so black rules sit on it without vibrating. */
 .tx {
-  --stock: #f2f2f0;
-  --ink: #0c0c0d;
-  --rule: rgba(12, 12, 13, 0.16);
+  --stock: #f6f3f1;
+  --ink: #242424;
+  --rule: #cecac8;
   --rule-strong: rgba(12, 12, 13, 0.5);
   /* The timecode column. Narrow on a phone, where 5.5rem was a seventh of
      the screen given over to a two-character label and left every paragraph
@@ -771,11 +771,11 @@
  * "section four". Every accent clears 4.5:1 as text on both papers.
  */
 .paper {
-  --stock: #ffffff;
+  --stock: #faf8f7;
   background: var(--stock);
 }
 .paper-grey {
-  --stock: #f2f2f0;
+  --stock: #f6f3f1;
   background: var(--stock);
 }
 
@@ -916,7 +916,7 @@
    verdict colours read exactly as they will inside the product, and gets its
    colour from one soft band at the top edge instead. */
 .ground-aura {
-  --stock: #ffffff;
+  --stock: #faf8f7;
   background-color: var(--stock);
   --ground-field: radial-gradient(
     80% 40% at 50% 0%,

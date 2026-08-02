@@ -432,7 +432,7 @@ function Cue({
         // Sans, sentence case, and a size you can read at a glance. Tracked
         // mono caps is a good voice for a timecode and a poor one for the
         // thing somebody is looking for when they have decided to act.
-        "press inline-flex items-center rounded-full px-6 py-3.5 font-medium text-[0.95rem] transition-colors duration-200",
+        "press inline-flex items-center rounded-full px-7 py-3.5 font-mono text-[0.78rem] uppercase tracking-[0.06em] transition-colors duration-200",
         "focus-visible:outline-2 focus-visible:outline-[var(--ink)] focus-visible:outline-offset-2",
         tone === "solid"
           ? "bg-[var(--ink)] text-[var(--stock)] hover:opacity-85"
@@ -567,7 +567,7 @@ function SectionHead({
 }) {
   return (
     <div data-rise="" className="grid grid-cols-[var(--gutter)_1fr] gap-x-4">
-      <Slug className="tc pt-2">{n}</Slug>
+      <Slug className="tc pt-2">{`{ ${n} }`}</Slug>
       <div>
         {/* Sentence case, normal width, and a full stop.
          *
@@ -1503,6 +1503,24 @@ function Close() {
             </Cue>
           </div>
         </div>
+      </div>
+
+      {/* The closing signature.
+       *
+       * All three references end the page on a full-bleed band of the single
+       * accent, and it does a job nothing else on the page does: it is the
+       * full stop. Without it the last content section simply stops and the
+       * footer begins, which is why the bottom of this page has always felt
+       * like it ran out rather than ended.
+       *
+       * Ours carries the mark and one line, and it is the only place the brand
+       * colour is allowed to be the largest thing on screen — everywhere else
+       * it is a control. The three verdict colours never appear on it. */}
+      <div
+        aria-hidden="true"
+        className="-mx-4 md:-mx-8 mt-24 flex h-[26vh] min-h-[11rem] items-start bg-brand px-4 pt-8 md:mt-32 md:px-8"
+      >
+        <ExplainaloudMark className="h-9 w-9 text-white" strokeWidth={5} />
       </div>
     </section>
   );
