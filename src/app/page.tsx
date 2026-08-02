@@ -841,7 +841,7 @@ function Hero() {
            * and it is the disagreement between them that reads as depth. */}
           <Artifact
             accent="var(--ok)"
-            className="hero-drift-near lay-in-soft float-slow hero-orbit-left mt-10"
+            className="hero-drift-near lay-in-soft hero-orbit-left mt-10"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               Forces come in pairs,{" "}
@@ -860,7 +860,7 @@ function Hero() {
 
           <Artifact
             accent="var(--miss)"
-            className="hero-drift-far lay-in-soft float-slower hero-orbit-right mt-4"
+            className="hero-drift-far lay-in-soft hero-orbit-right mt-4"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
