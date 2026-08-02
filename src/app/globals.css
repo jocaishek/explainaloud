@@ -1003,6 +1003,42 @@
     );
 }
 
+/* The deep warm stock, and the page's only mid-tone.
+ *
+ * **Why this exists.** The page used to run white → near-black → white →
+ * white → white → near-black: two hard inversions with almost nothing between
+ * them, because the three "light" sections sat at #ffffff, #f6f3f1 and #ffffff
+ * — a two per cent step, which is no step at all. So the whole tonal budget
+ * was spent on two full eye adaptations, one of them in the first two screens,
+ * and the middle of the page was flat. It read as a flash, three identical
+ * rooms, then another flash.
+ *
+ * The fix is to spend the range rather than the inversions. This is the bottom
+ * of the light ramp, and it is a real step down from paper without asking
+ * anybody's eyes to re-adapt. There is now exactly one inversion on the page,
+ * at the close, where going dark means "this is the end" rather than "a
+ * section happened".
+ *
+ * `#f2ede6` is not a taste value, it is a floor: it is the deepest warm stock
+ * on which all three verdicts still clear 4.5:1 (green 4.66, red 4.93, tan
+ * 4.54). One step deeper and the tan fails. Anything laid on this ground may
+ * therefore still mark. */
+.ground-warm {
+  --stock: #f2ede6;
+  background-color: var(--stock);
+  --ground-field:
+    radial-gradient(
+      68% 72% at 14% 12%,
+      rgba(251, 191, 36, 0.22) 0%,
+      rgba(249, 115, 22, 0) 66%
+    ),
+    radial-gradient(
+      56% 64% at 88% 92%,
+      rgba(249, 115, 22, 0.12) 0%,
+      rgba(249, 115, 22, 0) 70%
+    );
+}
+
 /* The two tints. Light enough that a red or a tan verdict on top still clears
    4.5:1, which is the whole reason these sections take a tint and not a field.
    Same hue, one value apart — deeper first, lifting as the page runs out. */

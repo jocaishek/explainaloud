@@ -44,16 +44,24 @@ export function Masthead({
   stats: Stat[];
 }) {
   return (
-    /* The landing's dark ground, not a private near-black. `ground-deep` is
-       the same warm stock and sunset field the landing's section 02 stands on,
-       so crossing the sign-in does not change what dark means — and the field
-       slides with the scroll there and here alike. */
-    <section className="ground ground-deep relative overflow-hidden text-white">
-      <div className="relative mx-auto flex w-full max-w-[var(--measure)] flex-col gap-6 px-4 pt-8 pb-7 sm:px-6 lg:px-8 lg:pt-10">
+    /* No band at all.
+     *
+     * This was a full-bleed near-black region under a light nav, above a light
+     * page — one hard inversion in the first screen of a tool somebody opens
+     * many times a day, and the same complaint the landing page's section 02
+     * earned. A dark field is a way of saying "this region is different", and
+     * on a dashboard the top of the page is not different: it is the top of
+     * the page.
+     *
+     * So the greeting and the three figures simply stand on the app canvas,
+     * separated from the work below by the rule the stat rail already carries.
+     * Nothing is lost but the paint. */
+    <section className="mx-auto w-full max-w-[var(--measure)] px-4 pt-8 pb-2 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-5">
         {/* The corner data. Small, monospaced, factual. */}
-        <p className="font-mono text-[0.6rem] text-white/45 uppercase tracking-[0.16em]">
+        <p className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.16em]">
           Dashboard
-          <span className="mx-2 text-white/25">/</span>
+          <span className="mx-2 opacity-50">/</span>
           {stats[0]?.value ?? 0} recorded
         </p>
 
@@ -66,10 +74,10 @@ export function Masthead({
              thing on this page; the three actions under it are. Source Serif
              at weight 400, sentence case, keeps the line warm and personal
              without turning the header into a monument. */
-          className="max-w-[20ch] font-display font-normal text-[clamp(1.5rem,3.2vw,2.2rem)] leading-[1.15] tracking-[-0.015em] text-white"
+          className="max-w-[20ch] font-display font-normal text-[clamp(1.5rem,3.2vw,2.2rem)] text-strong leading-[1.15] tracking-[-0.015em]"
         />
 
-        <StatRail stats={stats} tone="dark" />
+        <StatRail stats={stats} />
       </div>
     </section>
   );
