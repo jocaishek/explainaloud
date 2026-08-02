@@ -57,7 +57,14 @@ export function ScrollReveal() {
       { rootMargin: "0px 0px -12% 0px" },
     );
 
-    for (const el of targets) observer.observe(el);
+    /* Each block gets its index, so the stylesheet can stagger siblings off
+       it. Set here rather than authored into the markup: the order is a fact
+       about the document, and asking every call site to number itself is how
+       a stagger ends up with two elements on the same beat. */
+    targets.forEach((el, i) => {
+      el.style.setProperty("--rise-index", String(i % 6));
+      observer.observe(el);
+    });
     return () => observer.disconnect();
   }, []);
 

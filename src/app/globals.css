@@ -44,6 +44,32 @@
      because they mean the same thing on both sides of the sign-in and a pace
      chart in the app has to be able to say "racing" in the same amber the
      transcript uses for "vague". */
+  /* Motion, as a system rather than a per-component guess.
+   *
+   * Two curves and three durations, and everything in the product uses one of
+   * each. This is most of what "the motion feels considered" actually is: not
+   * a more elaborate animation, but the same weight and the same settle
+   * everywhere, so movement reads as one hand rather than six.
+   *
+   * Entrance is fast to start and gentle to settle, which is what makes an
+   * element feel like it has mass arriving. Exit is slow to start and decisive
+   * to finish, so a thing leaving reads as deliberate rather than dropped.
+   *
+   * No spring, no overshoot. A bounce says "look at the animation"; these say
+   * "look at the thing that moved". */
+  --ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-exit: cubic-bezier(0.19, 1, 0.22, 1);
+
+  /* Micro-interaction, component, and page-level reveal. */
+  --dur-micro: 300ms;
+  --dur-component: 500ms;
+  --dur-reveal: 700ms;
+
+  /* How far a revealing element travels, and the gap between siblings in a
+     stagger. Small enough that the movement is felt rather than watched. */
+  --reveal-rise: 20px;
+  --reveal-stagger: 70ms;
+
   --ok: #0f7a3d;
   --miss: #c4271c;
   --vague: #96600a;
@@ -814,12 +840,16 @@
    the tail of the exponential ease to be long enough to notice. */
 [data-rise] {
   transition:
-    opacity 750ms cubic-bezier(0.23, 1, 0.32, 1),
-    transform 750ms cubic-bezier(0.23, 1, 0.32, 1);
+    opacity var(--dur-reveal) var(--ease-enter),
+    transform var(--dur-reveal) var(--ease-enter);
+  /* Siblings stagger off an index the component sets, so a row of cards
+     arrives in sequence rather than as one block. */
+  transition-delay: calc(var(--rise-index, 0) * var(--reveal-stagger));
 }
 [data-rise="out"] {
   opacity: 0;
-  transform: translateY(1.15rem);
+  transform: translateY(var(--reveal-rise));
+  transition-delay: 0ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
