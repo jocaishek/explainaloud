@@ -112,7 +112,7 @@ export function NewFolderButton() {
             // Anchored right: the trigger sits at the right edge of the
             // header row, so a left-anchored panel would run off-screen.
             style={{ transformOrigin: "top right" }}
-            className="absolute top-full right-0 z-20 mt-2 w-72 rounded-xl border border-border bg-popover p-3 shadow-xl"
+            className="absolute top-full right-0 z-20 mt-2 w-72 rounded-card border border-border bg-popover p-3 shadow-xl"
           >
             <form action={formAction} className="flex flex-col gap-3">
               <Input
@@ -234,7 +234,7 @@ function FolderEditRow({
   }, [pending, state.error, onDone]);
 
   return (
-    <div className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-3">
+    <div className="flex flex-col gap-3 rounded-card border border-border bg-surface p-3">
       <form action={formAction} className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="id" value={folder.id} />
         <Input

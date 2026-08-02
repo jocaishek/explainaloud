@@ -164,7 +164,7 @@ export function CourseBuilder({
         {sources.length > 0 && (
           <fieldset
             disabled={generating}
-            className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 disabled:opacity-60"
+            className="flex flex-col gap-3 rounded-card border border-border bg-surface p-4 disabled:opacity-60"
           >
             <legend className="px-1 text-sm font-semibold text-strong">
               {SCOPE_QUESTION}
@@ -464,7 +464,7 @@ export function CourseBuilder({
             )}
 
             {sources.length > 0 && citationEntries.length === 0 && (
-              <section className="rounded-xl border border-border bg-surface p-4">
+              <section className="rounded-card border border-border bg-surface p-4">
                 <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
                   Citations
                 </h2>
@@ -563,7 +563,7 @@ function CitationList({ citations }: { citations: CourseCitation[] }) {
           <li
             id={`course-source-${index + 1}`}
             key={citationKey(citation)}
-            className="scroll-mt-24 rounded-xl border border-border bg-surface p-4 target:border-brand/50 target:bg-brand/[0.04]"
+            className="scroll-mt-24 rounded-card border border-border bg-surface p-4 target:border-brand/50 target:bg-brand/[0.04]"
           >
             <div className="flex items-baseline gap-2">
               <span className="font-mono text-[10px] font-semibold text-brand-ink">

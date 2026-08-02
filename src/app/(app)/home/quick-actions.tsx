@@ -15,9 +15,11 @@ import Link from "next/link";
  * because the difference between "record" and "gaps" is not obvious from a
  * microphone and a document.
  *
- * The world is the landing page's, one register quieter: hairlines instead of
- * card edges, a mono kicker on each row, ultramarine on the primary. Nothing
- * here is glass and nothing floats.
+ * In the app register: a white card on the near-white canvas, the soft tinted
+ * elevation, a mono kicker on each row, and the accent carried by the one
+ * action that is the point of the screen. The other two are cards, not filled
+ * buttons, because three filled buttons in a row is three primary actions,
+ * which is none.
  */
 const ACTIONS = [
   {
@@ -58,8 +60,8 @@ export function QuickActions() {
           href={action.href}
           className={
             action.primary
-              ? "press group flex flex-col gap-2 rounded-xl bg-brand-deep p-5 text-white transition-colors duration-200 hover:bg-brand focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
-              : "press group flex flex-col gap-2 rounded-xl border border-border p-5 transition-colors duration-200 hover:bg-surface focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+              ? "press group flex flex-col gap-2 rounded-card bg-accent-solid p-6 text-accent-contrast shadow-rest transition-[background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-accent-solid-hover hover:shadow-hover"
+              : "press group flex flex-col gap-2 rounded-card border border-border bg-card p-6 shadow-rest transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-hover"
           }
         >
           <span className="flex items-center gap-2">
@@ -67,7 +69,7 @@ export function QuickActions() {
               className={
                 action.primary
                   ? "size-4 shrink-0"
-                  : "size-4 shrink-0 text-brand-ink"
+                  : "size-4 shrink-0 text-[color:var(--accent-solid)]"
               }
             />
             <span

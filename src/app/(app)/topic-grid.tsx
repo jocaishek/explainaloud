@@ -15,7 +15,7 @@ const EASE = [0.23, 1, 0.32, 1] as const;
 
 /** Shared grid geometry — cards are deliberately compact. */
 const GRID =
-  "grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+  "grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
 
 /** Custom MIME type so the grid ignores files and text dragged in from outside. */
 const DRAG_TYPE = "application/x-explainaloud-course";
@@ -233,7 +233,7 @@ function NewTopicTile({ folderId }: { folderId?: string }) {
   return (
     <Link
       href={folderId ? `/new?folder=${folderId}` : "/new"}
-      className="press flex h-36 flex-col items-center justify-center gap-1.5 rounded-xl border border-border border-dashed text-subtle transition-colors duration-200 hover:border-brand hover:text-brand-ink"
+      className="press flex h-36 flex-col items-center justify-center gap-1.5 rounded-card border border-border border-dashed text-subtle transition-colors duration-200 hover:border-brand hover:text-brand-ink"
     >
       <Plus className="size-4" />
       <span className="text-xs font-medium">New topic</span>

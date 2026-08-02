@@ -43,7 +43,7 @@ export function PasswordField({
           placeholder={placeholder}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-11 border-input bg-surface pr-10 text-base text-strong placeholder:text-subtle"
+          className="pr-10 text-base text-strong placeholder:text-subtle"
         />
         <button
           type="button"
@@ -62,7 +62,7 @@ export function PasswordField({
             onChange(generateSecurePassword());
             setVisible(true);
           }}
-          className="flex w-fit items-center gap-1.5 text-xs font-medium text-brand-ink hover:text-[#7FB3F0]"
+          className="flex w-fit items-center gap-1.5 font-medium text-brand-ink text-xs hover:opacity-80"
         >
           <Sparkles className="size-3.5" />
           Generate a secure password
@@ -97,14 +97,24 @@ export function PasswordField({
   );
 }
 
+/* Met and unmet are told apart by contrast, not by a colour.
+ *
+ * This was lime `#84CC16` — a literal hex, and a fourth hue in a product whose
+ * only colours are the register's accent and the three verdicts. It could not
+ * borrow the verdict green either: `--ok` means "this claim was correct" inside
+ * a transcript and nowhere else, and spending it on a password rule is how a
+ * reserved colour stops meaning anything. Ink against grey says the same thing
+ * and survives being read in greyscale. */
 function PasswordCheckItem({ met, label }: { met: boolean; label: string }) {
   return (
-    <li className={cn("flex items-center gap-1.5", met && "text-[#84CC16]")}>
+    <li
+      className={cn(
+        "flex items-center gap-1.5 transition-colors duration-200",
+        met ? "font-medium text-strong" : "text-subtle",
+      )}
+    >
       <span
-        className={cn(
-          "size-1 rounded-full",
-          met ? "bg-[#84CC16]" : "bg-subtle",
-        )}
+        className={cn("size-1 rounded-full", met ? "bg-strong" : "bg-subtle")}
       />
       {label}
     </li>

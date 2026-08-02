@@ -2,12 +2,30 @@ import type * as React from "react";
 
 import { cn } from "~/lib/utils";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+/* A card is a surface, not a box drawn around content.
+ *
+ * Three things carry that, and all three are tokens so the same component is
+ * correct in both registers: the radius (20px in the app, 0 on the landing),
+ * a hairline tinted with the text colour rather than a grey, and an elevation
+ * that is two soft tinted layers instead of one hard `shadow-sm`. On the
+ * landing every one of those resolves to nothing and the card is a plain
+ * ruled block, which is what that page wants.
+ *
+ * `interactive` is opt-in rather than the default. A card that lifts under the
+ * cursor is making a promise that clicking it does something, and most cards
+ * here are just panels. */
+function Card({
+  className,
+  interactive = false,
+  ...props
+}: React.ComponentProps<"div"> & { interactive?: boolean }) {
   return (
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm",
+        "flex flex-col gap-6 rounded-card border border-border bg-card py-6 text-card-foreground shadow-rest",
+        interactive &&
+          "transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-hover",
         className,
       )}
       {...props}

@@ -355,12 +355,18 @@ export default async function GapReportPage({
         )}
       >
         <div className="flex min-w-0 flex-col gap-8">
+          {/* `data-rise` opts a block into the scroll reveal. The report is
+              the longest screen in the product and the one people actually
+              read top to bottom, so each finding arrives as it is reached
+              rather than the whole page being present at once. */}
           {!focused && metrics?.reliable && (
-            <DeliverySummary
-              wpm={metrics.medianWpm}
-              usualWpm={baselineWpm}
-              recordingsSoFar={reliablePastWpm.length}
-            />
+            <div data-rise="">
+              <DeliverySummary
+                wpm={metrics.medianWpm}
+                usualWpm={baselineWpm}
+                recordingsSoFar={reliablePastWpm.length}
+              />
+            </div>
           )}
 
           {/* The shape of the delivery, under the two numbers that summarise
@@ -374,7 +380,9 @@ export default async function GapReportPage({
               is evidently on, and the chart the landing page promised simply
               is not there. */}
           {!focused && metrics?.reliable && (
-            <PaceTrack pace={metrics.pace} baselineWpm={baselineWpm} />
+            <div data-rise="">
+              <PaceTrack pace={metrics.pace} baselineWpm={baselineWpm} />
+            </div>
           )}
 
           {!focused && slowSpot && slowSpotWeakness && baselineWpm && (
@@ -387,6 +395,7 @@ export default async function GapReportPage({
 
           {!focused && session.transcript && spans.length > 0 && (
             <section
+              data-rise=""
               aria-labelledby="transcript-heading"
               className="flex flex-col gap-3"
             >
@@ -463,6 +472,7 @@ export default async function GapReportPage({
 
         <div className="flex min-w-0 flex-col gap-8">
           <section
+            data-rise=""
             aria-labelledby="strengths-heading"
             className="flex flex-col gap-3"
           >
@@ -515,7 +525,7 @@ export default async function GapReportPage({
                     {focused.gaps?.map((gap) => (
                       <li
                         key={gap.phrase}
-                        className="rounded-xl border border-border bg-surface p-4"
+                        className="rounded-card border border-border bg-surface p-4"
                       >
                         <p className="text-sm font-medium text-strong">
                           {gap.phrase}

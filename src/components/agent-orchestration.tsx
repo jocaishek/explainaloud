@@ -148,7 +148,7 @@ export function AgentOrchestration({
       aria-label="Agent orchestration"
       aria-live={running ? "polite" : undefined}
       className={cn(
-        "overflow-hidden rounded-xl border border-border bg-surface",
+        "overflow-hidden rounded-card border border-border bg-surface",
         className,
       )}
     >
