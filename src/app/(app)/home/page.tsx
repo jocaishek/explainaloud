@@ -122,13 +122,14 @@ export default async function DashboardPage() {
   ];
 
   return (
-    /* Full-bleed band, then the contained page. The masthead is deliberately
-       outside the measure — a dark region that stops at the same gutter as the
-       cards below it reads as a hero card, which is the thing it is not. */
+    /* One continuous surface. The masthead used to be a full-bleed dark band
+       held outside the measure so it would not read as a hero card; now that
+       it is not a band, it sits on the same gutter as everything else and the
+       page is one column from the nav to the footer. */
     <div className="flex flex-col">
       <Masthead firstName={profile.first_name} stats={stats} />
 
-      <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+      <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 pt-8 pb-10 sm:px-6 lg:px-8 lg:pb-14">
         {/* Before the topic list, not after it: arriving usually means knowing
             what you want to do rather than which topic you want to do it to. */}
         <QuickActions />

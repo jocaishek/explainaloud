@@ -78,10 +78,22 @@ product:
   ultramarine until the sunset landed; if you find another ultramarine in the
   codebase it is a leftover, not a decision.)
 - **A saturated ground under a marked transcript.** Green, red and tan have to
-  stay legible and keep meaning *correct*, *missed* and *vague*. Sections that
-  mark anything take a light tint; only a section that marks nothing can carry
-  the deep field. This is why the colour is not simply alternated down the
-  page.
+  stay legible and keep meaning *correct*, *missed* and *vague*. Every section
+  that marks anything takes a light ground, and `#f2ede6` is the floor: it is
+  the deepest warm stock on which all three verdicts still clear 4.5:1. One
+  step below it the tan fails.
+- **More than one inversion on a page.** Light to dark and back is a full eye
+  adaptation, and a reader who does it twice in six sections reports the page
+  as flashing at them — which is exactly what happened. A page gets at most one
+  crossing, and it goes where the meaning is: the landing's close, because
+  going dark there says *this is the end*. The dashboard gets none at all; the
+  top of a tool somebody opens ten times a day is not a different region, it is
+  the top of the page.
+
+  The corollary is that chapters have to come from the light range instead, so
+  spend it. Three "different" sections at `#ffffff`, `#f6f3f1` and `#ffffff` is
+  a two per cent step, which is no step at all — that flatness is what made the
+  two dark bands read as flashes rather than as structure.
 - Cursor-following effects, 3D tilt, magnetic buttons, typewriter headlines.
 - Pure-black shadows. Elevation is tinted with the text hue or it reads as dirt.
 - Spring or overshoot easing.
