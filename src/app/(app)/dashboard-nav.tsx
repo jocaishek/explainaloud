@@ -21,11 +21,14 @@ import {
 } from "~/components/ui/dropdown-menu";
 import { cn } from "~/lib/utils";
 
+/* Sentence case, not Title Case. Every other label in the product is written
+   the way a sentence is, and "Gap Report" / "Re-Teach" were the only two
+   shouting — which also made them the two longest items in the row. */
 const ITEMS = [
   { href: "/home", label: "Home", icon: House },
   { href: "/record", label: "Record", icon: Mic },
-  { href: "/gapreport", label: "Gap Report", icon: ClipboardList },
-  { href: "/reteach", label: "Re-Teach", icon: GraduationCap },
+  { href: "/gapreport", label: "Gaps", icon: ClipboardList },
+  { href: "/reteach", label: "Re-teach", icon: GraduationCap },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -105,7 +108,11 @@ export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex items-center gap-2 rounded-control px-2.5 py-2 font-medium text-sm transition-colors duration-200 lg:px-3",
+                /* `whitespace-nowrap` is load-bearing: without it "Gap Report"
+                   and "Re-Teach" wrap to two lines as soon as the row is
+                   tight, which makes those two items twice the height of the
+                   other four and the whole bar ragged. */
+                "relative flex items-center gap-2 whitespace-nowrap rounded-control px-2.5 py-2 font-medium text-sm transition-colors duration-200 lg:px-3",
                 /* The active item is the one place in the shell the accent
                    appears. Everything else in the bar is ink or grey, so
                    "where am I" is answered by the only colour on screen. */

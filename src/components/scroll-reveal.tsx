@@ -52,19 +52,33 @@ export function ScrollReveal() {
               : "out";
         }
       },
-      /* Held back from the very bottom edge, so a block starts its rise a
-         little after it appears rather than crossing the fold mid-fade. */
-      { rootMargin: "0px 0px -12% 0px" },
+      /* Fires as the block reaches the fold — not well after it, and not so
+       * far before it that the reveal is over by the time anybody looks.
+       *
+       * This was `-12%`, which held the trigger until a block was already an
+       * eighth of the way up the screen. The practical effect was that you
+       * scrolled to something, looked at it, and only then watched it start
+       * to arrive: the animation played *at* you rather than while you were
+       * travelling toward it.
+       *
+       * The tempting overcorrection is a large positive margin, which starts
+       * the rise well below the fold — but at a one-second duration that
+       * finishes off-screen and the block simply appears, already settled,
+       * which is no animation at all. 5% is the small head start that keeps
+       * it in motion as it crosses the fold while leaving most of the
+       * travel where it can be seen. */
+      { rootMargin: "0px 0px 5% 0px" },
     );
 
     /* Stagger comes from document order, not from the call site.
      *
      * A row of cards should arrive left to right, and the alternative — every
      * card being told its own index by whatever renders it — puts presentation
-     * state into data. `% 6` caps the run so a long list does not end with a
-     * card half a second late; after six the group starts over. */
+     * state into data. `% 4` caps the run so a long list does not end with a
+     * visibly late card; it was `% 6`, which at the old stagger put a third of
+     * a second between the first block in a group and the last. */
     targets.forEach((el, i) => {
-      el.style.setProperty("--rise-index", String(i % 6));
+      el.style.setProperty("--rise-index", String(i % 4));
       observer.observe(el);
     });
     return () => observer.disconnect();

@@ -8,21 +8,22 @@ import { cn } from "~/lib/utils";
  * Templates keyed on the local day of week. `{day}` is the weekday name,
  * `{name}` the user's first name.
  */
+/* Short, and about the work rather than the weather.
+ *
+ * The longer templates — "Lovely {day}, isn't it {name}?", "Morning or not,
+ * {name}, it's {day}" — ran to three lines at the masthead's old display size
+ * and read as a greetings card. They are also the wrong subject: this is the
+ * first line of a study tool, so the ones that point at what you came to do
+ * earn their place and the ones that make small talk about Tuesday do not. */
 const TEMPLATES = [
-  "Have a good {day}, {name}",
-  "Lovely {day}, isn't it {name}?",
-  "{day} again, {name}",
-  "Make it a good {day}, {name}",
-  "Happy {day}, {name}",
   "Welcome back, {name}",
   "Good to see you, {name}",
   "Ready when you are, {name}",
-  "Hey {name}, {day} treating you well?",
-  "Let's get into it, {name}",
-  "{name}, what are we learning this {day}?",
   "Back at it, {name}",
-  "Morning or not, {name}, it's {day}",
-  "Hope your {day}'s going well, {name}",
+  "Let's get into it, {name}",
+  "What are we learning today, {name}?",
+  "Pick up where you left off, {name}",
+  "Happy {day}, {name}",
 ] as const;
 
 /**

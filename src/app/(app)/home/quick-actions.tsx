@@ -1,110 +1,107 @@
-import { FileText, Mic, Plus } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
+import { cn } from "~/lib/utils";
 
 /**
- * The three things anyone opens this app to do, at the top of the page.
+ * The three things anyone opens this app to do.
  *
- * The home screen used to be a greeting and then a wall of topic tiles, which
- * assumes you arrived knowing which topic you wanted and what you meant to do
- * with it. Most of the time you arrive knowing only the second half — you want
- * to explain something, or you want to see what you got wrong last time — and
- * every one of those routes already exists as its own address. They were just
- * reachable only from the nav, which is a menu you have to read.
+ * **Not three cards.** This was a row of three equal rounded boxes, which is
+ * the layout the landing page is explicitly forbidden to use and for the same
+ * reason: three identical containers say the three things inside them are
+ * interchangeable, and these are not — they are one sequence. You put material
+ * in, you explain it, you read back what you missed. A card grid flattens an
+ * order into a menu.
  *
- * Written as verbs with a sentence under each rather than icons with a label,
- * because the difference between "record" and "gaps" is not obvious from a
- * microphone and a document.
+ * So it is built the way the landing builds its running order: a lettered
+ * gutter, hairline rules instead of card edges, and the duration on the right.
+ * Reading down the column gives you the loop in the order you do it, which is
+ * also the answer to "what is this app" for somebody on their first visit.
  *
- * In the app register: a white card on the near-white canvas, the soft tinted
- * elevation, a mono kicker on each row, and the accent carried by the one
- * action that is the point of the screen. The other two are cards, not filled
- * buttons, because three filled buttons in a row is three primary actions,
- * which is none.
+ * **The copy is what actually happens.** The old lines were three restatements
+ * of "do a thing here" at the same pitch — "Upload your material and a course
+ * gets built from it", "Talk through a topic you already have". Each row now
+ * says what you give it, what comes back, and how long it takes, because that
+ * is the information somebody is choosing between.
+ *
+ * The accent appears once, on the first step, and only as an inked rule and a
+ * filled arrow. One primary action per screen; the other two are the same row
+ * without the paint.
  */
 const ACTIONS = [
   {
     href: "/new",
-    kicker: "New",
+    n: "A",
     title: "Start a topic",
-    lede: "Upload your material and a course gets built from it.",
-    icon: Plus,
+    detail:
+      "Slides, a chapter or your notes — PDF, Word, Markdown, HTML, CSV or LaTeX. Agents draft a short course and audit each other, and every claim comes back tied to a quote from your files.",
+    dur: "2:30",
     primary: true,
   },
   {
     href: "/record",
-    kicker: "Three minutes",
-    title: "Explain something",
-    lede: "Talk through a topic you already have. Marked as you speak.",
-    icon: Mic,
+    n: "B",
+    title: "Explain it out loud",
+    detail:
+      "Three minutes on a topic you already have, talking the way you would to someone who has never met it. Claims turn green, amber or red while you are still speaking.",
+    dur: "3:00",
     primary: false,
   },
   {
     href: "/gapreport",
-    kicker: "Last session",
-    title: "See what you missed",
-    lede: "Claim by claim, with what to do about each one.",
-    icon: FileText,
+    n: "C",
+    title: "Read back the gaps",
+    detail:
+      "Every claim you got right, every one too vague to check, and the steps you never reached — each with what to do about it, and your pace against your own baseline.",
+    dur: "1:00",
     primary: false,
   },
 ] as const;
 
 export function QuickActions() {
   return (
-    <nav
-      aria-label="What would you like to do"
-      data-tour="actions"
-      className="grid gap-3 sm:grid-cols-3"
-    >
+    <nav aria-label="What would you like to do" data-tour="actions">
       {ACTIONS.map((action) => (
         <Link
           key={action.href}
           href={action.href}
-          /* Each card rises on its own beat — three actions arriving left to
-             right read as being dealt, not as one block appearing. */
           data-rise=""
-          className={
+          className={cn(
+            "press group grid grid-cols-[1.75rem_1fr_auto] items-start gap-x-4 border-t py-5",
+            "transition-colors duration-200",
             action.primary
-              ? "press group flex flex-col gap-2 rounded-card bg-accent-solid p-6 text-accent-contrast shadow-rest transition-[background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-accent-solid-hover hover:shadow-hover"
-              : /* The landing's frosted panel and its lift, so the blocks
-                   somebody hovered before signing up behave the same after. */
-                "press group panel-live glass-panel flex flex-col gap-2 rounded-card p-6"
-          }
+              ? "border-t-[color:var(--accent-solid)]"
+              : "border-border hover:border-[color:var(--accent-solid)]",
+          )}
         >
-          <span className="flex items-center gap-2">
-            <action.icon
-              className={
-                action.primary
-                  ? "size-4 shrink-0"
-                  : "size-4 shrink-0 text-[color:var(--accent-solid)]"
-              }
-            />
-            <span
-              className={
-                action.primary
-                  ? "font-mono text-[0.68rem] uppercase tracking-[0.09em] opacity-85"
-                  : "font-mono text-[0.68rem] text-subtle uppercase tracking-[0.09em]"
-              }
-            >
-              {action.kicker}
+          <span
+            className={cn(
+              "pt-1 font-mono text-[0.68rem] uppercase tracking-[0.09em]",
+              action.primary ? "text-brand-ink" : "text-subtle",
+            )}
+          >
+            {action.n}
+          </span>
+
+          <span className="min-w-0">
+            <span className="flex items-center gap-2">
+              <span className="font-semibold text-[1.08rem] text-strong leading-tight">
+                {action.title}
+              </span>
+              <ArrowRight
+                aria-hidden="true"
+                className={cn(
+                  "size-4 shrink-0 transition-transform duration-200 ease-out group-hover:translate-x-1",
+                  action.primary ? "text-brand-ink" : "text-subtle",
+                )}
+              />
+            </span>
+            <span className="mt-2 block max-w-[62ch] text-[0.88rem] text-subtle leading-relaxed">
+              {action.detail}
             </span>
           </span>
-          <span
-            className={
-              action.primary
-                ? "font-semibold text-[1.12rem] leading-tight"
-                : "font-semibold text-[1.12rem] text-strong leading-tight"
-            }
-          >
-            {action.title}
-          </span>
-          <span
-            className={
-              action.primary
-                ? "text-[0.88rem] leading-relaxed opacity-90"
-                : "text-[0.88rem] text-subtle leading-relaxed"
-            }
-          >
-            {action.lede}
+
+          <span className="pt-1 font-mono text-[0.68rem] text-subtle uppercase tabular-nums tracking-[0.09em]">
+            {action.dur}
           </span>
         </Link>
       ))}

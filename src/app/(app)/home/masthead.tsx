@@ -49,9 +49,8 @@ export function Masthead({
        so crossing the sign-in does not change what dark means — and the field
        slides with the scroll there and here alike. */
     <section className="ground ground-deep relative overflow-hidden text-white">
-      <div className="relative mx-auto flex w-full max-w-[var(--measure)] flex-col gap-8 px-4 pt-10 pb-9 sm:px-6 lg:px-8 lg:pt-14">
-        {/* The corner data. Small, monospaced, and factual — it is the thing
-            the display type is allowed to be enormous *against*. */}
+      <div className="relative mx-auto flex w-full max-w-[var(--measure)] flex-col gap-6 px-4 pt-8 pb-7 sm:px-6 lg:px-8 lg:pt-10">
+        {/* The corner data. Small, monospaced, factual. */}
         <p className="font-mono text-[0.6rem] text-white/45 uppercase tracking-[0.16em]">
           Dashboard
           <span className="mx-2 text-white/25">/</span>
@@ -60,11 +59,14 @@ export function Masthead({
 
         <Greeting
           name={firstName}
-          /* Packed: leading below 1 and tracking pulled in, so two lines read
-             as one block. The gradient fill runs light-to-transparent down the
-             glyphs, which is why the second line dissolves into the band
-             instead of ending on a hard edge. */
-          className="fill-fade font-sans font-bold text-[clamp(2.6rem,9vw,7rem)] uppercase leading-[0.82] tracking-[-0.045em] [font-stretch:125%]"
+          /* The landing's display voice, at a size a working screen can carry.
+             This was 112px of packed uppercase grotesque with a gradient
+             running down it — a poster, and the first thing anybody saw every
+             time they opened the app. A greeting is not the most important
+             thing on this page; the three actions under it are. Source Serif
+             at weight 400, sentence case, keeps the line warm and personal
+             without turning the header into a monument. */
+          className="max-w-[20ch] font-display font-normal text-[clamp(1.5rem,3.2vw,2.2rem)] leading-[1.15] tracking-[-0.015em] text-white"
         />
 
         <StatRail stats={stats} tone="dark" />
