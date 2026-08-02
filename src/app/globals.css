@@ -1470,3 +1470,116 @@
     transform: scaleY(0.6);
   }
 }
+
+/* ---------------------------------------------------------------------------
+ * The sunset register — tarmac black, Athens gold.
+ *
+ * Scoped to `.register-sunset` rather than `:root` for the same reason the app
+ * register is: the landing and the signed-in product are two worlds, and a
+ * second `:root` gives one its canvas by taking the other's away.
+ *
+ * **The problem this block had to solve.** The three verdict colours are the
+ * product's entire semantic: green means the claim was correct, red means a
+ * step was missed, tan means it was said but not checkably. On a near-black
+ * canvas the shipped values fail outright — `#0f7a3d` green sits at 2.4:1 on
+ * `#0b0b0c`, well under the 4.5:1 a marked word needs to be read. And the
+ * brief's accent family is gold and amber, which is *the same hue* as the tan
+ * that means "vague". A brand colour indistinguishable from a verdict is worse
+ * than an ugly brand colour: it makes the marking unreadable as marking.
+ *
+ * So the verdicts get dark-canvas values here — lifted in value, held at the
+ * same hue, so they still read as the greens and reds somebody will be graded
+ * in — and `--vague` is pulled to a desaturated sand that separates from the
+ * luminous CTA gold by saturation rather than by hue. Both stay reserved: they
+ * mark words and nothing else, and the sunset accents never touch a
+ * transcript.
+ * ------------------------------------------------------------------------- */
+.register-sunset {
+  /* Tarmac. Not pure black — a carbon with a trace of warmth in it, so the
+     gold reads as light falling on the surface rather than as a sticker. */
+  --stock: #0b0b0c;
+  --carbon: #141416;
+  --carbon-high: #1b1b1e;
+  --ink: #f4f1ea;
+  --ink-soft: rgba(244, 241, 234, 0.62);
+  --ink-faint: rgba(244, 241, 234, 0.38);
+
+  /* Athens at sunset: three stops of one warm ramp, low to high. */
+  --sun-deep: #c2410c;
+  --sun: #f97316;
+  --sun-high: #fbbf24;
+  --sun-glow: rgba(249, 115, 22, 0.22);
+
+  /* Hairlines and glass. The border is the light source, not a box edge —
+     brighter at the top where the sun would catch it. */
+  --rule: rgba(244, 241, 234, 0.1);
+  --rule-strong: rgba(244, 241, 234, 0.28);
+  --glass: rgba(24, 24, 27, 0.55);
+  --glass-edge: rgba(251, 191, 36, 0.18);
+
+  /* Verdicts, lifted for this canvas. Same three meanings, same three hues,
+     read against black instead of paper. */
+  --ok: #4ade80;
+  --miss: #fb7185;
+  --vague: #d6c19a;
+
+  background-color: var(--stock);
+  color: var(--ink);
+}
+
+/* Frosted panel.
+ *
+ * Real glass, not a grey box: a translucent fill so the glow behind it shows
+ * through, a hairline that is warmer along the top edge, and an inset
+ * highlight standing in for the lit bevel. The blur is what makes it glass and
+ * it is also the most expensive thing on the page, which is why it is dropped
+ * on small screens — nobody sees through a blur on a 6-inch display. */
+.glass-panel {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.02) 42%
+    ),
+    var(--glass);
+  border: 1px solid var(--rule);
+  border-top-color: var(--glass-edge);
+  backdrop-filter: blur(20px) saturate(140%);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
+    0 24px 60px -24px rgba(0, 0, 0, 0.9);
+}
+@media (max-width: 767px) {
+  .glass-panel {
+    backdrop-filter: none;
+    background: var(--carbon-high);
+  }
+}
+
+/* The sunset behind the page.
+ *
+ * The brief asks for sections to bleed into each other rather than being cut
+ * apart by rules, and this is how: a soft warm field low in the section, so
+ * one region ends by getting darker rather than by hitting a line. It is a
+ * ground, not a floating orb — it defines the region and the type sits in it. */
+.sunset-field {
+  position: relative;
+  isolation: isolate;
+}
+.sunset-field::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(
+      120% 60% at 50% 108%,
+      var(--sun-glow) 0%,
+      rgba(249, 115, 22, 0) 62%
+    ),
+    radial-gradient(
+      90% 50% at 82% -10%,
+      rgba(251, 191, 36, 0.1) 0%,
+      rgba(251, 191, 36, 0) 60%
+    );
+}
