@@ -301,7 +301,7 @@ export function AuthCard({
       {stage === "forgot-password" && (
         <form
           onSubmit={handleForgotPassword}
-          className="flex w-full flex-col gap-4 rounded-card border border-border bg-card p-6 shadow-rest"
+          className="glass-panel flex w-full flex-col gap-4 rounded-card p-6"
         >
           <div>
             <h3 className="text-base font-semibold text-strong">
@@ -342,7 +342,7 @@ export function AuthCard({
           <Button
             type="submit"
             disabled={submitting}
-            className="h-11 bg-brand-deep font-semibold text-white transition-colors duration-200 hover:bg-brand"
+            className="press h-11 bg-brand-deep font-semibold text-white transition-colors duration-200 hover:bg-brand"
           >
             {submitting ? "Sending…" : "Send reset link"}
           </Button>
@@ -368,7 +368,7 @@ export function AuthCard({
       {stage === "form" && (
         <form
           onSubmit={handleSubmit}
-          className="flex w-full flex-col gap-4 rounded-card border border-border bg-card p-6 shadow-rest"
+          className="glass-panel flex w-full flex-col gap-4 rounded-card p-6"
         >
           <div className="flex flex-col gap-2">
             {/* Google's own button when Identity Services is available, so
@@ -424,10 +424,14 @@ export function AuthCard({
             )}
           </div>
 
-          <div className="flex items-center gap-3 text-xs text-subtle">
-            <span className="h-px flex-1 bg-white/10" />
+          <div className="flex items-center gap-3 font-mono text-[0.62rem] uppercase tracking-[0.09em] text-subtle">
+            {/* `bg-white/10` — a leftover from when this card was dark, and
+                invisible on a light one. */}
+            <span className="h-px flex-1 bg-border" />
             or continue with email
-            <span className="h-px flex-1 bg-white/10" />
+            {/* `bg-white/10` — a leftover from when this card was dark, and
+                invisible on a light one. */}
+            <span className="h-px flex-1 bg-border" />
           </div>
 
           <div className="flex flex-col gap-3">
@@ -466,7 +470,7 @@ export function AuthCard({
             type="submit"
             size="default"
             disabled={submitting || oauthLoading !== null}
-            className="h-11 bg-brand-deep font-semibold text-white transition-colors duration-200 hover:bg-brand"
+            className="press h-11 bg-brand-deep font-semibold text-white transition-colors duration-200 hover:bg-brand"
           >
             {submitting
               ? mode === "signup"
@@ -506,7 +510,7 @@ export function AuthCard({
       )}
 
       {stage === "check-email" && (
-        <div className="flex w-full flex-col gap-5 rounded-card border border-border bg-card p-6 shadow-rest">
+        <div className="glass-panel flex w-full flex-col gap-5 rounded-card p-6">
           <div>
             <h3 className="text-base font-semibold text-strong">
               Verify your email

@@ -89,12 +89,14 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
             : `${courseHref(course)}/record`;
 
           return (
-            <Link key={course.id} href={href} className="group">
+            /* Each row rises on its own beat as the list arrives — the same
+               dealt-out cadence the landing's running order uses. */
+            <Link key={course.id} href={href} data-rise="" className="group">
               <Card
                 className={cn(
-                  "press flex flex-row items-center justify-between gap-4",
+                  "press panel-live flex flex-row items-center justify-between gap-4",
                   "rounded-card border border-border bg-card p-4",
-                  "transition-colors duration-200 hover:border-brand/50 hover:bg-surface",
+                  "hover:border-brand/50",
                 )}
               >
                 <div className="min-w-0">
@@ -132,7 +134,7 @@ function Shell({
 }) {
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
-      <div>
+      <div data-rise="">
         <h1 className="font-semibold text-[clamp(1.45rem,3vw,2rem)] text-strong leading-[1.1] tracking-[-0.025em]">
           {title}
         </h1>

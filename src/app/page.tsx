@@ -536,10 +536,12 @@ function Masthead() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1 lg:ml-7">
+          {/* "Log in", not "Sign in". The form it opens is labelled "Log in",
+              its own toggle says "Already a member? Log in", and every error
+              message says logging in — one name for one action, or the pair
+              reads as two different doors. */}
           <Link href="/login" className="press px-3 py-2">
-            <Slug className="transition-opacity hover:opacity-100">
-              Sign in
-            </Slug>
+            <Slug className="transition-opacity hover:opacity-100">Log in</Slug>
           </Link>
           <Cue href="/signup">Start</Cue>
         </div>
@@ -836,7 +838,7 @@ function Hero() {
            * and it is the disagreement between them that reads as depth. */}
           <Artifact
             accent="var(--ok)"
-            className="hero-drift-near lay-in-soft float-slow mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
+            className="hero-drift-near lay-in-soft float-slow hero-orbit-left mt-10"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span
@@ -861,7 +863,7 @@ function Hero() {
 
           <Artifact
             accent="var(--miss)"
-            className="hero-drift-far lay-in-soft float-slower mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
+            className="hero-drift-far lay-in-soft float-slower hero-orbit-right mt-4"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
@@ -1136,9 +1138,12 @@ function LiveMarking() {
         lede="Not a verdict at the end. Drag the scrubber."
       />
 
+      {/* The demo floats on glass, as the chart in 04 and the hero's take do:
+          this is product output, and everything the product returns sits on
+          the same panel. */}
       <div
         data-rise=""
-        className="mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4"
+        className="lay-in panel-live glass-panel mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4 rounded-[20px] p-5 md:p-7"
       >
         <div />
         <div className="grid gap-10 lg:grid-cols-[1fr_15rem]">
@@ -1369,9 +1374,12 @@ function SourcesOnly() {
         lede="Nothing beyond your files. What they do not cover gets named, not invented."
       />
 
+      {/* The switch and its list float on glass, as the chart in 04 does:
+          this is the course the product built, and product output sits on
+          the same panel everywhere on the page. */}
       <div
         data-rise=""
-        className="mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4"
+        className="lay-in panel-live glass-panel mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4 rounded-[20px] p-5 md:p-7"
       >
         <div />
         <div>
@@ -1462,7 +1470,7 @@ function SourcesOnly() {
 
 function Close() {
   return (
-    <section className="tx-invert ribbon px-4 py-28 md:px-8 md:py-36">
+    <section className="tx-invert ground ribbon px-4 py-28 md:px-8 md:py-36">
       <div data-rise="" className="grid grid-cols-[var(--gutter)_1fr] gap-x-4">
         <div className="pt-3">
           <span className="font-mono text-[0.68rem] uppercase tracking-[0.09em]">
@@ -1492,7 +1500,9 @@ function Close() {
           <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Cue
               href="/signup"
-              className="justify-center bg-white text-[#1b1585] hover:bg-white/90 sm:justify-start"
+              /* Sunset ink, not the ultramarine this button kept from the
+                 palette before last. It was the only blue left on the page. */
+              className="justify-center bg-white text-[var(--brand-deep)] hover:bg-white/90 sm:justify-start"
             >
               Start a session
             </Cue>
@@ -1501,7 +1511,7 @@ function Close() {
               tone="outline"
               className="justify-center hover:bg-white/10 sm:justify-start"
             >
-              Sign in
+              Log in
             </Cue>
           </div>
         </div>

@@ -1053,8 +1053,26 @@
  * Flat ink instead. The base of this page is paper, grey stock and ink; the
  * only colour anywhere is a verdict on a word somebody said, and a saturated
  * field this size was competing with the three colours the product runs on. */
+/* The closing band.
+ *
+ * Warm stock rather than a neutral near-black, and a sunset barely lifting off
+ * the bottom-left corner — the same light as everything above it, turned right
+ * down. Deliberately fainter than `.ground-deep`: that field defines a section
+ * you read inside, this one just stops the last thing on the page from being a
+ * flat rectangle. Any stronger and it competes with the white type on it. */
 .ribbon {
-  background-color: #101012;
+  background-color: #14100c;
+  --ground-field:
+    radial-gradient(
+      70% 80% at 12% 88%,
+      rgba(249, 115, 22, 0.13) 0%,
+      rgba(249, 115, 22, 0) 66%
+    ),
+    radial-gradient(
+      50% 60% at 88% 8%,
+      rgba(251, 191, 36, 0.07) 0%,
+      rgba(249, 115, 22, 0) 70%
+    );
 }
 /* The level meter running through the on-air strip.
  *
@@ -1392,6 +1410,37 @@
 .hero-drift-far {
   transform: translate3d(0, calc(var(--hero-t) * -1.6rem), 0);
   will-change: transform;
+}
+
+/* Where the two hero artifacts sit when there is room to orbit.
+ *
+ * They are absolutely positioned against the centred 46rem column, and a fixed
+ * `-19rem` offset from that column runs off the side of any window narrower
+ * than about 84rem — which is most laptops, so the panels arrived cropped to a
+ * sliver. The `max()` is the fix: the ideal offset, or the furthest the panel
+ * can go while keeping 1.25rem of air to the viewport edge, whichever keeps it
+ * on screen. `(46rem - 100vw) / 2` is where the viewport edge is in the
+ * column's own coordinates.
+ *
+ * CSS rather than utility classes because a Tailwind arbitrary value
+ * containing a comma does not generate — the same reason the wordmark's
+ * `min()` is inline. */
+@media (min-width: 64rem) {
+  .hero-orbit-left,
+  .hero-orbit-right {
+    position: absolute;
+    margin-top: 0;
+  }
+  .hero-orbit-left {
+    width: 15rem;
+    top: 3.5rem;
+    left: max(-19rem, calc((46rem - 100vw) / 2 + 1.25rem));
+  }
+  .hero-orbit-right {
+    width: 14rem;
+    top: 9rem;
+    right: max(-18rem, calc((46rem - 100vw) / 2 + 1.25rem));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

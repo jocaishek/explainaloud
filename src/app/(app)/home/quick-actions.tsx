@@ -58,10 +58,15 @@ export function QuickActions() {
         <Link
           key={action.href}
           href={action.href}
+          /* Each card rises on its own beat — three actions arriving left to
+             right read as being dealt, not as one block appearing. */
+          data-rise=""
           className={
             action.primary
               ? "press group flex flex-col gap-2 rounded-card bg-accent-solid p-6 text-accent-contrast shadow-rest transition-[background-color,box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:bg-accent-solid-hover hover:shadow-hover"
-              : "press group flex flex-col gap-2 rounded-card border border-border bg-card p-6 shadow-rest transition-[box-shadow,transform,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-hover"
+              : /* The landing's frosted panel and its lift, so the blocks
+                   somebody hovered before signing up behave the same after. */
+                "press group panel-live glass-panel flex flex-col gap-2 rounded-card p-6"
           }
         >
           <span className="flex items-center gap-2">
