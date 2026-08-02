@@ -176,12 +176,12 @@
    * that changes shape between controls is one they have to re-find on every
    * press. */
   :focus-visible {
-    outline: 2px solid var(--color-brand);
+    outline: 2px solid currentColor;
     outline-offset: 2px;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+    background: rgba(12, 12, 13, 0.14);
     color: inherit;
   }
 

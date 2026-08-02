@@ -433,7 +433,7 @@ function Cue({
         // mono caps is a good voice for a timecode and a poor one for the
         // thing somebody is looking for when they have decided to act.
         "press inline-flex items-center rounded-full px-6 py-3.5 font-medium text-[0.95rem] transition-colors duration-200",
-        "focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2",
+        "focus-visible:outline-2 focus-visible:outline-[var(--ink)] focus-visible:outline-offset-2",
         tone === "solid"
           ? "bg-[var(--ink)] text-[var(--stock)] hover:opacity-85"
           : "border border-[var(--rule-strong)] hover:bg-[rgba(12,12,13,0.06)]",
@@ -502,7 +502,7 @@ function Masthead() {
           className="press flex shrink-0 items-center gap-2.5"
           aria-label="Explainaloud, home"
         >
-          <ExplainaloudMark className="h-7 w-7 text-brand" />
+          <ExplainaloudMark className="h-7 w-7" />
           <span className="font-semibold text-[0.92rem] uppercase tracking-[0.04em] [font-stretch:87%]">
             Explainaloud
           </span>
@@ -515,7 +515,7 @@ function Masthead() {
                 className={cn(
                   "transition-opacity duration-200",
                   current === s.id
-                    ? "text-brand opacity-100"
+                    ? "opacity-100 underline underline-offset-4"
                     : "group-hover:opacity-100",
                 )}
               >
@@ -712,7 +712,7 @@ function Hero() {
        * what is being said. A sentence about explaining something out loud
        * should be set the way a sentence is set, not squeezed into a column
        * beside a picture. */}
-      <section className="paper accent-blue [container-type:inline-size] px-4 pt-14 pb-20 md:px-8 md:pt-16 md:pb-28">
+      <section className="paper [container-type:inline-size] px-4 pt-14 pb-20 md:px-8 md:pt-16 md:pb-28">
         {/* The name, at the size the name should be.
          *
          * Set in Archivo at the top of its width axis rather than in the
@@ -960,7 +960,7 @@ function Ticker() {
                 {/* The mark itself as the separator, rather than a bullet or
                     a slash. It is already the page's one drawn shape. */}
                 <ExplainaloudMark
-                  className="mx-6 h-3.5 w-3.5 shrink-0 text-brand opacity-70"
+                  className="mx-6 h-3.5 w-3.5 shrink-0 opacity-40"
                   strokeWidth={6}
                 />
               </li>
@@ -980,7 +980,7 @@ function RunningOrder() {
   return (
     <section
       id="order"
-      className="paper-grey accent-violet relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper-grey relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="02"
@@ -1121,7 +1121,7 @@ function LiveMarking() {
     <section
       ref={ref}
       id="marking"
-      className="paper accent-blue relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="03"
@@ -1184,7 +1184,7 @@ function LiveMarking() {
                 }}
                 className="mt-3 h-[5px] w-full cursor-ew-resize appearance-none rounded-full accent-[var(--ink)]"
                 style={{
-                  background: `linear-gradient(to right, var(--color-brand) ${(scrub / SCRUB_MAX) * 100}%, rgba(12,12,13,0.16) ${(scrub / SCRUB_MAX) * 100}%)`,
+                  background: `linear-gradient(to right, var(--ink) ${(scrub / SCRUB_MAX) * 100}%, rgba(12,12,13,0.16) ${(scrub / SCRUB_MAX) * 100}%)`,
                 }}
               />
             </div>
@@ -1261,7 +1261,7 @@ function Pace() {
     <section
       ref={ref}
       id="pace"
-      className="paper-grey accent-magenta relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper-grey relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="04"
@@ -1289,8 +1289,7 @@ function Pace() {
                 className="relative block flex-1 self-end rounded-t-[4px] focus:outline-none"
                 style={{
                   height: visible ? `${(v / peak) * 100}%` : "0%",
-                  background:
-                    v > RACING ? "var(--vague)" : "var(--color-brand)",
+                  background: v > RACING ? "var(--vague)" : "var(--ink)",
                   opacity: hover === null || hover === i ? 1 : 0.3,
                   transition: `height 720ms ${EASE} ${i * 55}ms, opacity 180ms ease-out`,
                 }}
@@ -1352,7 +1351,7 @@ function SourcesOnly() {
   return (
     <section
       id="sources"
-      className="paper accent-violet relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+      className="paper relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
       <SectionHead
         n="05"
@@ -1372,7 +1371,7 @@ function SourcesOnly() {
             role="switch"
             aria-checked={strict}
             onClick={() => setStrict((s) => !s)}
-            className="press inline-flex items-center gap-4 focus:outline-none focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-4"
+            className="press inline-flex items-center gap-4 focus:outline-none focus-visible:outline-2 focus-visible:outline-[var(--ink)] focus-visible:outline-offset-4"
           >
             <span
               className={cn(
@@ -1390,7 +1389,7 @@ function SourcesOnly() {
             </span>
             <span className="font-mono text-[0.72rem] uppercase tracking-[0.09em]">
               Sources only{" "}
-              <span className={strict ? "text-brand" : "opacity-45"}>
+              <span className={strict ? "" : "opacity-45"}>
                 {strict ? "on" : "off"}
               </span>
             </span>
@@ -1435,7 +1434,7 @@ function SourcesOnly() {
           </ul>
 
           <p className="rule-t pt-4">
-            <Slug className={strict ? "text-brand opacity-100" : undefined}>
+            <Slug className={strict ? "opacity-100" : undefined}>
               {strict
                 ? `${IN_SOURCE} key points. ${COURSE.length - IN_SOURCE} gaps named instead of filled.`
                 : `${COURSE.length} key points, ${COURSE.length - IN_SOURCE} of them researched beyond your files.`}
@@ -1493,7 +1492,7 @@ function Footer() {
   return (
     <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-8 md:px-8">
       <span className="flex items-center gap-2">
-        <ExplainaloudMark className="h-5 w-5 text-brand" />
+        <ExplainaloudMark className="h-5 w-5" />
         <Slug className="opacity-100">Explainaloud</Slug>
       </span>
       <Link href="/terms" className="ml-auto">
