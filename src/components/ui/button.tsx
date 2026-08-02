@@ -12,26 +12,33 @@ import { cn } from "~/lib/utils";
  * push it. Changing the shared variant rather than each call site is what
  * keeps the two halves of the product looking like one product. */
 const buttonVariants = cva(
-  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium whitespace-nowrap transition-all outline-none active:scale-[0.97] focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "inline-flex shrink-0 items-center justify-center gap-2 rounded-full text-sm font-medium whitespace-nowrap outline-none transition-[transform,box-shadow,background-color,border-color] duration-[var(--dur)] ease-[var(--ease)] active:translate-y-0 active:scale-[0.98] focus-visible:ring-[3px] focus-visible:ring-[var(--accent-ring)] motion-reduce:transition-none disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        /* The one accented element on any given view.
+         *
+         * A flat fill rather than a gradient: at this size a two-stop gradient
+         * reads as a texture artefact, and the shadow is what gives the button
+         * its dimension. The lift is two pixels with the accent bleeding into
+         * the shadow, so it warms rather than just moving. */
+        default:
+          "bg-[var(--accent-solid)] text-white shadow-[0_1px_2px_rgba(17,24,39,0.08)] hover:-translate-y-0.5 hover:bg-[var(--accent-solid-hover)] hover:shadow-[0_4px_14px_rgba(79,124,255,0.32)]",
         destructive:
           "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40",
         outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border border-[var(--border)] bg-[var(--card)] text-[var(--foreground)] shadow-[var(--shadow-card)] hover:-translate-y-0.5 hover:bg-[var(--muted)] hover:shadow-[var(--shadow-card-hover)]",
         secondary:
           "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost:
           "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
+        link: "text-[var(--accent-solid)] underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-9 px-5 py-2 has-[>svg]:px-3",
+        default: "h-10 px-6 py-2 has-[>svg]:px-4",
         xs: "h-6 gap-1 rounded-full px-2.5 text-xs has-[>svg]:px-1.5 [&_svg:not([class*='size-'])]:size-3",
         sm: "h-8 gap-1.5 rounded-full px-3.5 has-[>svg]:px-2.5",
-        lg: "h-10 rounded-full px-6 has-[>svg]:px-4",
+        lg: "h-12 rounded-full px-8 text-[0.95rem] has-[>svg]:px-6",
         icon: "size-9",
         "icon-xs": "size-6 rounded-full [&_svg:not([class*='size-'])]:size-3",
         "icon-sm": "size-8",

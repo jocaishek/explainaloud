@@ -7,7 +7,24 @@ function Card({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="card"
       className={cn(
-        "flex flex-col gap-6 rounded-xl border bg-card py-6 text-card-foreground shadow-sm",
+        /* The one card in the product.
+         *
+         * Geometry comes from tokens, never literals: 20px radius, a hairline
+         * at 8% of the text colour, and a two-layer shadow tinted with that
+         * same hue rather than pure black - which is the difference between a
+         * card that reads as lifted and one that looks smudged.
+         *
+         * Separation is carried by the border and by the single step from the
+         * #FAFAFB page to white. The shadow is nearly subliminal at rest, so a
+         * grid of these reads as quiet rather than as a pile of panels.
+         *
+         * The lift on hover is one pixel of translation, not a scale. Scaling
+         * a card resamples the text inside it, and blurry type under the
+         * cursor is what separates a cheap hover from a polished one. */
+        "flex flex-col gap-6 rounded-[var(--r-card)] border border-[var(--border)] bg-card p-7 text-card-foreground shadow-[var(--shadow-card)]",
+        "transition-[transform,box-shadow,border-color] duration-[var(--dur)] ease-[var(--ease)]",
+        "hover:-translate-y-px hover:border-[rgba(17,24,39,0.12)] hover:shadow-[var(--shadow-card-hover)]",
+        "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         className,
       )}
       {...props}

@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Archivo, Martian_Mono } from "next/font/google";
+import { Inter, Martian_Mono } from "next/font/google";
 import { AuthHashRescue } from "~/components/auth-hash-rescue";
 import { siteUrl } from "~/lib/site";
 import { ThemeProvider } from "./theme-provider";
@@ -24,12 +24,20 @@ import "./globals.css";
  * width. The italic is loaded because the headline uses it as a second voice:
  * the phrases the page marks are set italic as well as coloured, so the
  * emphasis survives being read in greyscale. */
-const archivo = Archivo({
+/* Inter, the whole interface.
+ *
+ * Named in the brief, and the variable cut so weight is a continuous axis
+ * rather than four downloads: display sits at 600-700, section headers at 600,
+ * body at 400, and the steps between them are what carries hierarchy here
+ * instead of size alone.
+ *
+ * `cv11` gives the single-storey l and the straight-tailed a, which is what
+ * stops Inter at large sizes reading as the browser default. */
+const inter = Inter({
   subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["wdth"],
   variable: "--font-sans",
 });
+
 
 /* Martian Mono carries the timecodes, cue labels and status lines.
  *
@@ -114,7 +122,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className={`${archivo.variable} ${martianMono.variable} font-sans`}>
+      <body className={`${inter.variable} ${martianMono.variable} font-sans`}>
         {/* The direction this design is under contract to, emitted as a real
             HTML comment so it survives the production build and can be read
             off the served page rather than taken on trust from a source file
