@@ -432,7 +432,7 @@ function Cue({
         // Sans, sentence case, and a size you can read at a glance. Tracked
         // mono caps is a good voice for a timecode and a poor one for the
         // thing somebody is looking for when they have decided to act.
-        "press inline-flex items-center rounded-full px-6 py-3.5 font-medium text-[0.95rem] transition-colors duration-200",
+        "press inline-flex items-center rounded-full px-7 py-3.5 font-mono text-[0.78rem] uppercase tracking-[0.06em] transition-colors duration-200",
         "focus-visible:outline-2 focus-visible:outline-[var(--ink)] focus-visible:outline-offset-2",
         tone === "solid"
           ? "bg-[var(--ink)] text-[var(--stock)] hover:opacity-85"
@@ -567,7 +567,7 @@ function SectionHead({
 }) {
   return (
     <div data-rise="" className="grid grid-cols-[var(--gutter)_1fr] gap-x-4">
-      <Slug className="tc pt-2">{n}</Slug>
+      <Slug className="tc pt-2">{`{ ${n} }`}</Slug>
       <div>
         {/* Sentence case, normal width, and a full stop.
          *
@@ -1503,6 +1503,39 @@ function Close() {
             </Cue>
           </div>
         </div>
+      </div>
+
+      {/* The closing signature.
+       *
+       * All three references end the page on a full-bleed band of the single
+       * accent, and it does a job nothing else on the page does: it is the
+       * full stop. Without it the last content section simply stops and the
+       * footer begins, which is why the bottom of this page has always felt
+       * like it ran out rather than ended.
+       *
+       * Ours carries the mark and one line, and it is the only place the brand
+       * colour is allowed to be the largest thing on screen — everywhere else
+       * it is a control. The three verdict colours never appear on it.
+       *
+       * A strip, not a field. The first version was 26vh of flat colour, which
+       * on a wide display is most of a screen given over to a rectangle with a
+       * logo in the corner — the reference can afford that because its band
+       * closes a page built around full-bleed photography, and this one closes
+       * a page built out of hairlines. At 48px it reads as a rule with weight
+       * rather than as a section, which is the job.
+       *
+       * The negative bottom margin cancels the section's own padding. Without
+       * it the strip is not the last thing on the page — a slice of the dark
+       * section renders underneath, and a full stop with something after it is
+       * not a full stop. */}
+      <div
+        aria-hidden="true"
+        className="-mx-4 -mb-28 md:-mx-8 md:-mb-36 mt-24 flex h-12 items-center gap-3 bg-brand px-4 md:mt-32 md:px-8"
+      >
+        <ExplainaloudMark
+          className="h-4 w-4 shrink-0 text-white"
+          strokeWidth={6}
+        />
       </div>
     </section>
   );
