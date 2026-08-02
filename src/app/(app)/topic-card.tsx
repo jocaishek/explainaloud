@@ -73,7 +73,7 @@ export function TopicCard({
           <Link
             href={courseHref(course)}
             aria-label={`${title}, topic: ${course.topic}`}
-            className="press flex h-36 flex-col justify-between rounded-card border border-border bg-card p-4 shadow-rest transition-[box-shadow,transform] duration-200 ease-out hover:-translate-y-0.5 hover:shadow-hover"
+            className="press panel-live flex h-36 flex-col justify-between rounded-card border border-border bg-card p-4 shadow-rest"
           >
             <span className="font-mono text-[0.66rem] tracking-[0.08em] text-subtle uppercase">
               {course.status}

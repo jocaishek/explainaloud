@@ -1136,9 +1136,12 @@ function LiveMarking() {
         lede="Not a verdict at the end. Drag the scrubber."
       />
 
+      {/* The demo floats on glass, as the chart in 04 and the hero's take do:
+          this is product output, and everything the product returns sits on
+          the same panel. */}
       <div
         data-rise=""
-        className="mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4"
+        className="lay-in panel-live glass-panel mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4 rounded-[20px] p-5 md:p-7"
       >
         <div />
         <div className="grid gap-10 lg:grid-cols-[1fr_15rem]">
@@ -1369,9 +1372,12 @@ function SourcesOnly() {
         lede="Nothing beyond your files. What they do not cover gets named, not invented."
       />
 
+      {/* The switch and its list float on glass, as the chart in 04 does:
+          this is the course the product built, and product output sits on
+          the same panel everywhere on the page. */}
       <div
         data-rise=""
-        className="mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4"
+        className="lay-in panel-live glass-panel mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4 rounded-[20px] p-5 md:p-7"
       >
         <div />
         <div>

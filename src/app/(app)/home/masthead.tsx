@@ -44,16 +44,11 @@ export function Masthead({
   stats: Stat[];
 }) {
   return (
-    <section className="relative overflow-hidden bg-[#101012] text-white">
-      {/* The band's own light source: a soft vertical lift from the top edge,
-          which is what the gradient-filled type fades into. Linear and
-          top-anchored — not one of the blurred radial fields this product has
-          twice had removed. */}
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.16),rgba(255,255,255,0)_58%)]"
-      />
-
+    /* The landing's dark ground, not a private near-black. `ground-deep` is
+       the same warm stock and sunset field the landing's section 02 stands on,
+       so crossing the sign-in does not change what dark means — and the field
+       slides with the scroll there and here alike. */
+    <section className="ground ground-deep relative overflow-hidden text-white">
       <div className="relative mx-auto flex w-full max-w-[var(--measure)] flex-col gap-8 px-4 pt-10 pb-9 sm:px-6 lg:px-8 lg:pt-14">
         {/* The corner data. Small, monospaced, and factual — it is the thing
             the display type is allowed to be enormous *against*. */}
