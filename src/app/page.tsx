@@ -639,7 +639,7 @@ function Artifact({
     <div
       style={accent ? { borderLeft: `3px solid ${accent}` } : undefined}
       className={cn(
-        "rounded-[20px] border border-[var(--rule)] bg-white p-5 text-left",
+        "panel-live rounded-[20px] border border-[var(--rule)] bg-white p-5 text-left",
         "shadow-[0_20px_25px_-5px_rgba(0,0,0,0.06),0_8px_10px_-6px_rgba(0,0,0,0.05)]",
         className,
       )}
@@ -837,7 +837,7 @@ function Hero() {
            * and it is the disagreement between them that reads as depth. */}
           <Artifact
             accent="var(--ok)"
-            className="hero-drift-near mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
+            className="hero-drift-near lay-in-soft mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span
@@ -862,7 +862,7 @@ function Hero() {
 
           <Artifact
             accent="var(--miss)"
-            className="hero-drift-far mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
+            className="hero-drift-far lay-in-soft mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
@@ -875,7 +875,7 @@ function Hero() {
 
         {/* The take itself, centred under the sentence rather than beside it. */}
         <div className="mx-auto mt-14 max-w-[42rem]">
-          <div className="rounded-[20px] border border-[var(--rule)] p-5">
+          <div className="lay-in panel-live rounded-[20px] border border-[var(--rule)] bg-white p-5">
             {/* What is being explained, and what it was built from.
              *
              * The panel used to open straight into three marked sentences with
@@ -974,70 +974,6 @@ function Hero() {
         </div>
       </section>
     </>
-  );
-}
-
-/* -------------------------------------------------------------------------
- * The ticker
- * ---------------------------------------------------------------------- */
-
-/**
- * What the product actually does, in one line that never stops.
- *
- * Every item is a confirmed capability, not a claim: each one is implemented
- * and each one is described somewhere further down the page. The ticker is
- * where somebody who is not going to read six sections finds out what they
- * would have read.
- */
-const TICKER = [
-  "Coloured as you speak",
-  "Pace against your own baseline",
-  "Sources-only mode",
-  "Every claim tied to a quote from your files",
-  "Interview mode, never the same question twice",
-  "PDF, Word, Markdown, HTML, CSV, LaTeX",
-  "Half credit for half a point",
-  "Nothing typed",
-  "No audio kept",
-] as const;
-
-/**
- * The ticker rail.
- *
- * The track holds two identical copies of the list, so translating exactly
- * -50% lands copy two where copy one began and the loop has no seam. Hovering
- * pauses it, because a line of moving text you cannot finish reading is a tax
- * rather than a feature — and the pause is a `animation-play-state`, so it
- * stops where it is instead of snapping home.
- *
- * `aria-hidden` on the second copy: it is the same nine phrases again, and a
- * screen reader reading them twice is the seam made audible.
- */
-function Ticker() {
-  return (
-    <div className="marquee rule-b overflow-hidden py-3.5">
-      <div className="marquee-track flex w-max">
-        {[0, 1].map((copy) => (
-          <ul
-            key={copy}
-            aria-hidden={copy === 1}
-            className="flex shrink-0 items-center"
-          >
-            {TICKER.map((item) => (
-              <li key={item} className="flex items-center">
-                <Slug className="whitespace-nowrap">{item}</Slug>
-                {/* The mark itself as the separator, rather than a bullet or
-                    a slash. It is already the page's one drawn shape. */}
-                <ExplainaloudMark
-                  className="mx-6 h-3.5 w-3.5 shrink-0 opacity-40"
-                  strokeWidth={6}
-                />
-              </li>
-            ))}
-          </ul>
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -1586,7 +1522,6 @@ export default function Home() {
       <ScrollReveal />
       <Masthead />
       <Hero />
-      <Ticker />
       <RunningOrder />
       <LiveMarking />
       <Pace />
