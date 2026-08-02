@@ -61,11 +61,7 @@ const VERDICT_LABEL: Record<Exclude<Verdict, "plain">, string> = {
  * in the first line they read, which is a strange way to open.
  */
 const HEADLINE: readonly Run[] = [
-  ["Say it out loud, and turn ", "plain"],
-  ["sort of", "vague"],
-  [" into ", "plain"],
-  ["certain", "ok"],
-  [".", "plain"],
+  ["Find the gaps you didn't know you had.", "plain"],
 ];
 
 /**
@@ -161,69 +157,11 @@ const RUNNING_ORDER = [
   },
 ] as const;
 
-/**
- * The chain of agents, written as a handover rather than as a log.
- *
- * The first version of this section was five timestamped lines and it read
- * like a table of contents: five names, five numbers, no visible relationship
- * between them. The thing worth understanding is not that five agents ran, it
- * is that the third one throws away the second one's work — so each step now
- * names what it was handed, what it did, and what it passed on, and the audit
- * step shows the two claims it actually cut.
- *
- * `takes`/`gives` are the handover. `cut` is only set where something was
- * thrown away, and it is the whole point of the section.
- */
-const CHAIN: readonly {
-  readonly who: string;
-  readonly takes: string;
-  readonly does: string;
-  readonly gives: string;
-  /** Only the audit step throws anything away. */
-  readonly cut?: readonly string[];
-}[] = [
-  {
-    who: "Research",
-    takes: "Your files, and the topic",
-    does: "Finds what a good course on this would cover.",
-    gives: "12 sources read, 4 worth keeping",
-  },
-  {
-    who: "Architect",
-    takes: "4 sources, your files",
-    does: "Drafts the key points you will be graded against, each tied to a quote.",
-    gives: "9 key points drafted",
-  },
-  {
-    who: "Audit",
-    takes: "9 key points",
-    does: "Checks every claim against your files. It sees the quotes, not the reasoning.",
-    gives: "7 upheld",
-    cut: [
-      "Checkpoint control and p53",
-      "Comparison with binary fission in prokaryotes",
-    ],
-  },
-  {
-    who: "Revise",
-    takes: "7 upheld, 2 rejected",
-    does: "Rewrites around the holes. A shorter course is the right answer.",
-    gives: "7 key points, final",
-  },
-  {
-    who: "Questions",
-    takes: "7 key points",
-    does: "Writes the interview bank. No question repeats one you have answered.",
-    gives: "24 questions, none repeating",
-  },
-];
-
 const SECTIONS = [
   { id: "order", label: "Running order" },
   { id: "marking", label: "Live marking" },
   { id: "pace", label: "Pace" },
   { id: "sources", label: "Sources only" },
-  { id: "chain", label: "The chain" },
 ] as const;
 
 /* -------------------------------------------------------------------------
@@ -449,163 +387,8 @@ function MarkedLine({
 }
 
 /* -------------------------------------------------------------------------
- * The field behind the first viewport
- * ---------------------------------------------------------------------- */
-
-/**
- * A waveform tile that repeats without a seam.
- *
- * Every term is a whole number of cycles across the tile width, so the last
- * sample lands exactly where the first one starts and two tiles laid side by
- * side join invisibly. That is the entire reason the drift below can be a
- * single linear translate rather than a simulation.
- *
- * Computed at module scope from a fixed formula — no randomness anywhere, so
- * the server and the browser draw the same path and hydration has nothing to
- * argue about.
- */
-const TILE_W = 1200;
-const TILE_H = 220;
-
-function wavePath(amplitude: number, phase: number) {
-  const points: string[] = [];
-  for (let x = 0; x <= TILE_W; x += 8) {
-    const t = (x / TILE_W) * Math.PI * 2;
-    const y =
-      TILE_H / 2 +
-      amplitude *
-        (Math.sin(3 * t + phase) +
-          0.55 * Math.sin(7 * t + phase * 1.7) +
-          0.3 * Math.sin(11 * t + phase * 2.3));
-    points.push(`${x},${y.toFixed(1)}`);
-  }
-  return `M ${points.join(" L ")}`;
-}
-
-/* Two layers, and both close to invisible.
- *
- * The first version ran three at up to half opacity and it took the page over:
- * the sentence in front of it was the thing you stopped being able to read,
- * which is the opposite of the job. At 0.14 and 0.08 the field registers as
- * texture in the corner of the eye and disappears the moment you look at a
- * word, and the drift is slow enough that nothing in it ever catches. */
-const WAVES = [
-  { d: wavePath(52, 0), opacity: 0.14, seconds: 90, width: 1 },
-  { d: wavePath(78, 2.4), opacity: 0.08, seconds: 140, width: 1 },
-] as const;
-
-/**
- * The signal running through the on-air strip.
- *
- * Stripe's version of "a thing that runs on the page" is an animated gradient
- * mesh behind the hero, and that is the one shape of background this page's
- * rules refuse outright. This is the same intent taken somewhere it belongs: a
- * transmission strip carries a level meter, the meter never stops, and because
- * it is fifteen pixels tall inside a band that is already there it cannot
- * compete with anything.
- *
- * Same seamless tile as the field below, stroked in white and running faster,
- * because a meter that crawls reads as broken.
- */
-function SignalStrip() {
-  return (
-    <div
-      aria-hidden="true"
-      className="relative ml-auto hidden h-4 w-40 overflow-hidden md:block lg:w-72"
-    >
-      <div
-        className="wave-drift absolute inset-y-0 left-0 flex w-[200%]"
-        style={{ animationDuration: "9s" }}
-      >
-        {[0, 1].map((copy) => (
-          <svg
-            key={copy}
-            className="h-full w-1/2 shrink-0"
-            viewBox={`0 0 ${TILE_W} ${TILE_H}`}
-            preserveAspectRatio="none"
-            fill="none"
-            role="presentation"
-          >
-            <path
-              d={WAVES[0].d}
-              stroke="#ffffff"
-              strokeWidth={1}
-              strokeOpacity={0.7}
-              vectorEffect="non-scaling-stroke"
-            />
-          </svg>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* -------------------------------------------------------------------------
  * Chrome
  * ---------------------------------------------------------------------- */
-
-/**
- * What a panel carries besides its content.
- *
- * The page was legible and empty. These are the two devices the reference
- * sites use to give a section presence without putting a picture in it, and
- * both are made of something the section already has rather than of
- * decoration invented for the gap.
- *
- * The numeral is the section's own index, set at about a quarter of the
- * viewport and run off the right edge so only part of it is in frame. Every
- * editorial site on the list does some version of this, and Leonardo builds
- * its entire opening out of it: letterforms at a scale where they stop being
- * read and start being seen. At five per cent of the panel's accent it is
- * texture — you notice the page has something in it, not what.
- *
- * There was a 3px rule in the accent along each panel's top edge too, and it
- * had to go. On the pace panel that meant a single magenta line with nothing
- * else magenta anywhere near it, which reads as a stray border rather than as
- * a system — a colour needs more than one appearance in a panel before a bare
- * rule in it means anything. The numeral and the section index carry the
- * accent between them, and that is enough.
- */
-function PanelDecor({ n, side }: { n: string; side: "left" | "right" }) {
-  return (
-    <div
-      aria-hidden="true"
-      className="-z-10 pointer-events-none absolute inset-y-0 right-[var(--pad)] left-[var(--pad)] overflow-hidden"
-    >
-      {/* Alternating sides down the page.
-       *
-       * Every numeral on the same edge reads as a fixed margin ornament — you
-       * stop seeing it after the second one. Swapping sides means the eye
-       * meets it somewhere new in each panel, which is what keeps it working
-       * as texture rather than as furniture, and it sets up a slow zigzag
-       * against the timecode ladder that runs down the left throughout. */}
-      <span
-        className={cn(
-          "-translate-y-1/2 absolute top-1/2 hidden select-none font-semibold text-[24vw] text-[var(--accent)] leading-none tracking-[-0.05em] opacity-[0.05] [font-stretch:78%] md:block",
-          side === "right" ? "-right-[3vw]" : "-left-[3vw]",
-        )}
-      >
-        {n}
-      </span>
-    </div>
-  );
-}
-
-/**
- * The ruled scale down a section's left margin.
- *
- * Absolutely positioned inside the section rather than placed in the gutter
- * cell of the grid, because it has to run the section's whole height and the
- * grid cell it would otherwise live in is only as tall as the label in it.
- */
-function Ladder() {
-  return (
-    <div
-      aria-hidden="true"
-      className="ladder -z-10 pointer-events-none absolute top-0 bottom-0 left-[var(--pad)] hidden w-[var(--gutter)] md:block"
-    />
-  );
-}
 
 /** Small tracked mono. The page's only label voice. */
 function Slug({
@@ -650,9 +433,9 @@ function Cue({
         // mono caps is a good voice for a timecode and a poor one for the
         // thing somebody is looking for when they have decided to act.
         "press inline-flex items-center rounded-full px-6 py-3.5 font-medium text-[0.95rem] transition-colors duration-200",
-        "focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2",
+        "focus-visible:outline-2 focus-visible:outline-[var(--ink)] focus-visible:outline-offset-2",
         tone === "solid"
-          ? "bg-brand text-white hover:bg-brand-deep"
+          ? "bg-[var(--ink)] text-[var(--stock)] hover:opacity-85"
           : "border border-[var(--rule-strong)] hover:bg-[rgba(12,12,13,0.06)]",
         className,
       )}
@@ -713,13 +496,13 @@ function Masthead() {
 
   return (
     <header className="sticky top-0 z-50 bg-white">
-      <div className="rule-b flex items-center gap-4 px-[var(--pad)] py-3">
+      <div className="rule-b flex items-center gap-4 px-4 py-3 md:px-8">
         <Link
           href="/"
           className="press flex shrink-0 items-center gap-2.5"
           aria-label="Explainaloud, home"
         >
-          <ExplainaloudMark className="h-7 w-7 text-brand" />
+          <ExplainaloudMark className="h-7 w-7" />
           <span className="font-semibold text-[0.92rem] uppercase tracking-[0.04em] [font-stretch:87%]">
             Explainaloud
           </span>
@@ -732,7 +515,7 @@ function Masthead() {
                 className={cn(
                   "transition-opacity duration-200",
                   current === s.id
-                    ? "text-brand opacity-100"
+                    ? "opacity-100 underline underline-offset-4"
                     : "group-hover:opacity-100",
                 )}
               >
@@ -742,7 +525,7 @@ function Masthead() {
                   rather than appearing, so moving between sections reads as
                   one mark travelling along the row. */}
               <span
-                className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-brand"
+                className="absolute inset-x-0 bottom-0 h-[2px] origin-left bg-[var(--ink)]"
                 style={{
                   transform: `scaleX(${current === s.id ? 1 : 0})`,
                   transition: `transform 280ms ${EASE}`,
@@ -764,7 +547,7 @@ function Masthead() {
       <div className="h-[2px] w-full bg-[rgba(12,12,13,0.08)]">
         <div
           ref={tape}
-          className="h-full w-full origin-left bg-brand"
+          className="h-full w-full origin-left bg-[var(--ink)]"
           style={{ transform: "scaleX(0)" }}
         />
       </div>
@@ -795,7 +578,7 @@ function SectionHead({
          * most of what reads as professional rather than promotional. The type
          * is still Archivo and still heavier and tighter than the body; it has
          * simply stopped performing. */}
-        <h2 className="max-w-[22ch] font-semibold text-[clamp(1.7rem,3.6vw,2.7rem)] leading-[1.1] tracking-[-0.025em]">
+        <h2 className="max-w-[24ch] font-display font-normal text-[clamp(1.9rem,3.8vw,3rem)] leading-[1.15] tracking-[-0.015em]">
           {title}
         </h2>
         <p className="mt-5 max-w-[54ch] text-[1.05rem] leading-[1.65] opacity-80">
@@ -823,6 +606,43 @@ const TAKE_OFFSETS = TAKE.reduce<number[]>((acc, _line, i) => {
   acc.push(before);
   return acc;
 }, []);
+
+/**
+ * A fragment of real output, floated beside the headline.
+ *
+ * Steep's hero scatters product UI around the sentence rather than framing one
+ * screenshot beside it, and these are the smallest honest unit of what this
+ * product returns: a marked clause, and a claim that was never reached. Both
+ * are authored demonstration material, marked exactly as the grader would mark
+ * them.
+ *
+ * A real shadow, unlike anything else on the page. It is the one place the
+ * system allows elevation, because these are the only elements that overlap
+ * the text they belong to and need to read as sitting above it.
+ */
+function Artifact({
+  children,
+  className,
+  accent,
+}: {
+  children: React.ReactNode;
+  className?: string;
+  /** The verdict this fragment carries, drawn as an edge. */
+  accent?: string;
+}) {
+  return (
+    <div
+      style={accent ? { borderLeft: `3px solid ${accent}` } : undefined}
+      className={cn(
+        "rounded-[20px] border border-[var(--rule)] bg-white p-5 text-left",
+        "shadow-[0_20px_25px_-5px_rgba(0,0,0,0.06),0_8px_10px_-6px_rgba(0,0,0,0.05)]",
+        className,
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
 function Hero() {
   const [cued, setCued] = useState(false);
@@ -878,96 +698,115 @@ function Hero() {
        * empty space — and every attempt to fix it was an attempt to fill the
        * gap rather than to stop making one. Sized by what is in it, with real
        * padding round it, there is nothing left over. */}
-      <section className="paper accent-blue overflow-hidden px-[var(--pad)] py-10 md:py-14">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <span className="inline-flex items-center rounded-full border border-[var(--rule)] px-3 py-1.5 font-mono text-[0.66rem] uppercase tracking-[0.09em]">
-            <span className="tally-lamp mr-2 inline-block h-[6px] w-[6px] rounded-full bg-[var(--miss)]" />
-            Rec 00:{String(elapsed).padStart(2, "0")} of 03:00
-          </span>
-          <Slug>Marked as you speak</Slug>
-          <SignalStrip />
-        </div>
-
-        {/* The headline at the size a name is set on a building. `[text-wrap:balance]`
-            is deliberately off — the line breaks are part of the composition at
-            this scale and balancing them evens the block into a paragraph. */}
-        {/* The claim on the left, the thing being tested on the right.
+      {/* A centred editorial hero, with the product floating around it.
+       *
+       * The previous composition was a two-column split: claim on the left,
+       * demonstration panel on the right. It is the arrangement every SaaS
+       * landing page uses, and swapping the typeface into it did not change
+       * that - the page still read as the same page in different clothes.
+       *
+       * This one puts the sentence in the middle at full width and lets real
+       * product output orbit it. The reference set does this consistently:
+       * the headline is the composition, and the interface fragments are
+       * scattered evidence rather than one framed screenshot. It also suits
+       * what is being said. A sentence about explaining something out loud
+       * should be set the way a sentence is set, not squeezed into a column
+       * beside a picture. */}
+      <section className="paper [container-type:inline-size] px-4 pt-14 pb-20 md:px-8 md:pt-16 md:pb-28">
+        {/* The name, at the size the name should be.
          *
-         * One grid of two rows rather than two grids stacked: the headline and
-         * the copy take the left column in turn, and the take spans both, so
-         * the panel runs the full height of the viewport and there is no
-         * bottom-right corner left over to fill.
+         * Set in Archivo at the top of its width axis rather than in the
+         * display serif: a wordmark and a headline in the same face at the
+         * same moment compete, and the one that loses is the sentence, which
+         * carries the meaning. Expanded grotesque against a serif sentence is
+         * a real contrast rather than a size difference.
          *
-         * A legend of the three verdict colours was tried in that corner and
-         * removed: section 03 already carries exactly that list, and a hero
-         * that explains its own colour code before anybody has scrolled is
-         * answering a question nobody has asked yet. The corner itself then
-         * went, with the fixed height that created it. */}
-        <div className="grid items-start gap-x-12 gap-y-10 py-10 md:py-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,31rem)]">
-          {/* One column, not two rows.
-           *
-           * The headline and the copy used to be separate rows of the outer
-           * grid, which meant row one's height was set by whichever was taller
-           * — the take panel — and the difference fell out as a hole under the
-           * headline. Nested, they flow, and the two columns simply end where
-           * their own content ends. */}
-          <div className="flex flex-col">
-            <h1 className="max-w-[13ch] font-semibold text-[clamp(2.6rem,7.4vw,6.4rem)] leading-[1.04] tracking-[-0.038em]">
-              <MarkedLine
-                runs={HEADLINE}
-                cued={cued}
-                baseDelay={350}
-                step={340}
-              />
-            </h1>
+         * Sized with `min()` in an inline style, not a viewport unit in a
+         * class. `vw` keeps growing after the page has stopped: past the
+         * measure the content is capped at 84rem while `12vw` is not, so on a
+         * wide display the word ran straight off the side. The rem term is
+         * what catches it. Inline because a Tailwind arbitrary value
+         * containing a comma does not generate.
+         *
+         * Tracking goes positive, against everything else on the page. A
+         * wordmark is read as letters in sequence rather than as a word
+         * shape, and letters need air to be read that way. */}
+        <p
+          aria-hidden="true"
+          style={{ fontSize: "min(9.4cqw, 8.5rem)" }}
+          className="select-none whitespace-nowrap text-center font-semibold leading-[0.95] tracking-[0.01em] [font-stretch:125%]"
+        >
+          EXPLAINALOUD
+        </p>
 
-            <div className="mt-9">
-              <p className="max-w-[32ch] text-[1.02rem] leading-[1.6] opacity-75">
-                Talk through a topic for three minutes. Get your own words back,
-                marked. Nothing typed, no audio kept.
-              </p>
-              <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
-                <Cue href="/signup" className="justify-center sm:justify-start">
-                  Start a session
-                </Cue>
-                {/* A link, not a second button.
-                 *
-                 * Two pills side by side read as a choice between two equal
-                 * things, and these were never equal: one starts the product,
-                 * the other scrolls down the page. Same label problem too —
-                 * "See it mark" sounded like an alternative way in rather than
-                 * a jump to the section that explains the marking. */}
-                <a
-                  href="#marking"
-                  className="press inline-flex items-center justify-center py-3.5 font-medium text-[0.95rem] underline decoration-[var(--rule-strong)] underline-offset-4 transition-colors hover:decoration-current sm:justify-start"
-                >
-                  See how the marking works
-                </a>
-              </div>
-            </div>
+        <div className="relative mx-auto max-w-[46rem] text-center">
+          <h1 className="mx-auto mt-7 max-w-[22ch] pb-1 font-display font-normal text-[clamp(1.7rem,3.4vw,2.6rem)] leading-[1.2] tracking-[-0.012em] opacity-90">
+            <MarkedLine
+              runs={HEADLINE}
+              cued={cued}
+              baseDelay={350}
+              step={340}
+            />
+          </h1>
+
+          <p className="mx-auto mt-7 max-w-[46ch] text-[1.05rem] leading-[1.65] opacity-70">
+            Upload your notes, talk through them for three minutes, and read
+            back which claims you got right, which were vague, and what you
+            skipped.
+          </p>
+
+          <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
+            <Cue href="/signup">Start a session</Cue>
+            <Cue href="#marking" tone="outline">
+              See how the marking works
+            </Cue>
           </div>
 
-          {/* The take, beside the headline.
-           *
-           * The right of the first viewport went through a constellation, a
-           * drawn figure and a gradient panel before this, and all three were
-           * the same mistake: something invented to fill a space. The proof
-           * was already on the page, sitting in a strip along the foot where
-           * nobody arriving would read it. It belongs here — you read the
-           * claim on the left and watch it being tested on the right, in one
-           * movement, which is the product. */}
-          {/* Sized to finish level with the button beside it.
-           *
-           * The panel used to overhang the left column by about eighty pixels,
-           * which read as the composition having been assembled rather than
-           * measured — the eye lines up two columns that start together and
-           * expects them to end together. Nothing was removed to close that
-           * gap; the spacing inside was simply tightened a notch throughout,
-           * and the one floor that was reserving room it never needed came
-           * out. The reserved height on the three take lines stays exactly as
-           * it was, because that is what stops the page stepping down as the
-           * words arrive. */}
-          <div className="rounded-2xl border border-[var(--rule)] p-5">
+          {/* Two fragments of real output, floated either side of the
+           * headline on a wide screen and folded back into the flow below it
+           * on a narrow one. `lg:absolute` is what does the folding: they are
+           * ordinary blocks until there is room to orbit. */}
+          <Artifact
+            accent="var(--ok)"
+            className="mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
+          >
+            <p className="text-[0.95rem] leading-[1.6]">
+              <span
+                style={{ color: "var(--ok)" }}
+                className="italic underline decoration-1 underline-offset-[3px]"
+              >
+                two identical daughter cells
+              </span>
+              , and it starts with the DNA{" "}
+              <span
+                style={{ color: "var(--ok)" }}
+                className="italic underline decoration-1 underline-offset-[3px]"
+              >
+                being copied
+              </span>
+              .
+            </p>
+            <p className="mt-3 text-[0.8rem] opacity-55">
+              Marked as you said it
+            </p>
+          </Artifact>
+
+          <Artifact
+            accent="var(--miss)"
+            className="mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
+          >
+            <p className="text-[0.95rem] leading-[1.6]">
+              <span style={{ color: "var(--miss)" }} className="italic">
+                the spindle fibres attach at the centromere
+              </span>
+            </p>
+            <p className="mt-3 text-[0.8rem] opacity-55">Never said</p>
+          </Artifact>
+        </div>
+
+        {/* The take itself, centred under the sentence rather than beside it. */}
+        <div className="mx-auto mt-14 max-w-[42rem]">
+          <div className="rounded-[20px] border border-[var(--rule)] p-5">
             {/* What is being explained, and what it was built from.
              *
              * The panel used to open straight into three marked sentences with
@@ -981,9 +820,7 @@ function Hero() {
                   From cell-division.pdf
                 </Slug>
               </div>
-              <Slug className="tc shrink-0 text-[var(--accent)] opacity-100">
-                Live
-              </Slug>
+              <Slug className="tc shrink-0 opacity-100">Live</Slug>
             </div>
 
             {/* The level, while it is still being said.
@@ -999,7 +836,7 @@ function Hero() {
                 <span
                   key={delay}
                   className={cn(
-                    "flex-1 rounded-[1px] bg-[var(--accent)]",
+                    "flex-1 rounded-[1px] bg-[var(--ink)] opacity-25",
                     !take.done && "waveform-bar",
                   )}
                   style={{
@@ -1123,7 +960,7 @@ function Ticker() {
                 {/* The mark itself as the separator, rather than a bullet or
                     a slash. It is already the page's one drawn shape. */}
                 <ExplainaloudMark
-                  className="mx-6 h-3.5 w-3.5 shrink-0 text-brand opacity-70"
+                  className="mx-6 h-3.5 w-3.5 shrink-0 opacity-40"
                   strokeWidth={6}
                 />
               </li>
@@ -1143,10 +980,8 @@ function RunningOrder() {
   return (
     <section
       id="order"
-      className="paper-grey accent-violet relative isolate rule-b scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
+      className="paper-grey relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
-      <PanelDecor n="02" side="right" />
-      <Ladder />
       <SectionHead
         n="02"
         title="Four minutes, start to finish."
@@ -1169,7 +1004,7 @@ function RunningOrder() {
           >
             <Slug className="tc pt-2.5">{row.n}</Slug>
             <div>
-              <h3 className="font-semibold text-[clamp(1.3rem,3.2vw,2.1rem)] leading-[1.05] tracking-[-0.02em] [font-stretch:87%]">
+              <h3 className="font-display font-normal text-[clamp(1.35rem,3vw,2rem)] leading-[1.15] tracking-[-0.01em]">
                 {row.item}
               </h3>
               <p className="max-w-[58ch] pt-3 leading-[1.6] opacity-80">
@@ -1286,10 +1121,8 @@ function LiveMarking() {
     <section
       ref={ref}
       id="marking"
-      className="paper accent-blue relative isolate rule-b scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
+      className="paper relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
-      <PanelDecor n="03" side="left" />
-      <Ladder />
       <SectionHead
         n="03"
         title="Marked while you are still talking."
@@ -1349,9 +1182,9 @@ function LiveMarking() {
                   posRef.current = Number(e.target.value);
                   setScrub(posRef.current);
                 }}
-                className="mt-3 h-[5px] w-full cursor-ew-resize appearance-none rounded-full accent-[var(--color-brand)]"
+                className="mt-3 h-[5px] w-full cursor-ew-resize appearance-none rounded-full accent-[var(--ink)]"
                 style={{
-                  background: `linear-gradient(to right, var(--color-brand) ${(scrub / SCRUB_MAX) * 100}%, rgba(12,12,13,0.16) ${(scrub / SCRUB_MAX) * 100}%)`,
+                  background: `linear-gradient(to right, var(--ink) ${(scrub / SCRUB_MAX) * 100}%, rgba(12,12,13,0.16) ${(scrub / SCRUB_MAX) * 100}%)`,
                 }}
               />
             </div>
@@ -1376,9 +1209,21 @@ function LiveMarking() {
                   <dt>
                     <Slug>{VERDICT_LABEL[v]}</Slug>
                   </dt>
+                  {/* The missing claim arrives at the end, not at the start.
+                   *
+                   * This read `v === "miss" ? 1 : ...` - a literal, so the row
+                   * said "missing a step: 1" at every scrubber position
+                   * including zero, and never once changed while you dragged
+                   * it. Two things wrong with that. It is the only number on a
+                   * panel built entirely on numbers that move, so it reads as
+                   * broken. And it is not true yet: at the start of a take
+                   * nothing has been skipped, because nothing has been said.
+                   * You cannot miss a step you have not reached. */}
                   <dd className="tc ml-auto font-mono text-[0.72rem] tabular-nums">
                     {v === "miss"
-                      ? 1
+                      ? counted.length === SCRUB.length
+                        ? 1
+                        : 0
                       : counted.filter((r) => r[1] === v).length}
                   </dd>
                 </div>
@@ -1416,10 +1261,8 @@ function Pace() {
     <section
       ref={ref}
       id="pace"
-      className="paper-grey accent-magenta relative isolate rule-b scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
+      className="paper-grey relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
-      <PanelDecor n="04" side="right" />
-      <Ladder />
       <SectionHead
         n="04"
         title="Fast is not the same as fluent."
@@ -1446,8 +1289,7 @@ function Pace() {
                 className="relative block flex-1 self-end rounded-t-[4px] focus:outline-none"
                 style={{
                   height: visible ? `${(v / peak) * 100}%` : "0%",
-                  background:
-                    v > RACING ? "var(--vague)" : "var(--color-brand)",
+                  background: v > RACING ? "var(--vague)" : "var(--ink)",
                   opacity: hover === null || hover === i ? 1 : 0.3,
                   transition: `height 720ms ${EASE} ${i * 55}ms, opacity 180ms ease-out`,
                 }}
@@ -1509,10 +1351,8 @@ function SourcesOnly() {
   return (
     <section
       id="sources"
-      className="paper accent-violet relative isolate rule-b scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
+      className="paper relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
-      <PanelDecor n="05" side="left" />
-      <Ladder />
       <SectionHead
         n="05"
         title="A short course is a correct answer."
@@ -1531,12 +1371,12 @@ function SourcesOnly() {
             role="switch"
             aria-checked={strict}
             onClick={() => setStrict((s) => !s)}
-            className="press inline-flex items-center gap-4 focus:outline-none focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-4"
+            className="press inline-flex items-center gap-4 focus:outline-none focus-visible:outline-2 focus-visible:outline-[var(--ink)] focus-visible:outline-offset-4"
           >
             <span
               className={cn(
                 "relative block h-7 w-[3.25rem] shrink-0 rounded-full transition-colors duration-200",
-                strict ? "bg-brand" : "bg-[rgba(12,12,13,0.18)]",
+                strict ? "bg-[var(--ink)]" : "bg-[rgba(12,12,13,0.18)]",
               )}
             >
               <span
@@ -1549,7 +1389,7 @@ function SourcesOnly() {
             </span>
             <span className="font-mono text-[0.72rem] uppercase tracking-[0.09em]">
               Sources only{" "}
-              <span className={strict ? "text-brand" : "opacity-45"}>
+              <span className={strict ? "" : "opacity-45"}>
                 {strict ? "on" : "off"}
               </span>
             </span>
@@ -1594,7 +1434,7 @@ function SourcesOnly() {
           </ul>
 
           <p className="rule-t pt-4">
-            <Slug className={strict ? "text-brand opacity-100" : undefined}>
+            <Slug className={strict ? "opacity-100" : undefined}>
               {strict
                 ? `${IN_SOURCE} key points. ${COURSE.length - IN_SOURCE} gaps named instead of filled.`
                 : `${COURSE.length} key points, ${COURSE.length - IN_SOURCE} of them researched beyond your files.`}
@@ -1607,200 +1447,12 @@ function SourcesOnly() {
 }
 
 /* -------------------------------------------------------------------------
- * 06 — The chain
- * ---------------------------------------------------------------------- */
-
-function Chain() {
-  const { ref, visible } = useInView<HTMLElement>();
-
-  /* The work moving down the chain, on a loop.
-   *
-   * `stage` is which agent currently holds it: everything before has run,
-   * everything after is waiting. It advances once the section is on screen
-   * rather than on mount, so the run is not already over by the time anybody
-   * scrolls to it — and when it reaches the end it holds on the finished
-   * chain, then starts a fresh course from the top.
-   *
-   * The hold at the end is the longest pause in the sequence and it is doing
-   * work: the finished state is what the section is arguing for, and a chain
-   * that snapped straight back to nothing would never let anybody read it.
-   *
-   * The audit step gets longer than the running steps for the same reason. It
-   * is the one that rejects something, and the pause before the two cut claims
-   * appear is what makes the rejection read as a decision rather than a
-   * transition. */
-  const [stage, setStage] = useState(0);
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
-
-  useEffect(() => {
-    if (!visible) return;
-    if (reduced) {
-      setStage(CHAIN.length);
-      return;
-    }
-    const finished = stage >= CHAIN.length;
-    const id = window.setTimeout(
-      () => setStage(finished ? 0 : stage + 1),
-      finished
-        ? 3_200
-        : stage === 0
-          ? 400
-          : CHAIN[stage - 1]?.cut
-            ? 1_900
-            : 1_100,
-    );
-    return () => window.clearTimeout(id);
-  }, [visible, stage, reduced]);
-
-  return (
-    <section
-      ref={ref}
-      id="chain"
-      className="paper-grey accent-blue relative isolate scroll-mt-24 px-[var(--pad)] py-24 md:py-32"
-    >
-      <PanelDecor n="06" side="right" />
-      <Ladder />
-      <SectionHead
-        n="06"
-        title="Nobody grades their own work."
-        lede="One agent drafts. A second one that did not write it cuts anything it cannot trace to your files."
-      />
-
-      <div
-        data-rise=""
-        className="mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4"
-      >
-        <Slug className="tc pt-6">chain</Slug>
-
-        {/* A rule down the left of the whole list, so the five steps read as
-            one thing being passed along rather than as five entries. The
-            ultramarine line on top of it is the work itself: it draws down as
-            each agent finishes and hands over, which is the one fact this
-            section exists to make legible. */}
-        <ol className="relative border-[var(--rule)] border-l">
-          <span
-            aria-hidden="true"
-            className="-left-px absolute top-0 w-px origin-top bg-brand"
-            style={{
-              height: `${(Math.min(stage, CHAIN.length) / CHAIN.length) * 100}%`,
-              transition: `height 700ms ${EASE}`,
-            }}
-          />
-
-          {CHAIN.map((step, i) => {
-            const done = stage > i;
-            const working = stage === i;
-            const reached = done || working;
-
-            return (
-              <li
-                key={step.who}
-                className="relative py-7 pl-8 md:pl-10"
-                style={{
-                  opacity: reached ? 1 : 0.35,
-                  transition: `opacity 500ms ${EASE}`,
-                }}
-              >
-                {/* The node. Hollow until the work reaches it, filled once it
-                    has run, and pinging while it is the one holding the work.
-                    The audit step fills red rather than ultramarine — the one
-                    colour difference in the list marks the one step that can
-                    say no. */}
-                <span className="-left-[6px] absolute top-[2.3rem] block h-[11px] w-[11px]">
-                  {working ? (
-                    <span
-                      className={cn(
-                        "work-ping absolute inset-0 rounded-full border",
-                        step.cut
-                          ? "border-[var(--miss)]"
-                          : "border-[var(--color-brand)]",
-                      )}
-                    />
-                  ) : null}
-                  <span
-                    className={cn(
-                      "absolute inset-0 rounded-full border-2 transition-colors duration-500",
-                      reached
-                        ? step.cut
-                          ? "border-[var(--miss)] bg-[var(--miss)]"
-                          : "border-brand bg-brand"
-                        : "border-[var(--rule-strong)] bg-[var(--stock)]",
-                    )}
-                  />
-                </span>
-
-                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                  <h3 className="font-semibold text-[clamp(1.15rem,2.4vw,1.6rem)] tracking-[-0.02em]">
-                    {step.who}
-                  </h3>
-                  {/* The handover reads as a state, so it says what it is
-                      doing while it is doing it. */}
-                  <Slug className="tc">
-                    {done ? (
-                      <>
-                        in: {step.takes} → out: {step.gives}
-                      </>
-                    ) : working ? (
-                      <span className="text-brand-ink opacity-100">
-                        Working on {step.takes.toLowerCase()}
-                      </span>
-                    ) : (
-                      <span className="opacity-60">Waiting</span>
-                    )}
-                  </Slug>
-                </div>
-
-                <p className="mt-2.5 max-w-[58ch] leading-[1.65] opacity-80">
-                  {step.does}
-                </p>
-
-                {/* What was thrown away, named. This is the section's argument
-                    and it is the only place on the page where the product
-                    tells you about something it decided not to give you — so
-                    it arrives when the audit finishes, not before. */}
-                {step.cut ? (
-                  <div
-                    className="mt-5 grid transition-[grid-template-rows,opacity] duration-500 ease-out"
-                    style={{
-                      gridTemplateRows: done ? "1fr" : "0fr",
-                      opacity: done ? 1 : 0,
-                    }}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="rounded-r-lg border-[var(--miss)] border-l-2 bg-[color-mix(in_srgb,var(--miss)_6%,transparent)] py-3 pr-4 pl-4">
-                        <Slug className="text-[var(--miss)] opacity-100">
-                          Cut, not traceable to your files
-                        </Slug>
-                        <ul className="mt-2 space-y-1">
-                          {step.cut.map((claim) => (
-                            <li
-                              key={claim}
-                              className="text-[0.95rem] text-[var(--miss)] leading-[1.5] line-through decoration-[var(--miss)]/50"
-                            >
-                              {claim}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-/* -------------------------------------------------------------------------
  * Close
  * ---------------------------------------------------------------------- */
 
 function Close() {
   return (
-    <section className="tx-invert ribbon px-[var(--pad)] py-28 md:py-36">
+    <section className="tx-invert ribbon px-4 py-28 md:px-8 md:py-36">
       <div data-rise="" className="grid grid-cols-[var(--gutter)_1fr] gap-x-4">
         <div className="pt-3">
           <span className="font-mono text-[0.68rem] uppercase tracking-[0.09em]">
@@ -1809,7 +1461,7 @@ function Close() {
           </span>
         </div>
         <div>
-          <h2 className="max-w-[16ch] font-semibold text-[clamp(2rem,4.6vw,3.4rem)] leading-[1.08] tracking-[-0.03em]">
+          <h2 className="max-w-[18ch] font-display font-normal text-[clamp(2.1rem,4.4vw,3.4rem)] leading-[1.12] tracking-[-0.015em]">
             Find out before it matters.
           </h2>
           <p className="mt-8 max-w-[32ch] text-[1.15rem] leading-[1.55] opacity-90">
@@ -1838,9 +1490,9 @@ function Close() {
 
 function Footer() {
   return (
-    <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 px-[var(--pad)] py-8">
+    <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-8 md:px-8">
       <span className="flex items-center gap-2">
-        <ExplainaloudMark className="h-5 w-5 text-brand" />
+        <ExplainaloudMark className="h-5 w-5" />
         <Slug className="opacity-100">Explainaloud</Slug>
       </span>
       <Link href="/terms" className="ml-auto">
@@ -1870,7 +1522,6 @@ export default function Home() {
       <LiveMarking />
       <Pace />
       <SourcesOnly />
-      <Chain />
       <Close />
       <Footer />
     </main>

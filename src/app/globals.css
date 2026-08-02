@@ -176,12 +176,12 @@
    * that changes shape between controls is one they have to re-find on every
    * press. */
   :focus-visible {
-    outline: 2px solid var(--color-brand);
+    outline: 2px solid currentColor;
     outline-offset: 2px;
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-brand) 22%, transparent);
+    background: rgba(12, 12, 13, 0.14);
     color: inherit;
   }
 
@@ -459,38 +459,12 @@
      beside it setting at about thirty characters. */
   --gutter: 2.75rem;
 
-  /* The measure, expressed as padding rather than as a centred container.
-   *
-   * The page has no wrapper and cannot easily have one: every panel is
-   * full-bleed by design — the alternating stocks and the inverted closing
-   * region run edge to edge — so a `max-width` box around the content would
-   * have to sit inside each section, and the timecode ladder and the ghost
-   * numerals are positioned against the section itself. Padding that grows
-   * once the viewport passes the measure keeps one number in one place and
-   * every absolutely positioned thing can share it.
-   *
-   * Without this the page simply kept stretching. At 2000px the headline
-   * column and the take panel were the same size they are at 1400 with nine
-   * hundred pixels of nothing between them, and the running order's durations
-   * sat a screen's width from the rows they belonged to. Content islands
-   * drifting apart is the specific way an unconstrained layout looks broken
-   * on a large display.
-   *
-   * `100%` rather than `100vw`: a percentage resolves against the containing
-   * block, so it excludes the scrollbar. `100vw` includes it, which overshoots
-   * by however wide the scrollbar is and puts a horizontal scroll on the page.
-   * `max()` is what keeps the value from going negative below the measure —
-   * a negative padding is invalid and would drop the declaration entirely. */
-  --measure: 84rem;
-  --pad: 1rem;
-
   background: var(--stock);
   color: var(--ink);
 }
 @media (min-width: 768px) {
   .tx {
     --gutter: 5.5rem;
-    --pad: max(2rem, calc((100% - var(--measure)) / 2));
   }
 }
 @media (min-width: 1024px) {
@@ -510,7 +484,14 @@
  * unreadable and, worse, stops meaning "correct" — the marking always stays on
  * the grey stock. */
 .tx-invert {
-  --stock: var(--color-brand);
+  /* Ink, not the brand hue.
+   *
+   * This region was a full-bleed ultramarine panel, which made the largest
+   * single colour on the page a colour that means nothing. The base is
+   * monotone now - paper, grey stock, ink - and the only colour anywhere is a
+   * verdict on a word somebody said. A saturated field this size was
+   * competing with the three colours the whole product runs on. */
+  --stock: #101012;
   --ink: #ffffff;
   --rule: rgba(255, 255, 255, 0.3);
   --rule-strong: rgba(255, 255, 255, 0.65);
@@ -664,61 +645,20 @@
   --accent: #0c0c0d;
 }
 
-/* The gradient, on the closing block and nowhere else.
+/* The closing field: ink, flat.
  *
- * It was tried behind the first viewport and it was the wrong place: a
- * saturated field under the headline fought the marked words, which are the
- * one thing on this page that cannot be allowed to go quiet, and it is the
- * treatment `.claude/rules/design.md` rules out by name for looking generated.
+ * This was four radial gradients in violet, magenta and blue, drifting on a
+ * 26-second loop. It was the largest colour on the site and it meant nothing —
+ * and a blurred radial gradient used as a background is the first thing on the
+ * banned list in `.claude/rules/design.md`, which this predated and then
+ * quietly outlived.
  *
- * The close is where it earns its keep. There is no marking on it, nothing to
- * read but one line and two buttons, and a page that has been disciplined for
- * six sections can afford to end on colour.
- *
- * Animating `background-position` rather than the colour stops: positions are
- * cheap to interpolate and the browser slides an already-painted gradient,
- * where animating stops re-rasterises the whole thing every frame. Twenty-six
- * seconds a cycle, so nothing in it ever appears to arrive.
- *
- * Declared after `.tx-invert` on purpose — that class paints the flat brand
- * ground this replaces, and at equal specificity the later rule wins. */
-@keyframes ribbon-drift {
-  0%,
-  100% {
-    background-position:
-      0% 0%,
-      100% 0%,
-      50% 100%,
-      0% 100%;
-  }
-  50% {
-    background-position:
-      35% 25%,
-      65% 35%,
-      25% 65%,
-      70% 90%;
-  }
-}
+ * Flat ink instead. The base of this page is paper, grey stock and ink; the
+ * only colour anywhere is a verdict on a word somebody said, and a saturated
+ * field this size was competing with the three colours the product runs on. */
 .ribbon {
-  background-color: #1b1585;
-  background-image:
-    radial-gradient(62% 72% at 18% 18%, #4b23c8 0%, transparent 62%),
-    radial-gradient(58% 66% at 88% 12%, #8f1a72 0%, transparent 62%),
-    radial-gradient(72% 62% at 62% 92%, #0f5fd8 0%, transparent 62%),
-    radial-gradient(52% 56% at 8% 88%, #2a1298 0%, transparent 62%);
-  background-size:
-    180% 180%,
-    160% 160%,
-    200% 200%,
-    170% 170%;
-  animation: ribbon-drift 26s ease-in-out infinite;
+  background-color: #101012;
 }
-@media (prefers-reduced-motion: reduce) {
-  .ribbon {
-    animation: none;
-  }
-}
-
 /* The level meter running through the on-air strip.
  *
  * The track holds two copies of a seamless tile, so translating exactly -50%
