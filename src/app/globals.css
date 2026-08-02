@@ -1828,13 +1828,46 @@
     rgba(255, 252, 248, 0.5);
   border: 1px solid rgba(194, 65, 12, 0.14);
   border-top-color: rgba(251, 191, 36, 0.45);
-  backdrop-filter: blur(18px) saturate(150%);
+  /* Through a variable, so the app can switch it off. See below. */
+  --glass-blur: blur(18px) saturate(150%);
+  backdrop-filter: var(--glass-blur);
   /* The lift is tinted with the sunset rather than with black. A neutral
      shadow under a warm panel on warm paper reads as dirt; this one reads as
      the panel sitting in the same light as everything around it. */
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
     0 20px 45px -22px rgba(124, 45, 18, 0.4);
+}
+
+/* The blur, only where there is something to blur.
+ *
+ * `backdrop-filter` is the most expensive property on any page that uses it:
+ * the compositor snapshots the region behind the element, blurs it, and does
+ * that again on every frame the element or anything behind it moves — during a
+ * scroll, every frame, for the panel's whole area.
+ *
+ * On the landing it buys something: those panels float over ground fields with
+ * real structure in them. In the app it buys nothing, and that is measurable
+ * rather than a matter of taste — the canvas behind these panels is a flat
+ * `#f2f2f0` with no field, no image and no gradient, and blurring a uniform
+ * colour returns the same uniform colour. Every pixel of that work was being
+ * spent to produce an identical image.
+ *
+ * **Written as opt-in rather than as an override, and that is not a style
+ * choice.** The first attempt was `.register-app .glass-panel { backdrop-filter:
+ * none }`, which reached the browser as `.register-app .glass-panel { }` —
+ * Lightning CSS drops declarations whose value is the property's initial
+ * value, so an override that says "none" is silently deleted and the blur
+ * survives. Anything that turns this off by resetting it will be eaten the
+ * same way. Turning it *on* in one place cannot be.
+ *
+ * `.tx` is the landing root, and the `min-width` is why the blur was already
+ * dropped on phones: nobody sees through a blur on a six-inch display.
+ *
+ * The panel still looks like glass everywhere, because the translucent fill,
+ * the warm hairline and the lit top edge are what made it look like glass. */
+.register-app .glass-panel {
+  --glass-blur: none;
 }
 
 /* Inside the one dark section, the same panel inverts. */

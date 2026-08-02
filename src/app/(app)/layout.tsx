@@ -26,7 +26,21 @@ export default async function DashboardLayout({
           should not depend on where somebody has scrolled to in a long gap
           report. Hairline underneath rather than a shadow: the bar is part of
           the page's structure, not floating over it. */}
-      <header className="sticky top-0 z-40 border-border border-b bg-background/90 backdrop-blur-sm">
+      {/* Opaque, and no blur.
+       *
+       * This was `bg-background/90 backdrop-blur-sm`, which is the most
+       * expensive thing that can be put on a sticky element: a bar pinned to
+       * the top of a scrolling page has to re-snapshot and re-blur the strip
+       * behind it on every single frame of every scroll, across the full
+       * width of the window.
+       *
+       * What that bought was ten per cent of the page showing through, then
+       * blurred. At that transmission the blur is very nearly invisible, and
+       * the ninety per cent that was already opaque is doing all the work of
+       * making the bar read as a surface. Going fully opaque loses a hairline
+       * of translucency nobody could describe and removes a full-width
+       * compositor pass per frame. */}
+      <header className="sticky top-0 z-40 border-border border-b bg-background">
         <div className="mx-auto flex w-full max-w-[var(--measure)] items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex min-w-0 items-center gap-3 lg:gap-8">
             {/* Same mark and same wordmark as the landing masthead. The
