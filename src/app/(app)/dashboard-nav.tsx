@@ -59,7 +59,7 @@ export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
           aria-label={
             current ? `Menu. Currently on ${current.label}` : "Open menu"
           }
-          className="flex items-center gap-1.5 rounded-md bg-surface px-2.5 py-1.5 text-sm font-medium text-strong transition-colors hover:bg-surface/80 focus-visible:ring-2 focus-visible:ring-brand focus-visible:outline-none md:hidden"
+          className="flex items-center gap-1.5 rounded-control border border-border bg-card px-3 py-2 font-medium text-sm text-strong shadow-rest transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] md:hidden"
         >
           {current ? (
             <>
@@ -105,8 +105,13 @@ export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
               aria-label={item.label}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "relative flex items-center gap-2 rounded-md px-2 py-1.5 text-sm font-medium transition-colors duration-200 lg:px-3",
-                active ? "text-strong" : "text-subtle hover:text-strong",
+                "relative flex items-center gap-2 rounded-control px-2.5 py-2 font-medium text-sm transition-colors duration-200 lg:px-3",
+                /* The active item is the one place in the shell the accent
+                   appears. Everything else in the bar is ink or grey, so
+                   "where am I" is answered by the only colour on screen. */
+                active
+                  ? "text-[color:var(--accent-solid)]"
+                  : "text-subtle hover:text-strong",
               )}
             >
               {/* Shared layout id: the active pill slides between tabs instead
@@ -115,7 +120,7 @@ export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
                 <motion.span
                   layoutId={layoutId}
                   transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
-                  className="absolute inset-0 rounded-md bg-surface"
+                  className="absolute inset-0 rounded-control bg-accent-wash"
                 />
               )}
               <Icon className="relative size-4" />

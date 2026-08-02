@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Archivo, Martian_Mono, Source_Serif_4 } from "next/font/google";
+import { Archivo, Inter, Martian_Mono, Source_Serif_4 } from "next/font/google";
 import { AuthHashRescue } from "~/components/auth-hash-rescue";
 import { siteUrl } from "~/lib/site";
 import { ThemeProvider } from "./theme-provider";
@@ -63,6 +63,27 @@ const sourceSerif = Source_Serif_4({
   style: ["normal", "italic"],
   weight: ["400"],
   variable: "--font-display",
+});
+
+/* Inter, and only inside the signed-in app.
+ *
+ * It is loaded here because fonts have to be requested from the root layout to
+ * be preloaded, but it is applied by `.register-app` alone — the landing page
+ * never sets a word in it.
+ *
+ * The old rule in `.claude/rules/design.md` banned Inter outright, and that
+ * ban was written when the app had no type system at all: Inter was the
+ * symptom of everything being default, not the cause. With a real weight and
+ * size scale under it, a neutral grotesque is exactly right for a working
+ * interface — the display face's job is to be memorable in three seconds, and
+ * a screen somebody reads for twenty minutes has the opposite job.
+ *
+ * The variable cut, so weight is a continuous axis rather than four separate
+ * downloads: headings sit at 600, body at 400, and the distance between them
+ * is what carries hierarchy instead of size alone. */
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-ui",
 });
 
 const DIRECTION_CONTRACT = `<!--
@@ -137,7 +158,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body
-        className={`${archivo.variable} ${martianMono.variable} ${sourceSerif.variable} font-sans`}
+        className={`${archivo.variable} ${martianMono.variable} ${sourceSerif.variable} ${inter.variable} font-sans`}
       >
         {/* The direction this design is under contract to, emitted as a real
             HTML comment so it survives the production build and can be read

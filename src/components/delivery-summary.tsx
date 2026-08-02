@@ -49,7 +49,7 @@ export function DeliverySummary({
   return (
     <section
       aria-labelledby="delivery-heading"
-      className="flex flex-col gap-3 rounded-xl border border-border bg-surface p-5"
+      className="flex flex-col gap-3 rounded-card border border-border bg-card p-5 shadow-rest"
     >
       <h2
         id="delivery-heading"

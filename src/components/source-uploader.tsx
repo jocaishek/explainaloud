@@ -293,7 +293,7 @@ export function SourceUploader({
               role="dialog"
               aria-modal="true"
               aria-label={`Preview of ${preview.filename}`}
-              className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-xl border border-border bg-popover"
+              className="flex max-h-[80vh] w-full max-w-2xl flex-col rounded-card border border-border bg-popover shadow-float"
             >
               <div className="flex items-center gap-3 border-b border-border px-4 py-3">
                 <span className="min-w-0 flex-1 truncate text-sm font-semibold text-strong">

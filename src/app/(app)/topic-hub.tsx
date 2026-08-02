@@ -64,7 +64,7 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
   if (!courses?.length) {
     return (
       <Shell title={title} lede={lede}>
-        <Card className="flex flex-col items-start gap-4 rounded-xl border border-border bg-card p-6">
+        <Card className="flex flex-col items-start gap-4 rounded-card border border-border bg-card p-6">
           <p className="text-sm text-subtle">
             You don&apos;t have any topics yet. Start one, and everything here
             fills in as you explain it.
@@ -93,7 +93,7 @@ export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
               <Card
                 className={cn(
                   "press flex flex-row items-center justify-between gap-4",
-                  "rounded-xl border border-border bg-card p-4",
+                  "rounded-card border border-border bg-card p-4",
                   "transition-colors duration-200 hover:border-brand/50 hover:bg-surface",
                 )}
               >
@@ -131,7 +131,7 @@ function Shell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-6 py-16">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <div>
         <h1 className="font-semibold text-[clamp(1.45rem,3vw,2rem)] text-strong leading-[1.1] tracking-[-0.025em]">
           {title}

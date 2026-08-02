@@ -2587,7 +2587,7 @@ export function RecordConsole({
        * up. A demo that promises one surface and delivers another is a small
        * lie told at the worst possible moment. */}
       {(status === "recording" || transcript) && (
-        <div className="w-full max-w-2xl rounded-2xl border border-border p-6">
+        <div className="w-full max-w-2xl rounded-card border border-border bg-card p-6 shadow-rest">
           <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 border-border border-b pb-3 font-mono text-[0.68rem] text-subtle uppercase tracking-[0.09em]">
             <span className="flex items-center gap-2">
               <span
@@ -2640,7 +2640,7 @@ export function RecordConsole({
             {/* No score here. A number attached to the thing you just said
                 invites judging the take rather than reading what was missed —
                 the score belongs on the gap report, once. */}
-            <div className="rounded-xl border border-border bg-surface p-4">
+            <div className="rounded-card border border-border bg-surface p-4">
               <p className="text-sm text-foreground">{report.verdict}</p>
             </div>
 
@@ -2954,7 +2954,7 @@ function ModeChooser({
  */
 function InterviewRecap({ segments }: { segments: Segment[] }) {
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-border bg-surface p-5">
+    <div className="flex w-full max-w-2xl flex-col gap-3 rounded-card border border-border bg-surface p-5">
       <h2 className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
         This recording · {segments.length} answered
       </h2>

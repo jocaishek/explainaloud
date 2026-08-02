@@ -17,7 +17,7 @@ export default async function SettingsPage() {
     .maybeSingle<{ capable_wpm: number; median_wpm: number }>();
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-10 px-6 py-16">
+    <div className="mx-auto flex w-full max-w-2xl flex-col gap-stack px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <div>
         <h1 className="text-3xl font-semibold tracking-tight text-strong">
           Settings
@@ -33,7 +33,7 @@ export default async function SettingsPage() {
         title="What's included"
         description="Everything Explainaloud does, at no cost."
       >
-        <ul className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+        <ul className="divide-y divide-border overflow-hidden rounded-card border border-border bg-card shadow-rest">
           {PLAN_FEATURES.map((feature) => (
             <li
               key={feature.label}
@@ -67,7 +67,7 @@ export default async function SettingsPage() {
       </Section>
 
       <Section title="Account" description="Details tied to your login.">
-        <dl className="divide-y divide-border overflow-hidden rounded-xl border border-border">
+        <dl className="divide-y divide-border overflow-hidden rounded-card border border-border bg-card shadow-rest">
           <Row label="Email" value={user.email ?? "—"} />
           <Row
             label="Using it for"

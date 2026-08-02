@@ -53,7 +53,7 @@ export function PacePanel({
   return (
     <section
       aria-labelledby="pace-panel-heading"
-      className="rounded-xl border border-border p-5 sm:p-6"
+      className="rounded-card border border-border bg-card p-5 shadow-rest sm:p-6"
     >
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
         <h2

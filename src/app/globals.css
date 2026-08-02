@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+/* `dark:` follows the class, not the operating system.
+ *
+ * Tailwind v4's default `dark:` variant is `prefers-color-scheme`, and this
+ * product themes by class — `ThemeProvider` sets `light` by default precisely
+ * so that an OS setting does not decide what somebody meets the product in.
+ * Those two were decoupled, which is a real bug and not a cosmetic one: on a
+ * machine set to dark, every `dark:` utility in the codebase fired while the
+ * document was still light, so components came out as light-dark hybrids.
+ *
+ * It showed up as grey form fields. `Input` asks for `bg-card` (white) and
+ * then `dark:bg-input/30` on top; on a dark-mode machine that second rule won,
+ * and 30% of a 12% ink border is the 3.6% wash that every field on the sign-in
+ * screen was painted with. Every `dark:` utility in the app had the same
+ * problem — this was just the one visible enough to catch.
+ *
+ * `:where()` keeps the variant at zero specificity, so it layers exactly like
+ * the utility it modifies. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* Light theme. The default everywhere, marketing page included: the
    transmission-script world it is built in is printed paper with hard rules,
    and it only reads on a light ground. */
@@ -26,6 +45,15 @@
      its own ink here — 6.5:1 against the page — so the light theme sets words
      in it rather than in the deeper one. */
   --brand-ink: #3b37e6;
+  /* The three stops as variables rather than as literals in `@theme`.
+     Twenty-five files across the app already ask for `bg-brand-deep` or
+     `text-brand-ink` and are right to — those names say what the colour is
+     for. Making them indirect is what lets the app register answer with its
+     own accent without a rename touching every one of those files, and it is
+     why there is no mass find-and-replace in this change. */
+  --brand: #3b37e6;
+  --brand-deep: #241fb0;
+  --brand-foreground: #ffffff;
 
   /* Strong/among-text pairs used across the app so a component never has to
      hardcode a hex to get "brighter than body copy" or "dimmer than it". */
@@ -83,6 +111,134 @@
   --surface-border: rgba(255, 255, 255, 0.08);
 }
 
+/* ---------------------------------------------------------------------------
+ * The app register.
+ *
+ * The landing page and the signed-in app are two visual registers on purpose
+ * (see `.claude/rules/design.md`). The landing is a monument: photocopy stock,
+ * hard hairlines, no card edges, a serif at display size, and three colours
+ * that all mean something. The app is a tool somebody sits inside for twenty
+ * minutes, where legibility and calm beat impact.
+ *
+ * The mistake to avoid here — and the one the first attempt at this made — is
+ * expressing that as a second `:root`. Overwriting the root palette gives the
+ * app its canvas by taking the landing page's away, which is how the previous
+ * branch ended up unmergeable against a landing rebuild: two changes editing
+ * the same forty lines to say opposite things.
+ *
+ * So the shape is: `:root` keeps the landing's values *and* declares the
+ * register-shaped tokens with landing-correct defaults (flat corners, no
+ * elevation, ink for the accent). `.register-app` re-points those same tokens
+ * at the app's answers. Every component below reads the token and never the
+ * literal, so one class on the app shell switches the whole product over and
+ * neither side has to know the other exists.
+ *
+ * What deliberately does not appear in either block: `--ok`, `--miss` and
+ * `--vague`. The three verdicts are the same green, red and tan on both sides
+ * of the sign-in, because the colour somebody is shown before they sign up has
+ * to be the colour they are graded in afterwards. That thread is the main
+ * thing stopping this reading as two products.
+ * ------------------------------------------------------------------------- */
+:root {
+  /* Landing defaults: the page has no cards, so it has no card radius and no
+     elevation. Written out rather than left undefined so a shared primitive
+     rendered outside the app degrades to the landing's flat world instead of
+     to whatever the browser does with an empty `var()`. */
+  --r-card: 0px;
+  --r-control: 0px;
+  --r-pill: 9999px;
+
+  --elev-rest: none;
+  --elev-hover: none;
+  --elev-float: none;
+
+  --accent-solid: #18181b;
+  --accent-solid-hover: #3f3f46;
+  --accent-contrast: #ffffff;
+  --accent-ring: rgba(24, 24, 27, 0.28);
+  --accent-wash: rgba(24, 24, 27, 0.06);
+
+  /* The vertical rhythm between blocks on a page. One number, so "generous"
+     is a value somebody can change rather than a habit each screen re-guesses
+     with its own `gap-10`. */
+  --stack: 2rem;
+  --measure: 72rem;
+}
+
+.register-app {
+  /* Surfaces. The page is not white; the cards are. That single step of
+     separation is what lets a card read as raised without a heavy shadow
+     doing the work — and it is why the canvas is #fafafb rather than #fff. */
+  --background: #fafafb;
+  --card: #ffffff;
+  --popover: #ffffff;
+  --muted: #f4f4f6;
+  --secondary: #f4f4f6;
+
+  /* Two weights of voice and no more: what you read, and what you read only
+     if you want to. A third grey is where hierarchy turns into mud. */
+  --foreground: #111827;
+  --card-foreground: #111827;
+  --popover-foreground: #111827;
+  --secondary-foreground: #111827;
+  --muted-foreground: #6b7280;
+  --strong: #111827;
+  --subtle: #6b7280;
+
+  /* Borders carry the separating, not shadows. At 8% of the text colour they
+     read as an edge rather than as a drawn box, and tinting them with the ink
+     rather than using a grey keeps them from going cold against the canvas. */
+  --border: rgba(17, 24, 39, 0.08);
+  --input: rgba(17, 24, 39, 0.12);
+  --surface: rgba(17, 24, 39, 0.03);
+  --surface-border: rgba(17, 24, 39, 0.08);
+
+  /* One accent, and it means "you can act on this": primary buttons, links,
+     focus, the active nav item, progress. Never decoration, and never a
+     surface larger than a control. */
+  --accent-solid: #4f7cff;
+  --accent-solid-hover: #3f6cf0;
+  --accent-contrast: #ffffff;
+  --accent-ring: rgba(79, 124, 255, 0.35);
+  --accent-wash: rgba(79, 124, 255, 0.08);
+  --ring: #4f7cff;
+
+  /* The brand stops, answered in the app's accent. `brand-deep` is the
+     pressed and hovered one, `brand-ink` is what words are set in. */
+  --brand: #4f7cff;
+  --brand-deep: #3f6cf0;
+  --brand-ink: #4f7cff;
+  --brand-foreground: #ffffff;
+
+  /* Three radii. Panels at 20, controls at 12, pills round. A fourth value is
+     how a system starts drifting, so there is deliberately nowhere to put
+     one. */
+  --r-card: 20px;
+  --r-control: 12px;
+
+  /* Elevation, tinted with the text hue rather than pure black — a neutral
+     shadow on a slightly warm canvas reads as dirt. Three steps and no more:
+     at rest, under the cursor, and floating over the page. */
+  --elev-rest:
+    0 1px 2px rgba(17, 24, 39, 0.04), 0 4px 12px rgba(17, 24, 39, 0.04);
+  --elev-hover:
+    0 2px 4px rgba(17, 24, 39, 0.05), 0 12px 28px rgba(17, 24, 39, 0.08);
+  --elev-float:
+    0 1px 2px rgba(17, 24, 39, 0.04), 0 8px 24px rgba(17, 24, 39, 0.08);
+
+  --stack: 2.75rem;
+  --measure: 74rem;
+
+  /* Inter, for the interface only. The landing keeps Archivo over Source
+     Serif — a serif headline reads as a sentence somebody wrote, which is
+     right for a page whose whole content is an argument, and wrong for a
+     screen of controls that has to stay legible at 13px for twenty minutes. */
+  font-family:
+    var(--font-ui), var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -122,14 +278,28 @@
      `brand-ink` is what words are set in, and is the only one that changes
      between themes: the deep stop on a near-white page, a bright tint on a
      near-black one. A single value cannot clear 4.5:1 against both. */
-  --color-brand: #3b37e6;
-  --color-brand-deep: #241fb0;
+  --color-brand: var(--brand);
+  --color-brand-deep: var(--brand-deep);
   --color-brand-ink: var(--brand-ink);
-  --color-brand-foreground: #ffffff;
+  --color-brand-foreground: var(--brand-foreground);
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
   --radius-xl: 0.75rem;
+
+  /* The register-shaped tokens, as utilities: `rounded-card`, `shadow-rest`,
+     `bg-accent-solid`, `gap-stack`. A component reaches for one of these and
+     is correct in both registers without knowing which one it is in. */
+  --radius-card: var(--r-card);
+  --radius-control: var(--r-control);
+  --shadow-rest: var(--elev-rest);
+  --shadow-hover: var(--elev-hover);
+  --shadow-float: var(--elev-float);
+  --color-accent-solid: var(--accent-solid);
+  --color-accent-solid-hover: var(--accent-solid-hover);
+  --color-accent-contrast: var(--accent-contrast);
+  --color-accent-wash: var(--accent-wash);
+  --spacing-stack: var(--stack);
 
   --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
@@ -305,28 +475,6 @@
     0 0 0 1px color-mix(in srgb, var(--color-brand) 10%, transparent),
     0 0 60px -12px color-mix(in srgb, var(--color-brand) 50%, transparent),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
-}
-
-/* Infinite ticker. The track holds two identical copies of the content, so
-   translating exactly -50% lands copy two where copy one began — seamless. */
-@keyframes marquee-track {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    transform: translateX(-50%);
-  }
-}
-.marquee-track {
-  animation: marquee-track 36s linear infinite;
-}
-.marquee:hover .marquee-track {
-  animation-play-state: paused;
-}
-@media (prefers-reduced-motion: reduce) {
-  .marquee-track {
-    animation: none;
-  }
 }
 
 /* Specular sweep across a button on hover. Purely decorative, so it's gated
@@ -752,19 +900,303 @@
    750ms sounds long written down. It is not doing the work of an entrance;
    it is doing the work of the page feeling like it has weight, which needs
    the tail of the exponential ease to be long enough to notice. */
+/* ---------------------------------------------------------------------------
+ * Motion.
+ *
+ * Two curves and three durations. Everything that moves in this product uses
+ * one of each, which is most of what "the motion feels considered" actually
+ * is — the alternative is thirty components each having guessed a number, and
+ * the eye reads that inconsistency long before it can name it.
+ *
+ * `--ease-enter` is the important one: almost all of its distance is covered
+ * in the first third, then it takes its time settling. That asymmetry is what
+ * gives an arriving element mass — it reads as something heavy coming to rest
+ * rather than as a box being faded in. Linear and ease-out both feel cheap
+ * next to it, and a spring feels like a toy.
+ *
+ * Nothing here overshoots. A bounce says "look at the animation"; this system
+ * is trying to say "the page arrived".
+ * ------------------------------------------------------------------------- */
+:root {
+  --ease-enter: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-exit: cubic-bezier(0.19, 1, 0.22, 1);
+
+  /* A press answering. Long enough to see, too short to wait for. */
+  --dur-micro: 160ms;
+  /* A control changing state: hover, focus, a panel opening. */
+  --dur-ui: 320ms;
+  /* Content arriving on scroll. Deliberately slow — this is the one place the
+     product is allowed to take its time. */
+  --dur-reveal: 900ms;
+
+  /* How far a revealing block travels, and how much later each one in a group
+     starts. 70ms is the useful window: below it a stagger is invisible, above
+     it the last card in a row is visibly late. */
+  --reveal-rise: 1.5rem;
+  --reveal-stagger: 70ms;
+}
+
+/* Blocks arriving on scroll.
+ *
+ * `--rise-index` is set from document order by `ScrollReveal`, so a row of
+ * cards arrives left to right without any of them being authored to know
+ * their position. Blocks that never get one fall back to 0 and simply arrive
+ * together. */
 [data-rise] {
+  --rise-index: 0;
   transition:
-    opacity 750ms cubic-bezier(0.23, 1, 0.32, 1),
-    transform 750ms cubic-bezier(0.23, 1, 0.32, 1);
+    opacity var(--dur-reveal) var(--ease-enter),
+    transform var(--dur-reveal) var(--ease-enter);
+  transition-delay: calc(var(--rise-index) * var(--reveal-stagger));
 }
 [data-rise="out"] {
   opacity: 0;
-  transform: translateY(1.15rem);
+  transform: translateY(var(--reveal-rise));
+}
+
+/* Type arriving from behind its own baseline.
+ *
+ * Each line is a window with `overflow: hidden`, and the words inside start
+ * fully below it. Nothing fades — the line is simply not there yet and then
+ * it is, the way a printed line would if the paper were sliding up past a
+ * slot. It is the one motion on the page with a physical explanation, which
+ * is why it is reserved for the single largest piece of type on a screen and
+ * never used on a paragraph.
+ *
+ * `padding-bottom` on the window is not optional: descenders (g, y, p) sit
+ * below the baseline, and a window sized to the line box alone shears them
+ * off at rest. */
+.mask-line {
+  display: block;
+  overflow: hidden;
+  padding-bottom: 0.12em;
+  margin-bottom: -0.12em;
+}
+.mask-line > span {
+  display: block;
+  transition: transform var(--dur-reveal) var(--ease-enter);
+  transition-delay: calc(var(--rise-index) * var(--reveal-stagger));
+}
+[data-rise="out"] .mask-line > span {
+  transform: translateY(105%);
+}
+
+/* Display type filled with a gradient that fades into its own background.
+ *
+ * The reference's signature: the headline does not sit on the dark band, it
+ * emerges from it — bright at the cap line, dissolving toward the baseline, so
+ * a two-line block has no hard bottom edge.
+ *
+ * It has to be declared on the inner `span` rather than on the heading, and
+ * that is not a style preference. `background-clip: text` clips an element's
+ * background to the glyphs *that element paints*, and here the heading paints
+ * none of them: `.mask-line > span` carries a transform, which puts the text in
+ * its own layer. Applied to the heading, the effect silently renders nothing at
+ * all — transparent text over a background clipped to no glyphs — which is
+ * exactly what it did on the first attempt.
+ *
+ * The ramp bottoms out at 52% rather than near zero. The reference can fade a
+ * word to almost nothing because that word is decoration; the last line here is
+ * somebody's name, and a name that disappears is a bug, not an effect.
+ *
+ * Deliberately not one of the blurred radial fields this product has twice had
+ * removed. This is a two-stop linear ramp inside letterforms; there is no glow
+ * anywhere on the band. */
+.fill-fade > span {
+  background-image: linear-gradient(
+    180deg,
+    #ffffff 22%,
+    rgba(255, 255, 255, 0.52) 100%
+  );
+  background-clip: text;
+  color: transparent;
+}
+
+/* ---------------------------------------------------------------------------
+ * Panels that come into play as you scroll to them.
+ *
+ * Scroll-*driven* rather than scroll-*triggered*, and the difference is the
+ * whole point. `data-rise` fires once when a block crosses a line and then
+ * plays a 900ms transition on its own clock; this is welded to the scrollbar,
+ * so a panel is exactly as far in as you have scrolled it and it runs backwards
+ * when you scroll back up. It reads as direct manipulation instead of as a
+ * cutscene, which is most of what "interactive" means on a page with no
+ * controls in it.
+ *
+ * `animation-timeline: view()` does it with no JavaScript at all — no observer,
+ * no scroll listener, no rAF loop, and it runs off the main thread. The whole
+ * block is inside `@supports`, so a browser without it simply gets the panel,
+ * finished and static, which is the correct fallback rather than a degraded
+ * one.
+ *
+ * The gesture is ours rather than borrowed. The reference scales a photograph
+ * up to fill the screen; this product has no photographs — its imagery is its
+ * own output, and it is a thing that marks a line *while you are still saying
+ * it*. So a panel is uncovered from the top down, the way its own transcript
+ * fills: `clip-path` opens, the panel settles the last few percent of its
+ * size, and the shadow arrives last so it lifts off the stock as it finishes
+ * rather than floating the whole way in.
+ * ------------------------------------------------------------------------- */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes panel-lay {
+      from {
+        /* Held slightly back and slightly down. Small numbers: a panel that
+           arrives from 0.7 scale reads as a modal opening, not as a page. */
+        transform: scale(0.94) translateY(2.5rem);
+        opacity: 0;
+        clip-path: inset(28% 0 0 0 round var(--panel-round, 20px));
+      }
+      to {
+        transform: none;
+        opacity: 1;
+        clip-path: inset(0 0 0 0 round var(--panel-round, 20px));
+      }
+    }
+
+    .lay-in {
+      animation: panel-lay linear both;
+      animation-timeline: view();
+      /* Finished well before the panel reaches the middle of the screen. Run
+         to `entry 100%` and the panel is still assembling when it is already
+         the thing you are reading. */
+      animation-range: entry 5% entry 70%;
+      will-change: transform, opacity, clip-path;
+    }
+
+    /* Half the travel and none of the clip, for the small fragments orbiting
+       the headline. They are already in the first viewport, so a full arrival
+       would mean the page assembling itself in front of somebody who has not
+       scrolled yet. */
+    @keyframes panel-lay-soft {
+      from {
+        transform: scale(0.96) translateY(1.25rem);
+        opacity: 0;
+      }
+      to {
+        transform: none;
+        opacity: 1;
+      }
+    }
+    .lay-in-soft {
+      animation: panel-lay-soft linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+    }
+  }
+}
+
+/* Panels answer the cursor.
+ *
+ * Not a tilt and not a magnet — both are banned, and both make a page feel
+ * like a toy. This is the same lift the app's cards use, which is the point:
+ * the thing you hover on the marketing page behaves like the thing you will
+ * hover once you are inside. */
+.panel-live {
+  transition:
+    transform var(--dur-ui) var(--ease-exit),
+    box-shadow var(--dur-ui) var(--ease-exit);
+}
+@media (hover: hover) {
+  .panel-live:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      0 24px 32px -8px rgba(0, 0, 0, 0.09),
+      0 10px 14px -8px rgba(0, 0, 0, 0.06);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .panel-live {
+    transition: none;
+  }
+  .panel-live:hover {
+    transform: none;
+  }
+}
+
+/* The hero, reacting to its own scroll.
+ *
+ * `--hero-t` runs 0 to 1 across the first viewport, written once per frame by
+ * `useHeroScroll` onto this one element. Everything below reads it, so a frame
+ * costs one style recalculation on one subtree rather than an inherited
+ * variable invalidating every descendant on the page.
+ *
+ * The wordmark settles back and loosens as you leave it, and the two artifact
+ * panels drift at different rates — the near one faster than the far one,
+ * which is the whole of parallax. Small numbers on purpose: this is the page
+ * acknowledging the scroll, not a ride.
+ */
+.hero-scroll {
+  --hero-t: 0;
+}
+.hero-mark {
+  transform: scale(calc(1 - var(--hero-t) * 0.06))
+    translate3d(0, calc(var(--hero-t) * -1.4rem), 0);
+  opacity: calc(1 - var(--hero-t) * 0.55);
+  transform-origin: 50% 0;
+  will-change: transform;
+}
+.hero-drift-near {
+  transform: translate3d(0, calc(var(--hero-t) * -3.5rem), 0);
+  will-change: transform;
+}
+.hero-drift-far {
+  transform: translate3d(0, calc(var(--hero-t) * -1.6rem), 0);
+  will-change: transform;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-rise] {
+  .hero-mark,
+  .hero-drift-near,
+  .hero-drift-far {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+/* Ink fading down the glyphs, the light-register version of `.fill-fade`.
+ *
+ * Same reason it exists: the wordmark should emerge from the stock rather than
+ * sit on it. Declared on the element itself here — the wordmark carries no
+ * mask, so it paints its own text and `background-clip` has glyphs to clip
+ * to. */
+.fill-fade-ink {
+  background-image: linear-gradient(
+    180deg,
+    var(--ink, #101012) 30%,
+    rgba(16, 16, 18, 0.42) 100%
+  );
+  background-clip: text;
+  color: transparent;
+}
+
+/* The same move, played once on mount rather than on scroll.
+ *
+ * The masthead of a screen is above the fold by definition, so the observer
+ * reports it as already visible and it never animates — it is simply there
+ * when the page paints. A route somebody navigated to should arrive, so the
+ * one line at the top of it plays this instead, and everything below keeps
+ * waiting to be scrolled to. */
+@keyframes mask-enter {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: none;
+  }
+}
+.mask-enter > span {
+  animation: mask-enter var(--dur-reveal) var(--ease-enter) both;
+  animation-delay: calc(var(--rise-index, 0) * var(--reveal-stagger));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-rise],
+  .mask-line > span {
     transition: none;
+  }
+  .mask-enter > span {
+    animation: none;
   }
   /* Belt and braces: the observer never runs under this setting, so nothing
      is ever marked `out`. This is here in case that guard is ever lost. */
@@ -772,12 +1204,15 @@
     opacity: 1;
     transform: none;
   }
+  [data-rise="out"] .mask-line > span {
+    transform: none;
+  }
 }
 
-/* Press feedback, on everything pressable. 160ms is short enough that the
-   scale reads as the surface answering rather than as an animation. */
+/* Press feedback, on everything pressable. Short enough that the scale reads
+   as the surface answering rather than as an animation. */
 .press {
-  transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: transform var(--dur-micro) var(--ease-exit);
 }
 .press:active {
   transform: scale(0.97);

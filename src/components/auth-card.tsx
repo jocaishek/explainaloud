@@ -301,7 +301,7 @@ export function AuthCard({
       {stage === "forgot-password" && (
         <form
           onSubmit={handleForgotPassword}
-          className="flex w-full flex-col gap-4 rounded-2xl border border-border bg-card p-6"
+          className="flex w-full flex-col gap-4 rounded-card border border-border bg-card p-6 shadow-rest"
         >
           <div>
             <h3 className="text-base font-semibold text-strong">
@@ -317,11 +317,11 @@ export function AuthCard({
             placeholder="you@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="h-11 border-input bg-muted text-base text-strong placeholder:text-subtle"
+            className="text-base text-strong placeholder:text-subtle"
           />
           {error && <p className="text-sm text-destructive">{error}</p>}
           {needsVerification && (
-            <div className="flex flex-col gap-1.5 rounded-lg border border-border/60 bg-white/[0.03] p-3">
+            <div className="flex flex-col gap-1.5 rounded-control border border-border bg-muted p-3">
               <p className="text-xs leading-5 text-foreground">
                 Didn&apos;t get it, or has the link expired? Signing up again
                 won&apos;t send another one. This will.
@@ -368,7 +368,7 @@ export function AuthCard({
       {stage === "form" && (
         <form
           onSubmit={handleSubmit}
-          className="flex w-full flex-col gap-4 rounded-2xl border border-border bg-card p-6"
+          className="flex w-full flex-col gap-4 rounded-card border border-border bg-card p-6 shadow-rest"
         >
           <div className="flex flex-col gap-2">
             {/* Google's own button when Identity Services is available, so
@@ -437,7 +437,7 @@ export function AuthCard({
               placeholder="you@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="h-11 border-input bg-muted text-base text-strong placeholder:text-subtle"
+              className="text-base text-strong placeholder:text-subtle"
             />
             <PasswordField
               value={password}
@@ -506,7 +506,7 @@ export function AuthCard({
       )}
 
       {stage === "check-email" && (
-        <div className="flex w-full flex-col gap-5 rounded-2xl border border-border bg-card p-6">
+        <div className="flex w-full flex-col gap-5 rounded-card border border-border bg-card p-6 shadow-rest">
           <div>
             <h3 className="text-base font-semibold text-strong">
               Verify your email

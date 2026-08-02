@@ -1,8 +1,8 @@
-import { Greeting } from "~/components/greeting";
 import type { Course, Folder } from "~/lib/folders";
 import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { requireProfile } from "~/lib/supabase/server";
 import { TopicGrid } from "../topic-grid";
+import { Masthead } from "./masthead";
 import { PacePanel, type PaceSession } from "./pace-panel";
 import { QuickActions } from "./quick-actions";
 
@@ -24,6 +24,7 @@ export default async function DashboardPage() {
     { data: courses },
     { data: baseline },
     { data: recent },
+    { count: sessionCount },
   ] = await Promise.all([
     supabase
       .from("folders")
@@ -61,6 +62,11 @@ export default async function DashboardPage() {
           courses: { topic: string; slug: string } | null;
         }>
       >(),
+    // Head-only: the rail wants the number, never the rows.
+    supabase
+      .from("course_sessions")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", user.id),
   ]);
 
   /* Unreliable recordings are dropped rather than drawn faintly.
@@ -93,22 +99,47 @@ export default async function DashboardPage() {
     .slice(0, PACE_BARS)
     .reverse();
 
+  const baselineWpm = baseline?.median_wpm ?? baseline?.capable_wpm ?? null;
+
+  const stats = [
+    {
+      label: "Explanations recorded",
+      value: sessionCount ?? 0,
+      empty: "None yet — your first one is three minutes away.",
+    },
+    {
+      label: "Your speaking pace",
+      value: baselineWpm ?? 0,
+      unit: "wpm",
+      empty: "Measured on your first take.",
+    },
+    {
+      label: "Topics",
+      value: courses?.length ?? 0,
+      empty: "Upload something to start one.",
+    },
+  ];
+
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-12">
-      <div className="flex flex-col gap-7">
-        <Greeting name={profile.first_name} />
-        {/* Before the topic list, not after it: arriving usually means
-            knowing what you want to do rather than which topic you want to
-            do it to. */}
+    /* Full-bleed band, then the contained page. The masthead is deliberately
+       outside the measure — a dark region that stops at the same gutter as the
+       cards below it reads as a hero card, which is the thing it is not. */
+    <div className="flex flex-col">
+      <Masthead firstName={profile.first_name} stats={stats} />
+
+      <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+        {/* Before the topic list, not after it: arriving usually means knowing
+            what you want to do rather than which topic you want to do it to. */}
         <QuickActions />
+
+        <div data-rise="">
+          <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
+        </div>
+
+        <div data-rise="">
+          <TopicGrid folders={folders ?? []} courses={courses ?? []} />
+        </div>
       </div>
-
-      <PacePanel
-        sessions={paceSessions}
-        baselineWpm={baseline?.median_wpm ?? baseline?.capable_wpm ?? null}
-      />
-
-      <TopicGrid folders={folders ?? []} courses={courses ?? []} />
     </div>
   );
 }
