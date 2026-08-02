@@ -333,15 +333,33 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
     if (gap * 1000 > PAUSE_FLOOR_MS) totalSilence += gap;
   }
   const voicedSeconds = Math.max(0, speakingSeconds - totalSilence);
-  const overallWpm =
+  /* The same implausibility ceiling the windows get.
+   *
+   * Without it this was the hole the ceiling was written to close. `rates` is
+   * empty precisely when every window was rejected — most often because they
+   * all read above `MAX_PLAUSIBLE_WPM`, which is what Whisper's invented
+   * timings look like. `medianWpm` and `capableWpm` then fall back to *this*
+   * number, computed the same way from the same bad timings and reported with
+   * no ceiling at all. So the recordings most likely to produce nonsense were
+   * the only ones that could publish it, and a baseline of ~600 words a minute
+   * would be written to the profile and drawn on the dashboard.
+   *
+   * Null rather than a clamped number, for the reason the window guard already
+   * gives: a clamped 300 still asserts that a rate was measured. Nothing is
+   * measurable here, and every caller below already handles that. */
+  const rawOverall =
     voicedSeconds > 0 ? (usable.length * 60) / voicedSeconds : 0;
+  const overallWpm =
+    rawOverall > 0 && rawOverall <= MAX_PLAUSIBLE_WPM ? rawOverall : null;
 
   return {
     wordCount: usable.length,
     speakingSeconds: Number(speakingSeconds.toFixed(2)),
-    medianWpm: Math.round(rates.length ? median(rates) : overallWpm),
+    medianWpm: Math.round(rates.length ? median(rates) : (overallWpm ?? 0)),
     capableWpm: Math.round(
-      rates.length ? percentile(rates, CAPABLE_PACE_PERCENTILE) : overallWpm,
+      rates.length
+        ? percentile(rates, CAPABLE_PACE_PERCENTILE)
+        : (overallWpm ?? 0),
     ),
     /* Rounded on the way in. These go straight into a jsonb column and are
        read back only to set a bar's height and its position on a time axis,
@@ -354,7 +372,13 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
     pauses: pauseStats(usable),
     fillerPer100: Number(((fillers / usable.length) * 100).toFixed(1)),
     slowestStretch: slowestStretch(usable, windows),
-    reliable: speakingSeconds >= MIN_SPEAKING_SECONDS && rates.length > 0,
+    /* A zero here means the fallback was rejected too, so there is no
+       trustworthy rate anywhere in this take. Saying so is the whole point:
+       `reliable: false` keeps the number off the chart and out of the
+       baseline rather than publishing a confident 600. */
+    reliable:
+      speakingSeconds >= MIN_SPEAKING_SECONDS &&
+      (rates.length > 0 || overallWpm !== null),
   };
 }
 

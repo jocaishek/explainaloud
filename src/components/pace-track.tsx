@@ -42,14 +42,21 @@ import { cn } from "~/lib/utils";
 const RACING = 1.15;
 
 /**
- * Most bars drawn, whatever the recording's length.
+ * How much of the take each bar stands for.
  *
- * Windows are sampled every 2.5 seconds, so three minutes produces about
- * seventy of them — at panel width that is a texture, not a chart. Adjacent
- * windows are averaged down to this many, which also smooths the overlap
- * between them.
+ * Ten seconds, matching `RATE_WINDOW_SECONDS` — one bar is one window, and
+ * consecutive bars do not overlap.
+ *
+ * The rates underneath are sampled every 2.5 seconds on purpose: an
+ * overlapping stride means a dip cannot fall between windows and go unseen.
+ * That is right for *finding* the slow stretch and wrong for drawing one,
+ * because four out of every five neighbouring readings share most of their
+ * audio. Plotted directly it produced about seventy bars for a three-minute
+ * take, each 75% the same speech as the one beside it — a texture rather than
+ * a chart, and one that reads as though the pace were being measured every two
+ * and a half seconds. It is not; it is measured over ten.
  */
-const MAX_BARS = 16;
+const BAR_SECONDS = 10;
 
 /** Below this there is no shape to look at, only a couple of readings. */
 const MINIMUM_WINDOWS = 4;
@@ -65,18 +72,27 @@ function clock(seconds: number) {
   return `${minutes}:${String(total % 60).padStart(2, "0")}`;
 }
 
-/** Average each run of windows down to one bar, keeping the first one's time. */
+/**
+ * One bar per non-overlapping ten seconds of the take.
+ *
+ * Each slot takes the reading whose window *starts* in it, so a bar is a real
+ * measured window rather than an average of several overlapping ones. Averaging
+ * was the previous approach and it flattened exactly the peaks the chart exists
+ * to show — a fast ten seconds blended with the four readings straddling it
+ * comes back looking ordinary.
+ *
+ * Slots with no reading are skipped rather than drawn at zero. A gap in the
+ * chart means "nothing measurable was said here", which is true and is not the
+ * same claim as "they spoke at zero words a minute".
+ */
 function bucket(points: PacePoint[]): PacePoint[] {
-  if (points.length <= MAX_BARS) return points;
-  const per = Math.ceil(points.length / MAX_BARS);
   const out: PacePoint[] = [];
-  for (let i = 0; i < points.length; i += per) {
-    const run = points.slice(i, i + per);
-    const sum = run.reduce((n, p) => n + p.wpm, 0);
-    out.push({
-      atSeconds: run[0]?.atSeconds ?? 0,
-      wpm: Math.round(sum / run.length),
-    });
+  let slot = -1;
+  for (const point of points) {
+    const index = Math.floor(point.atSeconds / BAR_SECONDS);
+    if (index === slot) continue;
+    slot = index;
+    out.push({ atSeconds: index * BAR_SECONDS, wpm: point.wpm });
   }
   return out;
 }
@@ -293,7 +309,9 @@ export function PaceTrack({
 
           <div className="mt-3 flex items-baseline justify-between gap-3 border-border border-t pt-2">
             <Slug className="tabular-nums">0:00</Slug>
-            <Slug className="truncate">Speaking rate, pauses left out</Slug>
+            <Slug className="truncate">
+              Ten-second windows, pauses left out
+            </Slug>
             <Slug className="tabular-nums">{clock(last?.atSeconds ?? 0)}</Slug>
           </div>
         </div>
