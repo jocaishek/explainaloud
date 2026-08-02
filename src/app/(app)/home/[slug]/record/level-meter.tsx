@@ -130,7 +130,11 @@ export function LevelMeter({
     <div
       ref={rowRef}
       aria-hidden="true"
-      className="mb-4 flex h-8 items-end gap-[3px]"
+      /* Sized, not stretched. This sits under the microphone button in a
+         centred column, so a full-width row would run the meter out to the
+         edges of the screen and stop reading as an instrument attached to
+         that control. */
+      className="flex h-7 w-40 items-end justify-center gap-[3px]"
     >
       {Array.from({ length: BAR_COUNT }, (_, i) => (
         <span

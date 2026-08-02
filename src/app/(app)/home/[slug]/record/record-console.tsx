@@ -1372,30 +1372,65 @@ export function RecordConsole({
       );
     });
 
-    const scored = answered.filter(
-      (segment): segment is Segment & { score: number } =>
-        segment.score !== null,
+    /* Question numbers are carried, not re-derived.
+     *
+     * The breakdown used to be built by mapping over the *scored* segments and
+     * numbering them by their position in that array, which silently renumbers
+     * every question after a missing one: an interview where question two was
+     * not captured printed question three's mark as "Q2". The number belongs to
+     * the question, so it is taken from the answer's position in `answered` and
+     * travels with it. */
+    const marks = answered.map((segment, i) => ({ n: i + 1, segment }));
+    const scored = marks.filter(
+      (mark): mark is { n: number; segment: Segment & { score: number } } =>
+        mark.segment.score !== null,
     );
+    const missed = marks.filter((mark) => mark.segment.score === null);
+
     // The mean, because each answer was a whole answer to its own question.
     // Weighting by length would say a rambling answer is worth more of the
     // grade than a tight one, which is the opposite of true.
     const score = scored.length
       ? Math.round(
-          scored.reduce((total, segment) => total + segment.score, 0) /
+          scored.reduce((total, mark) => total + mark.segment.score, 0) /
             scored.length,
         )
       : 0;
 
+    /* An answer that was not captured is named, not quietly dropped.
+     *
+     * This mean is taken over the answers that have a mark, so an answer that
+     * produced no transcript leaves the denominator along with the numerator —
+     * and the result is a full score for half an interview. A real session came
+     * back 100/100 having graded one of two questions, and nothing on the page
+     * said so. The number was not wrong arithmetic; it was an honest average of
+     * a set the reader did not know had been narrowed.
+     *
+     * Scoring the missing answer zero would be worse. It is not established
+     * that the person said nothing — only that nothing reached the grader, and
+     * that is at least as likely to be our failure as theirs. So the score
+     * stands and its basis is stated. */
+    const breakdown = scored
+      .map((mark) => `Q${mark.n}: ${mark.segment.score}`)
+      .join(" · ");
+    const shortfall =
+      missed.length > 0
+        ? ` Scored on ${scored.length} of ${answered.length}: nothing was captured for ${
+            missed.length === 1 ? "question" : "questions"
+          } ${missed.map((mark) => mark.n).join(" and ")}, so ${
+            missed.length === 1 ? "it is" : "they are"
+          } not in this mark.`
+        : "";
+
     const report = {
       score,
-      verdict: `You answered ${answered.length} question${answered.length === 1 ? "" : "s"} in this recording. ${scored
-        .map((segment, i) => `Q${i + 1}: ${segment.score}`)
-        .join(" · ")}`,
+      verdict: `You answered ${answered.length} question${answered.length === 1 ? "" : "s"} in this recording. ${breakdown}${shortfall}`,
       gaps: answered.flatMap((segment) => segment.gaps),
       strengths: answered.flatMap((segment) => segment.strengths),
       next_focus:
         scored.length > 0
-          ? ([...scored].sort((a, b) => a.score - b.score)[0]?.question ?? "")
+          ? ([...scored].sort((a, b) => a.segment.score - b.segment.score)[0]
+              ?.segment.question ?? "")
           : "",
     };
 
@@ -2457,6 +2492,17 @@ export function RecordConsole({
           )}
         </button>
 
+        {/* Directly under the button that opened the microphone.
+         *
+         * It was down in the transcript panel, which is the wrong place for
+         * it twice over: that panel is about what you said, and on a phone it
+         * is often below the fold while you are talking. The one question this
+         * row answers — is it hearing me — is asked of the microphone control,
+         * so the answer belongs against the microphone control. */}
+        {status === "recording" && (
+          <LevelMeter analyserRef={analyserRef} active={true} />
+        )}
+
         <Button
           type="button"
           onClick={primaryAction}
@@ -2567,14 +2613,6 @@ export function RecordConsole({
               </span>
             )}
           </div>
-
-          {/* The hero panel's level meter, on the screen where there is
-              actually something to meter. It reads the analyser the silence
-              watchdog already opened, so a muted microphone shows as a flat
-              row straight away instead of as a warning ten seconds in. */}
-          {status === "recording" && (
-            <LevelMeter analyserRef={analyserRef} active={true} />
-          )}
 
           <p className="min-h-[6rem] text-[1.02rem] leading-[1.6]">
             <ColouredTranscript
