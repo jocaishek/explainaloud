@@ -44,16 +44,19 @@
   /* Brand text on a near-white surface. The hero stop is dark enough to be
      its own ink here — 6.5:1 against the page — so the light theme sets words
      in it rather than in the deeper one. */
-  --brand-ink: #3b37e6;
+  --brand-ink: #fbbf24;
   /* The three stops as variables rather than as literals in `@theme`.
      Twenty-five files across the app already ask for `bg-brand-deep` or
      `text-brand-ink` and are right to — those names say what the colour is
      for. Making them indirect is what lets the app register answer with its
      own accent without a rename touching every one of those files, and it is
      why there is no mass find-and-replace in this change. */
-  --brand: #3b37e6;
-  --brand-deep: #241fb0;
-  --brand-foreground: #ffffff;
+  --brand: #f97316;
+  --brand-deep: #c2410c;
+  /* Dark ink on the sunset, not white. #f97316 is a light, luminous colour —
+     white type on it sits at 2.6:1, and the label on the one button somebody
+     is meant to press cannot be the least readable text on the page. */
+  --brand-foreground: #1a1206;
 
   /* Strong/among-text pairs used across the app so a component never has to
      hardcode a hex to get "brighter than body copy" or "dimmer than it". */
@@ -775,7 +778,7 @@
   background: var(--stock);
 }
 .paper-grey {
-  --stock: #f2f2f0;
+  --stock: #f6f3f1;
   background: var(--stock);
 }
 
@@ -871,7 +874,13 @@
    colour lit from opposite corners, so the field has a direction without a
    second hue appearing. */
 .ground-deep {
-  --stock: #14133a;
+  --stock: #14100c;
+  /* The verdicts, lifted for this one dark section. Same three meanings and
+     the same three hues, read against near-black instead of paper — `#0f7a3d`
+     green sits at 2.4:1 here, well under what a marked word needs. */
+  --ok: #4ade80;
+  --miss: #fb7185;
+  --vague: #d6c19a;
   --ink: #ffffff;
   --rule: rgba(255, 255, 255, 0.26);
   --rule-strong: rgba(255, 255, 255, 0.6);
@@ -880,13 +889,13 @@
   --ground-field:
     radial-gradient(
       62% 70% at 20% 16%,
-      rgba(59, 55, 230, 0.85) 0%,
-      rgba(59, 55, 230, 0) 64%
+      rgba(249, 115, 22, 0.3) 0%,
+      rgba(249, 115, 22, 0) 64%
     ),
     radial-gradient(
       52% 60% at 86% 90%,
-      rgba(59, 55, 230, 0.45) 0%,
-      rgba(59, 55, 230, 0) 68%
+      rgba(251, 191, 36, 0.18) 0%,
+      rgba(249, 115, 22, 0) 68%
     );
 }
 
@@ -894,21 +903,21 @@
    4.5:1, which is the whole reason these sections take a tint and not a field.
    Same hue, one value apart — deeper first, lifting as the page runs out. */
 .ground-tint {
-  --stock: #e9ebff;
+  --stock: #f6f3f1;
   background-color: var(--stock);
   --ground-field: radial-gradient(
     70% 60% at 78% 10%,
-    rgba(59, 55, 230, 0.16) 0%,
-    rgba(59, 55, 230, 0) 70%
+    rgba(249, 115, 22, 0) 0%,
+    rgba(249, 115, 22, 0) 70%
   );
 }
 .ground-tint-soft {
-  --stock: #f4f5ff;
+  --stock: #ffffff;
   background-color: var(--stock);
   --ground-field: radial-gradient(
     64% 62% at 16% 14%,
-    rgba(59, 55, 230, 0.14) 0%,
-    rgba(59, 55, 230, 0) 68%
+    rgba(251, 191, 36, 0.1) 0%,
+    rgba(249, 115, 22, 0) 68%
   );
 }
 
@@ -920,8 +929,8 @@
   background-color: var(--stock);
   --ground-field: radial-gradient(
     80% 40% at 50% 0%,
-    rgba(59, 55, 230, 0.13) 0%,
-    rgba(59, 55, 230, 0) 72%
+    rgba(249, 115, 22, 0) 0%,
+    rgba(249, 115, 22, 0) 72%
   );
 }
 
@@ -1468,5 +1477,180 @@
   .waveform-bar {
     animation: none;
     transform: scaleY(0.6);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * The sunset register — tarmac black, Athens gold.
+ *
+ * Scoped to `.register-sunset` rather than `:root` for the same reason the app
+ * register is: the landing and the signed-in product are two worlds, and a
+ * second `:root` gives one its canvas by taking the other's away.
+ *
+ * **The problem this block had to solve.** The three verdict colours are the
+ * product's entire semantic: green means the claim was correct, red means a
+ * step was missed, tan means it was said but not checkably. On a near-black
+ * canvas the shipped values fail outright — `#0f7a3d` green sits at 2.4:1 on
+ * `#0b0b0c`, well under the 4.5:1 a marked word needs to be read. And the
+ * brief's accent family is gold and amber, which is *the same hue* as the tan
+ * that means "vague". A brand colour indistinguishable from a verdict is worse
+ * than an ugly brand colour: it makes the marking unreadable as marking.
+ *
+ * So the verdicts get dark-canvas values here — lifted in value, held at the
+ * same hue, so they still read as the greens and reds somebody will be graded
+ * in — and `--vague` is pulled to a desaturated sand that separates from the
+ * luminous CTA gold by saturation rather than by hue. Both stay reserved: they
+ * mark words and nothing else, and the sunset accents never touch a
+ * transcript.
+ * ------------------------------------------------------------------------- */
+/* The landing runs in this world.
+ *
+ * `.tx` is the class the page root already carries, and every section below it
+ * derives its ground from the same three variables — so re-pointing them here
+ * converts the whole page instead of requiring each of the six sections to be
+ * rewritten. That indirection was built for exactly this. */
+.register-sunset {
+  /* Tarmac. Not pure black — a carbon with a trace of warmth in it, so the
+     gold reads as light falling on the surface rather than as a sticker. */
+  --stock: #0b0b0c;
+  --carbon: #141416;
+  --carbon-high: #1b1b1e;
+  --ink: #f4f1ea;
+  --ink-soft: rgba(244, 241, 234, 0.62);
+  --ink-faint: rgba(244, 241, 234, 0.38);
+
+  /* Athens at sunset: three stops of one warm ramp, low to high. */
+  --sun-deep: #c2410c;
+  --sun: #f97316;
+  --sun-high: #fbbf24;
+  --sun-glow: rgba(249, 115, 22, 0.22);
+
+  /* Hairlines and glass. The border is the light source, not a box edge —
+     brighter at the top where the sun would catch it. */
+  --rule: rgba(244, 241, 234, 0.1);
+  --rule-strong: rgba(244, 241, 234, 0.28);
+  --glass: rgba(24, 24, 27, 0.55);
+  --glass-edge: rgba(251, 191, 36, 0.18);
+
+  /* Verdicts, lifted for this canvas. Same three meanings, same three hues,
+     read against black instead of paper. */
+  --ok: #4ade80;
+  --miss: #fb7185;
+  --vague: #d6c19a;
+
+  background-color: var(--stock);
+  color: var(--ink);
+}
+
+/* Frosted panel.
+ *
+ * Real glass, not a grey box: a translucent fill so the glow behind it shows
+ * through, a hairline that is warmer along the top edge, and an inset
+ * highlight standing in for the lit bevel. The blur is what makes it glass and
+ * it is also the most expensive thing on the page, which is why it is dropped
+ * on small screens — nobody sees through a blur on a 6-inch display. */
+.glass-panel {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.9),
+      rgba(255, 255, 255, 0.62) 60%
+    ),
+    rgba(255, 252, 248, 0.5);
+  border: 1px solid rgba(194, 65, 12, 0.14);
+  border-top-color: rgba(251, 191, 36, 0.45);
+  backdrop-filter: blur(18px) saturate(150%);
+  /* The lift is tinted with the sunset rather than with black. A neutral
+     shadow under a warm panel on warm paper reads as dirt; this one reads as
+     the panel sitting in the same light as everything around it. */
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
+    0 20px 45px -22px rgba(124, 45, 18, 0.4);
+}
+
+/* Inside the one dark section, the same panel inverts. */
+.register-sunset .glass-panel,
+.ground-deep .glass-panel {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.07),
+      rgba(255, 255, 255, 0.02) 42%
+    ),
+    rgba(24, 20, 16, 0.6);
+  border-color: rgba(244, 241, 234, 0.12);
+  border-top-color: rgba(251, 191, 36, 0.28);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
+    0 24px 60px -24px rgba(0, 0, 0, 0.85);
+}
+@media (max-width: 767px) {
+  .glass-panel {
+    backdrop-filter: none;
+    background: #fffdfb;
+  }
+  .register-sunset .glass-panel,
+  .ground-deep .glass-panel {
+    background: #1b1712;
+  }
+}
+
+/* The sunset behind the page.
+ *
+ * The brief asks for sections to bleed into each other rather than being cut
+ * apart by rules, and this is how: a soft warm field low in the section, so
+ * one region ends by getting darker rather than by hitting a line. It is a
+ * ground, not a floating orb — it defines the region and the type sits in it. */
+.sunset-field {
+  position: relative;
+  isolation: isolate;
+}
+.sunset-field::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(
+      120% 60% at 50% 108%,
+      var(--sun-glow) 0%,
+      rgba(249, 115, 22, 0) 62%
+    ),
+    radial-gradient(
+      90% 50% at 82% -10%,
+      rgba(251, 191, 36, 0.1) 0%,
+      rgba(251, 191, 36, 0) 60%
+    );
+}
+
+/* The hero fragments' idle drift.
+ *
+ * CSS rather than Framer Motion: these two panels already carry a scroll-linked
+ * parallax transform written from a rAF loop, and a second library animating
+ * the same property would fight it every frame. A keyframe on a wrapper class
+ * composes instead.
+ *
+ * Different cycle lengths on purpose. Matched loops read as one mechanism
+ * moving two objects, and the illusion dies within about four seconds of
+ * watching; falling out of phase is the whole effect. */
+@keyframes float-drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -10px;
+  }
+}
+.float-slow {
+  animation: float-drift 7s cubic-bezier(0.44, 0, 0.56, 1) infinite;
+}
+.float-slower {
+  animation: float-drift 9.5s cubic-bezier(0.44, 0, 0.56, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .float-slow,
+  .float-slower {
+    animation: none;
   }
 }
