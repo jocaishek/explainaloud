@@ -1392,8 +1392,12 @@ function Pace() {
 
           <div className="rule-t mt-3 flex items-baseline justify-between pt-2">
             <Slug className="tc">00:00</Slug>
-            <Slug>Eight-second windows</Slug>
-            <Slug className="tc">01:04</Slug>
+            {/* Ten, because that is what the product measures over —
+                `RATE_WINDOW_SECONDS` in `speech-metrics.ts`. The page said
+                eight, which was a number nothing in the code produced. Eight
+                bars at ten seconds is 1:20, not 1:04. */}
+            <Slug>Ten-second windows</Slug>
+            <Slug className="tc">01:20</Slug>
           </div>
         </div>
       </div>
