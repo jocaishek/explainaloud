@@ -1,6 +1,6 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Archivo, Martian_Mono } from "next/font/google";
+import { Archivo, Martian_Mono, Source_Serif_4 } from "next/font/google";
 import { AuthHashRescue } from "~/components/auth-hash-rescue";
 import { siteUrl } from "~/lib/site";
 import { ThemeProvider } from "./theme-provider";
@@ -41,6 +41,28 @@ const archivo = Archivo({
 const martianMono = Martian_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+});
+
+/* Source Serif 4 sets every headline. Archivo keeps the body and the labels.
+ *
+ * A serif display over a grotesque body is the single most reliable way for a
+ * page whose only content is text to look designed rather than defaulted, and
+ * it is what the reference set does almost without exception. The serif carries
+ * one more thing here: this product is about explaining, and an explanation is
+ * a written form. A grotesque headline reads as an announcement; a serif one
+ * reads as a sentence somebody wrote.
+ *
+ * Weight 400 at every size, never bold. That restraint is the whole effect —
+ * the serif states rather than shouts, and at 64px a regular weight has more
+ * authority than a semibold, because nothing on the page is straining.
+ *
+ * Not Instrument Serif and not Fraunces, which are the two faces every
+ * generated page reaches for first. */
+const sourceSerif = Source_Serif_4({
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+  weight: ["400"],
+  variable: "--font-display",
 });
 
 const DIRECTION_CONTRACT = `<!--
@@ -114,7 +136,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
-      <body className={`${archivo.variable} ${martianMono.variable} font-sans`}>
+      <body
+        className={`${archivo.variable} ${martianMono.variable} ${sourceSerif.variable} font-sans`}
+      >
         {/* The direction this design is under contract to, emitted as a real
             HTML comment so it survives the production build and can be read
             off the served page rather than taken on trust from a source file

@@ -61,10 +61,8 @@ const VERDICT_LABEL: Record<Exclude<Verdict, "plain">, string> = {
  * in the first line they read, which is a strange way to open.
  */
 const HEADLINE: readonly Run[] = [
-  ["Say it out loud, and turn ", "plain"],
-  ["sort of", "vague"],
-  [" into ", "plain"],
-  ["certain", "ok"],
+  ["Explain it out loud. Find out what you ", "plain"],
+  ["only half know", "vague"],
   [".", "plain"],
 ];
 
@@ -161,69 +159,11 @@ const RUNNING_ORDER = [
   },
 ] as const;
 
-/**
- * The chain of agents, written as a handover rather than as a log.
- *
- * The first version of this section was five timestamped lines and it read
- * like a table of contents: five names, five numbers, no visible relationship
- * between them. The thing worth understanding is not that five agents ran, it
- * is that the third one throws away the second one's work — so each step now
- * names what it was handed, what it did, and what it passed on, and the audit
- * step shows the two claims it actually cut.
- *
- * `takes`/`gives` are the handover. `cut` is only set where something was
- * thrown away, and it is the whole point of the section.
- */
-const CHAIN: readonly {
-  readonly who: string;
-  readonly takes: string;
-  readonly does: string;
-  readonly gives: string;
-  /** Only the audit step throws anything away. */
-  readonly cut?: readonly string[];
-}[] = [
-  {
-    who: "Research",
-    takes: "Your files, and the topic",
-    does: "Finds what a good course on this would cover.",
-    gives: "12 sources read, 4 worth keeping",
-  },
-  {
-    who: "Architect",
-    takes: "4 sources, your files",
-    does: "Drafts the key points you will be graded against, each tied to a quote.",
-    gives: "9 key points drafted",
-  },
-  {
-    who: "Audit",
-    takes: "9 key points",
-    does: "Checks every claim against your files. It sees the quotes, not the reasoning.",
-    gives: "7 upheld",
-    cut: [
-      "Checkpoint control and p53",
-      "Comparison with binary fission in prokaryotes",
-    ],
-  },
-  {
-    who: "Revise",
-    takes: "7 upheld, 2 rejected",
-    does: "Rewrites around the holes. A shorter course is the right answer.",
-    gives: "7 key points, final",
-  },
-  {
-    who: "Questions",
-    takes: "7 key points",
-    does: "Writes the interview bank. No question repeats one you have answered.",
-    gives: "24 questions, none repeating",
-  },
-];
-
 const SECTIONS = [
   { id: "order", label: "Running order" },
   { id: "marking", label: "Live marking" },
   { id: "pace", label: "Pace" },
   { id: "sources", label: "Sources only" },
-  { id: "chain", label: "The chain" },
 ] as const;
 
 /* -------------------------------------------------------------------------
@@ -544,69 +484,6 @@ function SignalStrip() {
  * Chrome
  * ---------------------------------------------------------------------- */
 
-/**
- * What a panel carries besides its content.
- *
- * The page was legible and empty. These are the two devices the reference
- * sites use to give a section presence without putting a picture in it, and
- * both are made of something the section already has rather than of
- * decoration invented for the gap.
- *
- * The numeral is the section's own index, set at about a quarter of the
- * viewport and run off the right edge so only part of it is in frame. Every
- * editorial site on the list does some version of this, and Leonardo builds
- * its entire opening out of it: letterforms at a scale where they stop being
- * read and start being seen. At five per cent of the panel's accent it is
- * texture — you notice the page has something in it, not what.
- *
- * There was a 3px rule in the accent along each panel's top edge too, and it
- * had to go. On the pace panel that meant a single magenta line with nothing
- * else magenta anywhere near it, which reads as a stray border rather than as
- * a system — a colour needs more than one appearance in a panel before a bare
- * rule in it means anything. The numeral and the section index carry the
- * accent between them, and that is enough.
- */
-function PanelDecor({ n, side }: { n: string; side: "left" | "right" }) {
-  return (
-    <div
-      aria-hidden="true"
-      className="-z-10 pointer-events-none absolute inset-0 overflow-hidden"
-    >
-      {/* Alternating sides down the page.
-       *
-       * Every numeral on the same edge reads as a fixed margin ornament — you
-       * stop seeing it after the second one. Swapping sides means the eye
-       * meets it somewhere new in each panel, which is what keeps it working
-       * as texture rather than as furniture, and it sets up a slow zigzag
-       * against the timecode ladder that runs down the left throughout. */}
-      <span
-        className={cn(
-          "-translate-y-1/2 absolute top-1/2 hidden select-none font-semibold text-[24vw] text-[var(--accent)] leading-none tracking-[-0.05em] opacity-[0.05] [font-stretch:78%] md:block",
-          side === "right" ? "-right-[3vw]" : "-left-[3vw]",
-        )}
-      >
-        {n}
-      </span>
-    </div>
-  );
-}
-
-/**
- * The ruled scale down a section's left margin.
- *
- * Absolutely positioned inside the section rather than placed in the gutter
- * cell of the grid, because it has to run the section's whole height and the
- * grid cell it would otherwise live in is only as tall as the label in it.
- */
-function Ladder() {
-  return (
-    <div
-      aria-hidden="true"
-      className="ladder -z-10 pointer-events-none absolute top-0 bottom-0 left-4 hidden w-[var(--gutter)] md:left-8 md:block"
-    />
-  );
-}
-
 /** Small tracked mono. The page's only label voice. */
 function Slug({
   children,
@@ -795,7 +672,7 @@ function SectionHead({
          * most of what reads as professional rather than promotional. The type
          * is still Archivo and still heavier and tighter than the body; it has
          * simply stopped performing. */}
-        <h2 className="max-w-[22ch] font-semibold text-[clamp(1.7rem,3.6vw,2.7rem)] leading-[1.1] tracking-[-0.025em]">
+        <h2 className="max-w-[24ch] font-display font-normal text-[clamp(1.9rem,3.8vw,3rem)] leading-[1.15] tracking-[-0.015em]">
           {title}
         </h2>
         <p className="mt-5 max-w-[54ch] text-[1.05rem] leading-[1.65] opacity-80">
@@ -912,7 +789,7 @@ function Hero() {
            * headline. Nested, they flow, and the two columns simply end where
            * their own content ends. */}
           <div className="flex flex-col">
-            <h1 className="max-w-[13ch] font-semibold text-[clamp(2.6rem,7.4vw,6.4rem)] leading-[1.04] tracking-[-0.038em]">
+            <h1 className="max-w-[28ch] pb-1 font-display font-normal text-[clamp(2.2rem,4.6vw,3.7rem)] leading-[1.12] tracking-[-0.015em]">
               <MarkedLine
                 runs={HEADLINE}
                 cued={cued}
@@ -922,9 +799,15 @@ function Hero() {
             </h1>
 
             <div className="mt-9">
-              <p className="max-w-[32ch] text-[1.02rem] leading-[1.6] opacity-75">
-                Talk through a topic for three minutes. Get your own words back,
-                marked. Nothing typed, no audio kept.
+              {/* What the product does, in one sentence, before anything
+                  else. The old line described the experience ("get your own
+                  words back, marked") to somebody who did not yet know what
+                  was being marked or why. Upload, talk, read back: the three
+                  steps in order, and the reason at the end. */}
+              <p className="max-w-[34ch] text-[1.05rem] leading-[1.65] opacity-75">
+                Upload your notes, talk through them for three minutes, and read
+                back exactly which claims you got right, which were vague, and
+                what you skipped.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:items-center">
                 <Cue href="/signup" className="justify-center sm:justify-start">
@@ -967,7 +850,7 @@ function Hero() {
            * out. The reserved height on the three take lines stays exactly as
            * it was, because that is what stops the page stepping down as the
            * words arrive. */}
-          <div className="rounded-2xl border border-[var(--rule)] p-5">
+          <div className="rounded-[20px] border border-[var(--rule)] p-5">
             {/* What is being explained, and what it was built from.
              *
              * The panel used to open straight into three marked sentences with
@@ -1145,8 +1028,6 @@ function RunningOrder() {
       id="order"
       className="paper-grey accent-violet relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
-      <PanelDecor n="02" side="right" />
-      <Ladder />
       <SectionHead
         n="02"
         title="Four minutes, start to finish."
@@ -1169,7 +1050,7 @@ function RunningOrder() {
           >
             <Slug className="tc pt-2.5">{row.n}</Slug>
             <div>
-              <h3 className="font-semibold text-[clamp(1.3rem,3.2vw,2.1rem)] leading-[1.05] tracking-[-0.02em] [font-stretch:87%]">
+              <h3 className="font-display font-normal text-[clamp(1.35rem,3vw,2rem)] leading-[1.15] tracking-[-0.01em]">
                 {row.item}
               </h3>
               <p className="max-w-[58ch] pt-3 leading-[1.6] opacity-80">
@@ -1288,8 +1169,6 @@ function LiveMarking() {
       id="marking"
       className="paper accent-blue relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
-      <PanelDecor n="03" side="left" />
-      <Ladder />
       <SectionHead
         n="03"
         title="Marked while you are still talking."
@@ -1418,8 +1297,6 @@ function Pace() {
       id="pace"
       className="paper-grey accent-magenta relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
-      <PanelDecor n="04" side="right" />
-      <Ladder />
       <SectionHead
         n="04"
         title="Fast is not the same as fluent."
@@ -1511,8 +1388,6 @@ function SourcesOnly() {
       id="sources"
       className="paper accent-violet relative isolate rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
     >
-      <PanelDecor n="05" side="left" />
-      <Ladder />
       <SectionHead
         n="05"
         title="A short course is a correct answer."
@@ -1607,194 +1482,6 @@ function SourcesOnly() {
 }
 
 /* -------------------------------------------------------------------------
- * 06 — The chain
- * ---------------------------------------------------------------------- */
-
-function Chain() {
-  const { ref, visible } = useInView<HTMLElement>();
-
-  /* The work moving down the chain, on a loop.
-   *
-   * `stage` is which agent currently holds it: everything before has run,
-   * everything after is waiting. It advances once the section is on screen
-   * rather than on mount, so the run is not already over by the time anybody
-   * scrolls to it — and when it reaches the end it holds on the finished
-   * chain, then starts a fresh course from the top.
-   *
-   * The hold at the end is the longest pause in the sequence and it is doing
-   * work: the finished state is what the section is arguing for, and a chain
-   * that snapped straight back to nothing would never let anybody read it.
-   *
-   * The audit step gets longer than the running steps for the same reason. It
-   * is the one that rejects something, and the pause before the two cut claims
-   * appear is what makes the rejection read as a decision rather than a
-   * transition. */
-  const [stage, setStage] = useState(0);
-  const reduced = useMediaQuery("(prefers-reduced-motion: reduce)");
-
-  useEffect(() => {
-    if (!visible) return;
-    if (reduced) {
-      setStage(CHAIN.length);
-      return;
-    }
-    const finished = stage >= CHAIN.length;
-    const id = window.setTimeout(
-      () => setStage(finished ? 0 : stage + 1),
-      finished
-        ? 3_200
-        : stage === 0
-          ? 400
-          : CHAIN[stage - 1]?.cut
-            ? 1_900
-            : 1_100,
-    );
-    return () => window.clearTimeout(id);
-  }, [visible, stage, reduced]);
-
-  return (
-    <section
-      ref={ref}
-      id="chain"
-      className="paper-grey accent-blue relative isolate scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
-    >
-      <PanelDecor n="06" side="right" />
-      <Ladder />
-      <SectionHead
-        n="06"
-        title="Nobody grades their own work."
-        lede="One agent drafts. A second one that did not write it cuts anything it cannot trace to your files."
-      />
-
-      <div
-        data-rise=""
-        className="mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4"
-      >
-        <Slug className="tc pt-6">chain</Slug>
-
-        {/* A rule down the left of the whole list, so the five steps read as
-            one thing being passed along rather than as five entries. The
-            ultramarine line on top of it is the work itself: it draws down as
-            each agent finishes and hands over, which is the one fact this
-            section exists to make legible. */}
-        <ol className="relative border-[var(--rule)] border-l">
-          <span
-            aria-hidden="true"
-            className="-left-px absolute top-0 w-px origin-top bg-brand"
-            style={{
-              height: `${(Math.min(stage, CHAIN.length) / CHAIN.length) * 100}%`,
-              transition: `height 700ms ${EASE}`,
-            }}
-          />
-
-          {CHAIN.map((step, i) => {
-            const done = stage > i;
-            const working = stage === i;
-            const reached = done || working;
-
-            return (
-              <li
-                key={step.who}
-                className="relative py-7 pl-8 md:pl-10"
-                style={{
-                  opacity: reached ? 1 : 0.35,
-                  transition: `opacity 500ms ${EASE}`,
-                }}
-              >
-                {/* The node. Hollow until the work reaches it, filled once it
-                    has run, and pinging while it is the one holding the work.
-                    The audit step fills red rather than ultramarine — the one
-                    colour difference in the list marks the one step that can
-                    say no. */}
-                <span className="-left-[6px] absolute top-[2.3rem] block h-[11px] w-[11px]">
-                  {working ? (
-                    <span
-                      className={cn(
-                        "work-ping absolute inset-0 rounded-full border",
-                        step.cut
-                          ? "border-[var(--miss)]"
-                          : "border-[var(--color-brand)]",
-                      )}
-                    />
-                  ) : null}
-                  <span
-                    className={cn(
-                      "absolute inset-0 rounded-full border-2 transition-colors duration-500",
-                      reached
-                        ? step.cut
-                          ? "border-[var(--miss)] bg-[var(--miss)]"
-                          : "border-brand bg-brand"
-                        : "border-[var(--rule-strong)] bg-[var(--stock)]",
-                    )}
-                  />
-                </span>
-
-                <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-                  <h3 className="font-semibold text-[clamp(1.15rem,2.4vw,1.6rem)] tracking-[-0.02em]">
-                    {step.who}
-                  </h3>
-                  {/* The handover reads as a state, so it says what it is
-                      doing while it is doing it. */}
-                  <Slug className="tc">
-                    {done ? (
-                      <>
-                        in: {step.takes} → out: {step.gives}
-                      </>
-                    ) : working ? (
-                      <span className="text-brand-ink opacity-100">
-                        Working on {step.takes.toLowerCase()}
-                      </span>
-                    ) : (
-                      <span className="opacity-60">Waiting</span>
-                    )}
-                  </Slug>
-                </div>
-
-                <p className="mt-2.5 max-w-[58ch] leading-[1.65] opacity-80">
-                  {step.does}
-                </p>
-
-                {/* What was thrown away, named. This is the section's argument
-                    and it is the only place on the page where the product
-                    tells you about something it decided not to give you — so
-                    it arrives when the audit finishes, not before. */}
-                {step.cut ? (
-                  <div
-                    className="mt-5 grid transition-[grid-template-rows,opacity] duration-500 ease-out"
-                    style={{
-                      gridTemplateRows: done ? "1fr" : "0fr",
-                      opacity: done ? 1 : 0,
-                    }}
-                  >
-                    <div className="overflow-hidden">
-                      <div className="rounded-r-lg border-[var(--miss)] border-l-2 bg-[color-mix(in_srgb,var(--miss)_6%,transparent)] py-3 pr-4 pl-4">
-                        <Slug className="text-[var(--miss)] opacity-100">
-                          Cut, not traceable to your files
-                        </Slug>
-                        <ul className="mt-2 space-y-1">
-                          {step.cut.map((claim) => (
-                            <li
-                              key={claim}
-                              className="text-[0.95rem] text-[var(--miss)] leading-[1.5] line-through decoration-[var(--miss)]/50"
-                            >
-                              {claim}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-/* -------------------------------------------------------------------------
  * Close
  * ---------------------------------------------------------------------- */
 
@@ -1809,7 +1496,7 @@ function Close() {
           </span>
         </div>
         <div>
-          <h2 className="max-w-[16ch] font-semibold text-[clamp(2rem,4.6vw,3.4rem)] leading-[1.08] tracking-[-0.03em]">
+          <h2 className="max-w-[18ch] font-display font-normal text-[clamp(2.1rem,4.4vw,3.4rem)] leading-[1.12] tracking-[-0.015em]">
             Find out before it matters.
           </h2>
           <p className="mt-8 max-w-[32ch] text-[1.15rem] leading-[1.55] opacity-90">
@@ -1870,7 +1557,6 @@ export default function Home() {
       <LiveMarking />
       <Pace />
       <SourcesOnly />
-      <Chain />
       <Close />
       <Footer />
     </main>
