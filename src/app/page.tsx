@@ -1276,9 +1276,12 @@ function Pace() {
         lede="Measured against your own baseline, so thinking time is not held against you. Racing usually means reciting."
       />
 
+      {/* The chart floats, as the hero's take does. Before this it was the one
+          piece of product output on the page sitting flat on the stock, which
+          made section 04 read as a different page from the one above it. */}
       <div
         data-rise=""
-        className="mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4"
+        className="lay-in panel-live glass-panel mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4 rounded-[20px] p-5 md:p-7"
       >
         <Slug className="tc pt-1">wpm</Slug>
         <div>
