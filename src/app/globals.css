@@ -272,6 +272,79 @@
   color: var(--foreground);
 }
 
+/* The app, at night.
+ *
+ * `.register-app` answers the surface and ink tokens with literals, and it is
+ * more specific than `.dark`, so every one of those literals won that fight —
+ * the theme switcher moved the landing page and left the app on white paper.
+ * The visible symptom was smaller and stranger than "dark mode is broken":
+ * utilities resolved against `.register-app` and came back light, `@theme`
+ * variables read from inline styles resolved at `:root` and came back dark,
+ * and a chart label ended up a black slab on a white panel.
+ *
+ * So the app gets its own night values at the same specificity. This is the
+ * warm stock inverted, not a neutral grey: the same carbon the landing's
+ * `ground-deep` uses, so both registers are dark in the same colour.
+ *
+ * The accent does not move. Amber over carbon is the pairing the landing
+ * already runs, and `--accent-contrast` stays dark ink because the fill is
+ * just as luminous at night. `--brand-ink` does move — the deep stop is too
+ * dark to set words in against carbon. */
+.dark .register-app {
+  /* Warm charcoal, not the landing's tarmac.
+   *
+   * The first pass used `#14100c` — the same near-black `ground-deep` carries.
+   * That is right for a full-bleed band you scroll past in three seconds and
+   * wrong for a screen somebody works inside for twenty minutes: at that value
+   * white text on it haloes, and the contrast between page and card is so
+   * small that everything reads as one flat void. These sit several steps up
+   * the same warm ramp, which is easier to look at for a long time and leaves
+   * real daylight between the canvas and the cards on it. */
+  --background: #221d17;
+  --card: #2c2620;
+  --popover: #2c2620;
+  --muted: #382f27;
+  --secondary: #382f27;
+
+  --foreground: #f0ece4;
+  --card-foreground: #f0ece4;
+  --popover-foreground: #f0ece4;
+  --secondary-foreground: #f0ece4;
+  --muted-foreground: #b5aca0;
+  --strong: #ffffff;
+  --subtle: #b5aca0;
+
+  --border: #453d33;
+  --input: #574d41;
+  --surface: rgba(240, 236, 228, 0.05);
+  --surface-border: rgba(240, 236, 228, 0.12);
+
+  /* Lifted for a dark canvas. The deep stop carries a white label and is
+     therefore too dark to be one — as body text on carbon it is under the
+     4.5:1 a paragraph needs. */
+  --brand-ink: #fbbf24;
+
+  /* Elevation on a dark canvas is a shadow nobody can see. What separates a
+     card from the page here is that the card is *lighter*, so the shadows go
+     to near-black and do the softening rather than the lifting. */
+  --elev-rest:
+    0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -18px rgba(0, 0, 0, 0.7);
+  --elev-hover:
+    0 2px 6px rgba(0, 0, 0, 0.45), 0 22px 48px -22px rgba(0, 0, 0, 0.8);
+  --elev-float:
+    0 1px 3px rgba(0, 0, 0, 0.4), 0 20px 45px -22px rgba(0, 0, 0, 0.75);
+
+  /* The verdicts, lifted exactly as `ground-deep` lifts them. `#0f7a3d` green
+     sits at 2.4:1 on this canvas, well under what a marked word needs, and
+     these three have to keep meaning what they mean on both sides. */
+  --ok: #4ade80;
+  --miss: #fb7185;
+  --vague: #d6c19a;
+
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -1214,14 +1287,22 @@
   /* A control changing state: hover, focus, a panel opening. */
   --dur-ui: 320ms;
   /* Content arriving on scroll. Deliberately slow — this is the one place the
-     product is allowed to take its time. */
-  --dur-reveal: 900ms;
+     product is allowed to take its time. The block should already be moving
+     by the time you look at it, so what makes this feel slow or fast is when
+     it *starts*, not how long it runs; see `scroll-reveal.tsx` for the
+     trigger, which is the half that was actually wrong. */
+  --dur-reveal: 1000ms;
 
   /* How far a revealing block travels, and how much later each one in a group
-     starts. 70ms is the useful window: below it a stagger is invisible, above
-     it the last card in a row is visibly late. */
+     starts.
+
+     The stagger is deliberately small. It used to be 70ms against a run of
+     six, so the sixth block in a group started 350ms after the first and
+     finished a third of a second after everything around it had settled —
+     which reads as one late straggler rather than as a group arriving. At
+     45ms across a run of four the whole group is under way within 135ms. */
   --reveal-rise: 1.5rem;
-  --reveal-stagger: 70ms;
+  --reveal-stagger: 45ms;
 }
 
 /* Blocks arriving on scroll.
@@ -1647,6 +1728,7 @@
 
 /* Inside the one dark section, the same panel inverts. */
 .register-sunset .glass-panel,
+.dark .register-app .glass-panel,
 .ground-deep .glass-panel {
   background:
     linear-gradient(
@@ -1667,6 +1749,7 @@
     background: #fffdfb;
   }
   .register-sunset .glass-panel,
+  .dark .register-app .glass-panel,
   .ground-deep .glass-panel {
     background: #1b1712;
   }

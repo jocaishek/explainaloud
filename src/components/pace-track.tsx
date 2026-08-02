@@ -221,7 +221,18 @@ export function PaceTrack({
                     height: shown ? `${(point.wpm / peak) * 100}%` : "0%",
                     // The reserved amber, meaning what it means everywhere
                     // else: said, but not in a form worth trusting.
-                    background: over ? "var(--vague)" : "var(--color-brand)",
+                    /* Ink for an ordinary window, the reserved amber for a
+                       racing one — the same pairing the landing's chart uses.
+
+                       Two bugs met here. `var(--color-brand)` is a `@theme`
+                       variable, and reading one in an inline style resolves
+                       it at `:root` rather than against `.register-app` — so
+                       this drew the landing's `#f97316` while every utility
+                       on the same screen drew the app's amber. And once the
+                       app accent moved to gold, brand-against-`--vague` was
+                       one hue at two values: an orange bar and a brown one,
+                       in a chart whose entire job is that distinction. */
+                    background: over ? "var(--vague)" : "var(--foreground)",
                     // Dimming the rest is what makes one bar readable in a row
                     // of sixteen; without it the hover only moves a tooltip.
                     opacity: hover === null || hover === i ? 1 : 0.3,
@@ -265,14 +276,15 @@ export function PaceTrack({
                     landing on 52% opaque rather than solid.
 
                     Now that the panel itself is the card colour, the chip can
-                    simply be that: one opaque token, shared with the surface
-                    it sits on, so the two cannot drift apart. */}
-                <Slug
-                  className="absolute right-0 bottom-1.5 px-2 text-strong"
-                  style={{
-                    background: "var(--color-card)",
-                  }}
-                >
+                    simply be that — but as the `bg-card` *utility*, not as
+                    `var(--color-card)` in an inline style. Those are not the
+                    same thing: a `@theme` variable read inline resolves at
+                    `:root`, so in dark mode the chip came back `#171717`
+                    while the panel behind it stayed white, and the label was
+                    dark text on a black slab in the middle of the chart. The
+                    utility resolves against `.register-app` exactly as the
+                    panel's own `bg-card` does, so the two cannot disagree. */}
+                <Slug className="absolute right-0 bottom-1.5 bg-card px-2 text-strong">
                   Your baseline {baselineWpm}
                 </Slug>
               </div>
