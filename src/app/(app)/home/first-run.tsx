@@ -89,11 +89,30 @@ export function FirstRunTour() {
     };
     measure();
 
-    window.addEventListener("resize", measure);
-    window.addEventListener("scroll", measure, { passive: true });
+    /* Coalesced to one measurement per frame.
+     *
+     * `measure` was wired straight to the scroll event, and it calls
+     * `setRect` — so a scroll fired a React state update, and therefore a
+     * re-render of this component, once per scroll event rather than once
+     * per frame. Browsers can emit several of those between paints, and
+     * `getBoundingClientRect` forces layout each time. The tour only runs on
+     * somebody's first visit, which is the worst possible moment for the app
+     * to feel heavy. */
+    let frame = 0;
+    const onScroll = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        measure();
+      });
+    };
+
+    window.addEventListener("resize", onScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
-      window.removeEventListener("resize", measure);
-      window.removeEventListener("scroll", measure);
+      window.removeEventListener("resize", onScroll);
+      window.removeEventListener("scroll", onScroll);
+      if (frame) cancelAnimationFrame(frame);
     };
   }, [current]);
 
