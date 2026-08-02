@@ -44,16 +44,19 @@
   /* Brand text on a near-white surface. The hero stop is dark enough to be
      its own ink here — 6.5:1 against the page — so the light theme sets words
      in it rather than in the deeper one. */
-  --brand-ink: #3b37e6;
+  --brand-ink: #fbbf24;
   /* The three stops as variables rather than as literals in `@theme`.
      Twenty-five files across the app already ask for `bg-brand-deep` or
      `text-brand-ink` and are right to — those names say what the colour is
      for. Making them indirect is what lets the app register answer with its
      own accent without a rename touching every one of those files, and it is
      why there is no mass find-and-replace in this change. */
-  --brand: #3b37e6;
-  --brand-deep: #241fb0;
-  --brand-foreground: #ffffff;
+  --brand: #f97316;
+  --brand-deep: #c2410c;
+  /* Dark ink on the sunset, not white. #f97316 is a light, luminous colour —
+     white type on it sits at 2.6:1, and the label on the one button somebody
+     is meant to press cannot be the least readable text on the page. */
+  --brand-foreground: #1a1206;
 
   /* Strong/among-text pairs used across the app so a component never has to
      hardcode a hex to get "brighter than body copy" or "dimmer than it". */
@@ -775,7 +778,7 @@
   background: var(--stock);
 }
 .paper-grey {
-  --stock: #f2f2f0;
+  --stock: #f6f3f1;
   background: var(--stock);
 }
 
@@ -871,7 +874,13 @@
    colour lit from opposite corners, so the field has a direction without a
    second hue appearing. */
 .ground-deep {
-  --stock: #14133a;
+  --stock: #14100c;
+  /* The verdicts, lifted for this one dark section. Same three meanings and
+     the same three hues, read against near-black instead of paper — `#0f7a3d`
+     green sits at 2.4:1 here, well under what a marked word needs. */
+  --ok: #4ade80;
+  --miss: #fb7185;
+  --vague: #d6c19a;
   --ink: #ffffff;
   --rule: rgba(255, 255, 255, 0.26);
   --rule-strong: rgba(255, 255, 255, 0.6);
@@ -880,13 +889,13 @@
   --ground-field:
     radial-gradient(
       62% 70% at 20% 16%,
-      rgba(59, 55, 230, 0.85) 0%,
-      rgba(59, 55, 230, 0) 64%
+      rgba(249, 115, 22, 0.3) 0%,
+      rgba(249, 115, 22, 0) 64%
     ),
     radial-gradient(
       52% 60% at 86% 90%,
-      rgba(59, 55, 230, 0.45) 0%,
-      rgba(59, 55, 230, 0) 68%
+      rgba(251, 191, 36, 0.18) 0%,
+      rgba(249, 115, 22, 0) 68%
     );
 }
 
@@ -894,21 +903,21 @@
    4.5:1, which is the whole reason these sections take a tint and not a field.
    Same hue, one value apart — deeper first, lifting as the page runs out. */
 .ground-tint {
-  --stock: #e9ebff;
+  --stock: #faf6f2;
   background-color: var(--stock);
   --ground-field: radial-gradient(
     70% 60% at 78% 10%,
-    rgba(59, 55, 230, 0.16) 0%,
-    rgba(59, 55, 230, 0) 70%
+    rgba(249, 115, 22, 0.12) 0%,
+    rgba(249, 115, 22, 0) 70%
   );
 }
 .ground-tint-soft {
-  --stock: #f4f5ff;
+  --stock: #fdfaf7;
   background-color: var(--stock);
   --ground-field: radial-gradient(
     64% 62% at 16% 14%,
-    rgba(59, 55, 230, 0.14) 0%,
-    rgba(59, 55, 230, 0) 68%
+    rgba(251, 191, 36, 0.1) 0%,
+    rgba(249, 115, 22, 0) 68%
   );
 }
 
@@ -920,8 +929,8 @@
   background-color: var(--stock);
   --ground-field: radial-gradient(
     80% 40% at 50% 0%,
-    rgba(59, 55, 230, 0.13) 0%,
-    rgba(59, 55, 230, 0) 72%
+    rgba(249, 115, 22, 0.12) 0%,
+    rgba(249, 115, 22, 0) 72%
   );
 }
 
@@ -1494,6 +1503,12 @@
  * mark words and nothing else, and the sunset accents never touch a
  * transcript.
  * ------------------------------------------------------------------------- */
+/* The landing runs in this world.
+ *
+ * `.tx` is the class the page root already carries, and every section below it
+ * derives its ground from the same three variables — so re-pointing them here
+ * converts the whole page instead of requiring each of the six sections to be
+ * rewritten. That indirection was built for exactly this. */
 .register-sunset {
   /* Tarmac. Not pure black — a carbon with a trace of warmth in it, so the
      gold reads as light falling on the surface rather than as a sticker. */
@@ -1538,21 +1553,45 @@
   background:
     linear-gradient(
       160deg,
-      rgba(255, 255, 255, 0.06),
+      rgba(255, 255, 255, 0.9),
+      rgba(255, 255, 255, 0.62) 60%
+    ),
+    rgba(255, 252, 248, 0.5);
+  border: 1px solid rgba(194, 65, 12, 0.14);
+  border-top-color: rgba(251, 191, 36, 0.45);
+  backdrop-filter: blur(18px) saturate(150%);
+  /* The lift is tinted with the sunset rather than with black. A neutral
+     shadow under a warm panel on warm paper reads as dirt; this one reads as
+     the panel sitting in the same light as everything around it. */
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
+    0 20px 45px -22px rgba(124, 45, 18, 0.4);
+}
+
+/* Inside the one dark section, the same panel inverts. */
+.register-sunset .glass-panel,
+.ground-deep .glass-panel {
+  background:
+    linear-gradient(
+      160deg,
+      rgba(255, 255, 255, 0.07),
       rgba(255, 255, 255, 0.02) 42%
     ),
-    var(--glass);
-  border: 1px solid var(--rule);
-  border-top-color: var(--glass-edge);
-  backdrop-filter: blur(20px) saturate(140%);
+    rgba(24, 20, 16, 0.6);
+  border-color: rgba(244, 241, 234, 0.12);
+  border-top-color: rgba(251, 191, 36, 0.28);
   box-shadow:
     inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
-    0 24px 60px -24px rgba(0, 0, 0, 0.9);
+    0 24px 60px -24px rgba(0, 0, 0, 0.85);
 }
 @media (max-width: 767px) {
   .glass-panel {
     backdrop-filter: none;
-    background: var(--carbon-high);
+    background: #fffdfb;
+  }
+  .register-sunset .glass-panel,
+  .ground-deep .glass-panel {
+    background: #1b1712;
   }
 }
 
@@ -1582,4 +1621,36 @@
       rgba(251, 191, 36, 0.1) 0%,
       rgba(251, 191, 36, 0) 60%
     );
+}
+
+/* The hero fragments' idle drift.
+ *
+ * CSS rather than Framer Motion: these two panels already carry a scroll-linked
+ * parallax transform written from a rAF loop, and a second library animating
+ * the same property would fight it every frame. A keyframe on a wrapper class
+ * composes instead.
+ *
+ * Different cycle lengths on purpose. Matched loops read as one mechanism
+ * moving two objects, and the illusion dies within about four seconds of
+ * watching; falling out of phase is the whole effect. */
+@keyframes float-drift {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -10px;
+  }
+}
+.float-slow {
+  animation: float-drift 7s cubic-bezier(0.44, 0, 0.56, 1) infinite;
+}
+.float-slower {
+  animation: float-drift 9.5s cubic-bezier(0.44, 0, 0.56, 1) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .float-slow,
+  .float-slower {
+    animation: none;
+  }
 }
