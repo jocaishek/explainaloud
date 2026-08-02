@@ -61,9 +61,7 @@ const VERDICT_LABEL: Record<Exclude<Verdict, "plain">, string> = {
  * in the first line they read, which is a strange way to open.
  */
 const HEADLINE: readonly Run[] = [
-  ["Explain it out loud. Find out what you ", "plain"],
-  ["only half know", "vague"],
-  [".", "plain"],
+  ["Find the gaps you didn't know you had.", "plain"],
 ];
 
 /**
@@ -710,9 +708,35 @@ function Hero() {
        * what is being said. A sentence about explaining something out loud
        * should be set the way a sentence is set, not squeezed into a column
        * beside a picture. */}
-      <section className="paper accent-blue px-[var(--pad)] pt-14 pb-20 md:pt-16 md:pb-28">
+      <section className="paper accent-blue px-4 pt-14 pb-20 md:px-8 md:pt-16 md:pb-28">
+        {/* The name, at the size the name should be.
+         *
+         * Set in Archivo at the top of its width axis rather than in the
+         * display serif: a wordmark and a headline in the same face at the
+         * same moment compete, and the one that loses is the sentence, which
+         * carries the meaning. Expanded grotesque against a serif sentence is
+         * a real contrast rather than a size difference.
+         *
+         * Sized with `min()` in an inline style, not a viewport unit in a
+         * class. `vw` keeps growing after the page has stopped: past the
+         * measure the content is capped at 84rem while `12vw` is not, so on a
+         * wide display the word ran straight off the side. The rem term is
+         * what catches it. Inline because a Tailwind arbitrary value
+         * containing a comma does not generate.
+         *
+         * Tracking goes positive, against everything else on the page. A
+         * wordmark is read as letters in sequence rather than as a word
+         * shape, and letters need air to be read that way. */}
+        <p
+          aria-hidden="true"
+          style={{ fontSize: "min(11.5vw, 10.5rem)" }}
+          className="select-none text-center font-semibold leading-[0.92] tracking-[0.01em] [font-stretch:125%]"
+        >
+          EXPLAINALOUD
+        </p>
+
         <div className="relative mx-auto max-w-[46rem] text-center">
-          <h1 className="mx-auto max-w-[24ch] pb-1 font-display font-normal text-[clamp(2.3rem,5.4vw,4.1rem)] leading-[1.14] tracking-[-0.015em]">
+          <h1 className="mx-auto mt-7 max-w-[22ch] pb-1 font-display font-normal text-[clamp(1.7rem,3.4vw,2.6rem)] leading-[1.2] tracking-[-0.012em] opacity-90">
             <MarkedLine
               runs={HEADLINE}
               cued={cued}
