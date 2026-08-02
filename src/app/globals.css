@@ -1394,6 +1394,37 @@
   will-change: transform;
 }
 
+/* Where the two hero artifacts sit when there is room to orbit.
+ *
+ * They are absolutely positioned against the centred 46rem column, and a fixed
+ * `-19rem` offset from that column runs off the side of any window narrower
+ * than about 84rem — which is most laptops, so the panels arrived cropped to a
+ * sliver. The `max()` is the fix: the ideal offset, or the furthest the panel
+ * can go while keeping 1.25rem of air to the viewport edge, whichever keeps it
+ * on screen. `(46rem - 100vw) / 2` is where the viewport edge is in the
+ * column's own coordinates.
+ *
+ * CSS rather than utility classes because a Tailwind arbitrary value
+ * containing a comma does not generate — the same reason the wordmark's
+ * `min()` is inline. */
+@media (min-width: 64rem) {
+  .hero-orbit-left,
+  .hero-orbit-right {
+    position: absolute;
+    margin-top: 0;
+  }
+  .hero-orbit-left {
+    width: 15rem;
+    top: 3.5rem;
+    left: max(-19rem, calc((46rem - 100vw) / 2 + 1.25rem));
+  }
+  .hero-orbit-right {
+    width: 14rem;
+    top: 9rem;
+    right: max(-18rem, calc((46rem - 100vw) / 2 + 1.25rem));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .hero-mark,
   .hero-drift-near,

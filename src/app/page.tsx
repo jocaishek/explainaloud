@@ -836,7 +836,7 @@ function Hero() {
            * and it is the disagreement between them that reads as depth. */}
           <Artifact
             accent="var(--ok)"
-            className="hero-drift-near lay-in-soft float-slow mt-10 lg:absolute lg:-left-[19rem] lg:top-[3.5rem] lg:mt-0 lg:w-[15rem]"
+            className="hero-drift-near lay-in-soft float-slow hero-orbit-left mt-10"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span
@@ -861,7 +861,7 @@ function Hero() {
 
           <Artifact
             accent="var(--miss)"
-            className="hero-drift-far lay-in-soft float-slower mt-4 lg:absolute lg:-right-[18rem] lg:top-[9rem] lg:mt-0 lg:w-[14rem]"
+            className="hero-drift-far lay-in-soft float-slower hero-orbit-right mt-4"
           >
             <p className="text-[0.95rem] leading-[1.6]">
               <span style={{ color: "var(--miss)" }} className="italic">
