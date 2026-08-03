@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
+import { TryIt } from "~/components/landing/try-it";
 import { ScrollReveal } from "~/components/scroll-reveal";
 import { useInView } from "~/hooks/use-in-view";
 import { useMediaQuery } from "~/hooks/use-media-query";
@@ -165,6 +166,7 @@ const SECTIONS = [
   { id: "marking", label: "Live marking" },
   { id: "pace", label: "Pace" },
   { id: "sources", label: "Sources only" },
+  { id: "try", label: "Try it" },
 ] as const;
 
 /* -------------------------------------------------------------------------
@@ -1531,6 +1533,43 @@ function SourcesOnly() {
 }
 
 /* -------------------------------------------------------------------------
+ * 06 — Walk the whole loop
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The last section before the ask, and the only one that shows the sequence.
+ *
+ * Everything above demonstrates a slice — the hero marks a take, 03 scrubs
+ * one, 04 charts a pace, 05 toggles the source rule. All true, none of them
+ * answering "what is it like to use this", because the product is a sequence
+ * and a slice cannot show one. This is where somebody who has read that far
+ * finds out, immediately before being asked to sign up.
+ *
+ * `ground-aura` rather than a tint: the take on step three carries marked
+ * words, and the pure ground is what keeps the three verdicts reading exactly
+ * as they will inside the product.
+ */
+function TryItSection() {
+  return (
+    <section
+      id="try"
+      className="ground ground-aura rule-b scroll-mt-24 px-4 py-24 md:px-8 md:py-32"
+    >
+      <SectionHead
+        n="06"
+        title="See the whole thing, in four steps."
+        lede="Pick a subject and walk it through — material in, course out, your take marked, the gaps named."
+      />
+
+      <div className="mt-16 grid grid-cols-[var(--gutter)_1fr] gap-x-4">
+        <div />
+        <TryIt />
+      </div>
+    </section>
+  );
+}
+
+/* -------------------------------------------------------------------------
  * Close
  * ---------------------------------------------------------------------- */
 
@@ -1619,6 +1658,7 @@ export default function Home() {
       <LiveMarking />
       <Pace />
       <SourcesOnly />
+      <TryItSection />
       <Close />
       <Footer />
     </main>
