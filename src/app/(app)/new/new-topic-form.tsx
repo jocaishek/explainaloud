@@ -11,7 +11,11 @@ import {
 } from "~/components/source-scope-choice";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
-import { HOMEWORK_MESSAGE, looksLikeHomework } from "~/lib/homework";
+import {
+  HOMEWORK_MESSAGE,
+  looksLikeHomework,
+  materialLooksLikeHomework,
+} from "~/lib/homework";
 import { BROAD_TOPIC_MESSAGE, isTopicTooBroad } from "~/lib/topic-scope";
 import {
   ACCEPT_ATTRIBUTE,
@@ -159,7 +163,7 @@ export function NewTopicForm({
       return;
     }
     const notes = String(formData.get("notes") ?? "");
-    if (looksLikeHomework(topic) || looksLikeHomework(notes)) {
+    if (looksLikeHomework(topic) || materialLooksLikeHomework(notes)) {
       setError(HOMEWORK_MESSAGE);
       setStatus(null);
       return;
