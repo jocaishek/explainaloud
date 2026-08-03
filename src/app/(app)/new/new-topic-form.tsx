@@ -16,6 +16,7 @@ import { BROAD_TOPIC_MESSAGE, isTopicTooBroad } from "~/lib/topic-scope";
 import {
   ACCEPT_ATTRIBUTE,
   ACCEPTED_EXTENSIONS,
+  MAX_NOTES_CHARS,
   MAX_SOURCE_BYTES,
   sourceLimitFor,
 } from "~/lib/uploads";
@@ -55,6 +56,9 @@ export function NewTopicForm({
   const inputRef = useRef<HTMLInputElement>(null);
   const dragDepth = useRef(0);
   const [files, setFiles] = useState<File[]>([]);
+  // Controlled only so the length can be reported back; the value still posts
+  // through the form's own `name`, and the whole of it is saved.
+  const [notes, setNotes] = useState("");
   const [dragActive, setDragActive] = useState(false);
   // Off by default: someone who uploads a single handout and expects a whole
   // course should get one. Strictness is the deliberate choice, not the
@@ -234,8 +238,24 @@ export function NewTopicForm({
           rows={4}
           disabled={!!createdCourseId}
           placeholder="Paste your notes here (optional)"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
           className="resize-none rounded-md border border-input bg-surface p-3 text-sm text-strong placeholder:text-subtle focus:outline-none disabled:opacity-60"
         />
+        {/* Said before submitting, not discovered afterwards.
+         *
+         * The whole note is saved and shown on the topic page; only what
+         * travels to the course builder is bounded. Without this the cut is
+         * silent, and a student who pasted a chapter would have no way to know
+         * the course was built from part of it. */}
+        {notes.length > MAX_NOTES_CHARS && (
+          <p className="text-xs text-subtle">
+            That&apos;s {notes.length.toLocaleString()} characters. The course
+            is built from the first {MAX_NOTES_CHARS.toLocaleString()} — the
+            rest is saved with your topic but not sent to the builder. Paste the
+            part you want taught, or upload it as a file instead.
+          </p>
+        )}
       </div>
 
       <section className="flex flex-col gap-3" aria-labelledby="source-heading">

@@ -6,6 +6,19 @@
  * would fail the build.
  */
 
+/**
+ * How much of the pasted notes reaches the course builder.
+ *
+ * Here rather than beside the source budget in `lib/ai/sources.ts` for the
+ * reason this file exists at all: that module is `server-only`, and the form
+ * needs this number to tell somebody their notes are longer than one request
+ * can carry. Two copies of a limit drift; the trimmer imports it from here.
+ *
+ * Everything typed is still saved and still shown on the topic page — this
+ * bounds the prompt, not the record.
+ */
+export const MAX_NOTES_CHARS = 8_000;
+
 export const ACCEPTED_EXTENSIONS = [
   ".pdf",
   ".docx",
