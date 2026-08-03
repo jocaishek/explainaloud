@@ -3,6 +3,8 @@
  * auditable in a single place rather than scattered across route handlers.
  */
 
+import { renderNotes } from "~/lib/ai/sources";
+
 /** The teaching contract, applied to anything that explains material. */
 export const TUTOR_SYSTEM = `You are an expert AI tutor.
 
@@ -100,6 +102,10 @@ export function courseGenerationPrompt(
   /** The student switched outside sources off; the files are the whole world. */
   sourcesOnly = false,
 ) {
+  /* Bounded before it reaches the prompt. Uploads have always been budgeted;
+     this box was not, and pasting is the easiest way to overfill it. */
+  const studentNotes = renderNotes(notes);
+
   return `ROLE: You are the Course Architect agent in a multi-agent teaching system.
 Your work will be audited by a separate Accuracy Reviewer agent.
 
@@ -118,7 +124,7 @@ answered — an expression to evaluate, a numbered exercise, a question off a
 paper — do not solve it. Teach the method it tests, using a different worked
 example of your own, so the student can explain the idea rather than copy an
 answer.
-${notes ? `\nThe student added these notes:\n${notes}\n` : ""}
+${studentNotes ? `\nThe student added these notes:\n${studentNotes}\n` : ""}
 Return JSON with this exact shape:
 {
   "summary": "2-3 sentence overview${grounded ? " grounded in the sources" : ""}",

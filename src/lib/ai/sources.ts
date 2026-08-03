@@ -2,8 +2,55 @@ import "server-only";
 
 export { ACCEPT_ATTRIBUTE, ACCEPTED_EXTENSIONS } from "~/lib/uploads";
 
+import { MAX_NOTES_CHARS } from "~/lib/uploads";
+
 /** Hard ceiling on how much source text we hand a model in one request. */
 const MAX_SOURCE_CHARS = 8_000;
+
+/**
+ * The prompt budget for pasted notes.
+ *
+ * Uploads have been budgeted since they existed; the notes box was not, and
+ * it is the easier of the two to overfill — pasting is one keystroke. A
+ * student pasted about ten thousand words of revision notes and the request
+ * came to 21,479 tokens, against a provider limit of 12,000 per minute. That
+ * request could not succeed at any time, on any retry, because one request
+ * was larger than the entire per-minute budget; it failed 413, not 429.
+ *
+ * Note this is a *prompt* budget, not a storage one. The full text is still
+ * written to `input_notes` and still shown on the topic page — nothing the
+ * student wrote is thrown away. Only what travels to the model is bounded,
+ * because that is the only place the length actually costs anything.
+ */
+
+/**
+ * Trims pasted notes to the prompt budget, saying so when it cuts.
+ *
+ * Cut at a paragraph or sentence boundary where one is near the limit rather
+ * than mid-word: the model reads this as evidence, and a sentence severed
+ * halfway is a sentence it may complete with a guess.
+ *
+ * The marker is not decoration. Without it the model sees a document that
+ * simply stops and has no way to know it is working from part of one, which
+ * is exactly the condition under which it fills the gap from its own
+ * knowledge — the thing sources-only mode exists to prevent.
+ */
+export function renderNotes(notes: string | null): string | null {
+  const text = notes?.trim();
+  if (!text) return null;
+  if (text.length <= MAX_NOTES_CHARS) return text;
+
+  const head = text.slice(0, MAX_NOTES_CHARS);
+  const breakAt = Math.max(head.lastIndexOf("\n\n"), head.lastIndexOf(". "));
+  // Only honour a boundary in the last fifth, so a document with no paragraph
+  // breaks near the cut does not lose most of its budget to the search.
+  const cut = breakAt > MAX_NOTES_CHARS * 0.8 ? breakAt + 1 : MAX_NOTES_CHARS;
+
+  return `${text.slice(0, cut).trim()}
+
+[These notes were longer than fits in one request and were cut here. Teach
+only what is above; do not guess at what came after it.]`;
+}
 
 export type SourceRow = {
   filename: string;
