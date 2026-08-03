@@ -16,7 +16,7 @@ type DisplayAgent = {
     | "revised"
     | "degraded"
     | "skipped";
-  provider?: "gemini" | "groq" | "local";
+  provider?: "gemini" | "groq" | "ling" | "local";
 };
 
 type Pipeline = "course" | "recording";
