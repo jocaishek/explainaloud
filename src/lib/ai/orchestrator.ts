@@ -14,7 +14,11 @@ import {
   gapReportPrompt,
   topicBreadthPrompt,
 } from "~/lib/ai/prompts";
-import { AiUnavailableError, completeJson } from "~/lib/ai/provider";
+import {
+  type AiProvider,
+  AiUnavailableError,
+  completeJson,
+} from "~/lib/ai/provider";
 import {
   type AgentRun,
   type AgentStep,
@@ -581,7 +585,7 @@ ${renderSources(evidenceSources)}`,
       ]);
 
   let review: CourseReview;
-  let reviewerProvider: "gemini" | "groq" | "local" = "local";
+  let reviewerProvider: AiProvider | "local" = "local";
   let reviewerStatus: AgentStep["status"] = "completed";
 
   try {
@@ -942,7 +946,7 @@ export async function orchestrateExplanation(params: ExplanationParams) {
   let covered: Set<number>;
   let partial: Set<number>;
   let thorough: Set<number>;
-  let detectionProvider: "gemini" | "groq" | "local";
+  let detectionProvider: AiProvider | "local";
   let detectionStatus: AgentStep["status"] = "completed";
 
   try {

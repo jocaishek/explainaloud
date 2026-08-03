@@ -1,24 +1,46 @@
 import "server-only";
 
 import { env } from "~/env";
+import { siteUrl } from "~/lib/site";
 import type { TranscribedWord } from "~/lib/speech-metrics";
 import { stripHallucinations } from "./transcript-cleanup";
 
 /**
- * Two-provider JSON completion: Gemini first, Groq as failover.
+ * Three-provider JSON completion: Gemini first, then Groq, with Ling behind it.
  *
- * Both are called through plain fetch rather than an SDK — the request shapes
- * are small and stable, and it keeps the failover logic honest and visible
- * instead of buried behind two different client abstractions.
+ * All three are called through plain fetch rather than an SDK — the request
+ * shapes are small and stable, and it keeps the failover logic honest and
+ * visible instead of buried behind three different client abstractions.
+ *
+ * The ordering is about context size as much as quality. Groq's free tier
+ * budgets tokens per minute and rejects an oversized request outright with a
+ * 413, so a long course would fail on `groq-70b` (12K/min) and then fail again
+ * on `groq-8b` (6K/min) — a smaller allowance for the same prompt is not a
+ * fallback, it is the same failure twice. Ling sits between them with a 262K
+ * window, so the request that neither Groq tier can hold still lands
+ * somewhere.
  */
 
-const GEMINI_MODEL = "gemini-2.0-flash";
+/**
+ * Flash-Lite rather than Flash: a 1M-token window, structured output support
+ * and roughly a fifth of Flash's input price. The window is the reason — it is
+ * what takes request size off the table as a failure mode entirely.
+ */
+const GEMINI_MODEL = "gemini-3.5-flash-lite";
 const GROQ_PRIMARY_MODEL = "llama-3.3-70b-versatile";
 const GROQ_FALLBACK_MODEL = "llama-3.1-8b-instant";
+/**
+ * Free tier, and treated accordingly: no SLA, no support channel, and no
+ * guarantee it stays either free or available. It earns its place as a
+ * failover — a 262K window costing nothing is worth having between the two
+ * Groq tiers — and it is deliberately not first for anything.
+ */
+const LING_MODEL = "inclusionai/ling-3.0-flash:free";
 
 const GEMINI_URL = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 
 /** Per-attempt ceiling. Two providers, so the worst case is ~2x this. */
 const TIMEOUT_MS = 45_000;
@@ -116,8 +138,10 @@ export class AiUnavailableError extends Error {
 export type AiResult<T> = {
   data: T;
   /** Which provider actually produced this, for surfacing in the UI. */
-  provider: "gemini" | "groq";
+  provider: AiProvider;
 };
+
+export type AiProvider = "gemini" | "groq" | "ling";
 
 /**
  * Strips markdown fences and any prose either side of the JSON body. Both
@@ -206,23 +230,39 @@ async function callGemini(
   return text;
 }
 
-async function callGroq(
+/**
+ * One caller for every OpenAI-shaped chat endpoint.
+ *
+ * Groq and OpenRouter speak the same request and response format, so the only
+ * things that differ are the URL, the key, the model and the name to put in an
+ * error message. Writing it twice would mean two places to fix the next time a
+ * status code needs handling.
+ */
+async function callOpenAiCompatible(
   prompt: string,
   maxOutputTokens: number,
-  model: string,
+  config: {
+    label: string;
+    url: string;
+    apiKey: string | undefined;
+    keyName: string;
+    model: string;
+    headers?: Record<string, string>;
+  },
 ): Promise<string> {
-  if (!env.GROQ_API_KEY) throw new Error("GROQ_API_KEY not set");
+  if (!config.apiKey) throw new Error(`${config.keyName} not set`);
 
   const response = await withTimeout((signal) =>
-    fetch(GROQ_URL, {
+    fetch(config.url, {
       method: "POST",
       signal,
       headers: {
         "content-type": "application/json",
-        authorization: `Bearer ${env.GROQ_API_KEY}`,
+        authorization: `Bearer ${config.apiKey}`,
+        ...config.headers,
       },
       body: JSON.stringify({
-        model,
+        model: config.model,
         temperature: 0,
         top_p: 0.1,
         max_tokens: maxOutputTokens,
@@ -238,15 +278,49 @@ async function callGroq(
       throw new RateLimitedError(
         parseRetryAfter(body, response.headers.get("retry-after")),
       );
-    throw new Error(`Groq ${response.status}: ${body}`);
+    throw new Error(`${config.label} ${response.status}: ${body}`);
   }
 
   const json = await response.json();
   const text = json?.choices?.[0]?.message?.content;
   if (typeof text !== "string" || !text.trim()) {
-    throw new Error("Groq returned an empty completion");
+    throw new Error(`${config.label} returned an empty completion`);
   }
   return text;
+}
+
+async function callGroq(
+  prompt: string,
+  maxOutputTokens: number,
+  model: string,
+): Promise<string> {
+  return callOpenAiCompatible(prompt, maxOutputTokens, {
+    label: "Groq",
+    url: GROQ_URL,
+    apiKey: env.GROQ_API_KEY,
+    keyName: "GROQ_API_KEY",
+    model,
+  });
+}
+
+async function callLing(
+  prompt: string,
+  maxOutputTokens: number,
+): Promise<string> {
+  return callOpenAiCompatible(prompt, maxOutputTokens, {
+    label: "Ling",
+    url: OPENROUTER_URL,
+    apiKey: env.OPENROUTER_API_KEY,
+    keyName: "OPENROUTER_API_KEY",
+    model: LING_MODEL,
+    // OpenRouter attributes free-tier traffic by these headers. They are
+    // optional, but without them the request is anonymous and rate limited
+    // harder than an attributed one.
+    headers: {
+      "http-referer": siteUrl(),
+      "x-title": "Explainaloud",
+    },
+  });
 }
 
 /**
@@ -265,7 +339,7 @@ export async function completeJson<T>(
     Math.min(options.maxOutputTokens ?? MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
   );
   const attempts: Array<{
-    provider: "gemini" | "groq";
+    provider: AiProvider;
     label: string;
     call: (p: string, maxTokens: number) => Promise<string>;
     configured: boolean;
@@ -299,6 +373,16 @@ export async function completeJson<T>(
       configured: !!env.GROQ_API_KEY,
     },
     {
+      provider: "ling",
+      label: "ling-3.0-flash",
+      // Ahead of groq-8b on purpose. By the time we are here groq-70b has
+      // already failed, and the most common reason is a prompt too large for
+      // its per-minute budget — which the smaller Groq tier, with half the
+      // allowance, cannot hold either. A 262K window can.
+      call: callLing,
+      configured: !!env.OPENROUTER_API_KEY,
+    },
+    {
       provider: "groq",
       label: "groq-8b",
       // The fallback model has a 6K TPM window. Its validated course JSON
@@ -323,7 +407,17 @@ export async function completeJson<T>(
     for (let tries = 0; tries <= RATE_LIMIT_RETRIES; tries++) {
       try {
         const raw = await attempt.call(prompt, maxOutputTokens);
-        return { data: validate(extractJson(raw)), provider: attempt.provider };
+        const data = validate(extractJson(raw));
+        // Only worth a line when something above this one did not answer.
+        // Silence on the happy path, and a record of every degraded call —
+        // otherwise the app can run a week on the free fallback and the first
+        // report of it comes from a student.
+        if (failures.length > 0) {
+          console.warn(
+            `ai: served by ${attempt.label} after ${failures.length} failure(s): ${failures.join(" | ")}`,
+          );
+        }
+        return { data, provider: attempt.provider };
       } catch (error) {
         if (isQuotaExhausted(error)) {
           quotaExhaustedUntil.set(
@@ -524,11 +618,11 @@ function parseWords(json: unknown): TranscribedWord[] {
 }
 
 export function aiConfigured() {
-  return !!(env.GEMINI_API_KEY || env.GROQ_API_KEY);
+  return !!(env.GEMINI_API_KEY || env.GROQ_API_KEY || env.OPENROUTER_API_KEY);
 }
 
 export type ProviderProbe = {
-  provider: "gemini" | "groq";
+  provider: AiProvider;
   configured: boolean;
   ok: boolean;
   status: number | null;
@@ -556,7 +650,7 @@ function describeProbeStatus(status: number): { ok: boolean; reason: string } {
  */
 export async function probeProviders(): Promise<ProviderProbe[]> {
   const checks: Array<{
-    provider: "gemini" | "groq";
+    provider: AiProvider;
     key: string | undefined;
     run: (key: string) => Promise<Response>;
   }> = [
@@ -573,6 +667,14 @@ export async function probeProviders(): Promise<ProviderProbe[]> {
       key: env.GROQ_API_KEY,
       run: (key) =>
         fetch("https://api.groq.com/openai/v1/models", {
+          headers: { authorization: `Bearer ${key}` },
+        }),
+    },
+    {
+      provider: "ling",
+      key: env.OPENROUTER_API_KEY,
+      run: (key) =>
+        fetch("https://openrouter.ai/api/v1/models", {
           headers: { authorization: `Bearer ${key}` },
         }),
     },
