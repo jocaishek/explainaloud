@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useActionState, useEffect, useId, useState } from "react";
+import { DateOfBirthField } from "~/components/date-of-birth-field";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -61,16 +62,14 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      <div className="flex max-w-xs flex-col gap-2">
-        <Label htmlFor={dobId}>Date of birth</Label>
-        <Input
-          id={dobId}
+      <div className="flex max-w-md flex-col gap-2">
+        <span id={dobId} className="font-medium text-sm text-strong">
+          Date of birth
+        </span>
+        <DateOfBirthField
           name="dateOfBirth"
-          type="date"
-          autoComplete="bday"
-          max={new Date().toISOString().slice(0, 10)}
           defaultValue={profile.date_of_birth}
-          className="h-11"
+          describedBy={dobId}
         />
       </div>
 

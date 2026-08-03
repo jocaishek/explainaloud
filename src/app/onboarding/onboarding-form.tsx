@@ -15,6 +15,7 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { useActionState, useId, useState } from "react";
+import { DateOfBirthField } from "~/components/date-of-birth-field";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -258,23 +259,18 @@ export function OnboardingForm({ email }: { email: string }) {
             )}
 
             {step === 1 && (
-              <div className="flex max-w-sm flex-col gap-4">
+              <div className="flex max-w-md flex-col gap-4">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor={dobId}>Date of birth</Label>
-                  <Input
-                    id={dobId}
-                    type="date"
-                    autoFocus
-                    autoComplete="bday"
-                    value={dateOfBirth}
-                    max={new Date().toISOString().slice(0, 10)}
-                    aria-invalid={!!error}
-                    aria-describedby={error ? errorId : undefined}
-                    onChange={(event) => {
-                      setDateOfBirth(event.target.value);
+                  <span id={dobId} className="font-medium text-sm text-strong">
+                    Date of birth
+                  </span>
+                  <DateOfBirthField
+                    invalid={!!error}
+                    describedBy={error ? errorId : dobId}
+                    onChange={(value) => {
+                      setDateOfBirth(value);
                       clearCurrentError();
                     }}
-                    className="h-12 bg-surface px-4 text-base"
                   />
                 </div>
                 <div className="rounded-xl bg-surface px-4 py-3">
