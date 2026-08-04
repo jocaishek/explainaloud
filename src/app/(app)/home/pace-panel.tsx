@@ -147,7 +147,7 @@ export function PacePanel({
             </span>{" "}
             wpm, well over your baseline. Racing usually means reciting.{" "}
             <Link
-              href={latest?.href ?? "/gapreport"}
+              href={latest?.href ?? "/gaps"}
               className="text-brand-ink underline"
             >
               See what you missed

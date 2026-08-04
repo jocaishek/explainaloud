@@ -47,7 +47,7 @@ const ACTIONS = [
     primary: false,
   },
   {
-    href: "/gapreport",
+    href: "/gaps",
     n: "C",
     title: "Read back the gaps",
     detail:
