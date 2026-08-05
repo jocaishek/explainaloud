@@ -365,6 +365,8 @@ export default async function GapReportPage({
                 wpm={metrics.medianWpm}
                 usualWpm={baselineWpm}
                 recordingsSoFar={reliablePastWpm.length}
+                fillerCount={metrics.fillerCount}
+                fillerPer100={metrics.fillerPer100}
               />
             </div>
           )}

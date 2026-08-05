@@ -563,9 +563,23 @@ export async function transcribeAudio(
     .filter((term) => term.length > 2)
     .join(", ")
     .slice(0, 400);
+  /* "um, uh" in the prompt is not an instruction — it is an example.
+   *
+   * Whisper tidies disfluency away by default: it is trained on written
+   * targets, so it hears "the, um, mitochondria" and writes "the
+   * mitochondria". That is usually welcome and here it is not, because the
+   * filler count in `speech-metrics` can only count what survives into the
+   * transcript, and a transcript with the hesitations removed reports every
+   * speaker as fluent.
+   *
+   * The prompt is a decoding bias rather than a directive, so this shifts the
+   * odds and does not guarantee anything. Writing the sounds out is what
+   * makes them likelier to come back: the same mechanism that keeps proper
+   * nouns spelled correctly, used on a different kind of word. */
   const prompt =
     `A student is explaining ${topic}. ` +
-    "Preserve course terminology and punctuation." +
+    "Preserve course terminology and punctuation. " +
+    "Write hesitations as spoken, um, uh, like this." +
     (terms ? ` Terms used: ${terms}.` : "");
   body.set("prompt", prompt);
   // Nothing here benefits from the model getting creative about what it heard.

@@ -1,6 +1,17 @@
 import { cn } from "~/lib/utils";
 
 /**
+ * Fillers per 100 words below which the count is not mentioned at all.
+ *
+ * Everybody hesitates, and a report that says "you said um twice" has turned
+ * a normal feature of speech into a defect. This is set where the habit starts
+ * being audible to a listener rather than where it starts being non-zero.
+ */
+const FILLER_RATE_WORTH_MENTIONING = 3;
+/** And never on a handful of words, where the rate is mostly noise. */
+const FILLER_COUNT_WORTH_MENTIONING = 5;
+
+/**
  * Pace, shown next to the score at the top of the gap report.
  *
  * Deliberately descriptive. It reports the two numbers and their difference and
@@ -19,6 +30,8 @@ export function DeliverySummary({
   wpm,
   usualWpm,
   recordingsSoFar,
+  fillerCount,
+  fillerPer100,
 }: {
   wpm: number;
   /**
@@ -28,6 +41,10 @@ export function DeliverySummary({
   usualWpm: number | null;
   /** Sessions with usable metrics, including this one. Drives the N/A copy. */
   recordingsSoFar: number;
+  /** Hesitations counted in this take. */
+  fillerCount?: number;
+  /** The same figure per 100 words, which is what decides if it is shown. */
+  fillerPer100?: number;
 }) {
   // Whole percentage points. A "3% slower" reads as precision the underlying
   // measurement does not have.
@@ -45,6 +62,14 @@ export function DeliverySummary({
   // is not an average of anything, and calling it "your usual" would let the
   // very first session define the person forever.
   const remaining = Math.max(0, 2 - recordingsSoFar);
+
+  // Both gates, not either: a short take can clear the rate on three words,
+  // and a long one can clear the count while hesitating less than anybody.
+  const noticeableFillers =
+    fillerCount !== undefined &&
+    fillerPer100 !== undefined &&
+    fillerCount >= FILLER_COUNT_WORTH_MENTIONING &&
+    fillerPer100 >= FILLER_RATE_WORTH_MENTIONING;
 
   return (
     <section
@@ -95,6 +120,19 @@ export function DeliverySummary({
           {deltaPercent < 0
             ? "Slowing down often means recall is taking effort, though some topics simply need more thinking."
             : "Speaking faster than usual is common when material is familiar."}
+        </p>
+      )}
+
+      {/* Descriptive, like the pace figures above it, and for the same reason:
+          hesitating is not evidence of not knowing. It is a delivery habit,
+          it is worth being able to see, and it is not part of the score. */}
+      {noticeableFillers && (
+        <p className="max-w-md text-sm leading-6 text-subtle">
+          You reached for a filler{" "}
+          <span className="font-medium text-strong">{fillerCount} times</span> —
+          &ldquo;um&rdquo;, &ldquo;uh&rdquo;, or &ldquo;like&rdquo; used to
+          stall. Comparisons and examples don&apos;t count, so &ldquo;just like
+          in the comic&rdquo; is not one of these.
         </p>
       )}
     </section>
