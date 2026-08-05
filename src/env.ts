@@ -11,9 +11,10 @@ export const env = createEnv({
     // start. Server-only: these must never reach the browser bundle.
     GEMINI_API_KEY: z.string().min(1).optional(),
     GROQ_API_KEY: z.string().min(1).optional(),
-    // OpenRouter, which is how the Ling failover is reached. Optional like the
-    // rest: unset, that rung is simply skipped and the chain is what it was.
-    OPENROUTER_API_KEY: z.string().min(1).optional(),
+    // The Vercel AI Gateway, which is how the wide-context failover rung is
+    // reached. Optional like the rest: unset, that rung is skipped and the
+    // chain is what it was.
+    AI_GATEWAY_API_KEY: z.string().min(1).optional(),
     TAVILY_API_KEY: z.string().min(1).optional(),
     // Set by Vercel to the project's stable production hostname, without a
     // protocol. Absent locally, which is why it's optional.
@@ -62,7 +63,7 @@ export const env = createEnv({
     NODE_ENV: process.env.NODE_ENV,
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
+    AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
     TAVILY_API_KEY: process.env.TAVILY_API_KEY,
     VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,

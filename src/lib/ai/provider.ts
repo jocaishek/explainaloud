@@ -1,24 +1,32 @@
 import "server-only";
 
 import { env } from "~/env";
-import { siteUrl } from "~/lib/site";
 import type { TranscribedWord } from "~/lib/speech-metrics";
 import { stripHallucinations } from "./transcript-cleanup";
 
 /**
- * Three-provider JSON completion: Gemini first, then Groq, with Ling behind it.
+ * Three-provider JSON completion: Gemini first, then Groq, with the Vercel AI
+ * Gateway between the two Groq tiers.
  *
  * All three are called through plain fetch rather than an SDK — the request
  * shapes are small and stable, and it keeps the failover logic honest and
- * visible instead of buried behind three different client abstractions.
+ * visible instead of buried behind three different client abstractions. The
+ * Gateway is OpenAI-shaped, so it shares Groq's caller outright.
  *
  * The ordering is about context size as much as quality. Groq's free tier
  * budgets tokens per minute and rejects an oversized request outright with a
  * 413, so a long course would fail on `groq-70b` (12K/min) and then fail again
  * on `groq-8b` (6K/min) — a smaller allowance for the same prompt is not a
- * fallback, it is the same failure twice. Ling sits between them with a 262K
- * window, so the request that neither Groq tier can hold still lands
+ * fallback, it is the same failure twice. The Gateway rung sits between them
+ * on a 262K window, so the request that neither Groq tier can hold still lands
  * somewhere.
+ *
+ * **Gemini is not routed through the Gateway, deliberately.** It is called on
+ * Google's own endpoint, which serves `gemini-3.5-flash-lite` to this key
+ * while the Gateway restricts that model to accounts holding paid credits and
+ * answers a free-tier key with 403. Going through the Gateway everywhere would
+ * mean unified billing bought at the price of the provider that actually
+ * works. See `GATEWAY_MODEL` for when that trade changes.
  */
 
 /**
@@ -30,17 +38,31 @@ const GEMINI_MODEL = "gemini-3.5-flash-lite";
 const GROQ_PRIMARY_MODEL = "llama-3.3-70b-versatile";
 const GROQ_FALLBACK_MODEL = "llama-3.1-8b-instant";
 /**
- * Free tier, and treated accordingly: no SLA, no support channel, and no
- * guarantee it stays either free or available. It earns its place as a
- * failover — a 262K window costing nothing is worth having between the two
- * Groq tiers — and it is deliberately not first for anything.
+ * The wide-context failover, reached through the Vercel AI Gateway.
+ *
+ * The Gateway rather than OpenRouter because the key already exists on the
+ * deployment and one vendor account is one fewer thing to keep alive for a
+ * rung that only fires when two others have already failed.
+ *
+ * Ling is free tier and treated accordingly: no SLA, no support channel, no
+ * guarantee it stays either free or available. It earns its place on the 262K
+ * window alone — enough to hold a request neither Groq tier can — and it is
+ * deliberately not first for anything.
+ *
+ * **Why this is not `google/gemini-3.5-flash-lite`.** The Gateway restricts
+ * that model to accounts with paid credits and answers a free-tier key with
+ * 403 `RestrictedModelsError`, while the direct Google endpoint above serves
+ * it happily. Pointing this rung at Gemini would therefore trade a working
+ * provider for a 403. Once the Vercel team has credits it becomes a real
+ * second Gemini path and is worth switching; until then it must not be.
  */
-const LING_MODEL = "inclusionai/ling-3.0-flash:free";
+const GATEWAY_MODEL = "inclusionai/ling-3.0-flash-free";
 
 const GEMINI_URL = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+/** OpenAI-shaped, so it goes through the same caller as Groq. */
+const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 
 /** Per-attempt ceiling. Two providers, so the worst case is ~2x this. */
 const TIMEOUT_MS = 45_000;
@@ -141,7 +163,7 @@ export type AiResult<T> = {
   provider: AiProvider;
 };
 
-export type AiProvider = "gemini" | "groq" | "ling";
+export type AiProvider = "gemini" | "groq" | "gateway";
 
 /**
  * Strips markdown fences and any prose either side of the JSON body. Both
@@ -233,7 +255,7 @@ async function callGemini(
 /**
  * One caller for every OpenAI-shaped chat endpoint.
  *
- * Groq and OpenRouter speak the same request and response format, so the only
+ * Groq and the Gateway speak the same request and response format, so the only
  * things that differ are the URL, the key, the model and the name to put in an
  * error message. Writing it twice would mean two places to fix the next time a
  * status code needs handling.
@@ -248,6 +270,22 @@ async function callOpenAiCompatible(
     keyName: string;
     model: string;
     headers?: Record<string, string>;
+    /**
+     * Whether the endpoint accepts `response_format: {type: "json_object"}`.
+     *
+     * "OpenAI-compatible" is not one specification. Groq honours this field;
+     * the Vercel AI Gateway rejects the whole request with a bare 400 "Invalid
+     * input" — verified against the live endpoint by sending the same call
+     * with and without it. Left unconditional, the Gateway rung would have
+     * failed every single time while looking perfectly configured, which is
+     * the worst shape a failover can have.
+     *
+     * Off, the JSON constraint comes from the prompt alone. That is weaker,
+     * and it is why `extractJson` still strips fences and prose: this rung is
+     * the third thing tried, and a model that needs its answer unwrapped is
+     * better than no answer.
+     */
+    jsonMode?: boolean;
   },
 ): Promise<string> {
   if (!config.apiKey) throw new Error(`${config.keyName} not set`);
@@ -266,7 +304,9 @@ async function callOpenAiCompatible(
         temperature: 0,
         top_p: 0.1,
         max_tokens: maxOutputTokens,
-        response_format: { type: "json_object" },
+        ...(config.jsonMode === false
+          ? {}
+          : { response_format: { type: "json_object" } }),
         messages: [{ role: "user", content: prompt }],
       }),
     }),
@@ -303,23 +343,17 @@ async function callGroq(
   });
 }
 
-async function callLing(
+async function callGateway(
   prompt: string,
   maxOutputTokens: number,
 ): Promise<string> {
   return callOpenAiCompatible(prompt, maxOutputTokens, {
-    label: "Ling",
-    url: OPENROUTER_URL,
-    apiKey: env.OPENROUTER_API_KEY,
-    keyName: "OPENROUTER_API_KEY",
-    model: LING_MODEL,
-    // OpenRouter attributes free-tier traffic by these headers. They are
-    // optional, but without them the request is anonymous and rate limited
-    // harder than an attributed one.
-    headers: {
-      "http-referer": siteUrl(),
-      "x-title": "Explainaloud",
-    },
+    label: "Gateway",
+    url: GATEWAY_URL,
+    apiKey: env.AI_GATEWAY_API_KEY,
+    keyName: "AI_GATEWAY_API_KEY",
+    model: GATEWAY_MODEL,
+    jsonMode: false,
   });
 }
 
@@ -373,14 +407,14 @@ export async function completeJson<T>(
       configured: !!env.GROQ_API_KEY,
     },
     {
-      provider: "ling",
-      label: "ling-3.0-flash",
+      provider: "gateway",
+      label: `gateway:${GATEWAY_MODEL}`,
       // Ahead of groq-8b on purpose. By the time we are here groq-70b has
       // already failed, and the most common reason is a prompt too large for
       // its per-minute budget — which the smaller Groq tier, with half the
       // allowance, cannot hold either. A 262K window can.
-      call: callLing,
-      configured: !!env.OPENROUTER_API_KEY,
+      call: callGateway,
+      configured: !!env.AI_GATEWAY_API_KEY,
     },
     {
       provider: "groq",
@@ -618,7 +652,7 @@ function parseWords(json: unknown): TranscribedWord[] {
 }
 
 export function aiConfigured() {
-  return !!(env.GEMINI_API_KEY || env.GROQ_API_KEY || env.OPENROUTER_API_KEY);
+  return !!(env.GEMINI_API_KEY || env.GROQ_API_KEY || env.AI_GATEWAY_API_KEY);
 }
 
 export type ProviderProbe = {
@@ -696,10 +730,10 @@ export async function probeProviders(): Promise<ProviderProbe[]> {
         }),
     },
     {
-      provider: "ling",
-      key: env.OPENROUTER_API_KEY,
+      provider: "gateway",
+      key: env.AI_GATEWAY_API_KEY,
       run: (key) =>
-        fetch("https://openrouter.ai/api/v1/models", {
+        fetch("https://ai-gateway.vercel.sh/v1/models", {
           headers: { authorization: `Bearer ${key}` },
         }),
     },
