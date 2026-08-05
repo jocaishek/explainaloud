@@ -438,7 +438,6 @@ export function RecordConsole({
   // Which question is on screen. Clamped on read rather than on write, so a
   // course that regenerates with fewer sections cannot leave this dangling.
   const askedAt = initialQuestion;
-  const asked = questions[Math.min(askedAt, questions.length - 1)];
   // Pinned when recording starts: the answer must be graded against the
   // question that was on screen when they began, not one they scrolled to
   // mid-sentence.
@@ -2097,7 +2096,7 @@ export function RecordConsole({
     return undefined;
   }
 
-  async function startRecording(question?: CourseQuestion) {
+  async function startRecording() {
     const Ctor = browserCaptionsUsable()
       ? (window.SpeechRecognition ?? window.webkitSpeechRecognition)
       : undefined;
@@ -2136,9 +2135,22 @@ export function RecordConsole({
     segmentsRef.current = [];
     setSegments([]);
     capturedRef.current = "";
-    answeringRef.current = interview
-      ? (drawn[0] ?? null)
-      : (question ?? asked ?? null);
+    /* Null in topic mode, and that is the whole point of topic mode.
+     *
+     * This used to fall back to the first unanswered course question, so a
+     * take the chooser had just described as "open-ended — say what you know
+     * about the topic" was graded against one question's key points.
+     * `scoped: !!params.question` in the orchestrator does the rest: somebody
+     * who talked about the subject rather than about that one question
+     * covered none of them, which makes `engaged` false and the score exactly
+     * zero, under the heading "Nothing in this recording addressed the
+     * question." The strengths list still quoted them accurately, because it
+     * comes from the model's draft and is not gated on coverage — so the
+     * report credited an insight and scored it nothing in the same view.
+     *
+     * Interview mode is where a question is the unit being marked. Topic mode
+     * is marked against the whole course. */
+    answeringRef.current = interview ? (drawn[0] ?? null) : null;
 
     // Ask for the microphone FIRST and wait for the user to answer the
     // browser prompt. A denied prompt must not burn one of the day's five
@@ -2450,7 +2462,14 @@ export function RecordConsole({
   const outOfQuota = !unlimited && remaining === 0 && status !== "recording";
   const running = status === "recording" || status === "between";
   const interviewing = mode === "interview" || interviewRef.current;
-  const live = interviewing ? asking[segmentIndex] : asked;
+  /* Interview mode asks; topic mode does not.
+   *
+   * A question on screen is read as an instruction — the comment below says
+   * so, and it is right. Showing one during an open-ended take told people to
+   * answer it, which is exactly what they then did, and then the take was
+   * marked against the whole course instead. Topic mode now shows no question
+   * at all, which is what "say what you know about the topic" means. */
+  const live = interviewing ? asking[segmentIndex] : null;
   /**
    * The examiner is still deciding what to ask, so there is nothing to show.
    *
