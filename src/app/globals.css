@@ -1969,3 +1969,61 @@
  *
  * The panels still drift, at different rates, when you scroll. That is the
  * parallax doing the same job in response to something the reader did. */
+
+/* -------------------------------------------------------------------------
+ * Dropdown menu
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The menu's own entrance, written out rather than imported.
+ *
+ * `dropdown-menu.tsx` arrived from shadcn carrying `animate-in fade-in-0
+ * zoom-in-95 slide-in-from-top-2`. Those utilities are provided by
+ * `tw-animate-css`, which this project has never installed — so they compiled
+ * to nothing at all and the menu simply appeared. Adding the package for four
+ * utilities was the worse trade: the app already writes its motion here, and
+ * this way the timing is a token rather than a number baked into a class name.
+ *
+ * Keyed on `data-slot` and Radix's `data-state`, so it needs no class on the
+ * element and cannot be dropped by a future refactor of the className string.
+ * `transform-origin` is Radix's own variable, already set on the element, so
+ * the menu grows out of the corner nearest its trigger instead of its centre.
+ */
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-0.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes menu-out {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.96) translateY(-0.25rem);
+  }
+}
+
+[data-slot="dropdown-menu-content"][data-state="open"] {
+  animation: menu-in 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Shorter on the way out. A menu that lingers after the tap that dismissed it
+   reads as lag, where the same duration on the way in reads as motion. */
+[data-slot="dropdown-menu-content"][data-state="closed"] {
+  animation: menu-out 90ms ease-in both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="dropdown-menu-content"][data-state="open"],
+  [data-slot="dropdown-menu-content"][data-state="closed"] {
+    animation: none;
+  }
+}

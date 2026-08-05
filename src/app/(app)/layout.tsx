@@ -51,7 +51,14 @@ export default async function DashboardLayout({
               className="press flex shrink-0 items-center gap-2.5 text-strong"
             >
               <ExplainaloudMark className="size-7 shrink-0 text-[color:var(--accent-solid)]" />
-              <span className="font-semibold text-[0.92rem] uppercase tracking-[0.04em]">
+              {/* The wordmark costs 125px of a 375px screen, and it was the
+                  reason the bar broke: mark, wordmark and the page menu came
+                  to 254px inside a 210px box, so the menu overflowed its own
+                  group and the New topic button was drawn on top of it.
+                  The mark stays at every width — it is the identity, and it
+                  is legible at 28px in a way the tracked wordmark is not
+                  worth 125px to repeat. */}
+              <span className="hidden font-semibold text-[0.92rem] uppercase tracking-[0.04em] sm:inline">
                 Explainaloud
               </span>
             </Link>
