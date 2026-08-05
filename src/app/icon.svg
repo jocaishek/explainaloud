@@ -1,14 +1,32 @@
+<!--
+  The mark: amber on a dark disc.
+
+  This was a #c2410c disc with a white mark, and beside the in-app mark — which
+  takes `currentColor` and so comes out amber — it read as a different logo
+  rather than the same one twice.
+
+  Amber could not simply become the fill. #f59e0b against white is 2.15:1,
+  which is why `design.md` says dark ink on the fill and never white, and an
+  amber disc on the #f2f2f0 stock is 1.92:1, so the tile would have had no edge
+  at all. Inverting solves both: the glyph is #f59e0b on #1a1206 at 8.63:1, the
+  disc keeps a hard edge on every ground the product uses, and it matches what
+  the mark already looks like everywhere else in the app.
+
+  #1a1206 is the accent-contrast token from the amber register, not a new
+  colour. Written without its leading dashes on purpose: a double hyphen is
+  illegal inside an XML comment and silently breaks the whole file.
+-->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <circle cx="32" cy="32" r="32" fill="#c2410c" />
+  <circle cx="32" cy="32" r="32" fill="#1a1206" />
   <g transform="translate(32 32) scale(0.78) translate(-30 -33)">
     <path
       d="M 19.1 13.9 L 33.9 20.6 Q 38 22.5 33.9 24.4 L 19.1 31.1 Q 15 33 15 28.5 L 15 16.5 Q 15 12 19.1 13.9 Z"
-      fill="#ffffff"
+      fill="#f59e0b"
     />
     <path
       d="M 17.5 39.5 A 18 18 0 0 0 42.5 50.5"
       fill="none"
-      stroke="#ffffff"
+      stroke="#f59e0b"
       stroke-width="5"
       stroke-linecap="round"
     />
