@@ -67,6 +67,12 @@ const nextConfig: NextConfig = {
         destination: "/:path*",
         permanent: true,
       },
+      // Renamed to match the tabs inside a topic, which have always been
+      // `/{slug}/gaps` and `/{slug}/re-teach`. The old spellings are in
+      // browser histories and in at least one first-run tour, so they keep
+      // working rather than 404ing somebody mid-session.
+      { source: "/gapreport", destination: "/gaps", permanent: true },
+      { source: "/reteach", destination: "/re-teach", permanent: true },
     ];
   },
 };

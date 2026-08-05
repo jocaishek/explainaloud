@@ -21,12 +21,20 @@ type Hub = {
 };
 
 /**
- * The "pick a topic" screen behind `/record`, `/gapreport` and `/reteach`.
+ * The "pick a topic" screen behind `/record`, `/gaps` and `/re-teach`.
  *
  * These addresses exist because they are the three things anyone actually
  * comes here to do, and each used to be reachable only by opening a topic
  * first. Same list, same shape, different destination — so one component,
  * rather than three files that drift apart.
+ *
+ * They are named for the course sub-page they land on — `/gaps`, not
+ * `/gapreport` — because a topic's own tabs are `/{slug}/gaps` and
+ * `/{slug}/re-teach`. Two spellings for one destination is the kind of thing
+ * nobody notices while writing it and everybody notices while reading a URL.
+ * Only `/record` still has a slot in the top-level nav; the other two are
+ * reached from Home's running order and from inside a topic, which is where
+ * somebody is when they want them.
  */
 export async function TopicHub({ path, title, lede, needsRecording }: Hub) {
   const { supabase, user } = await requireUser();

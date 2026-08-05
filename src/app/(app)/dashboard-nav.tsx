@@ -1,15 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import {
-  ChevronDown,
-  ClipboardList,
-  GraduationCap,
-  House,
-  Mic,
-  Settings,
-  ShieldCheck,
-} from "lucide-react";
+import { ChevronDown, House, Mic, Settings, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useId } from "react";
@@ -23,12 +15,22 @@ import { cn } from "~/lib/utils";
 
 /* Sentence case, not Title Case. Every other label in the product is written
    the way a sentence is, and "Gap Report" / "Re-Teach" were the only two
-   shouting — which also made them the two longest items in the row. */
+   shouting — which also made them the two longest items in the row.
+
+   Three destinations, not five. Gaps and Re-teach were here as peers of Home
+   and Record, which said they were places you go. They are not: both are what
+   you read *after* a recording, about a specific topic, and both are already
+   the last two rows of the running order on Home and the tabs inside a topic.
+   Listing them a third time in the top-level bar meant the same four verbs
+   appeared in two competing navigations, and neither one was obviously the
+   real one.
+
+   What is left is the shape of the product: Home is where your topics are,
+   Record is the thing you came to do, Settings is Settings. Everything about
+   a topic lives inside that topic. */
 const ITEMS = [
   { href: "/home", label: "Home", icon: House },
   { href: "/record", label: "Record", icon: Mic },
-  { href: "/gapreport", label: "Gaps", icon: ClipboardList },
-  { href: "/reteach", label: "Re-teach", icon: GraduationCap },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
