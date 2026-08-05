@@ -631,7 +631,10 @@ export type ProviderProbe = {
 
 function describeProbeStatus(status: number): { ok: boolean; reason: string } {
   if (status === 200) return { ok: true, reason: "reachable" };
-  if (status === 401 || status === 403) {
+  // 400 belongs with the auth failures: Google answers a malformed or unknown
+  // key on the model endpoint with INVALID_ARGUMENT rather than 401, so
+  // without this the commonest failure of all reads as "unexpected status".
+  if (status === 400 || status === 401 || status === 403) {
     return {
       ok: false,
       reason: `unauthorized (${status}), key invalid or revoked`,
@@ -639,6 +642,15 @@ function describeProbeStatus(status: number): { ok: boolean; reason: string } {
   }
   if (status === 429) {
     return { ok: false, reason: "rate limited (429), wait a minute" };
+  }
+  // The key is fine and the model is not. Worth its own wording: this is the
+  // failure that looks like nothing at all in production, because the chain
+  // quietly serves every request from the next provider down.
+  if (status === 404) {
+    return {
+      ok: false,
+      reason: "model not found (404), it may have been retired",
+    };
   }
   return { ok: false, reason: `unexpected status ${status}` };
 }
@@ -657,9 +669,22 @@ export async function probeProviders(): Promise<ProviderProbe[]> {
     {
       provider: "gemini",
       key: env.GEMINI_API_KEY,
+      // Asks after the one model this app actually calls, using the same
+      // header `callGemini` uses.
+      //
+      // Listing every model with `?key=` answered 200 while real generation
+      // was falling through to Groq on every request, so the health check
+      // reported a provider that did not work. Two reasons it could:
+      // `?key=` is the legacy auth form, and Google is midway through
+      // replacing `AIza` standard keys with service-account-bound `AQ.` ones,
+      // so the probe and the real call were not proving the same thing. And a
+      // model that has been retired still leaves the *list* endpoint healthy —
+      // naming the model is what turns that into a 404 here rather than a
+      // silent failover in production.
       run: (key) =>
         fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`,
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}`,
+          { headers: { "x-goog-api-key": key } },
         ),
     },
     {
