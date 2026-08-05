@@ -64,7 +64,13 @@ export function DashboardNav({ showAdmin = false }: { showAdmin?: boolean }) {
           aria-label={
             current ? `Menu. Currently on ${current.label}` : "Open menu"
           }
-          className="flex items-center gap-1.5 rounded-control border border-border bg-card px-3 py-2 font-medium text-sm text-strong shadow-rest transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] md:hidden"
+          /* `min-w-0` is load-bearing. The header's left group carries
+             `min-w-0` so it can shrink, which means a child that refuses to
+             shrink does not get clipped — it overflows the group and paints
+             over whatever is beside it. That is how the New topic button
+             ended up sitting on top of this trigger on a phone. With this,
+             the label truncates instead. */
+          className="flex min-w-0 items-center gap-1.5 rounded-control border border-border bg-card px-3 py-2 font-medium text-sm text-strong shadow-rest transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] md:hidden"
         >
           {current ? (
             <>

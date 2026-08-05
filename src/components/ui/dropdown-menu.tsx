@@ -42,7 +42,14 @@ function DropdownMenuContent({
         data-slot="dropdown-menu-content"
         sideOffset={sideOffset}
         className={cn(
-          "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
+          /* The `animate-in fade-in-0 zoom-in-95 slide-in-from-top-2` set that
+             shadcn ships with this component generated nothing here: those
+             utilities come from `tw-animate-css`, which this project has never
+             installed, so the menu appeared instantly and the classes read as
+             an animation that was simply never noticed. The real thing lives in
+             `globals.css`, keyed on this `data-slot` and on Radix's own
+             `data-state`, alongside the rest of the app's motion. */
+          "z-50 max-h-(--radix-dropdown-menu-content-available-height) min-w-[8rem] origin-(--radix-dropdown-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
           className,
         )}
         {...props}
