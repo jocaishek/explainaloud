@@ -9,7 +9,7 @@ export const agentStepSchema = z.object({
   // the pipeline does not report a fallback the student did not hit.
   status: z.enum(["completed", "revised", "degraded", "skipped"]),
   summary: z.string().min(1),
-  provider: z.enum(["gemini", "groq", "ling", "local"]).optional(),
+  provider: z.enum(["gemini", "groq", "gateway", "local"]).optional(),
 });
 export type AgentStep = z.infer<typeof agentStepSchema>;
 
