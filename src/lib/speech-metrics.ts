@@ -93,9 +93,90 @@ const MAX_PLAUSIBLE_WPM = 300;
  */
 export const MIN_SPEAKING_SECONDS = 7;
 
-/** Fillers counted toward the disfluency rate, as whole words. */
-const FILLER_PATTERN =
-  /^(um|uh|erm|er|hmm|mm|like|basically|literally|actually)$/i;
+/**
+ * Sounds that are only ever hesitation. Counted wherever they appear.
+ */
+const HESITATION_PATTERN = /^(um|uh+|erm|er|hmm+|mm+|ah|eh)$/i;
+
+/**
+ * The one word that is hesitation *sometimes* and ordinary English the rest of
+ * the time, and is still worth counting.
+ *
+ * `like` used to sit in the same list as `um`, so "just like in the comic" and
+ * "it behaves like a wave" were both scored as disfluency — which penalises
+ * the two things this app most wants people to do, comparing and giving
+ * examples. A student explaining by analogy was marked down for explaining by
+ * analogy.
+ *
+ * **`basically`, `literally` and `actually` were in that list too, and are now
+ * gone entirely rather than made conditional.** Every rule for them misfires
+ * on ordinary explanation: "figuratively and literally" is a real
+ * distinction, "in reality it actually is more interesting" is a real
+ * contrast, "basically a rounding error" is a real qualifier. Position in the
+ * clause does not separate those from the empty uses reliably enough, and the
+ * failure is not symmetric — a missed filler costs a slightly low number in a
+ * panel nobody is graded on, while a false one tells somebody their precise
+ * word choice was a stumble. If they come back it should be on evidence from
+ * real transcripts, not on a plausible-looking regex.
+ */
+const SOFT_FILLER_PATTERN = /^like$/i;
+
+/**
+ * Words that give the next `like` a grammatical job, so it is comparison
+ * rather than hesitation: "just like", "much like", "sounds like", "feels
+ * like", "looks like", "something like".
+ *
+ * `is`/`was`/`are` are deliberately absent. "it is like a wave" is already
+ * settled by `LIKE_OBJECT_AFTER` reading the `a`, so listing the copulas here
+ * added nothing and cost the genuine case — "the force is like, opposite",
+ * where `like` is a stumble and the copula was excusing it.
+ */
+const LIKE_ANCHOR_BEFORE =
+  /^(just|much|more|somewhat|something|anything|nothing|exactly|sound|sounds|sounded|feel|feels|felt|look|looks|looked|seem|seems|seemed|behave|behaves|behaved|act|acts|acted|work|works|worked|treat|treats|treated)$/i;
+
+/**
+ * Words that a comparing `like` takes as its object: a determiner, a pronoun,
+ * or a preposition heading a phrase — "like a wave", "like this", "like in
+ * the comic". A hesitating `like` is followed by a verb, another filler, or a
+ * restart, none of which appear here.
+ */
+const LIKE_OBJECT_AFTER =
+  /^(a|an|the|this|that|these|those|my|your|his|her|its|our|their|me|you|him|it|us|them|in|on|at|with|for|when|how)$/i;
+
+/** Letters only, lowercased — timings arrive with punctuation attached. */
+function bareWord(value: string): string {
+  return value.replace(/[^\p{L}]/gu, "").toLowerCase();
+}
+
+/**
+ * Whether a soft filler is doing no work at this position.
+ *
+ * Deliberately biased toward *not* counting. A missed filler costs a slightly
+ * low number in a panel nobody is graded on; a false one tells somebody their
+ * analogy was a stumble, which is worse, and is the thing being fixed here.
+ */
+function isDiscourseFiller(raw: string[], index: number): boolean {
+  // Tokens arrive with punctuation attached and mid-sentence capitalisation
+  // intact, so every pattern test needs the bare word while the capital and
+  // the trailing comma still have to be readable on the original.
+  const word = bareWord(raw[index] ?? "");
+  if (!SOFT_FILLER_PATTERN.test(word)) return false;
+
+  const previousRaw = raw[index - 1] ?? "";
+  const nextRaw = raw[index + 1] ?? "";
+
+  if (LIKE_ANCHOR_BEFORE.test(bareWord(previousRaw))) return false;
+  if (LIKE_OBJECT_AFTER.test(bareWord(nextRaw))) return false;
+  // "like Peter Parker" — a name is an object, not a stumble.
+  if (/^\p{Lu}/u.test(nextRaw)) return false;
+  // "like watching paint dry" — a gerund is an object too, and this is the
+  // shape most similes take once the determiner is gone.
+  if (/ing$/i.test(bareWord(nextRaw))) return false;
+  // Nothing after it to judge: end of transcript, or the last word before a
+  // cut. Left uncounted, same as every other unresolved case.
+  if (!nextRaw) return false;
+  return true;
+}
 
 /**
  * Percentile used as the "capable pace" reference within a single recording.
@@ -129,6 +210,14 @@ export type SpeechMetrics = {
   pauses: PauseStats;
   /** Fillers per 100 words, so it compares across recording lengths. */
   fillerPer100: number;
+  /**
+   * Fillers as a plain count, for showing back.
+   *
+   * The rate is the comparable figure and the one the baseline stores; this is
+   * the one a person recognises. "You said 'um' 14 times" lands where "3.2 per
+   * 100 words" does not.
+   */
+  fillerCount: number;
   /**
    * The words spoken during the slowest window, and its rate.
    *
@@ -315,8 +404,11 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
 
   const windows = rateWindows(usable);
   const rates = windows.map((w) => w.wpm).sort((a, b) => a - b);
-  const fillers = usable.filter((word) =>
-    FILLER_PATTERN.test(word.word.replace(/[^\p{L}]/gu, "")),
+  const tokens = usable.map((word) => word.word);
+  const fillers = tokens.filter(
+    (token, index) =>
+      HESITATION_PATTERN.test(bareWord(token)) ||
+      isDiscourseFiller(tokens, index),
   ).length;
 
   // With too little audio for a full window, fall back to the overall rate so
@@ -371,6 +463,7 @@ export function speechMetrics(words: TranscribedWord[]): SpeechMetrics | null {
     })),
     pauses: pauseStats(usable),
     fillerPer100: Number(((fillers / usable.length) * 100).toFixed(1)),
+    fillerCount: fillers,
     slowestStretch: slowestStretch(usable, windows),
     /* A zero here means the fallback was rejected too, so there is no
        trustworthy rate anywhere in this take. Saying so is the whole point:
