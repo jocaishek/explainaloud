@@ -61,8 +61,19 @@ const VERDICT_LABEL: Record<Exclude<Verdict, "plain">, string> = {
  * described the reader and told them something unflattering about themselves
  * in the first line they read, which is a strange way to open.
  */
+/**
+ * Says what you do, then what you get.
+ *
+ * This was "Find the gaps you didn't know you had." — a good line about the
+ * payoff that never mentions the mechanism, and so is equally true of a
+ * flashcard app, a quiz generator or an analytics dashboard. The one sentence
+ * on the page that plainly explained the product was the subhead below it, at
+ * 70% opacity, which is not where somebody deciding whether to read on is
+ * looking. Naming the action in the headline is the whole fix: a visitor who
+ * reads six words now knows they will be talking out loud.
+ */
 const HEADLINE: readonly Run[] = [
-  ["Find the gaps you didn't know you had.", "plain"],
+  ["Explain your notes out loud. See what you missed.", "plain"],
 ];
 
 /**
@@ -161,11 +172,28 @@ const RUNNING_ORDER = [
   },
 ] as const;
 
+/**
+ * Named for what each section shows, not for what it is called internally.
+ *
+ * "Running order" is a broadcast term, "Sources only" is this codebase's
+ * shorthand for source-grounding, and "Live marking" reads as a school word to
+ * anybody who was not marked at school. All three were labels you had to
+ * already understand the product to decode, sitting in the one component whose
+ * job is to tell a stranger what is on the page.
+ *
+ * Short, because this is a row and not a sentence. "Marked as you talk" and
+ * "From your files" read better but ran the bar 8px past the viewport at
+ * 1280 — the whole page scrolled sideways. The section heads underneath are
+ * where the full phrasing belongs; a nav label only has to be recognisable
+ * once you get there.
+ *
+ * The ids stay as they are: they are anchors in URLs people may already have.
+ */
 const SECTIONS = [
-  { id: "order", label: "Running order" },
-  { id: "marking", label: "Live marking" },
+  { id: "order", label: "How it works" },
+  { id: "marking", label: "As you talk" },
   { id: "pace", label: "Pace" },
-  { id: "sources", label: "Sources only" },
+  { id: "sources", label: "Your files" },
   { id: "try", label: "Try it" },
 ] as const;
 
@@ -1435,8 +1463,12 @@ function SourcesOnly() {
     >
       <SectionHead
         n="05"
-        title="A short course is a correct answer."
-        lede="Nothing beyond your files. What they do not cover gets named, not invented."
+        /* Was "A short course is a correct answer." — an aphorism that needs
+           the paragraph under it to decode, in the slot that is supposed to be
+           the decoding. The section is about where the material comes from, so
+           the title now says that and the lede keeps the promise. */
+        title="Built from your files, and nothing else."
+        lede="What your files do not cover gets named, not invented."
       />
 
       {/* The switch and its list float on glass, as the chart in 04 does:
