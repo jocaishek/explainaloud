@@ -607,6 +607,7 @@ ${renderSources(evidenceSources)}`,
         sourceNames: evidenceSources.map((source) => source.filename),
         sourceEvidence: sourceEvidence(evidenceSources),
         draft: auditView(architectCourse),
+        purpose: params.purpose ?? "study",
       }),
       (value) => courseReviewSchema.parse(value),
       // The small model, because this pass finds problems rather than writing
@@ -788,6 +789,14 @@ ${renderSources(evidenceSources)}`,
 
 type ExplanationParams = {
   topic: string;
+  /**
+   * Whether these key points are a course's or a speaker's own talk.
+   *
+   * Only the coach's wording depends on it, and only at the end. A point the
+   * speaker skipped in a rehearsal is a point they skipped, not one they
+   * failed to understand — they wrote it.
+   */
+  purpose?: Purpose;
   keyPoints: string[];
   transcript: string;
   grounded: boolean;
@@ -1021,6 +1030,9 @@ export async function orchestrateExplanation(params: ExplanationParams) {
       const coaching = await completeJson(
         `${gapReportPrompt({
           ...params,
+          // After the spread, not before: `params` carries `purpose` and may
+          // carry it as undefined, which would overwrite this default.
+          purpose: params.purpose ?? "study",
           gaps: spans
             .filter((span) => span.status === "gap")
             .map((span) => ({ text: span.text, issue: span.issue })),
