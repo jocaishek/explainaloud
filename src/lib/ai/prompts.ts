@@ -95,16 +95,94 @@ export const OPEN_KNOWLEDGE_RULE = `NO SOURCES PROVIDED:
   given, say so in "uncovered" rather than guessing.
 - Never invent specific numbers, dates, citations or study results.`;
 
+/**
+ * What changes when the material is the speaker's own.
+ *
+ * A rehearsal has a source of truth already: the deck. Teaching the topic
+ * would hand somebody points they never planned to make and then mark them
+ * for skipping them, which is the opposite of useful — the whole question is
+ * whether they said *their* thing, in *their* order.
+ *
+ * So the architect stops being an author and becomes a reader. It does not add,
+ * improve, reorder or correct. Everything downstream is unchanged: these are
+ * still key points, a skipped one is still a gap, and the delivery metrics
+ * never cared what the source was.
+ */
+const REHEARSAL_RULE = `REHEARSAL MODE — this material is the speaker's own talk:
+- Do NOT teach the topic. Do NOT add points they did not write.
+- Extract the points THEY intend to make, in THEIR order, in their words.
+- Do not correct, improve or fact-check their content. They are the source of
+  truth here; your job is to record what they meant to say so it can be
+  checked off as they say it.
+- If a slide or section carries no sayable claim — a title card, an image, a
+  thank-you — leave it out rather than inventing something for it.
+- Where they clearly intended a point but wrote it as a fragment, keep the
+  fragment's meaning rather than expanding it into prose they will not say.`;
+
 export function courseGenerationPrompt(
   topic: string,
   notes: string | null,
   grounded: boolean,
   /** The student switched outside sources off; the files are the whole world. */
   sourcesOnly = false,
+  /** `talk` swaps the architect from author to reader — see REHEARSAL_RULE. */
+  purpose: "study" | "talk" = "study",
 ) {
+  const rehearsing = purpose === "talk";
   /* Bounded before it reaches the prompt. Uploads have always been budgeted;
      this box was not, and pasting is the easiest way to overfill it. */
   const studentNotes = renderNotes(notes);
+
+  if (rehearsing) {
+    return `ROLE: You are the Course Architect agent, reading a talk somebody
+is about to deliver so their run-through can be checked against it.
+
+${TUTOR_SYSTEM}
+
+${GROUNDING_RULE}
+${REHEARSAL_RULE}
+${PRECISION_RULE}
+
+Read the material for the talk: "${topic}".
+${studentNotes ? `\nThe speaker added these notes:\n${studentNotes}\n` : ""}
+Return JSON with this exact shape — the same shape as a course, because a
+run-through is checked the same way an explanation is:
+{
+  "summary": "2-3 sentence overview of what this talk sets out to say",
+  "citations": [{ "source": "exact source label", "quote": "exact supporting sentence" }],
+  "sections": [
+    {
+      "title": "the speaker's own section or slide heading",
+      "intuition": "what this part of the talk is doing, in one or two lines",
+      "analogy": "",
+      "technical": "",
+      "example": "",
+      "quiz": "a question that asks them to deliver this part out loud",
+      "key_points": ["the specific things THEY plan to say in this part"],
+      "citations": [{ "source": "exact source label", "quote": "exact supporting sentence" }]
+    }
+  ],
+  "notes": ["one line per point, in delivery order, as a runsheet"],
+  "video_searches": [],
+  "resources": [],
+  "uncovered": [],
+  "scope_note": null
+}
+
+Sections follow the talk's own structure — one per slide, section or beat, in
+the order they will be delivered. Do not merge or reorder them.
+
+"video_searches" and "resources" must both be empty arrays. Somebody
+rehearsing a talk they wrote does not need further reading.
+
+Every section must contain at least one "key_points" entry, and each entry
+must be one concrete thing the speaker intends to say. These are what the
+run-through is checked against, so a point they hit is a point covered and a
+point they pass over is one they skipped.
+
+Set "scope_note" to null and leave "uncovered" empty. Neither applies: there
+is no syllabus here to fall short of, only the talk they wrote.`;
+  }
 
   return `ROLE: You are the Course Architect agent in a multi-agent teaching system.
 Your work will be audited by a separate Accuracy Reviewer agent.

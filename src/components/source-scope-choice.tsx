@@ -23,7 +23,11 @@ export function SourceScopeOption({
   description,
 }: {
   name: string;
-  value: "on" | "off";
+  /* Was `"on" | "off"`, which was this component's first caller rather than
+     anything about the component: it is a radio-card and the value is
+     whatever the fieldset it belongs to posts. The purpose chooser posts
+     "study" | "talk" through the same shape. */
+  value: string;
   checked: boolean;
   onSelect: () => void;
   title: string;
