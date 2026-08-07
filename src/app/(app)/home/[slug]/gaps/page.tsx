@@ -9,6 +9,7 @@ import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { SessionPicker } from "~/components/session-picker";
 import type { GapReport, SpanStatus } from "~/lib/ai/schemas";
 import { courseIdForSlug } from "~/lib/courses";
+import { purposeCopy } from "~/lib/purpose";
 import { PACE_DROP_FRACTION, type SpeechMetrics } from "~/lib/speech-metrics";
 import { requireUser } from "~/lib/supabase/server";
 import { cn } from "~/lib/utils";
@@ -130,48 +131,62 @@ export default async function GapReportPage({
       }>
     >();
 
-  const [{ data: session }, { data: baseline }, { data: pastSessions }] =
-    await Promise.all([
-      (wanted
-        ? supabase
-            .from("course_sessions")
-            .select(
-              "id, transcript, score, spans, report, speech_metrics, question, segments, gaps ( id, phrase, category, explanation, resolved, created_at )",
-            )
-            .eq("course_id", courseId)
-            .eq("user_id", user.id)
-            .eq("id", wanted)
-        : supabase
-            .from("course_sessions")
-            .select(
-              "id, transcript, score, spans, report, speech_metrics, question, segments, gaps ( id, phrase, category, explanation, resolved, created_at )",
-            )
-            .eq("course_id", courseId)
-            .eq("user_id", user.id)
-            .not("report", "is", null)
-            .order("started_at", { ascending: false })
-            .limit(1)
-      ).maybeSingle<SessionReport>(),
-      // The warm-up's reference, if they recorded one.
-      supabase
-        .from("speech_baselines")
-        .select("capable_wpm, median_wpm")
-        .eq("user_id", user.id)
-        .maybeSingle<BaselineRow>(),
-      // Fallback reference for anyone who skipped the warm-up: their own past
-      // sessions. Across every course, because how fast someone talks is a fact
-      // about them rather than about the topic. Capped because a rolling recent
-      // window tracks a speaker who is getting more fluent, where a lifetime
-      // average would not.
-      supabase
-        .from("course_sessions")
-        .select("speech_metrics")
-        .eq("user_id", user.id)
-        .not("speech_metrics", "is", null)
-        .order("started_at", { ascending: false })
-        .limit(10)
-        .returns<{ speech_metrics: SpeechMetrics | null }[]>(),
-    ]);
+  const [
+    { data: session },
+    { data: baseline },
+    { data: pastSessions },
+    { data: course },
+  ] = await Promise.all([
+    (wanted
+      ? supabase
+          .from("course_sessions")
+          .select(
+            "id, transcript, score, spans, report, speech_metrics, question, segments, gaps ( id, phrase, category, explanation, resolved, created_at )",
+          )
+          .eq("course_id", courseId)
+          .eq("user_id", user.id)
+          .eq("id", wanted)
+      : supabase
+          .from("course_sessions")
+          .select(
+            "id, transcript, score, spans, report, speech_metrics, question, segments, gaps ( id, phrase, category, explanation, resolved, created_at )",
+          )
+          .eq("course_id", courseId)
+          .eq("user_id", user.id)
+          .not("report", "is", null)
+          .order("started_at", { ascending: false })
+          .limit(1)
+    ).maybeSingle<SessionReport>(),
+    // The warm-up's reference, if they recorded one.
+    supabase
+      .from("speech_baselines")
+      .select("capable_wpm, median_wpm")
+      .eq("user_id", user.id)
+      .maybeSingle<BaselineRow>(),
+    // Fallback reference for anyone who skipped the warm-up: their own past
+    // sessions. Across every course, because how fast someone talks is a fact
+    // about them rather than about the topic. Capped because a rolling recent
+    // window tracks a speaker who is getting more fluent, where a lifetime
+    // average would not.
+    supabase
+      .from("course_sessions")
+      .select("speech_metrics")
+      .eq("user_id", user.id)
+      .not("speech_metrics", "is", null)
+      .order("started_at", { ascending: false })
+      .limit(10)
+      .returns<{ speech_metrics: SpeechMetrics | null }[]>(),
+    // What this course is for. Only the wording of two headings depends on
+    // it, but they are the two headings somebody reads first, and calling a
+    // rehearsal a "knowledge score" is the whole reason this exists.
+    supabase
+      .from("courses")
+      .select("purpose")
+      .eq("id", courseId)
+      .maybeSingle<{ purpose: string | null }>(),
+  ]);
+
+  const copy = purposeCopy(course?.purpose);
 
   if (!session?.report) {
     return (
@@ -338,7 +353,11 @@ export default async function GapReportPage({
           </section>
         </>
       ) : (
-        <KnowledgeScore score={score} verdict={session.report.verdict} />
+        <KnowledgeScore
+          score={score}
+          verdict={session.report.verdict}
+          heading={copy.scoreHeading}
+        />
       )}
 
       {/* Two columns on a wide screen: what you did on the left — the score's
@@ -563,7 +582,7 @@ export default async function GapReportPage({
               />
 
               <WeaknessList
-                heading="Not covered yet"
+                heading={copy.missedHeading}
                 description="You didn't get to these. That isn't the same as getting them wrong."
                 emptyText="You reached every key point in the course."
                 tone="neutral"

@@ -12,9 +12,20 @@ function scoreColor(score: number) {
 export function KnowledgeScore({
   score,
   verdict,
+  /**
+   * What the number is measuring, in the words of this course's purpose.
+   *
+   * "Knowledge score" is the right noun for an explanation and the wrong one
+   * for a rehearsal: somebody running through a talk they wrote is not being
+   * told whether they know it, they are being told how much of their own
+   * material they got through. Defaulted, so every existing caller is
+   * unchanged.
+   */
+  heading = "Knowledge score",
 }: {
   score: number;
   verdict: string;
+  heading?: string;
 }) {
   // The media query directly, rather than framer-motion's hook. This component
   // is on the first screen of the gap report and pulled the whole animation
@@ -59,7 +70,7 @@ export function KnowledgeScore({
     <section aria-labelledby="score-heading" className="flex flex-col gap-3">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 id="score-heading" className="text-base font-semibold text-strong">
-          Knowledge score
+          {heading}
         </h2>
         <p
           className="font-mono text-2xl font-semibold tabular-nums"
@@ -72,7 +83,7 @@ export function KnowledgeScore({
       </div>
       <div
         role="progressbar"
-        aria-label={`Knowledge score: ${score} out of 100`}
+        aria-label={`${heading}: ${score} out of 100`}
         aria-valuemin={0}
         aria-valuemax={100}
         aria-valuenow={score}

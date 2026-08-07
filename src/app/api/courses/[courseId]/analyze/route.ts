@@ -4,6 +4,7 @@ import { orchestrateExplanation } from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import type { SourceRow } from "~/lib/ai/sources";
+import { toPurpose } from "~/lib/purpose";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 
@@ -105,13 +106,14 @@ export async function POST(
 
   const { data: course } = await supabase
     .from("courses")
-    .select("id, topic, generated")
+    .select("id, topic, generated, purpose")
     .eq("id", courseId)
     .eq("user_id", user.id)
     .maybeSingle<{
       id: string;
       topic: string;
       generated: GeneratedCourse | null;
+      purpose: string | null;
     }>();
 
   if (!course) {
@@ -153,6 +155,7 @@ export async function POST(
   try {
     const result = await orchestrateExplanation({
       topic: course.topic,
+      purpose: toPurpose(course.purpose),
       keyPoints,
       question,
       transcript,

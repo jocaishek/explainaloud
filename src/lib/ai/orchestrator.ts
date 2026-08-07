@@ -34,6 +34,7 @@ import {
   spansSchema,
 } from "~/lib/ai/schemas";
 import { renderSources, type SourceRow } from "~/lib/ai/sources";
+import type { Purpose } from "~/lib/purpose";
 import {
   discoverCourseEvidence,
   discoverCourseResources,
@@ -490,6 +491,15 @@ export async function orchestrateCourse(params: {
    * nothing at all. So it is ignored unless something was uploaded.
    */
   sourcesOnly?: boolean;
+  /**
+   * Whether this is material to learn or a talk to deliver.
+   *
+   * Only the architect's prompt branches on it. Everything after — review,
+   * revision, grading, the delivery metrics — treats a talk's key points
+   * exactly as it treats a course's, which is the reason a rehearsal works at
+   * all without a second pipeline.
+   */
+  purpose?: Purpose;
 }) {
   const startedAt = new Date().toISOString();
   const runId = crypto.randomUUID();
@@ -527,7 +537,7 @@ export async function orchestrateCourse(params: {
   // wrong in both directions.
   const [architect, breadth] = await Promise.all([
     completeJson(
-      `${courseGenerationPrompt(params.topic, params.notes, evidenceGrounded, strict)}
+      `${courseGenerationPrompt(params.topic, params.notes, evidenceGrounded, strict, params.purpose ?? "study")}
 
 ${renderSources(evidenceSources)}`,
       (value) => courseSchema.parse(value),
@@ -597,6 +607,7 @@ ${renderSources(evidenceSources)}`,
         sourceNames: evidenceSources.map((source) => source.filename),
         sourceEvidence: sourceEvidence(evidenceSources),
         draft: auditView(architectCourse),
+        purpose: params.purpose ?? "study",
       }),
       (value) => courseReviewSchema.parse(value),
       // The small model, because this pass finds problems rather than writing
@@ -778,6 +789,14 @@ ${renderSources(evidenceSources)}`,
 
 type ExplanationParams = {
   topic: string;
+  /**
+   * Whether these key points are a course's or a speaker's own talk.
+   *
+   * Only the coach's wording depends on it, and only at the end. A point the
+   * speaker skipped in a rehearsal is a point they skipped, not one they
+   * failed to understand — they wrote it.
+   */
+  purpose?: Purpose;
   keyPoints: string[];
   transcript: string;
   grounded: boolean;
@@ -1011,6 +1030,9 @@ export async function orchestrateExplanation(params: ExplanationParams) {
       const coaching = await completeJson(
         `${gapReportPrompt({
           ...params,
+          // After the spread, not before: `params` carries `purpose` and may
+          // carry it as undefined, which would overwrite this default.
+          purpose: params.purpose ?? "study",
           gaps: spans
             .filter((span) => span.status === "gap")
             .map((span) => ({ text: span.text, issue: span.issue })),

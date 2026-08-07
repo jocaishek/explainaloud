@@ -5,6 +5,7 @@ import { uniqueCourseSlug } from "~/lib/courses";
 import { folderNameError, isFolderColor, topicNameError } from "~/lib/folders";
 import { looksLikeHomework, materialLooksLikeHomework } from "~/lib/homework";
 import { claimQuota, localDay } from "~/lib/limits";
+import { toPurpose } from "~/lib/purpose";
 import { requireUser } from "~/lib/supabase/server";
 import { isTopicTooBroad } from "~/lib/topic-scope";
 
@@ -31,6 +32,9 @@ export async function createCourse(
   // is queued, but the course row is written before the uploads are, so this
   // records the intent and `orchestrateCourse` ignores it if nothing landed.
   const sourcesOnly = formData.get("sourcesOnly") === "on";
+  // Study unless the form said otherwise, which is what every course written
+  // before this column existed was.
+  const purpose = toPurpose(formData.get("purpose"));
   // The browser sends its own calendar date so the cap resets at the
   // student's midnight, not the server's.
   const day = String(formData.get("day") ?? "") || localDay();
@@ -39,7 +43,13 @@ export async function createCourse(
     return { ok: false, error: "missing_topic" };
   }
 
-  if (isTopicTooBroad(topic)) {
+  /* Breadth is a study problem, not a rehearsal one.
+     "World War II" is too broad to build a course from, which is what this
+     guard is for. As the title of a talk somebody has already written it is
+     simply the title, and the material is their own deck — there is nothing
+     to scope, and refusing it would reject the very thing they came to
+     rehearse. */
+  if (purpose === "study" && isTopicTooBroad(topic)) {
     return { ok: false, error: "topic_too_broad" };
   }
 
@@ -67,6 +77,7 @@ export async function createCourse(
       input_notes: notes || null,
       folder_id: folderId || null,
       slug,
+      purpose,
       sources_only: sourcesOnly,
     })
     .select("id, slug")

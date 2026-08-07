@@ -16,6 +16,7 @@ import {
   looksLikeHomework,
   materialLooksLikeHomework,
 } from "~/lib/homework";
+import { PURPOSE_COPY, PURPOSES, type Purpose } from "~/lib/purpose";
 import { BROAD_TOPIC_MESSAGE, isTopicTooBroad } from "~/lib/topic-scope";
 import {
   ACCEPT_ATTRIBUTE,
@@ -68,6 +69,7 @@ export function NewTopicForm({
   // course should get one. Strictness is the deliberate choice, not the
   // accidental one.
   const [sourcesOnly, setSourcesOnly] = useState(false);
+  const [purpose, setPurpose] = useState<Purpose>("study");
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(
@@ -161,7 +163,9 @@ export function NewTopicForm({
 
     const formData = new FormData(event.currentTarget);
     const topic = String(formData.get("topic") ?? "");
-    if (isTopicTooBroad(topic)) {
+    // Mirrors the server: breadth is a study problem. A talk's title is a
+    // title, and its material is the speaker's own deck.
+    if (purpose === "study" && isTopicTooBroad(topic)) {
       setError(BROAD_TOPIC_MESSAGE);
       setStatus(null);
       return;
@@ -221,13 +225,43 @@ export function NewTopicForm({
       {folderId && <input type="hidden" name="folderId" value={folderId} />}
       <LocalDayField />
 
+      {/* Asked first, because it changes what the rest of the form means: the
+          same upload is either material to learn from or a talk to be checked
+          against. It is also the only question here somebody can answer
+          without thinking — they already know why they opened the app. */}
+      <fieldset
+        disabled={!!createdCourseId || pending}
+        className="flex flex-col gap-3 disabled:opacity-60"
+      >
+        <legend className="text-sm font-semibold text-strong">
+          What is this for?
+        </legend>
+        <div className="flex flex-col gap-2 sm:flex-row">
+          {PURPOSES.map((value) => (
+            <SourceScopeOption
+              key={value}
+              name="purpose"
+              value={value}
+              checked={purpose === value}
+              onSelect={() => setPurpose(value)}
+              title={PURPOSE_COPY[value].label}
+              description={PURPOSE_COPY[value].blurb}
+            />
+          ))}
+        </div>
+      </fieldset>
+
       <div className="flex flex-col gap-4">
         <Input
           type="text"
           name="topic"
           required
           disabled={!!createdCourseId}
-          placeholder="e.g. Photosynthesis, the Krebs cycle, Bayes' theorem…"
+          placeholder={
+            purpose === "talk"
+              ? "e.g. Capstone presentation, Founders pitch, Toast for Sam…"
+              : "e.g. Photosynthesis, the Krebs cycle, Bayes' theorem…"
+          }
           className="h-11 border-input bg-surface text-base text-strong placeholder:text-subtle"
           aria-invalid={error === BROAD_TOPIC_MESSAGE}
           aria-describedby={

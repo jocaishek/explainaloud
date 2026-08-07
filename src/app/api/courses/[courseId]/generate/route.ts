@@ -3,6 +3,7 @@ import { CourseCitationError, orchestrateCourse } from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
 import { BANK_TARGET, fillQuestionBank } from "~/lib/ai/question-bank";
 import type { SourceRow } from "~/lib/ai/sources";
+import { toPurpose } from "~/lib/purpose";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 
@@ -43,7 +44,7 @@ export async function POST(
   // clean 404 instead of an empty result further down.
   const { data: course } = await supabase
     .from("courses")
-    .select("id, topic, input_notes, sources_only")
+    .select("id, topic, input_notes, sources_only, purpose")
     .eq("id", courseId)
     .eq("user_id", user.id)
     .maybeSingle<{
@@ -51,6 +52,7 @@ export async function POST(
       topic: string;
       input_notes: string | null;
       sources_only: boolean;
+      purpose: string | null;
     }>();
 
   if (!course) {
@@ -76,6 +78,7 @@ export async function POST(
       notes: course.input_notes,
       sources: sources ?? [],
       sourcesOnly,
+      purpose: toPurpose(course.purpose),
     });
 
     const { error: saveError } = await supabase
