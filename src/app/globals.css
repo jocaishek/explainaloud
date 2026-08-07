@@ -1,5 +1,64 @@
 @import "tailwindcss";
 
+main.lp-v2 {
+  --background: #f3eddf;
+  --foreground: #29433e;
+  --card: #fffaf0;
+  --card-foreground: #173a35;
+  --muted: #e8e1d2;
+  --muted-foreground: #66736f;
+  --primary: #0b665a;
+  --primary-foreground: #fff9df;
+  --border: rgba(7, 89, 79, 0.16);
+  --brand-ink: #176e62;
+  --brand-deep: #0b665a;
+  --brand-foreground: #fff9df;
+  --strong: #123f38;
+  --ok-light: #71d69a;
+  --vague-light: #f1c26d;
+  --miss-light: #ff8c83;
+}
+
+.lp-v2 .lp-verdict-ok,
+.lp-v2 .lp-verdict-vague {
+  font-style: italic;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 0.08em;
+}
+
+.lp-v2 .lp-reveal-ok {
+  color: var(--ok-light);
+  text-decoration: underline;
+  text-decoration-thickness: 0.07em;
+  text-underline-offset: 0.12em;
+}
+
+.lp-v2 .lp-reveal-vague {
+  color: var(--vague-light);
+  text-decoration: underline;
+  text-decoration-thickness: 0.07em;
+  text-underline-offset: 0.12em;
+}
+
+.lp-v2 .lp-reveal-range:focus-visible {
+  opacity: 1;
+  height: 0.2rem;
+  top: 50%;
+  outline: 2px solid var(--foreground);
+  outline-offset: 4px;
+}
+
+.lp-v2 .lp-verdict-ok {
+  color: var(--ok);
+  background-image: linear-gradient(var(--ok), var(--ok));
+}
+
+.lp-v2 .lp-verdict-vague {
+  color: var(--vague);
+  background-image: linear-gradient(var(--vague), var(--vague));
+}
+
 /* `dark:` follows the class, not the operating system.
  *
  * Tailwind v4's default `dark:` variant is `prefers-color-scheme`, and this

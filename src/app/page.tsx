@@ -3,8 +3,8 @@
 import Link from "next/link";
 import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
+import { LandingRedesign } from "~/components/landing/landing-redesign";
 import { TryIt } from "~/components/landing/try-it";
-import { ScrollReveal } from "~/components/scroll-reveal";
 import { useInView } from "~/hooks/use-in-view";
 import { useMediaQuery } from "~/hooks/use-media-query";
 import { cn } from "~/lib/utils";
@@ -1679,20 +1679,18 @@ function Footer() {
  * ---------------------------------------------------------------------- */
 
 export default function Home() {
-  return (
-    <main className="tx min-h-screen">
-      {/* Reveals every block carrying `data-rise` below. One observer for the
-          page; see the component for why it is wired this way. */}
-      <ScrollReveal />
-      <Masthead />
-      <Hero />
-      <RunningOrder />
-      <LiveMarking />
-      <Pace />
-      <SourcesOnly />
-      <TryItSection />
-      <Close />
-      <Footer />
-    </main>
-  );
+  // Keep the previous landing implementation available while this visual
+  // direction is being reviewed. Nothing is deleted until the concept wins.
+  void [
+    Masthead,
+    Hero,
+    RunningOrder,
+    LiveMarking,
+    Pace,
+    SourcesOnly,
+    TryItSection,
+    Close,
+    Footer,
+  ];
+  return <LandingRedesign />;
 }
