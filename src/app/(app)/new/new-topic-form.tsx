@@ -292,7 +292,11 @@ export function NewTopicForm({
           name="notes"
           rows={4}
           disabled={!!createdCourseId}
-          placeholder="Paste your notes here (optional)"
+          placeholder={
+            purpose === "talk"
+              ? "Paste your script or outline here"
+              : "Paste your notes here (optional)"
+          }
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
           className="resize-none rounded-md border border-input bg-surface p-3 text-sm text-strong placeholder:text-subtle focus:outline-none disabled:opacity-60"
@@ -315,13 +319,20 @@ export function NewTopicForm({
 
       <section className="flex flex-col gap-3" aria-labelledby="source-heading">
         <div>
+          {/* A talk cannot be rehearsed against nothing, so the form has to
+              stop calling its material optional. It is still one of two —
+              slides here or an outline pasted above — which is why this says
+              "or" rather than marking the upload itself required. */}
           <h2 id="source-heading" className="text-sm font-semibold text-strong">
-            Add sources{" "}
-            <span className="font-normal text-subtle">(optional)</span>
+            {purpose === "talk" ? "Add your talk" : "Add sources"}{" "}
+            <span className="font-normal text-subtle">
+              {purpose === "talk" ? "(or paste it above)" : "(optional)"}
+            </span>
           </h2>
           <p className="mt-1 text-xs text-subtle">
-            Ground the course in your own PDFs, Word files, or text. You can
-            also add these later.
+            {purpose === "talk"
+              ? "Your slides, script or outline. The run-through is checked against what you wrote, so it needs the talk itself."
+              : "Ground the course in your own PDFs, Word files, or text. You can also add these later."}
           </p>
         </div>
 
@@ -470,7 +481,9 @@ export function NewTopicForm({
               ? "Retry sources"
               : files.length > 0
                 ? `Build with ${files.length} source${files.length === 1 ? "" : "s"}`
-                : "Build my course"}
+                : purpose === "talk"
+                  ? "Build my run-through"
+                  : "Build my course"}
         </Button>
 
         {createdCourseId && (
