@@ -44,6 +44,15 @@ import {
 const REVIEW_OUTPUT_TOKENS = 900;
 const REVIEW_EVIDENCE_CHARS = 6_000;
 
+export class TalkMaterialError extends Error {
+  constructor() {
+    super(
+      "A rehearsal needs the talk itself. Upload your slides or outline, or paste your notes, and try again.",
+    );
+    this.name = "TalkMaterialError";
+  }
+}
+
 export class CourseCitationError extends Error {
   constructor() {
     super(
@@ -503,6 +512,23 @@ export async function orchestrateCourse(params: {
 }) {
   const startedAt = new Date().toISOString();
   const runId = crypto.randomUUID();
+
+  /* A rehearsal has to have a talk to rehearse.
+     Study can fall back on general knowledge — "teach me photosynthesis" is a
+     complete instruction. "Rehearse my capstone presentation" is not: there is
+     nothing to extract, and the Architect would invent a talk and then mark
+     the speaker for skipping points they never wrote. Checked here rather than
+     only in the form because this is the first place both the notes and the
+     uploaded files are known — the course row is written before its sources
+     are. */
+  if (
+    params.purpose === "talk" &&
+    params.sources.length === 0 &&
+    !params.notes?.trim()
+  ) {
+    throw new TalkMaterialError();
+  }
+
   const grounded = params.sources.length > 0;
   const strict = grounded && params.sourcesOnly === true;
   const research = grounded

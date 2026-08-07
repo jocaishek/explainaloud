@@ -27,6 +27,18 @@ import {
 } from "~/lib/uploads";
 import { cn } from "~/lib/utils";
 
+/**
+ * A rehearsal needs the talk. Study does not: "teach me photosynthesis" is a
+ * complete instruction on its own, where "rehearse my capstone presentation"
+ * leaves nothing to check the run-through against.
+ *
+ * Enforced here as well as in the orchestrator because this is the only place
+ * it can be caught before a course row exists — uploads are posted after
+ * creation, so the server action that writes the row cannot see them.
+ */
+const TALK_NEEDS_MATERIAL =
+  "Add your slides, script or outline — or paste your notes. A rehearsal is checked against the talk you wrote.";
+
 const ERROR_MESSAGES: Record<string, string> = {
   missing_topic: "Enter a topic before continuing.",
   topic_too_broad: BROAD_TOPIC_MESSAGE,
@@ -171,6 +183,11 @@ export function NewTopicForm({
       return;
     }
     const notes = String(formData.get("notes") ?? "");
+    if (purpose === "talk" && files.length === 0 && !notes.trim()) {
+      setError(TALK_NEEDS_MATERIAL);
+      setStatus(null);
+      return;
+    }
     if (looksLikeHomework(topic) || materialLooksLikeHomework(notes)) {
       setError(HOMEWORK_MESSAGE);
       setStatus(null);
