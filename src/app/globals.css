@@ -1,19 +1,20 @@
 @import "tailwindcss";
 
 main.lp-v2 {
-  --background: #f3eddf;
+  --background: #f3efe5;
   --foreground: #29433e;
   --card: #fffaf0;
   --card-foreground: #173a35;
   --muted: #e8e1d2;
   --muted-foreground: #66736f;
-  --primary: #0b665a;
+  --primary: #07594f;
   --primary-foreground: #fff9df;
   --border: rgba(7, 89, 79, 0.16);
   --brand-ink: #176e62;
-  --brand-deep: #0b665a;
+  --brand-deep: #07594f;
   --brand-foreground: #fff9df;
   --strong: #123f38;
+  --ok: #0f7a3d;
   --ok-light: #71d69a;
   --vague-light: #f1c26d;
   --miss-light: #ff8c83;
