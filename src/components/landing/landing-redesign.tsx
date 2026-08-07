@@ -127,7 +127,7 @@ function MarqueeRibbon() {
             )}
           </path>
         </defs>
-        <text className="fill-[#fff9df]/78 font-sans font-medium text-[18px] tracking-normal">
+        <text className="fill-primary-foreground/80 font-sans font-medium text-[18px] tracking-normal">
           <motion.textPath
             href="#continuous-speech-path"
             animate={reduceMotion ? undefined : { startOffset: ["-55%", "0%"] }}
@@ -150,7 +150,7 @@ function MarqueeRibbon() {
           repeat: Number.POSITIVE_INFINITY,
           ease: "easeInOut",
         }}
-        className="absolute top-[86%] left-1/2 z-10 flex h-[5.5rem] w-[min(44vw,10.5rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[2.8rem_2.45rem_2.9rem_2.55rem] border-[3px] border-[#122d28] bg-[#fff9df] px-4 shadow-[0_18px_45px_-22px_rgba(0,20,17,0.72)]"
+        className="absolute top-[86%] left-1/2 z-10 flex h-[5.5rem] w-[min(44vw,10.5rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[2.8rem_2.45rem_2.9rem_2.55rem] border-[3px] border-strong bg-primary-foreground px-4 shadow-[0_18px_45px_-22px_rgba(0,20,17,0.72)]"
       >
         <div
           className="absolute -top-12 left-1/2 flex min-w-max -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2.5 font-semibold text-sm text-white shadow-[0_12px_28px_-16px_rgba(0,20,17,0.7)]"
@@ -182,7 +182,7 @@ function MarqueeRibbon() {
                 delay: index * 0.11,
                 ease: "easeInOut",
               }}
-              className="w-1 rounded-full bg-[#122d28]"
+              className="w-1 rounded-full bg-strong"
             />
           ))}
         </div>
@@ -305,7 +305,7 @@ function ScrollJourney() {
       detail:
         "Explainaloud checks off the point the moment your meaning lands.",
       color: "var(--ok)",
-      surface: "bg-[#d8f0df]",
+      surface: "bg-[var(--ok-light)]",
     },
     {
       label: "Too thin",
@@ -314,7 +314,7 @@ function ScrollJourney() {
       note: "You touched the point, but did not give the evidence you planned.",
       detail: "Amber means you said it, but too thinly to count as complete.",
       color: "var(--vague)",
-      surface: "bg-[#f5dfad]",
+      surface: "bg-[var(--vague-light)]",
     },
     {
       label: "Missed",
@@ -323,13 +323,13 @@ function ScrollJourney() {
       note: "This key point never appeared in your rehearsal.",
       detail: "Red turns the omission into a precise prompt for your next run.",
       color: "var(--miss)",
-      surface: "bg-[#f4c6c0]",
+      surface: "bg-[var(--miss-light)]",
     },
   ] as const;
   const stage = stages[activeStage];
 
   return (
-    <section ref={sectionRef} className="relative h-[260vh] bg-[#f5f0e5]">
+    <section ref={sectionRef} className="relative h-[260vh] bg-background">
       <div className="sticky top-0 flex h-screen items-center overflow-hidden px-5 pt-20 md:px-8">
         <div
           aria-hidden="true"
@@ -347,7 +347,7 @@ function ScrollJourney() {
             repeat: Number.POSITIVE_INFINITY,
             ease: "easeInOut",
           }}
-          className="absolute -right-[12rem] -bottom-[15rem] h-[31rem] w-[50rem] rounded-[50%] border-[4.5rem] border-[#c44742]/7"
+          className="absolute -right-[12rem] -bottom-[15rem] h-[31rem] w-[50rem] rounded-[50%] border-[4.5rem] border-[var(--miss)]/7"
         />
         <div className="relative mx-auto grid w-full max-w-[72rem] gap-7 lg:grid-cols-[10rem_34rem_minmax(14rem,1fr)] lg:items-center">
           <div className="hidden space-y-2 lg:block">
@@ -367,12 +367,12 @@ function ScrollJourney() {
           </div>
 
           <div className="relative overflow-hidden rounded-[2.6rem_2rem_2.8rem_2.2rem] bg-primary p-4 shadow-[0_34px_90px_-44px_rgba(7,89,79,0.65)] md:p-6">
-            <div className="flex items-center justify-between font-mono text-[0.62rem] text-[#c7ddd5] uppercase tracking-[0.12em]">
+            <div className="flex items-center justify-between font-mono text-[0.62rem] text-primary-foreground/75 uppercase tracking-[0.12em]">
               <span>Live rehearsal · 01:42</span>
               <span>{activeStage + 1} / 3</span>
             </div>
             <div
-              className={`mt-5 flex min-h-[20rem] flex-col rounded-[2.1rem_1.65rem_2.3rem_1.8rem] p-7 text-[#173a35] md:p-9 ${stage.surface}`}
+              className={`mt-5 flex min-h-[20rem] flex-col rounded-[2.1rem_1.65rem_2.3rem_1.8rem] p-7 text-card-foreground md:p-9 ${stage.surface}`}
             >
               <div
                 className="flex items-center gap-3 font-mono text-[0.64rem] uppercase tracking-[0.12em]"
@@ -387,7 +387,7 @@ function ScrollJourney() {
               <p className="mt-7 max-w-full font-display text-[clamp(2.1rem,3.35vw,3.45rem)] leading-[0.98] tracking-[-0.035em]">
                 {stage.quote}
               </p>
-              <p className="mt-auto max-w-[30rem] pt-7 text-[#29433e]/70 leading-relaxed">
+              <p className="mt-auto max-w-[30rem] pt-7 text-foreground/70 leading-relaxed">
                 {stage.note}
               </p>
             </div>
@@ -481,7 +481,7 @@ function FeedbackDemo() {
                     />
                   )}
                   <span
-                    className={`relative ${active === index ? "text-[#07594f]" : "text-[#d7e7df]"}`}
+                    className={`relative ${active === index ? "text-primary" : "text-primary-foreground/85"}`}
                   >
                     {option.label}
                   </span>
@@ -602,7 +602,7 @@ export function LandingRedesign() {
               repeat: Number.POSITIVE_INFINITY,
               ease: "easeInOut",
             }}
-            className="pointer-events-none absolute -top-[14rem] -left-[18rem] h-[38rem] w-[55rem] rounded-[50%] border-[5rem] border-[#f0a7a0]/8"
+            className="pointer-events-none absolute -top-[14rem] -left-[18rem] h-[38rem] w-[55rem] rounded-[50%] border-[5rem] border-[var(--miss-light)]/8"
           />
           <motion.div
             aria-hidden="true"
@@ -619,7 +619,7 @@ export function LandingRedesign() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease }}
-              className="font-mono text-[0.67rem] text-[#c7ddd5] uppercase tracking-[0.15em]"
+              className="font-mono text-[0.67rem] text-primary-foreground/75 uppercase tracking-[0.15em]"
             >
               Rehearse anything you have to say out loud
             </motion.p>
@@ -628,7 +628,7 @@ export function LandingRedesign() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.08, duration: 0.75, ease }}
-              className="mx-auto mt-4 max-w-[15ch] font-display text-[clamp(3.1rem,5.5vw,5.2rem)] text-[#fff9df] leading-[0.92] tracking-[-0.055em]"
+              className="mx-auto mt-4 max-w-[15ch] font-display text-[clamp(3.1rem,5.5vw,5.2rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]"
             >
               Say what you know.{" "}
               <em className="font-normal">See what you missed.</em>
@@ -638,7 +638,7 @@ export function LandingRedesign() {
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.16, duration: 0.7, ease }}
-              className="mx-auto mt-5 max-w-[42rem] text-[clamp(1rem,1.7vw,1.2rem)] text-[#d7e7df] leading-relaxed"
+              className="mx-auto mt-5 max-w-[42rem] text-[clamp(1rem,1.7vw,1.2rem)] text-primary-foreground/85 leading-relaxed"
             >
               Bring the points you intend to make, talk them through naturally,
               and see what you reached, rushed, or never got to.
@@ -652,14 +652,14 @@ export function LandingRedesign() {
             >
               <Link
                 href="/signup"
-                className="group inline-flex h-12 items-center gap-2 rounded-[1.4rem_1rem_1.4rem_1.1rem] bg-gradient-to-br from-[#eee5f8] to-[#e7efd9] px-6 text-[#173a35] font-medium shadow-[0_12px_30px_-16px_rgba(0,40,34,0.6)] transition-transform hover:scale-[1.025] active:scale-[0.98]"
+                className="group inline-flex h-12 items-center gap-2 rounded-[1.4rem_1rem_1.4rem_1.1rem] bg-card px-6 text-card-foreground font-medium shadow-[0_12px_30px_-16px_rgba(0,40,34,0.6)] transition-transform hover:scale-[1.025] active:scale-[0.98]"
               >
                 Start explaining
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <a
                 href="#how-it-works"
-                className="inline-flex h-12 items-center rounded-[1.2rem] border border-white/30 bg-white/5 px-6 font-medium text-[#fff9df] backdrop-blur-md transition-colors hover:bg-white/10"
+                className="inline-flex h-12 items-center rounded-[1.2rem] border border-white/30 bg-white/5 px-6 font-medium text-primary-foreground backdrop-blur-md transition-colors hover:bg-white/10"
               >
                 See how it works
               </a>
