@@ -3,9 +3,9 @@
 import {
   AnimatePresence,
   motion,
+  useMotionValueEvent,
   useReducedMotion,
   useScroll,
-  useTransform,
 } from "framer-motion";
 import {
   ArrowRight,
@@ -16,7 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 
 const transcript = [
@@ -63,46 +63,129 @@ const waveform = [
 ] as const;
 
 const marqueeCopy =
-  "Upload what you’re learning  ·  Explain it in your own words  ·  See what’s solid  ·  Find what’s missing  ·  ";
+  "I covered the customer problem clearly, explained why it matters, and connected the plan to next quarter.  ·  The timeline is ready, the owners are aligned, and the final risk is still waiting on legal.  ·  ";
+
+const trackingWave = [
+  { id: "track-a", height: 18 },
+  { id: "track-b", height: 30 },
+  { id: "track-c", height: 22 },
+  { id: "track-d", height: 42 },
+  { id: "track-e", height: 27 },
+  { id: "track-f", height: 50 },
+  { id: "track-g", height: 34 },
+  { id: "track-h", height: 56 },
+  { id: "track-i", height: 38 },
+  { id: "track-j", height: 48 },
+  { id: "track-k", height: 25 },
+  { id: "track-l", height: 40 },
+  { id: "track-m", height: 20 },
+];
+
+const liveResults = [
+  { label: "Reached: customer problem", color: "var(--ok)" },
+  { label: "Too thin: evidence", color: "var(--vague)" },
+  { label: "Missed: final risk", color: "var(--miss)" },
+] as const;
 
 function MarqueeRibbon() {
   const reduceMotion = useReducedMotion();
+  const [resultIndex, setResultIndex] = useState(0);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+    const interval = window.setInterval(() => {
+      setResultIndex((current) => (current + 1) % liveResults.length);
+    }, 3200);
+    return () => window.clearInterval(interval);
+  }, [reduceMotion]);
+
+  const activeResult = liveResults[resultIndex];
 
   return (
     <section
       aria-label="How Explainaloud works"
-      className="relative h-[12rem] overflow-hidden bg-primary md:h-[15rem]"
+      className="relative h-full overflow-hidden"
     >
-      <motion.div
-        animate={reduceMotion ? undefined : { x: ["0%", "-50%"] }}
-        transition={{
-          duration: 38,
-          repeat: Number.POSITIVE_INFINITY,
-          ease: "linear",
-        }}
-        className="absolute top-0 left-0 flex h-full w-max will-change-transform"
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 1600 900"
+        preserveAspectRatio="xMidYMid slice"
+        className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
       >
-        {["first", "second"].map((copy) => (
-          <svg
-            key={copy}
-            aria-hidden={copy === "second"}
-            viewBox="0 0 1600 240"
-            className="h-full w-[100rem] shrink-0 overflow-visible"
+        <defs>
+          <path
+            id="continuous-speech-path"
+            d="M -120 520 C 20 520 0 180 220 170 C 410 160 455 390 350 535 C 250 675 130 660 40 590 C 200 720 410 770 650 774 C 674 774 696 774 720 774 L 880 774 C 1070 774 1210 726 1370 714 C 1470 706 1560 720 1720 748"
           >
-            <title>{copy === "first" ? "How Explainaloud works" : ""}</title>
-            <defs>
-              <path
-                id={`marquee-curve-${copy}`}
-                d="M -80 185 Q 390 18 820 118 T 1680 72"
+            {!reduceMotion && (
+              <animate
+                attributeName="d"
+                dur="16s"
+                repeatCount="indefinite"
+                values="M -120 520 C 20 520 0 180 220 170 C 410 160 455 390 350 535 C 250 675 130 660 40 590 C 200 720 410 770 650 774 C 674 774 696 774 720 774 L 880 774 C 1070 774 1210 726 1370 714 C 1470 706 1560 720 1720 748;M -120 520 C 20 510 6 190 224 176 C 402 164 463 380 356 531 C 258 665 134 666 40 590 C 200 714 410 764 650 774 C 674 774 696 774 720 774 L 880 774 C 1070 774 1210 718 1370 708 C 1470 702 1560 718 1720 748;M -120 520 C 20 520 0 180 220 170 C 410 160 455 390 350 535 C 250 675 130 660 40 590 C 200 720 410 770 650 774 C 674 774 696 774 720 774 L 880 774 C 1070 774 1210 726 1370 714 C 1470 706 1560 720 1720 748"
               />
-            </defs>
-            <text className="fill-primary-foreground/82 font-display text-[42px] italic tracking-[-0.02em]">
-              <textPath href={`#marquee-curve-${copy}`} startOffset="0">
-                {marqueeCopy}
-              </textPath>
-            </text>
-          </svg>
-        ))}
+            )}
+          </path>
+        </defs>
+        <text className="fill-[#fff9df]/78 font-sans font-medium text-[18px] tracking-normal">
+          <motion.textPath
+            href="#continuous-speech-path"
+            animate={reduceMotion ? undefined : { startOffset: ["-55%", "0%"] }}
+            transition={{
+              duration: 42,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "linear",
+            }}
+          >
+            {marqueeCopy.repeat(5)}
+          </motion.textPath>
+        </text>
+      </svg>
+      <motion.div
+        animate={
+          reduceMotion ? undefined : { y: [0, -3, 0], scale: [1, 1.012, 1] }
+        }
+        transition={{
+          duration: 5.8,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
+        className="absolute top-[86%] left-1/2 z-10 flex h-[5.5rem] w-[min(44vw,10.5rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[2.8rem_2.45rem_2.9rem_2.55rem] border-[3px] border-[#122d28] bg-[#fff9df] px-4 shadow-[0_18px_45px_-22px_rgba(0,20,17,0.72)]"
+      >
+        <div
+          className="absolute -top-12 left-1/2 flex min-w-max -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2.5 font-semibold text-sm text-white shadow-[0_12px_28px_-16px_rgba(0,20,17,0.7)]"
+          style={{ backgroundColor: activeResult.color }}
+        >
+          <span className="h-2 w-2 rounded-full bg-white/80" />
+          {activeResult.label}
+        </div>
+
+        <div
+          role="img"
+          aria-label="Live speech waveform showing reached, thin, and missed points"
+          className="flex h-16 items-center justify-center gap-1.5"
+        >
+          {trackingWave.map(({ id, height }, index) => (
+            <motion.span
+              key={id}
+              animate={
+                reduceMotion
+                  ? { height, opacity: 0.9 }
+                  : {
+                      height: [height * 0.42, height * 0.78, height * 0.54],
+                      opacity: [0.62, 1, 0.78],
+                    }
+              }
+              transition={{
+                duration: 2.7 + (index % 4) * 0.24,
+                repeat: Number.POSITIVE_INFINITY,
+                delay: index * 0.11,
+                ease: "easeInOut",
+              }}
+              className="w-1 rounded-full bg-[#122d28]"
+            />
+          ))}
+        </div>
       </motion.div>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-white/15" />
     </section>
@@ -201,154 +284,128 @@ function AhaMoment() {
 
 function ScrollJourney() {
   const sectionRef = useRef<HTMLElement>(null);
+  const [activeStage, setActiveStage] = useState(0);
   const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: sectionRef,
-    offset: ["start end", "end start"],
+    offset: ["start start", "end end"],
   });
-  const hitY = useTransform(
-    scrollYProgress,
-    [0.05, 0.17, 0.3, 0.39],
-    [150, 0, 0, -150],
-  );
-  const hitOpacity = useTransform(
-    scrollYProgress,
-    [0.05, 0.14, 0.31, 0.39],
-    [0, 1, 1, 0],
-  );
-  const rushedY = useTransform(
-    scrollYProgress,
-    [0.3, 0.42, 0.54, 0.61],
-    [150, 0, 0, -150],
-  );
-  const rushedOpacity = useTransform(
-    scrollYProgress,
-    [0.3, 0.39, 0.54, 0.61],
-    [0, 1, 1, 0],
-  );
-  const missedY = useTransform(
-    scrollYProgress,
-    [0.52, 0.62, 0.84],
-    [150, 0, 0],
-  );
-  const missedOpacity = useTransform(
-    scrollYProgress,
-    [0.52, 0.6, 0.82],
-    [0, 1, 1],
-  );
+
+  useMotionValueEvent(scrollYProgress, "change", (latest) => {
+    const nextStage = latest < 0.34 ? 0 : latest < 0.67 ? 1 : 2;
+    setActiveStage((current) => (current === nextStage ? current : nextStage));
+  });
+
+  const stages = [
+    {
+      label: "Reached",
+      eyebrow: "Hit · the point",
+      quote: "We grew qualified leads by 24% this quarter.",
+      note: "Clear, specific, and matched to your intended talking point.",
+      detail:
+        "Explainaloud checks off the point the moment your meaning lands.",
+      color: "var(--ok)",
+      surface: "bg-[#d8f0df]",
+    },
+    {
+      label: "Too thin",
+      eyebrow: "Rushed · needs support",
+      quote: "The launch went pretty well overall.",
+      note: "You touched the point, but did not give the evidence you planned.",
+      detail: "Amber means you said it, but too thinly to count as complete.",
+      color: "var(--vague)",
+      surface: "bg-[#f5dfad]",
+    },
+    {
+      label: "Missed",
+      eyebrow: "Missed · next rehearsal cue",
+      quote: "Explain how the customer handoff will work.",
+      note: "This key point never appeared in your rehearsal.",
+      detail: "Red turns the omission into a precise prompt for your next run.",
+      color: "var(--miss)",
+      surface: "bg-[#f4c6c0]",
+    },
+  ] as const;
+  const stage = stages[activeStage];
 
   return (
-    <section ref={sectionRef} className="relative h-[230vh] bg-[#ebe6da]">
-      <div className="sticky top-0 h-screen overflow-hidden px-5 pt-24 md:px-8 md:pt-28">
-        <div className="mx-auto w-full max-w-[76rem]">
-          <div className="text-center">
-            <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
-              Rehearsal, made visible
-            </p>
-            <h2 className="mx-auto mt-4 max-w-[15ch] font-display text-[clamp(2.3rem,4.4vw,4.5rem)] text-strong leading-[0.95] tracking-[-0.045em]">
-              Watch your explanation become a clear next move.
-            </h2>
+    <section ref={sectionRef} className="relative h-[260vh] bg-[#f5f0e5]">
+      <div className="sticky top-0 flex h-screen items-center overflow-hidden px-5 pt-20 md:px-8">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(113,214,154,0.18),transparent_30%),radial-gradient(circle_at_82%_78%,rgba(255,140,131,0.12),transparent_34%)]"
+        />
+        <motion.div
+          aria-hidden="true"
+          animate={
+            reduceMotion
+              ? undefined
+              : { rotate: [-7, 5, -7], scale: [1, 1.05, 1] }
+          }
+          transition={{
+            duration: 22,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "easeInOut",
+          }}
+          className="absolute -right-[12rem] -bottom-[15rem] h-[31rem] w-[50rem] rounded-[50%] border-[4.5rem] border-[#c44742]/7"
+        />
+        <div className="relative mx-auto grid w-full max-w-[72rem] gap-7 lg:grid-cols-[10rem_34rem_minmax(14rem,1fr)] lg:items-center">
+          <div className="hidden space-y-2 lg:block">
+            {stages.map((item, index) => (
+              <div
+                key={item.label}
+                className={`border-l-4 py-3 pl-5 font-display text-2xl ${
+                  index === activeStage
+                    ? "border-[var(--stage-color)] text-strong"
+                    : "border-border text-muted-foreground/55"
+                }`}
+                style={{ "--stage-color": item.color } as CSSProperties}
+              >
+                {item.label}
+              </div>
+            ))}
           </div>
 
-          <div className="relative mx-auto h-[calc(100vh-22rem)] min-h-[20rem] max-w-[58rem]">
-            <motion.div
-              style={
-                reduceMotion ? undefined : { y: hitY, opacity: hitOpacity }
-              }
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <article className="w-full rounded-[2.8rem_2rem_2.7rem_2.2rem] border border-[var(--ok)]/25 bg-card/88 p-7 shadow-[0_32px_80px_-46px_rgba(7,89,79,0.5)] backdrop-blur-2xl md:p-10">
-                <div className="flex items-center gap-3 font-mono text-[0.64rem] text-[var(--ok)] uppercase tracking-[0.12em]">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--ok)]" />
-                  Hit · the rule
-                </div>
-                <p className="mt-6 max-w-[18ch] font-display text-[clamp(2.2rem,4.5vw,4.5rem)] text-strong leading-[1.02]">
-                  “Forces come in pairs, equal and opposite.”
-                </p>
-                <p className="mt-6 text-muted-foreground">
-                  Accurate, clear, and tied to your notes.
-                </p>
-              </article>
-            </motion.div>
-
-            <motion.div
-              style={
-                reduceMotion
-                  ? undefined
-                  : { y: rushedY, opacity: rushedOpacity }
-              }
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <article className="w-full rounded-[2rem_2.8rem_2.2rem_2.7rem] border border-[var(--vague)]/25 bg-card/88 p-7 shadow-[0_32px_80px_-46px_rgba(150,96,10,0.35)] backdrop-blur-2xl md:p-10">
-                <div className="flex items-center gap-3 font-mono text-[0.64rem] text-[var(--vague)] uppercase tracking-[0.12em]">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--vague)]" />
-                  Rushed · the why
-                </div>
-                <p className="mt-6 max-w-[18ch] font-display text-[clamp(2.2rem,4.5vw,4.5rem)] text-strong leading-[1.02] italic">
-                  “The wall kind of pushes back.”
-                </p>
-                <div
-                  className="mt-7 flex h-9 items-center gap-1"
-                  aria-hidden="true"
-                >
-                  {waveform.map(({ id, height }, index) => (
-                    <motion.span
-                      key={id}
-                      animate={
-                        reduceMotion
-                          ? { height }
-                          : {
-                              height: [height * 0.55, height, height * 0.55],
-                              opacity: [0.45, 0.9, 0.45],
-                            }
-                      }
-                      transition={{
-                        duration: 2.6,
-                        repeat: Number.POSITIVE_INFINITY,
-                        delay: index * 0.09,
-                        ease: "easeInOut",
-                      }}
-                      className="w-1 rounded-full bg-[var(--vague)]"
-                    />
-                  ))}
-                </div>
-                <p className="mt-5 text-muted-foreground">
-                  You said the result, but rushed past the mechanism.
-                </p>
-              </article>
-            </motion.div>
-
-            <motion.div
-              style={
-                reduceMotion
-                  ? undefined
-                  : { y: missedY, opacity: missedOpacity }
-              }
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <article className="w-full rounded-[2.7rem_2.1rem_2.9rem_2.2rem] border border-[var(--miss)]/25 bg-primary p-7 text-primary-foreground shadow-[0_36px_90px_-44px_rgba(7,89,79,0.72)] md:p-10">
-                <div className="flex items-center gap-3 font-mono text-[0.64rem] text-[var(--miss-light)] uppercase tracking-[0.12em]">
-                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--miss-light)]" />
-                  Missed · the key point
-                </div>
-                <p className="mt-6 max-w-[18ch] font-display text-[clamp(2.2rem,4.5vw,4.5rem)] leading-[1.02]">
-                  The forces act on different objects.
-                </p>
-                <p className="mt-6 max-w-[38rem] text-[#d7e7df] leading-relaxed">
-                  That is your next rehearsal cue. Say it once more, and connect
-                  it directly to why the pair does not cancel.
-                </p>
-              </article>
-            </motion.div>
-
-            <div
-              className="absolute top-1/2 -right-3 flex -translate-y-1/2 flex-col gap-2 md:-right-8"
-              aria-hidden="true"
-            >
-              <span className="h-2.5 w-2.5 rounded-full bg-[var(--ok)]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[var(--vague)]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[var(--miss)]" />
+          <div className="relative overflow-hidden rounded-[2.6rem_2rem_2.8rem_2.2rem] bg-primary p-4 shadow-[0_34px_90px_-44px_rgba(7,89,79,0.65)] md:p-6">
+            <div className="flex items-center justify-between font-mono text-[0.62rem] text-[#c7ddd5] uppercase tracking-[0.12em]">
+              <span>Live rehearsal · 01:42</span>
+              <span>{activeStage + 1} / 3</span>
             </div>
+            <div
+              className={`mt-5 flex min-h-[20rem] flex-col rounded-[2.1rem_1.65rem_2.3rem_1.8rem] p-7 text-[#173a35] md:p-9 ${stage.surface}`}
+            >
+              <div
+                className="flex items-center gap-3 font-mono text-[0.64rem] uppercase tracking-[0.12em]"
+                style={{ color: stage.color }}
+              >
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ backgroundColor: stage.color }}
+                />
+                {stage.eyebrow}
+              </div>
+              <p className="mt-7 max-w-full font-display text-[clamp(2.1rem,3.35vw,3.45rem)] leading-[0.98] tracking-[-0.035em]">
+                {stage.quote}
+              </p>
+              <p className="mt-auto max-w-[30rem] pt-7 text-[#29433e]/70 leading-relaxed">
+                {stage.note}
+              </p>
+            </div>
+          </div>
+
+          <div className="lg:pl-4">
+            <p
+              className="font-mono text-[0.65rem] uppercase tracking-[0.14em]"
+              style={{ color: stage.color }}
+            >
+              Rehearsal, made visible
+            </p>
+            <h2 className="mt-5 font-display text-[clamp(2.35rem,3.5vw,3.8rem)] text-strong leading-[0.98] tracking-[-0.04em]">
+              Your points update as you speak.
+            </h2>
+            <p className="mt-6 text-muted-foreground leading-relaxed">
+              {stage.detail}
+            </p>
           </div>
         </div>
       </div>
@@ -511,94 +568,107 @@ export function LandingRedesign() {
         </div>
       </nav>
 
-      <section className="relative overflow-hidden bg-primary px-5 pt-40 pb-20 text-primary-foreground md:px-8 md:pt-48 md:pb-28">
-        <motion.div
-          aria-hidden="true"
-          animate={reduceMotion ? undefined : { x: ["-12%", "12%", "-12%"] }}
-          transition={{
-            duration: 18,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-          className="pointer-events-none absolute top-28 left-1/2 h-px w-[44rem] -translate-x-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent"
-        />
-        <div className="mx-auto max-w-[76rem] text-center">
-          <motion.p
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease }}
-            className="font-mono text-[0.67rem] text-[#c7ddd5] uppercase tracking-[0.15em]"
-          >
-            Learn by explaining, not rereading
-          </motion.p>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.08, duration: 0.75, ease }}
-            className="mx-auto mt-7 max-w-[13ch] font-display text-[clamp(3.5rem,8vw,7.4rem)] text-[#fff9df] leading-[0.93] tracking-[-0.055em]"
-          >
-            Say what you know.{" "}
-            <em className="font-normal">See what you missed.</em>
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.16, duration: 0.7, ease }}
-            className="mx-auto mt-7 max-w-[42rem] text-[clamp(1.05rem,2vw,1.3rem)] text-[#d7e7df] leading-relaxed"
-          >
-            Upload your material, explain it out loud, and get your own words
-            back—marked with what was right, vague, or missing.
-          </motion.p>
-
+      <section className="relative overflow-hidden bg-primary px-5 pb-20 text-primary-foreground md:px-8 md:pb-28">
+        <div className="relative min-h-screen pt-24 md:pt-28">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(113,214,154,0.2),transparent_27%),radial-gradient(circle_at_88%_34%,rgba(255,140,131,0.14),transparent_31%)]"
+          />
           <motion.div
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.24, duration: 0.65, ease }}
-            className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
+            aria-hidden="true"
+            animate={
+              reduceMotion
+                ? undefined
+                : { x: ["-3%", "3%", "-3%"], scale: [1, 1.025, 1] }
+            }
+            transition={{
+              duration: 20,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "easeInOut",
+            }}
+            className="pointer-events-none absolute top-[16%] left-1/2 -translate-x-1/2 whitespace-nowrap font-black text-[clamp(7rem,18vw,18rem)] text-white/[0.035] uppercase leading-none tracking-[-0.08em]"
           >
-            <Link
-              href="/signup"
-              className="group inline-flex h-12 items-center gap-2 rounded-[1.4rem_1rem_1.4rem_1.1rem] bg-gradient-to-br from-[#eee5f8] to-[#e7efd9] px-6 text-[#173a35] font-medium shadow-[0_12px_30px_-16px_rgba(0,40,34,0.6)] transition-transform hover:scale-[1.025] active:scale-[0.98]"
-            >
-              Start explaining
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-            </Link>
-            <a
-              href="#how-it-works"
-              className="inline-flex h-12 items-center rounded-[1.2rem] border border-white/30 bg-white/5 px-6 font-medium text-[#fff9df] backdrop-blur-md transition-colors hover:bg-white/10"
-            >
-              See how it works
-            </a>
+            Explainaloud
           </motion.div>
-
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.55, duration: 0.65 }}
-            className="mx-auto mt-8 flex w-fit flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-[1.4rem] border border-white/15 bg-white/7 px-5 py-2.5 font-mono text-[0.62rem] text-[#c7ddd5] uppercase tracking-[0.11em] backdrop-blur-md"
-          >
-            <motion.span
-              aria-hidden="true"
-              animate={
-                reduceMotion
-                  ? undefined
-                  : { scale: [0.82, 1.18, 0.82], opacity: [0.45, 1, 0.45] }
-              }
-              transition={{
-                duration: 2.8,
-                repeat: Number.POSITIVE_INFINITY,
-                ease: "easeInOut",
-              }}
-              className="h-2 w-2 rounded-full bg-[#b9dccb] shadow-[0_0_18px_rgba(185,220,203,0.7)]"
-            />
-            <span>Upload</span>
-            <span className="opacity-45">→</span>
-            <span>Explain aloud</span>
-            <span className="opacity-45">→</span>
-            <span>See the gap</span>
-          </motion.div>
+            aria-hidden="true"
+            animate={
+              reduceMotion
+                ? undefined
+                : { rotate: [12, 18, 12], scale: [1, 1.06, 1] }
+            }
+            transition={{
+              duration: 24,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "easeInOut",
+            }}
+            className="pointer-events-none absolute -top-[14rem] -left-[18rem] h-[38rem] w-[55rem] rounded-[50%] border-[5rem] border-[#f0a7a0]/8"
+          />
+          <motion.div
+            aria-hidden="true"
+            animate={reduceMotion ? undefined : { x: ["-12%", "12%", "-12%"] }}
+            transition={{
+              duration: 18,
+              repeat: Number.POSITIVE_INFINITY,
+              ease: "easeInOut",
+            }}
+            className="pointer-events-none absolute top-28 left-1/2 h-px w-[44rem] -translate-x-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+          />
+          <div className="relative z-10 mx-auto max-w-[76rem] text-center">
+            <motion.p
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, ease }}
+              className="font-mono text-[0.67rem] text-[#c7ddd5] uppercase tracking-[0.15em]"
+            >
+              Rehearse anything you have to say out loud
+            </motion.p>
+
+            <motion.h1
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.08, duration: 0.75, ease }}
+              className="mx-auto mt-4 max-w-[15ch] font-display text-[clamp(3.1rem,5.5vw,5.2rem)] text-[#fff9df] leading-[0.92] tracking-[-0.055em]"
+            >
+              Say what you know.{" "}
+              <em className="font-normal">See what you missed.</em>
+            </motion.h1>
+
+            <motion.p
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.16, duration: 0.7, ease }}
+              className="mx-auto mt-5 max-w-[42rem] text-[clamp(1rem,1.7vw,1.2rem)] text-[#d7e7df] leading-relaxed"
+            >
+              Bring the points you intend to make, talk them through naturally,
+              and see what you reached, rushed, or never got to.
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 14 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.24, duration: 0.65, ease }}
+              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row"
+            >
+              <Link
+                href="/signup"
+                className="group inline-flex h-12 items-center gap-2 rounded-[1.4rem_1rem_1.4rem_1.1rem] bg-gradient-to-br from-[#eee5f8] to-[#e7efd9] px-6 text-[#173a35] font-medium shadow-[0_12px_30px_-16px_rgba(0,40,34,0.6)] transition-transform hover:scale-[1.025] active:scale-[0.98]"
+              >
+                Start explaining
+                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+              </Link>
+              <a
+                href="#how-it-works"
+                className="inline-flex h-12 items-center rounded-[1.2rem] border border-white/30 bg-white/5 px-6 font-medium text-[#fff9df] backdrop-blur-md transition-colors hover:bg-white/10"
+              >
+                See how it works
+              </a>
+            </motion.div>
+          </div>
+
+          <div className="pointer-events-none absolute inset-0">
+            <MarqueeRibbon />
+          </div>
         </div>
 
         <motion.div
@@ -712,8 +782,6 @@ export function LandingRedesign() {
           </div>
         </motion.div>
       </section>
-
-      <MarqueeRibbon />
 
       <ScrollJourney />
 
