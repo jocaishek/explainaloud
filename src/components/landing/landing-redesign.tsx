@@ -62,6 +62,53 @@ const waveform = [
   { id: "l", height: 22 },
 ] as const;
 
+const marqueeCopy =
+  "Upload what you’re learning  ·  Explain it in your own words  ·  See what’s solid  ·  Find what’s missing  ·  ";
+
+function MarqueeRibbon() {
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <section
+      aria-label="How Explainaloud works"
+      className="relative h-[12rem] overflow-hidden bg-primary md:h-[15rem]"
+    >
+      <motion.div
+        animate={reduceMotion ? undefined : { x: ["0%", "-50%"] }}
+        transition={{
+          duration: 38,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "linear",
+        }}
+        className="absolute top-0 left-0 flex h-full w-max will-change-transform"
+      >
+        {["first", "second"].map((copy) => (
+          <svg
+            key={copy}
+            aria-hidden={copy === "second"}
+            viewBox="0 0 1600 240"
+            className="h-full w-[100rem] shrink-0 overflow-visible"
+          >
+            <title>{copy === "first" ? "How Explainaloud works" : ""}</title>
+            <defs>
+              <path
+                id={`marquee-curve-${copy}`}
+                d="M -80 185 Q 390 18 820 118 T 1680 72"
+              />
+            </defs>
+            <text className="fill-primary-foreground/82 font-display text-[42px] italic tracking-[-0.02em]">
+              <textPath href={`#marquee-curve-${copy}`} startOffset="0">
+                {marqueeCopy}
+              </textPath>
+            </text>
+          </svg>
+        ))}
+      </motion.div>
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-white/15" />
+    </section>
+  );
+}
+
 const feedback = [
   {
     id: "correct",
@@ -159,87 +206,149 @@ function ScrollJourney() {
     target: sectionRef,
     offset: ["start end", "end start"],
   });
-  const sourceX = useTransform(scrollYProgress, [0.08, 0.42], [-260, 0]);
-  const sourceRotate = useTransform(scrollYProgress, [0.08, 0.42], [-8, -2]);
-  const voiceX = useTransform(scrollYProgress, [0.16, 0.5], [260, 0]);
-  const voiceRotate = useTransform(scrollYProgress, [0.16, 0.5], [7, 2]);
-  const insightY = useTransform(scrollYProgress, [0.28, 0.62], [260, 0]);
-  const insightScale = useTransform(scrollYProgress, [0.28, 0.62], [0.86, 1]);
+  const hitY = useTransform(
+    scrollYProgress,
+    [0.05, 0.17, 0.3, 0.39],
+    [150, 0, 0, -150],
+  );
+  const hitOpacity = useTransform(
+    scrollYProgress,
+    [0.05, 0.14, 0.31, 0.39],
+    [0, 1, 1, 0],
+  );
+  const rushedY = useTransform(
+    scrollYProgress,
+    [0.3, 0.42, 0.54, 0.61],
+    [150, 0, 0, -150],
+  );
+  const rushedOpacity = useTransform(
+    scrollYProgress,
+    [0.3, 0.39, 0.54, 0.61],
+    [0, 1, 1, 0],
+  );
+  const missedY = useTransform(
+    scrollYProgress,
+    [0.52, 0.62, 0.84],
+    [150, 0, 0],
+  );
+  const missedOpacity = useTransform(
+    scrollYProgress,
+    [0.52, 0.6, 0.82],
+    [0, 1, 1],
+  );
 
   return (
-    <section ref={sectionRef} className="relative h-[155vh] bg-[#dfece5]">
-      <div className="sticky top-0 h-screen overflow-hidden px-5 pt-28 md:px-8 md:pt-32">
+    <section ref={sectionRef} className="relative h-[230vh] bg-[#ebe6da]">
+      <div className="sticky top-0 h-screen overflow-hidden px-5 pt-24 md:px-8 md:pt-28">
         <div className="mx-auto w-full max-w-[76rem]">
           <div className="text-center">
             <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
-              Your thinking, made visible
+              Rehearsal, made visible
             </p>
-            <h2 className="mx-auto mt-4 max-w-[13ch] font-display text-[clamp(2.5rem,4.8vw,4.8rem)] text-strong leading-[0.95] tracking-[-0.045em]">
-              Watch an explanation become a study plan.
+            <h2 className="mx-auto mt-4 max-w-[15ch] font-display text-[clamp(2.3rem,4.4vw,4.5rem)] text-strong leading-[0.95] tracking-[-0.045em]">
+              Watch your explanation become a clear next move.
             </h2>
           </div>
 
-          <div className="relative mx-auto mt-8 h-[20rem] max-w-[64rem] md:mt-10 md:h-[23rem]">
-            <motion.article
+          <div className="relative mx-auto h-[calc(100vh-22rem)] min-h-[20rem] max-w-[58rem]">
+            <motion.div
               style={
-                reduceMotion ? undefined : { x: sourceX, rotate: sourceRotate }
+                reduceMotion ? undefined : { y: hitY, opacity: hitOpacity }
               }
-              className="absolute top-2 left-0 z-10 w-[58%] max-w-[26rem] rounded-[2rem] border border-border bg-[#ead7ff] p-6 shadow-[0_28px_70px_-38px_rgba(7,89,79,0.45)] md:p-8"
+              className="absolute inset-0 flex items-center justify-center"
             >
-              <span className="font-mono text-[0.62rem] uppercase tracking-[0.12em] opacity-55">
-                01 · Your material
-              </span>
-              <p className="mt-6 font-display text-[clamp(1.7rem,3vw,2.8rem)] text-strong leading-tight">
-                Newton’s laws
-              </p>
-              <p className="mt-3 text-foreground/65 text-sm">
-                Chapter 4 · Forces and motion
-              </p>
-            </motion.article>
+              <article className="w-full rounded-[2.8rem_2rem_2.7rem_2.2rem] border border-[var(--ok)]/25 bg-card/88 p-7 shadow-[0_32px_80px_-46px_rgba(7,89,79,0.5)] backdrop-blur-2xl md:p-10">
+                <div className="flex items-center gap-3 font-mono text-[0.64rem] text-[var(--ok)] uppercase tracking-[0.12em]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--ok)]" />
+                  Hit · the rule
+                </div>
+                <p className="mt-6 max-w-[18ch] font-display text-[clamp(2.2rem,4.5vw,4.5rem)] text-strong leading-[1.02]">
+                  “Forces come in pairs, equal and opposite.”
+                </p>
+                <p className="mt-6 text-muted-foreground">
+                  Accurate, clear, and tied to your notes.
+                </p>
+              </article>
+            </motion.div>
 
-            <motion.article
+            <motion.div
               style={
-                reduceMotion ? undefined : { x: voiceX, rotate: voiceRotate }
+                reduceMotion
+                  ? undefined
+                  : { y: rushedY, opacity: rushedOpacity }
               }
-              className="absolute top-10 right-0 z-20 w-[68%] max-w-[31rem] rounded-[2rem] border border-border bg-card p-6 shadow-[0_28px_70px_-38px_rgba(7,89,79,0.45)] md:p-8"
+              className="absolute inset-0 flex items-center justify-center"
             >
-              <span className="font-mono text-[0.62rem] text-muted-foreground uppercase tracking-[0.12em]">
-                02 · Your explanation
-              </span>
-              <p className="mt-6 font-display text-[clamp(1.65rem,3.2vw,3rem)] text-strong leading-[1.08]">
-                “The wall kind of pushes back.”
-              </p>
-              <div
-                className="mt-7 flex h-8 items-center gap-1"
-                aria-hidden="true"
-              >
-                {waveform.slice(0, 9).map(({ id, height }) => (
-                  <span
-                    key={id}
-                    className="w-1 rounded-full bg-brand-deep/70"
-                    style={{ height }}
-                  />
-                ))}
-              </div>
-            </motion.article>
+              <article className="w-full rounded-[2rem_2.8rem_2.2rem_2.7rem] border border-[var(--vague)]/25 bg-card/88 p-7 shadow-[0_32px_80px_-46px_rgba(150,96,10,0.35)] backdrop-blur-2xl md:p-10">
+                <div className="flex items-center gap-3 font-mono text-[0.64rem] text-[var(--vague)] uppercase tracking-[0.12em]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--vague)]" />
+                  Rushed · the why
+                </div>
+                <p className="mt-6 max-w-[18ch] font-display text-[clamp(2.2rem,4.5vw,4.5rem)] text-strong leading-[1.02] italic">
+                  “The wall kind of pushes back.”
+                </p>
+                <div
+                  className="mt-7 flex h-9 items-center gap-1"
+                  aria-hidden="true"
+                >
+                  {waveform.map(({ id, height }, index) => (
+                    <motion.span
+                      key={id}
+                      animate={
+                        reduceMotion
+                          ? { height }
+                          : {
+                              height: [height * 0.55, height, height * 0.55],
+                              opacity: [0.45, 0.9, 0.45],
+                            }
+                      }
+                      transition={{
+                        duration: 2.6,
+                        repeat: Number.POSITIVE_INFINITY,
+                        delay: index * 0.09,
+                        ease: "easeInOut",
+                      }}
+                      className="w-1 rounded-full bg-[var(--vague)]"
+                    />
+                  ))}
+                </div>
+                <p className="mt-5 text-muted-foreground">
+                  You said the result, but rushed past the mechanism.
+                </p>
+              </article>
+            </motion.div>
 
-            <motion.article
+            <motion.div
               style={
-                reduceMotion ? undefined : { y: insightY, scale: insightScale }
+                reduceMotion
+                  ? undefined
+                  : { y: missedY, opacity: missedOpacity }
               }
-              className="absolute right-[8%] bottom-0 z-30 w-[72%] max-w-[34rem] rounded-[2rem] bg-primary p-6 text-primary-foreground shadow-[0_32px_80px_-36px_rgba(7,89,79,0.7)] md:p-9"
+              className="absolute inset-0 flex items-center justify-center"
             >
-              <span className="font-mono text-[0.62rem] text-[#89e0b0] uppercase tracking-[0.12em]">
-                03 · The insight
-              </span>
-              <p className="mt-5 font-display text-[clamp(1.8rem,3.5vw,3.3rem)] leading-[1.03]">
-                The forces act on different objects.
-              </p>
-              <p className="mt-4 max-w-[28rem] text-[#d7e7df] text-sm leading-relaxed md:text-base">
-                Now you know exactly what to explain again—not just that you got
-                something wrong.
-              </p>
-            </motion.article>
+              <article className="w-full rounded-[2.7rem_2.1rem_2.9rem_2.2rem] border border-[var(--miss)]/25 bg-primary p-7 text-primary-foreground shadow-[0_36px_90px_-44px_rgba(7,89,79,0.72)] md:p-10">
+                <div className="flex items-center gap-3 font-mono text-[0.64rem] text-[var(--miss-light)] uppercase tracking-[0.12em]">
+                  <span className="h-2.5 w-2.5 rounded-full bg-[var(--miss-light)]" />
+                  Missed · the key point
+                </div>
+                <p className="mt-6 max-w-[18ch] font-display text-[clamp(2.2rem,4.5vw,4.5rem)] leading-[1.02]">
+                  The forces act on different objects.
+                </p>
+                <p className="mt-6 max-w-[38rem] text-[#d7e7df] leading-relaxed">
+                  That is your next rehearsal cue. Say it once more, and connect
+                  it directly to why the pair does not cancel.
+                </p>
+              </article>
+            </motion.div>
+
+            <div
+              className="absolute top-1/2 -right-3 flex -translate-y-1/2 flex-col gap-2 md:-right-8"
+              aria-hidden="true"
+            >
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--ok)]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--vague)]" />
+              <span className="h-2.5 w-2.5 rounded-full bg-[var(--miss)]" />
+            </div>
           </div>
         </div>
       </div>
@@ -253,7 +362,7 @@ function FeedbackDemo() {
   const item = feedback[active];
 
   return (
-    <motion.section className="relative z-20 -mt-[18vh] rounded-t-[3rem] bg-background px-5 pt-16 pb-24 shadow-[0_-24px_60px_-45px_rgba(7,89,79,0.45)] md:-mt-[30vh] md:px-8 md:pt-20 md:pb-32">
+    <motion.section className="relative z-20 rounded-t-[3.5rem] bg-background px-5 pt-16 pb-24 shadow-[0_-24px_60px_-45px_rgba(7,89,79,0.4)] md:px-8 md:pt-20 md:pb-32">
       <div className="mx-auto max-w-[76rem]">
         <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
@@ -315,7 +424,7 @@ function FeedbackDemo() {
                     />
                   )}
                   <span
-                    className={`relative ${active === index ? "text-[#0b665a]" : "text-[#d7e7df]"}`}
+                    className={`relative ${active === index ? "text-[#07594f]" : "text-[#d7e7df]"}`}
                   >
                     {option.label}
                   </span>
@@ -372,9 +481,9 @@ export function LandingRedesign() {
   const reduceMotion = useReducedMotion();
 
   return (
-    <main className="lp-v2 min-h-screen overflow-hidden bg-background text-foreground">
+    <main className="lp-v2 min-h-screen overflow-x-clip bg-background text-foreground">
       <nav className="fixed inset-x-0 top-0 z-50 px-3 pt-3 md:px-6 md:pt-5">
-        <div className="mx-auto flex h-16 max-w-[76rem] items-center rounded-[1.15rem] border border-border bg-card/95 px-5 shadow-[0_10px_35px_-24px_rgba(0,40,34,0.65)] backdrop-blur-xl md:px-7">
+        <div className="mx-auto flex h-16 max-w-[76rem] items-center rounded-[1.8rem_1.35rem_1.7rem_1.45rem] border border-white/60 bg-card/78 px-5 shadow-[0_16px_48px_-28px_rgba(0,40,34,0.55)] backdrop-blur-2xl md:px-7">
           <Link
             href="/"
             className="flex items-center gap-2.5"
@@ -451,14 +560,14 @@ export function LandingRedesign() {
           >
             <Link
               href="/signup"
-              className="group inline-flex h-12 items-center gap-2 rounded-full bg-[#ead7ff] px-6 text-[#173a35] font-medium shadow-[0_8px_24px_-12px_rgba(0,0,0,0.5)] transition-transform hover:scale-[1.025] active:scale-[0.98]"
+              className="group inline-flex h-12 items-center gap-2 rounded-[1.4rem_1rem_1.4rem_1.1rem] bg-gradient-to-br from-[#eee5f8] to-[#e7efd9] px-6 text-[#173a35] font-medium shadow-[0_12px_30px_-16px_rgba(0,40,34,0.6)] transition-transform hover:scale-[1.025] active:scale-[0.98]"
             >
               Start explaining
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
             <a
               href="#how-it-works"
-              className="inline-flex h-12 items-center rounded-full border border-white/30 px-6 font-medium text-[#fff9df] transition-colors hover:bg-white/10"
+              className="inline-flex h-12 items-center rounded-[1.2rem] border border-white/30 bg-white/5 px-6 font-medium text-[#fff9df] backdrop-blur-md transition-colors hover:bg-white/10"
             >
               See how it works
             </a>
@@ -468,8 +577,22 @@ export function LandingRedesign() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.55, duration: 0.65 }}
-            className="mx-auto mt-8 flex w-fit flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-full border border-white/15 bg-black/10 px-5 py-2.5 font-mono text-[0.62rem] text-[#c7ddd5] uppercase tracking-[0.11em]"
+            className="mx-auto mt-8 flex w-fit flex-wrap items-center justify-center gap-x-3 gap-y-2 rounded-[1.4rem] border border-white/15 bg-white/7 px-5 py-2.5 font-mono text-[0.62rem] text-[#c7ddd5] uppercase tracking-[0.11em] backdrop-blur-md"
           >
+            <motion.span
+              aria-hidden="true"
+              animate={
+                reduceMotion
+                  ? undefined
+                  : { scale: [0.82, 1.18, 0.82], opacity: [0.45, 1, 0.45] }
+              }
+              transition={{
+                duration: 2.8,
+                repeat: Number.POSITIVE_INFINITY,
+                ease: "easeInOut",
+              }}
+              className="h-2 w-2 rounded-full bg-[#b9dccb] shadow-[0_0_18px_rgba(185,220,203,0.7)]"
+            />
             <span>Upload</span>
             <span className="opacity-45">→</span>
             <span>Explain aloud</span>
@@ -482,7 +605,7 @@ export function LandingRedesign() {
           initial={{ opacity: 0, y: 34, scale: 0.985 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.3, duration: 0.9, ease }}
-          className="lp-product-window mx-auto mt-16 max-w-[68rem] overflow-hidden rounded-[2rem] border border-border bg-card shadow-[0_32px_90px_-48px_rgba(24,24,27,0.35)] md:mt-20"
+          className="lp-product-window mx-auto mt-16 max-w-[68rem] overflow-hidden rounded-[3rem_2rem_3.2rem_2.3rem] border border-white/60 bg-card/82 shadow-[0_38px_100px_-50px_rgba(0,40,34,0.5)] backdrop-blur-2xl md:mt-20"
         >
           <div className="flex items-center border-border border-b px-5 py-4">
             <div className="flex gap-1.5" aria-hidden="true">
@@ -554,9 +677,9 @@ export function LandingRedesign() {
                             }
                       }
                       transition={{
-                        duration: 1.5,
+                        duration: 2.6,
                         repeat: Number.POSITIVE_INFINITY,
-                        delay: index * 0.06,
+                        delay: index * 0.11,
                         ease: "easeInOut",
                       }}
                       className="w-1 rounded-full bg-brand-deep/65"
@@ -589,6 +712,8 @@ export function LandingRedesign() {
           </div>
         </motion.div>
       </section>
+
+      <MarqueeRibbon />
 
       <ScrollJourney />
 
