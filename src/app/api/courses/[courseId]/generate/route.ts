@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { CourseCitationError, orchestrateCourse } from "~/lib/ai/orchestrator";
+import {
+  CourseCitationError,
+  orchestrateCourse,
+  TalkMaterialError,
+} from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
 import { BANK_TARGET, fillQuestionBank } from "~/lib/ai/question-bank";
 import type { SourceRow } from "~/lib/ai/sources";
@@ -154,6 +158,14 @@ export async function POST(
           detail,
         },
         { status: 503 },
+      );
+    }
+    // 400 rather than 503: nothing is broken and retrying will not help. The
+    // rehearsal is missing the talk, and only the speaker can supply it.
+    if (error instanceof TalkMaterialError) {
+      return NextResponse.json(
+        { error: error.message, detail },
+        { status: 400 },
       );
     }
     if (error instanceof CourseCitationError) {
