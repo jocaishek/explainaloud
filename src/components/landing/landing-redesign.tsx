@@ -710,6 +710,9 @@ export function LandingRedesign() {
   const heroRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const navSentinelRef = useRef<HTMLDivElement>(null);
+  const flyerRef = useRef<HTMLDivElement>(null);
+  const flyerSpinRef = useRef<HTMLDivElement>(null);
+  const navSlotRef = useRef<HTMLSpanElement>(null);
 
   /**
    * The bar turns to glass once it is off the hero.
@@ -732,33 +735,118 @@ export function LandingRedesign() {
    * arrive. It cannot be skipped over, because scrolling and painting are the
    * same loop.
    */
+  /**
+   * The mark flies to the nav as the first screen scrolls away.
+   *
+   * Deliberately not a tween. The previous version was a GSAP timeline that
+   * animated a `fixed` element toward a landing pad by computing viewport
+   * offsets, and when that arithmetic did not land there was nothing to catch
+   * it: the mark stayed at full size in the middle of the page for the entire
+   * document. A tween is a promise about the future, and it can be broken by a
+   * stalled ticker, a refresh that never fires, or a bad number.
+   *
+   * This reads scroll position and sets a transform, every frame, from
+   * scratch. There is no state to get stuck in — whatever the last frame did,
+   * this one recomputes the answer from where the page actually is. Scroll to
+   * the bottom in one flick and it is simply at the end.
+   */
   useEffect(() => {
     const sentinel = navSentinelRef.current;
     const nav = navRef.current;
     if (!sentinel || !nav) return;
 
     let frame = 0;
+    let running = true;
     const sync = () => {
-      frame = 0;
       nav.classList.toggle(
         "is-light",
         sentinel.getBoundingClientRect().top <= 64,
       );
-    };
-    const schedule = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(sync);
-    };
 
-    sync();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
+      const flyer = flyerRef.current;
+      const spin = flyerSpinRef.current;
+      const slot = navSlotRef.current;
+      const hero = heroRef.current;
+      if (!flyer || !spin || !slot || !hero) return;
+
+      // Below `lg` the flyer is not rendered at all; nothing to place.
+      if (flyer.offsetWidth === 0) return;
+
+      const heroRect = hero.getBoundingClientRect();
+      const slotRect = slot.getBoundingClientRect();
+      const size = flyer.offsetWidth;
+
+      /* The journey is the first screen. It is complete by the time the hero
+         has scrolled away, so the mark is already the nav mark before any of
+         the light sections arrive — which is what stops it from ever being an
+         object floating over a paragraph. */
+      const travel = Math.max(1, heroRect.height * 0.72);
+      const raw = -heroRect.top / travel;
+      const t = raw < 0 ? 0 : raw > 1 ? 1 : raw;
+      // ease-in-out, so it leaves and arrives calmly rather than linearly
+      const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
+
+      const startX = heroRect.left + heroRect.width * 0.62;
+      const startY = heroRect.top + heroRect.height / 2 - size / 2;
+      const endScale = slotRect.width / size;
+
+      const x = startX + (slotRect.left - startX) * e;
+      const y = startY + (slotRect.top - startY) * e;
+      const scale = 1 + (endScale - 1) * e;
+
+      flyer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+      flyer.style.opacity = String(0.45 + 0.55 * e);
+      spin.style.transform = reduceMotion
+        ? "none"
+        : `rotateY(${(e * 360).toFixed(2)}deg)`;
+
+      /* The static nav mark only appears once the flyer is on top of it, so
+         the two are never both visible and never both absent. */
+      slot.style.opacity = e > 0.995 ? "1" : "0";
+      flyer.style.visibility = e > 0.995 ? "hidden" : "visible";
     };
-  }, []);
+    /* A frame loop, not a scroll listener.
+       Scroll events are the obvious input here and they are not dependable
+       enough for something that positions an object: they are coalesced under
+       load, they do not fire at all in some embedded viewers, and anything
+       that misses one is left holding a stale transform. Measured in one such
+       viewer: `scrollY` reported 900 and zero scroll events had been
+       delivered, so both the bar and the mark were reading a position from
+       several seconds earlier.
+
+       Reading the page's own geometry once per painted frame cannot miss
+       anything, because painting is the thing being kept in step with. The
+       body is two `getBoundingClientRect` calls and some arithmetic — cheap
+       enough to be the boring, correct answer. */
+    const tick = () => {
+      if (!running) return;
+      sync();
+      frame = requestAnimationFrame(tick);
+    };
+    tick();
+
+    /* And scroll events on top of the loop, which is belt and braces on
+       purpose. Each input fails in a way the other survives: scroll events are
+       coalesced under load and are not delivered at all in some embedded
+       viewers, while `requestAnimationFrame` stops when the page is not being
+       painted. Measured in one such viewer: one animation frame in five
+       hundred milliseconds, and zero scroll events, while `scrollY` moved 700
+       pixels. Either input alone leaves a stale transform on screen there;
+       together, something has to have gone wrong twice. `sync` recomputes from
+       scratch, so running it more often than necessary costs two rect reads
+       and changes nothing. */
+    window.addEventListener("scroll", sync, { passive: true });
+    window.addEventListener("resize", sync);
+    document.addEventListener("visibilitychange", sync);
+
+    return () => {
+      running = false;
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", sync);
+      window.removeEventListener("resize", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [reduceMotion]);
 
   useEffect(() => {
     if (!heroRef.current || !pageRef.current) return;
@@ -868,35 +956,6 @@ export function LandingRedesign() {
                transformed layer the compositor can move on the GPU, not a
                background-position the browser repaints every frame. Worth
                doing deliberately or not at all. */
-          }
-
-          if (!reduceMotion) {
-            /* The mark turns because the reader scrolls, not on a clock of its
-               own. A logo rotating by itself is a loading spinner, which is
-               the one thing an identity mark must never be mistaken for; the
-               same rotation tied to scroll is an object the reader is moving
-               around, which is the point.
-               
-               Same trigger window as the tween that flies it into the nav, so
-               the turn and the docking are one gesture: it spins up out of the
-               page and lands as the wordmark. */
-            gsap.to("#bg-logo-spin", {
-              /* Exactly one turn, not 460 degrees. The mark has to come to
-                 rest face-on, because where it comes to rest is the nav bar —
-                 and 460 left it sitting at 100 degrees, which is a wordmark
-                 turned nearly edge-on for the whole rest of the page. Any
-                 multiple of 360 is safe; nothing else is. */
-              rotationY: 360,
-              ease: "none",
-              transformOrigin: "50% 50%",
-              scrollTrigger: {
-                trigger: "#hero",
-                start: "top top",
-                end: "48% top",
-                scrub: 0.8,
-                invalidateOnRefresh: true,
-              },
-            });
           }
 
           gsap.fromTo(
@@ -1082,7 +1141,14 @@ export function LandingRedesign() {
             <span className="lp-nav-brand-copy font-sans font-semibold text-sm tracking-[-0.02em]">
               Explainaloud
             </span>
-            <ExplainaloudMark className="h-6 w-6 shrink-0" />
+            {/* The flyer lands here. Hidden until it arrives, so the mark is
+                never doubled and never missing. */}
+            <span
+              ref={navSlotRef}
+              className="block h-6 w-6 shrink-0 opacity-0 transition-opacity duration-150"
+            >
+              <ExplainaloudMark className="h-6 w-6" />
+            </span>
           </Link>
           <div className="flex items-center justify-self-end gap-2">
             <Link
@@ -1112,18 +1178,20 @@ export function LandingRedesign() {
           className="lp-hero-scrim absolute inset-0 z-[1]"
         />
 
-        {/* Absolute, and inside the hero, which already clips its overflow.
-            A fixed ornament at the document root can always end up over
-            content — this one did, for the whole page. An absolute one in a
-            clipped section cannot reach past it. */}
+        {/* `fixed` with `top:0; left:0`, and placed entirely by transform, so
+            the handler has one number to write instead of fighting a layout.
+            It is safe to be fixed again because its position is recomputed
+            from scroll every frame rather than animated toward a target. */}
         <div
           id="bg-logo"
+          ref={flyerRef}
           aria-hidden="true"
-          className="pointer-events-none absolute top-1/2 left-[62%] z-[1] hidden h-[clamp(8rem,13vw,12rem)] w-[clamp(8rem,13vw,12rem)] -translate-y-1/2 text-[length:clamp(8rem,13vw,12rem)] opacity-45 [perspective:900px] will-change-transform lg:block"
+          className="pointer-events-none fixed top-0 left-0 z-[60] hidden h-[clamp(8rem,13vw,12rem)] w-[clamp(8rem,13vw,12rem)] origin-top-left text-[length:clamp(8rem,13vw,12rem)] [perspective:900px] will-change-transform lg:block"
         >
-          {/* The spin is on its own element so nothing else is competing for
-              the same transform. */}
+          {/* The turn is on its own element so nothing competes for the
+              transform that is carrying the travel. */}
           <div
+            ref={flyerSpinRef}
             id="bg-logo-spin"
             className="h-full w-full will-change-transform"
             style={{ transformStyle: "preserve-3d" }}
