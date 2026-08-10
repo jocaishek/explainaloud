@@ -42,18 +42,38 @@ const steps = [
   },
 ] as const;
 
+/**
+ * The argument for the product, rather than a description of it.
+ *
+ * Every line here is about the method and can be checked by thinking about it.
+ * No competitor is named, and nothing is claimed about outcomes — `design.md`
+ * bans invented proof on the landing, and "students score higher" would be
+ * exactly that.
+ */
+const whyOutLoud = [
+  {
+    title: "Recognising is not knowing",
+    body: "Picking the right option means you can spot the answer when it is in front of you. It says nothing about whether you could produce it with nobody prompting you.",
+  },
+  {
+    title: "Gaps only show when you speak",
+    body: "Reading your notes again finds nothing wrong, because the page supplies every step. The missing one appears the moment you have to say it in order.",
+  },
+  {
+    title: "Marked against your material",
+    body: "Not a topic name and a generic question bank. The points come out of the file you uploaded, so the feedback answers to what you are actually responsible for.",
+  },
+] as const;
+
 const ease = [0.23, 1, 0.32, 1] as const;
 
+/* Matches the hero: a ground, not a picture. The page opens dark, goes light
+ * for the product, and comes back dark to close — one crossing each way, which
+ * is what `design.md` allows, and the dark now means "this is the end" rather
+ * than "here is another photograph". */
 const closingFieldStyle: CSSProperties = {
   backgroundImage:
-    'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-field-v1.webp")',
-  backgroundPosition: "center 60%",
-  backgroundSize: "cover",
-  /* Not `fixed`. A fixed attachment cannot be promoted to its own compositor
-   * layer, so the browser repaints the whole photograph on every scroll frame
-   * — which is the jump and stutter this band was showing, and on iOS Safari
-   * it does not work at all. */
-  backgroundAttachment: "scroll",
+    "radial-gradient(110% 80% at 30% 20%, rgba(27, 62, 116, 0.5), transparent 60%), linear-gradient(160deg, #0e2549 0%, #0a1c3a 48%, #061227 100%)",
 };
 
 const waveform = [
@@ -798,24 +818,27 @@ export function LandingRedesign() {
           );
 
           intro
+            /* No rotation. Each word used to come in tilted four degrees and
+               straighten as it landed, and a line of type that arrives crooked
+               reads as loose no matter how well it settles. Straight up from
+               behind the mask, tighter stagger, one ease. */
             .from("[data-hero-word]", {
-              yPercent: 125,
-              rotate: 4,
+              yPercent: 118,
               opacity: 0,
-              duration: 0.95,
-              stagger: 0.07,
-              ease: "power3.out",
+              duration: 0.72,
+              stagger: 0.055,
+              ease: "power4.out",
             })
             .from(
               "[data-hero-secondary]",
               {
-                y: 40,
+                y: 24,
                 opacity: 0,
-                duration: 0.85,
-                stagger: 0.15,
-                ease: "power3.out",
+                duration: 0.6,
+                stagger: 0.09,
+                ease: "power4.out",
               },
-              "-=0.4",
+              "-=0.34",
             );
 
           // After the chain, never before it: the guard has to have tweens to
@@ -893,6 +916,19 @@ export function LandingRedesign() {
              animation does or fails to do. The nav carries its own mark, which
              is what the flight was for. */
 
+          /* `toggleActions`, not `once`.
+             `once: true` fires a reveal a single time and then throws the
+             trigger away, so scrolling back up and down again shows content
+             that has already arrived — the page is finished with you after one
+             pass. "play none none reverse" runs it on the way down and rewinds
+             it on the way back up, so the second descent looks like the first.
+
+             They stay in the hidden-tab register. It is tempting to argue a
+             reversible trigger repairs itself the next time it is crossed, but
+             that is wrong: while the tab is hidden the ticker is stalled, so
+             the trigger fires and the tween never advances. There is no "next
+             time" until somebody is already looking at a half-drawn page.
+             Measured that way, the product window sat at 0.19. */
           gsap.utils
             .toArray<HTMLElement>("[data-scroll-reveal]")
             .forEach((element) => {
@@ -905,7 +941,7 @@ export function LandingRedesign() {
                   scrollTrigger: {
                     trigger: element,
                     start: "top 85%",
-                    once: true,
+                    toggleActions: "play none none reverse",
                   },
                 }),
               );
@@ -915,14 +951,13 @@ export function LandingRedesign() {
             gsap.from(".lp-product-window", {
               y: 120,
               scale: 0.92,
-              rotate: -1.5,
               opacity: 0,
               duration: 1.15,
               ease: "power3.out",
               scrollTrigger: {
                 trigger: ".lp-product-window",
                 start: "top 88%",
-                once: true,
+                toggleActions: "play none none reverse",
               },
             }),
           );
@@ -932,15 +967,14 @@ export function LandingRedesign() {
             .forEach((element, index) => {
               reveals.push(
                 gsap.from(element, {
-                  x: index % 2 === 0 ? -110 : 110,
-                  rotate: index % 2 === 0 ? -1.5 : 1.5,
+                  x: index % 2 === 0 ? -60 : 60,
                   opacity: 0,
                   duration: 1,
                   ease: "power3.out",
                   scrollTrigger: {
                     trigger: element,
                     start: "top 86%",
-                    once: true,
+                    toggleActions: "play none none reverse",
                   },
                 }),
               );
@@ -1132,9 +1166,9 @@ export function LandingRedesign() {
               data-hero-secondary
               className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
             >
-              Rehearse a presentation, or learn a subject, by explaining it out
-              loud. See which ideas landed, which were rushed, and which never
-              made it out of your head.
+              Upload your slides or your notes. Explain them out loud for three
+              minutes. Explainaloud marks what you said against the material —
+              sentence by sentence — and shows you the point you never reached.
             </p>
 
             <motion.div
@@ -1290,6 +1324,36 @@ export function LandingRedesign() {
             </aside>
           </div>
         </motion.div>
+      </section>
+
+      {/* The "why". The page demonstrated the product at length and never made
+          an argument for it: a reader who already owns flashcards had no reason
+          given to want this. Three contrasts, no competitor named and no
+          claim that cannot be checked by thinking about it. */}
+      <section
+        data-scroll-reveal
+        className="border-border border-y bg-card px-5 py-20 md:px-8 md:py-24"
+      >
+        <div className="mx-auto max-w-[76rem]">
+          <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
+            Why out loud
+          </p>
+          <h2 className="mt-5 max-w-[20ch] font-display text-[clamp(2.1rem,4vw,3.6rem)] text-strong leading-[1.02] tracking-[-0.04em]">
+            A quiz can be passed by recognising. Saying it cannot.
+          </h2>
+          <div className="mt-12 grid gap-10 border-border border-t pt-10 md:grid-cols-3 md:gap-12">
+            {whyOutLoud.map((item) => (
+              <article key={item.title}>
+                <h3 className="font-semibold text-lg text-strong tracking-[-0.02em]">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  {item.body}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
       <ResultsCarousel />

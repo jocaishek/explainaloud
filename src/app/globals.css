@@ -36,53 +36,27 @@ main.lp-v2 {
   --miss-light: #efc1bb;
 }
 
-/* The hero takes the reference artwork itself, cropped and scaled up.
+/* No picture.
  *
- * The source sheet is 1080x1350: a 1080-square of artwork with a footer
- * carrying the collection's title, body copy and thumbnails. The crop is
- * y 100..1060 — below the small logo badge, which ends at y=65, and above the
- * footer, which starts at exactly y=1080. Verified after cropping: no white
- * rows top or bottom, and the brightest channel in the top-left 60x60 is 75.
+ * The hero carried an abstract blue artwork, and the honest answer to "why is
+ * that there" was: because it looked nice. It said nothing about rehearsing a
+ * talk, nothing about being marked as you speak, and a first-time reader
+ * spends their attention on it before reaching anything that does. A landing
+ * page has one job and decoration competes with it.
  *
- * Then upscaled 1080 -> 2600 with Lanczos. Normally that much enlargement is
- * a bad idea, but this is the one kind of image it does not hurt: smooth
- * gradients with no fine detail. There is nothing in it to go soft. (A photo
- * of surf would have turned to mush at the same ratio.)
- *
- * `160% auto` anchored left, not `cover`. The artwork is nearly square and the
- * hero is nearly two-to-one, so `cover` fits it to the width and shows the
- * whole composition — including the bright core, which lands squarely behind
- * the centred headline. Measured that way, the headline ran at 1.69:1 and the
- * subheading at 2.48:1.
- *
- * Zooming to 160% and anchoring left puts the deep field under the type and
- * pushes the swirl to the right of it. Chosen by scanning zoom x horizontal x
- * vertical against the real composite and keeping only settings that cleared
- * 4.5:1 on all three text elements while leaving enough luminance range that
- * the artwork is still doing something. Two survived; this is the better.
- *
- * The scrim is not in this shorthand. It has to paint ABOVE the image, and an
- * element's own background always paints below its children, so it lives on
- * `.lp-hero-scrim` as a real layer. */
+ * What is left is a ground: deep navy, lighter where the type sits so the
+ * headline has somewhere to be, falling away toward the edges. It is a surface
+ * for the words and the product panel, and it is not asking to be looked at.
+ */
 .lp-v2 .lp-atmosphere {
   isolation: isolate;
   background:
-    url("/landing/explainaloud-field-v1.webp") right center / cover no-repeat;
-}
-
-/* The night-shore photograph, used as shot. Unused while the blue field is in
- * place; swapping the class name on the hero section is the whole revert. */
-.lp-v2 .lp-atmosphere-photo {
-  isolation: isolate;
-  background:
-    linear-gradient(
-      180deg,
-      rgba(4, 12, 26, 0.5) 0%,
-      rgba(4, 12, 26, 0.26) 42%,
-      rgba(4, 12, 26, 0.46) 74%,
-      rgba(3, 9, 20, 0.62) 100%
+    radial-gradient(
+      120% 90% at 18% 32%,
+      rgba(27, 62, 116, 0.55),
+      transparent 62%
     ),
-    url("/landing/explainaloud-shore-v1.webp") center / cover no-repeat;
+    linear-gradient(160deg, #0e2549 0%, #0a1c3a 46%, #061227 100%);
 }
 
 /* Heaviest where the display type sits, lifting through the middle so the
@@ -97,22 +71,16 @@ main.lp-v2 {
  *
  * The vertical one is only for the bottom band, where the product panel and
  * the tagline sit over whatever the crop happens to put behind them. */
+/* With no picture underneath there is nothing to protect the type from, so
+ * this is now only a vignette: it settles the lower edge so the product panel
+ * sits on something slightly darker than the field above it. */
 .lp-v2 .lp-hero-scrim {
-  background:
-    linear-gradient(
-      90deg,
-      rgba(3, 10, 24, 0.88) 0%,
-      rgba(3, 10, 24, 0.74) 30%,
-      rgba(3, 10, 24, 0.32) 50%,
-      rgba(3, 10, 24, 0) 64%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(4, 12, 26, 0.34) 0%,
-      rgba(4, 12, 26, 0.06) 42%,
-      rgba(4, 12, 26, 0.3) 74%,
-      rgba(3, 9, 20, 0.55) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    rgba(4, 12, 26, 0) 0%,
+    rgba(4, 12, 26, 0) 52%,
+    rgba(3, 9, 20, 0.28) 100%
+  );
 }
 
 .lp-v2 .lp-sky-nav {
