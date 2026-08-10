@@ -45,6 +45,10 @@ main.lp-v2 {
     rgba(5, 34, 23, 0.92),
     rgba(5, 34, 23, 0.54)
   );
+  transition:
+    background 320ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 320ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 320ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 html:has(main.lp-v2) {
@@ -84,6 +88,39 @@ html:has(main.lp-v2) {
   transform-origin: left;
 }
 
+/* Past the hero the bar floats over warm stock, and a green wash there reads
+ * as a tint someone forgot to remove rather than as the same bar. Blur is
+ * allowed here and nowhere else on the page: this is the one element that
+ * genuinely sits over content scrolling underneath it. */
+.lp-v2 .lp-sky-nav.is-light {
+  background: rgba(252, 251, 246, 0.82);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-color: var(--border);
+  color: var(--strong);
+}
+
+.lp-v2 .lp-sky-nav.is-light .lp-nav-link {
+  color: var(--muted-foreground);
+}
+
+.lp-v2 .lp-sky-nav.is-light .lp-nav-link:hover {
+  color: var(--strong);
+}
+
+.lp-v2 .lp-sky-nav.is-light .lp-nav-brand,
+.lp-v2 .lp-sky-nav.is-light .lp-nav-login {
+  color: var(--strong);
+}
+
+/* The one inverted control has to invert with it, or it disappears into the
+ * stock the moment the bar turns light. */
+.lp-v2 .lp-sky-nav.is-light .lp-nav-cta {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
 @media (prefers-reduced-motion: reduce) {
   html:has(main.lp-v2) {
     scroll-behavior: auto;
@@ -101,19 +138,10 @@ html:has(main.lp-v2) {
   mix-blend-mode: soft-light;
 }
 
-.lp-v2 .lp-atmosphere::after {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  background: radial-gradient(
-    18rem circle at var(--cursor-x, 50vw) var(--cursor-y, 45vh),
-    rgba(255, 253, 248, 0.2),
-    rgba(139, 196, 122, 0.09) 42%,
-    transparent 72%
-  );
-  content: "";
-  pointer-events: none;
-}
+/* A radial glow that tracked `--cursor-x` / `--cursor-y` lived here. Once the
+ * pointer effects went, nothing set those variables, so it froze into a
+ * blurred orb parked behind the headline — the exact decoration `design.md`
+ * bans by name. Removed rather than re-pointed. */
 
 .lp-v2 .lp-verdict-ok,
 .lp-v2 .lp-verdict-vague {

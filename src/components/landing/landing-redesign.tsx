@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  AnimatePresence,
-  motion,
-  useMotionValueEvent,
-  useReducedMotion,
-  useScroll,
-} from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowRight,
   Check,
@@ -33,18 +27,18 @@ const transcript = [
 const steps = [
   {
     number: "01",
-    title: "Bring your material",
-    body: "Upload notes, slides, or a chapter. Explainaloud builds the course from what you are actually learning.",
+    title: "Bring your talk or your material",
+    body: "Upload slides and speaker notes for a presentation, or notes and a chapter for a subject. Explainaloud pulls out the key points you are meant to hit.",
   },
   {
     number: "02",
     title: "Say it in your own words",
-    body: "Talk for about three minutes. Your explanation is transcribed and checked claim by claim as you speak.",
+    body: "Talk for about three minutes, with nothing to read off. Your explanation is transcribed and checked against those points claim by claim, as you speak.",
   },
   {
     number: "03",
-    title: "Know what to fix",
-    body: "See what was right, what was too vague, and the exact step you skipped—then turn the gaps into a plan.",
+    title: "Know exactly what to fix",
+    body: "See what landed, what was too thin to count, and the point you never reached—then run it again with those in front of you.",
   },
 ] as const;
 
@@ -73,84 +67,170 @@ const waveform = [
   { id: "l", height: 22 },
 ] as const;
 
+/**
+ * The three verdicts, as the hero states them.
+ *
+ * Ordered the way a rehearsal produces them rather than by severity, because
+ * the panel below reveals them one at a time and the sequence is the argument:
+ * you said this, you rushed this, you never reached this.
+ */
 const liveResults = [
-  { label: "Reached: customer problem", color: "var(--ok)" },
-  { label: "Too thin: evidence", color: "var(--vague)" },
-  { label: "Missed: final risk", color: "var(--miss)" },
+  {
+    id: "reached",
+    verdict: "Reached",
+    point: "The problem your audience actually has",
+    color: "var(--ok)",
+    tint: "var(--ok-light)",
+  },
+  {
+    id: "thin",
+    verdict: "Too thin",
+    point: "The evidence behind your main claim",
+    color: "var(--vague)",
+    tint: "var(--vague-light)",
+  },
+  {
+    id: "missed",
+    verdict: "Missed",
+    point: "How the handoff works at the end",
+    color: "var(--miss)",
+    tint: "var(--miss-light)",
+  },
 ] as const;
 
-function MarqueeRibbon() {
+/**
+ * The hero's product panel.
+ *
+ * The previous version was a recorder and nothing else — a mic, a waveform and
+ * a stop button, which is a screenshot of Voice Memos and says nothing about
+ * what this page is selling. What makes the product legible is not that it
+ * records you but that key points resolve into verdicts while you talk, so the
+ * panel now shows that happening: the checklist fills in, one line at a time,
+ * and starts over.
+ */
+function LiveRehearsalPanel() {
   const reduceMotion = useReducedMotion();
-  const [resultIndex, setResultIndex] = useState(0);
+  const [revealed, setRevealed] = useState(reduceMotion ? 3 : 0);
+  const [seconds, setSeconds] = useState(17);
+
+  useEffect(() => {
+    if (reduceMotion) {
+      setRevealed(liveResults.length);
+      return;
+    }
+    const interval = window.setInterval(() => {
+      // One past the last line, so the completed list holds for a beat before
+      // the run restarts — otherwise the third verdict is never actually read.
+      setRevealed((current) => (current + 1) % (liveResults.length + 1));
+    }, 1600);
+    return () => window.clearInterval(interval);
+  }, [reduceMotion]);
 
   useEffect(() => {
     if (reduceMotion) return;
     const interval = window.setInterval(() => {
-      setResultIndex((current) => (current + 1) % liveResults.length);
-    }, 3200);
+      setSeconds((current) => (current + 1) % 600);
+    }, 1000);
     return () => window.clearInterval(interval);
   }, [reduceMotion]);
 
-  const activeResult = liveResults[resultIndex];
+  const clock = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
+    seconds % 60,
+  ).padStart(2, "0")}`;
 
   return (
     <section
-      aria-label="Live voice recording preview"
-      className="absolute inset-x-0 bottom-5 mx-auto w-[min(44rem,calc(100%_-_1.5rem))] border border-white/20 bg-[var(--panel-deep)] text-primary-foreground shadow-[5px_6px_0_rgba(3,20,14,0.72)]"
+      aria-label="What Explainaloud shows while you rehearse"
+      className="mx-auto w-full max-w-[46rem] border border-white/20 bg-[var(--panel-deep)] text-primary-foreground shadow-[6px_7px_0_rgba(3,20,14,0.72)]"
     >
-      <div className="flex items-center gap-4 px-4 py-3.5 sm:px-5">
-        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--miss)] text-white">
-          <span className="absolute inset-0 animate-ping rounded-full border border-white/35 opacity-40" />
+      <div className="flex items-center gap-4 border-white/12 border-b px-4 py-3.5 sm:px-5">
+        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--miss)] text-white">
+          {!reduceMotion && (
+            <span className="absolute inset-0 animate-ping rounded-full border border-white/35 opacity-40" />
+          )}
           <Mic className="relative h-4 w-4" />
         </span>
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <span className="font-mono text-[0.62rem] uppercase tracking-[0.15em]">
-              Recording
-            </span>
-            <span className="font-mono text-[0.62rem] text-primary-foreground/60 tracking-[0.12em]">
-              00:17
-            </span>
-          </div>
-          <div
-            className="mt-2 flex h-8 items-center justify-center gap-[3px]"
-            aria-hidden="true"
-          >
-            {waveform.map(({ id, height }, index) => (
-              <motion.span
-                key={id}
-                animate={
-                  reduceMotion
-                    ? { height: Math.max(5, height * 0.62) }
-                    : {
-                        height: [
-                          Math.max(5, height * 0.42),
-                          Math.max(8, height * 0.82),
-                          Math.max(5, height * 0.5),
-                        ],
-                      }
-                }
-                transition={{
-                  duration: 1.35 + index * 0.04,
-                  repeat: Number.POSITIVE_INFINITY,
-                  delay: index * 0.055,
-                  ease: "easeInOut",
-                }}
-                className="w-1 rounded-full bg-[var(--ok-light)]"
-              />
-            ))}
-          </div>
+          <p className="font-mono text-[0.62rem] uppercase tracking-[0.15em]">
+            Rehearsing out loud
+          </p>
+          <p className="mt-1 truncate text-primary-foreground/60 text-sm">
+            Checking your talk against its key points
+          </p>
         </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25">
-          <span className="h-3 w-3 rounded-[2px] bg-primary-foreground" />
+        <div
+          className="hidden h-7 items-end gap-[3px] sm:flex"
+          aria-hidden="true"
+        >
+          {waveform.map(({ id, height }, index) => (
+            <motion.span
+              key={id}
+              animate={
+                reduceMotion
+                  ? { height: Math.max(5, height * 0.62) }
+                  : {
+                      height: [
+                        Math.max(5, height * 0.42),
+                        Math.max(8, height * 0.82),
+                        Math.max(5, height * 0.5),
+                      ],
+                    }
+              }
+              transition={{
+                duration: 1.35 + index * 0.04,
+                repeat: Number.POSITIVE_INFINITY,
+                delay: index * 0.055,
+                ease: "easeInOut",
+              }}
+              className="w-1 rounded-full bg-[var(--ok-light)]"
+            />
+          ))}
+        </div>
+        <span className="shrink-0 font-mono text-[0.62rem] text-primary-foreground/60 tracking-[0.12em] tabular-nums">
+          {clock}
         </span>
       </div>
-      <div className="flex items-center justify-between gap-3 border-white/15 border-t px-4 py-2 font-mono text-[0.58rem] uppercase tracking-[0.12em] sm:px-5">
-        <span className="text-primary-foreground/55">
-          Listening for key points
-        </span>
-        <span style={{ color: activeResult.color }}>{activeResult.label}</span>
-      </div>
+
+      <ul className="divide-y divide-white/10">
+        {liveResults.map((result, index) => {
+          const isRevealed = index < revealed;
+          return (
+            <li
+              key={result.id}
+              className="flex items-start gap-3 px-4 py-2 sm:items-center sm:px-5"
+            >
+              <span
+                aria-hidden="true"
+                className="mt-[0.45rem] h-2.5 w-2.5 shrink-0 transition-colors duration-500 sm:mt-0"
+                style={{
+                  backgroundColor: isRevealed
+                    ? result.color
+                    : "rgba(244, 240, 235, 0.16)",
+                }}
+              />
+              <span
+                className="min-w-0 flex-1 text-sm leading-snug transition-opacity duration-500 sm:truncate"
+                style={{ opacity: isRevealed ? 0.9 : 0.4 }}
+              >
+                {result.point}
+              </span>
+              <motion.span
+                initial={false}
+                animate={
+                  isRevealed
+                    ? { opacity: 1, y: 0 }
+                    : { opacity: 0, y: reduceMotion ? 0 : 4 }
+                }
+                transition={{ duration: 0.32, ease }}
+                className="mt-[0.3rem] shrink-0 font-mono text-[0.58rem] uppercase tracking-[0.12em] sm:mt-0"
+                style={{ color: result.tint }}
+              >
+                {result.verdict}
+              </motion.span>
+            </li>
+          );
+        })}
+      </ul>
     </section>
   );
 }
@@ -326,18 +406,46 @@ function IntroPanel() {
   );
 }
 
-function ScrollJourney() {
+const STAGE_MS = 3600;
+
+/**
+ * The three verdicts, cycling on their own.
+ *
+ * This used to be a 220vh scroll-jacked section: a `position: sticky` panel
+ * whose state was driven by `scrollYProgress`, so the only way to see the
+ * second and third verdicts was to keep scrolling — and the two extra
+ * viewports of height that bought the scrub read, correctly, as a screen and a
+ * half of blank page under the panel.
+ *
+ * The content was never scroll-shaped to begin with. It is three variations of
+ * one idea, which is a loop, so it loops: the section is now its own height and
+ * the stage advances on a timer, paused while it is off screen so a visitor
+ * does not arrive mid-sentence.
+ */
+function ResultsCarousel() {
   const sectionRef = useRef<HTMLElement>(null);
   const [activeStage, setActiveStage] = useState(0);
-  const { scrollYProgress } = useScroll({
-    target: sectionRef,
-    offset: ["start start", "end end"],
-  });
+  const [running, setRunning] = useState(false);
+  const reduceMotion = useReducedMotion();
 
-  useMotionValueEvent(scrollYProgress, "change", (latest) => {
-    const nextStage = latest < 0.34 ? 0 : latest < 0.67 ? 1 : 2;
-    setActiveStage((current) => (current === nextStage ? current : nextStage));
-  });
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setRunning(entry.isIntersecting),
+      { threshold: 0.35 },
+    );
+    observer.observe(section);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!running || reduceMotion) return;
+    const interval = window.setInterval(() => {
+      setActiveStage((current) => (current + 1) % 3);
+    }, STAGE_MS);
+    return () => window.clearInterval(interval);
+  }, [running, reduceMotion]);
 
   const stages = [
     {
@@ -375,74 +483,100 @@ function ScrollJourney() {
     <section
       id="results"
       ref={sectionRef}
-      className="relative h-[220vh] bg-background"
+      className="relative border-border border-y bg-background px-5 py-24 md:px-8 md:py-28"
     >
-      <div className="sticky top-0 flex h-screen items-start overflow-hidden border-white/10 border-y px-5 pt-28 md:px-8">
-        <div
-          data-scroll-reveal
-          className="relative mx-auto grid w-full max-w-[72rem] gap-7 lg:grid-cols-[10rem_34rem_minmax(14rem,1fr)] lg:items-center"
-        >
-          <div className="hidden space-y-2 lg:block">
-            {stages.map((item, index) => (
-              <div
+      <div
+        data-scroll-reveal
+        className="relative mx-auto grid w-full max-w-[72rem] gap-8 lg:grid-cols-[9rem_minmax(0,1.25fr)_minmax(0,1fr)] lg:items-center lg:gap-10"
+      >
+        <div className="hidden lg:block">
+          {stages.map((item, index) => {
+            const isActive = index === activeStage;
+            return (
+              <button
                 key={item.label}
-                className={`border-l-2 py-3 pl-5 font-mono text-xs uppercase tracking-[0.14em] ${
-                  index === activeStage
+                type="button"
+                onClick={() => setActiveStage(index)}
+                aria-current={isActive}
+                className={`relative block w-full border-l-2 py-3 pl-5 text-left font-mono text-xs uppercase tracking-[0.14em] transition-colors ${
+                  isActive
                     ? "border-[var(--stage-color)] text-strong"
-                    : "border-border text-muted-foreground/55"
+                    : "border-border text-muted-foreground/55 hover:text-muted-foreground"
                 }`}
                 style={{ "--stage-color": item.color } as CSSProperties}
               >
                 {item.label}
-              </div>
-            ))}
-          </div>
+                {/* The bar is the section's only clock. Without it the panel
+                    looks like it changes at random, which is the difference
+                    between a demo and a glitch. */}
+                {isActive && !reduceMotion && (
+                  <motion.span
+                    key={`${item.label}-${activeStage}`}
+                    aria-hidden="true"
+                    initial={{ scaleY: 0 }}
+                    animate={{ scaleY: 1 }}
+                    transition={{ duration: STAGE_MS / 1000, ease: "linear" }}
+                    className="-left-[2px] absolute inset-y-0 w-[2px] origin-top"
+                    style={{ backgroundColor: item.color }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
 
+        <div className="relative overflow-hidden rounded-[1.1rem] border border-border bg-card p-4 shadow-[7px_8px_0_rgba(18,53,36,0.22)] md:p-6">
+          <div className="flex items-center justify-between font-mono text-[0.62rem] text-muted-foreground uppercase tracking-[0.12em]">
+            <span>Live rehearsal · 01:42</span>
+            <span>{activeStage + 1} / 3</span>
+          </div>
           <div
-            data-gsap-hover
-            className="relative overflow-hidden rounded-[1.1rem] border border-border bg-card p-4 shadow-[7px_8px_0_rgba(18,53,36,0.22)] md:p-6"
+            className={`mt-5 flex min-h-[19rem] flex-col rounded-none border-white/10 border-y border-r border-l-2 p-7 text-card-foreground transition-colors duration-500 md:p-9 ${stage.surface}`}
+            style={{ borderLeftColor: stage.color }}
           >
-            <div className="flex items-center justify-between font-mono text-[0.62rem] text-muted-foreground uppercase tracking-[0.12em]">
-              <span>Live rehearsal · 01:42</span>
-              <span>{activeStage + 1} / 3</span>
-            </div>
-            <div
-              className={`mt-5 flex min-h-[20rem] flex-col rounded-none border-white/10 border-y border-r border-l-2 p-7 text-card-foreground md:p-9 ${stage.surface}`}
-              style={{ borderLeftColor: stage.color }}
-            >
-              <div
-                className="flex items-center gap-3 font-mono text-[0.64rem] uppercase tracking-[0.12em]"
-                style={{ color: stage.color }}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={stage.label}
+                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={reduceMotion ? undefined : { opacity: 0, y: -10 }}
+                transition={{ duration: 0.4, ease }}
+                className="flex flex-1 flex-col"
               >
-                <span
-                  className="h-2.5 w-2.5"
-                  style={{ backgroundColor: stage.color }}
-                />
-                {stage.eyebrow}
-              </div>
-              <p className="mt-7 max-w-full font-sans font-bold text-[clamp(2.1rem,3.35vw,3.45rem)] text-white leading-[0.98] tracking-[-0.045em]">
-                {stage.quote}
-              </p>
-              <p className="mt-auto max-w-[30rem] pt-7 text-primary-foreground/70 leading-relaxed">
-                {stage.note}
-              </p>
-            </div>
+                <div
+                  className="flex items-center gap-3 font-mono text-[0.64rem] uppercase tracking-[0.12em]"
+                  style={{ color: stage.color }}
+                >
+                  <span
+                    className="h-2.5 w-2.5"
+                    style={{ backgroundColor: stage.color }}
+                  />
+                  {stage.eyebrow}
+                </div>
+                <p className="mt-7 font-display text-[clamp(1.9rem,3vw,2.9rem)] text-white leading-[1.08] tracking-[-0.03em]">
+                  {stage.quote}
+                </p>
+                <p className="mt-auto max-w-[30rem] pt-7 text-primary-foreground/70 leading-relaxed">
+                  {stage.note}
+                </p>
+              </motion.div>
+            </AnimatePresence>
           </div>
+        </div>
 
-          <div className="lg:pl-4">
-            <p
-              className="font-mono text-[0.65rem] uppercase tracking-[0.14em]"
-              style={{ color: stage.color }}
-            >
-              Rehearsal, made visible
-            </p>
-            <h2 className="mt-5 font-sans font-bold text-[clamp(2.35rem,3.5vw,3.8rem)] text-strong uppercase leading-[0.92] tracking-[-0.05em]">
-              Your points update as you speak.
-            </h2>
-            <p className="mt-6 text-muted-foreground leading-relaxed">
-              {stage.detail}
-            </p>
-          </div>
+        <div className="lg:pl-2">
+          <p
+            className="font-mono text-[0.65rem] uppercase tracking-[0.14em] transition-colors duration-500"
+            style={{ color: stage.color }}
+          >
+            Rehearsal, made visible
+          </p>
+          <h2 className="mt-5 font-display text-[clamp(2.2rem,3.4vw,3.4rem)] text-strong leading-[1.02] tracking-[-0.04em]">
+            Your points update as you speak.
+          </h2>
+          <p className="mt-6 min-h-[3.5rem] text-muted-foreground leading-relaxed">
+            {stage.detail}
+          </p>
         </div>
       </div>
     </section>
@@ -465,7 +599,7 @@ function FeedbackDemo() {
             <p className="font-mono text-[0.67rem] text-muted-foreground uppercase tracking-[0.14em]">
               See the feedback
             </p>
-            <h2 className="mt-5 max-w-[14ch] font-sans font-bold text-[clamp(2.7rem,5vw,5rem)] text-strong uppercase leading-[0.9] tracking-[-0.055em]">
+            <h2 className="mt-5 max-w-[16ch] font-display text-[clamp(2.5rem,4.6vw,4.4rem)] text-strong leading-[1] tracking-[-0.04em]">
               One explanation. Three useful answers.
             </h2>
           </div>
@@ -574,6 +708,34 @@ export function LandingRedesign() {
   const pageRef = useRef<HTMLElement>(null);
   const heroRef = useRef<HTMLElement>(null);
   const brandRef = useRef<HTMLDivElement>(null);
+  const navRef = useRef<HTMLElement>(null);
+  const navSentinelRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * The bar turns to glass once it is off the forest.
+   *
+   * Deliberately not a ScrollTrigger. Whether the wordmark is legible is not a
+   * decoration, and everything GSAP does here arrives behind a dynamic import —
+   * so on a slow connection the bar would spend the first seconds dark over
+   * warm stock. An observer on a sentinel at the foot of the hero costs
+   * nothing, runs on the first paint, and needs no refresh on resize.
+   */
+  useEffect(() => {
+    const sentinel = navSentinelRef.current;
+    const nav = navRef.current;
+    if (!sentinel || !nav) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        nav.classList.toggle(
+          "is-light",
+          !entry.isIntersecting && entry.boundingClientRect.top < 0,
+        );
+      },
+      { rootMargin: "-64px 0px 0px 0px" },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!heroRef.current || !pageRef.current) return;
@@ -687,15 +849,7 @@ export function LandingRedesign() {
                 opacity: 1,
                 duration: 1,
                 ease: "power2.inOut",
-              })
-              .to(
-                ".lp-sky-nav",
-                {
-                  backgroundColor: "rgba(5, 34, 23, 0.98)",
-                  duration: 0.35,
-                },
-                0.55,
-              );
+              });
           }
 
           gsap.utils
@@ -793,6 +947,7 @@ export function LandingRedesign() {
 
     return () => {
       cancelled = true;
+      navRef.current?.classList.remove("is-light");
       hoverCleanups.forEach((cleanup) => {
         cleanup();
       });
@@ -816,7 +971,10 @@ export function LandingRedesign() {
       >
         <ExplainaloudMark className="h-full w-full" strokeWidth={4.5} />
       </div>
-      <nav className="lp-sky-nav fixed inset-x-0 top-0 z-50 border-white/20 border-b text-primary-foreground">
+      <nav
+        ref={navRef}
+        className="lp-sky-nav fixed inset-x-0 top-0 z-50 border-white/20 border-b text-primary-foreground"
+      >
         <div className="mx-auto grid h-16 max-w-[76rem] grid-cols-[1fr_auto_1fr] items-center px-5 md:px-8">
           <div className="hidden items-center gap-5 text-[0.78rem] lg:flex">
             <a href="#live-demo" className="lp-nav-link">
@@ -834,7 +992,7 @@ export function LandingRedesign() {
           </div>
           <Link
             href="/"
-            className="lp-nav-brand flex h-8 min-w-44 items-center justify-center gap-2.5 text-primary-foreground"
+            className="lp-nav-brand flex h-8 items-center justify-center gap-2.5 whitespace-nowrap text-primary-foreground sm:min-w-44"
             aria-label="Explainaloud home"
           >
             <span className="lp-nav-brand-copy font-sans font-semibold text-sm tracking-[-0.02em]">
@@ -846,13 +1004,16 @@ export function LandingRedesign() {
             />
           </Link>
           <div className="flex items-center justify-self-end gap-2">
-            <Link href="/login" className="px-4 py-2 text-sm hover:text-white">
+            <Link
+              href="/login"
+              className="lp-nav-login whitespace-nowrap px-3 py-2 text-sm sm:px-4"
+            >
               Log in
             </Link>
             <Link
               href="/signup"
               data-gsap-hover
-              className="inline-flex items-center gap-2 border border-card bg-card px-4 py-2 text-card-foreground text-sm"
+              className="lp-nav-cta inline-flex items-center gap-2 whitespace-nowrap border border-card bg-card px-3 py-2 text-card-foreground text-sm sm:px-4"
             >
               Start free <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -863,11 +1024,11 @@ export function LandingRedesign() {
       <section
         id="hero"
         ref={heroRef}
-        className="lp-atmosphere relative overflow-hidden border-white/15 border-b bg-primary px-5 pb-20 text-primary-foreground md:px-8 md:pb-28"
+        className="lp-atmosphere relative overflow-hidden border-white/15 border-b bg-primary px-5 text-primary-foreground md:px-8"
       >
-        <div className="relative min-h-screen pt-24 md:pt-28">
-          <div className="relative z-10 mx-auto flex min-h-[calc(100vh-12rem)] max-w-[76rem] flex-col items-center justify-center pb-48 text-center md:pb-44">
-            <h1 className="relative mx-auto max-w-[12ch] font-display text-[clamp(3.35rem,6.8vw,7rem)] text-primary-foreground leading-[0.88] tracking-[-0.055em]">
+        <div className="relative flex min-h-screen flex-col pt-20 md:pt-24">
+          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center">
+            <h1 className="relative mx-auto max-w-[12ch] font-display text-[clamp(2.9rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
               <span className="block overflow-hidden pb-[0.08em]">
                 <span data-hero-word className="inline-block">
                   Say
@@ -917,23 +1078,24 @@ export function LandingRedesign() {
             <div
               data-kinetic
               aria-hidden="true"
-              className="absolute bottom-[24%] left-[8%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(5,28,20,0.75)] lg:block"
+              className="absolute bottom-[8%] left-[2%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(5,28,20,0.75)] lg:block"
             >
               Missed · example
             </div>
 
             <p
               data-hero-secondary
-              className="mt-7 max-w-[34rem] text-primary-foreground/85 text-lg leading-relaxed"
+              className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed"
             >
-              Rehearse out loud. See which ideas landed, which were rushed, and
-              which never made it into your explanation.
+              Rehearse a presentation, or learn a subject, by explaining it out
+              loud. See which ideas landed, which were rushed, and which never
+              made it out of your head.
             </p>
 
             <motion.div
               data-hero-secondary
               data-gsap-lock
-              className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
+              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row"
             >
               <Link
                 href="/signup"
@@ -951,12 +1113,20 @@ export function LandingRedesign() {
                 See how it works
               </a>
             </motion.div>
+
+            <p
+              data-hero-secondary
+              className="mt-6 max-w-[36rem] font-mono text-[0.6rem] text-primary-foreground/55 uppercase tracking-[0.12em]"
+            >
+              Speech and presentation rehearsal · Studying by the Feynman method
+            </p>
           </div>
 
-          <div className="pointer-events-none absolute inset-0">
-            <MarqueeRibbon />
+          <div className="relative z-10 pb-6">
+            <LiveRehearsalPanel />
           </div>
         </div>
+        <div ref={navSentinelRef} aria-hidden="true" className="h-px w-full" />
       </section>
 
       <section
@@ -1064,7 +1234,10 @@ export function LandingRedesign() {
                 data-gsap-hover
                 className="mt-6 rounded-sm border border-white/10 border-l-2 border-l-miss bg-[var(--panel-deep)] p-5 shadow-[4px_4px_0_#000]"
               >
-                <span className="font-mono text-[0.62rem] text-miss uppercase tracking-[0.12em]">
+                {/* The lit tint, not the fill. `--miss` is tuned to be read on
+                    stock; on the deep panel it lands near 3:1 and the label
+                    reads as a smudge. */}
+                <span className="font-mono text-[0.62rem] text-[var(--miss-light)] uppercase tracking-[0.12em]">
                   Missing step
                 </span>
                 <p className="mt-3 font-display text-[1.45rem] text-primary-foreground leading-snug">
@@ -1083,7 +1256,7 @@ export function LandingRedesign() {
         </motion.div>
       </section>
 
-      <ScrollJourney />
+      <ResultsCarousel />
 
       <FeedbackDemo />
 
@@ -1098,15 +1271,21 @@ export function LandingRedesign() {
             data-story-step
             className="font-mono text-[0.68rem] text-brand-ink uppercase tracking-[0.13em]"
           >
-            A better study loop
+            Rehearse it, or learn it
           </motion.p>
           <div className="mt-5 grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
-            <h2
-              data-story-step
-              className="max-w-[12ch] font-display text-[clamp(2.8rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]"
-            >
-              Understanding shows up when you speak.
-            </h2>
+            <div data-story-step>
+              <h2 className="max-w-[12ch] font-display text-[clamp(2.6rem,4.6vw,4.6rem)] text-strong leading-[1] tracking-[-0.04em]">
+                Understanding shows up when you speak.
+              </h2>
+              <p className="mt-7 max-w-[34rem] text-muted-foreground leading-relaxed">
+                Richard Feynman&rsquo;s method for learning anything was to
+                explain it plainly, out loud, and watch for the place you get
+                stuck—because that is the part you did not really have. It is
+                the same test a talk fails on stage. Explainaloud runs it for
+                you before either one costs you anything.
+              </p>
+            </div>
             <div className="border-border border-t">
               {steps.map((step) => (
                 <motion.article
