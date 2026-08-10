@@ -36,22 +36,63 @@ main.lp-v2 {
   --miss-light: #efc1bb;
 }
 
-/* The photograph is used as shot: no blur, no duotone, no crop beyond what
- * `cover` does to fit the viewport. The one thing over it is a scrim, and it
- * is shaped rather than flat — the foam runs diagonally through the lower
- * half, which is exactly where the buttons and the tagline sit, and white
- * type on bright surf is a coin toss. */
+/* The abstract field, not a photograph of anything.
+ *
+ * A reviewer asked why there was an ocean behind the headline, and the answer
+ * turned out to be that there was: `main` still ships a night-shore photograph,
+ * because the abstract has been sitting unmerged. The complaint was about a
+ * literal sea, not about this.
+ *
+ * Which matters, because the two fail differently. A photograph of a beach has
+ * to be justified — it is a place, and a reader asks what the place has to do
+ * with rehearsing a talk. A field of colour is a ground: it carries the type
+ * and gets out of the way, the same job a sheet of paper does.
+ *
+ * Cropped past the source's logo badge (ends y=65), its footer (starts y=1080)
+ * and a hard vertical seam at x=168..186 where column brightness jumps 36 to
+ * 164. Blur 0.8 before the upscale, only enough to take the source WebP's block
+ * artifacts off — more than that destroys the specular bands, which are the
+ * only reason the image is worth having.
+ */
 .lp-v2 .lp-atmosphere {
   isolation: isolate;
   background:
+    url("/landing/explainaloud-field-v1.webp") right center / cover no-repeat;
+}
+
+/* Heaviest where the display type sits, lifting through the middle so the
+ * artwork is actually visible, back over the lower third where the buttons
+ * and the tagline are. */
+/* Two scrims, because the hero has two jobs on two axes.
+ *
+ * The horizontal one holds the left column dark so the headline has a bed —
+ * which is what the reference itself does: an empty navy third with the type
+ * in it, and the artwork to the right of it. It is gone by 62%, so the swirl
+ * is never touched.
+ *
+ * The vertical one is only for the bottom band, where the product panel and
+ * the tagline sit over whatever the crop happens to put behind them. */
+/* Two scrims on two axes. The horizontal one holds the left column dark so
+ * the headline has a bed — the artwork's own composition does the same, an
+ * empty field with the type in it and the picture to the right of it. It is
+ * gone by 64%, so the swirl itself is never touched. The vertical one is only
+ * for the bottom band, under the product panel. */
+.lp-v2 .lp-hero-scrim {
+  background:
+    linear-gradient(
+      90deg,
+      rgba(3, 10, 24, 0.88) 0%,
+      rgba(3, 10, 24, 0.74) 30%,
+      rgba(3, 10, 24, 0.32) 50%,
+      rgba(3, 10, 24, 0) 64%
+    ),
     linear-gradient(
       180deg,
-      rgba(4, 12, 26, 0.5) 0%,
-      rgba(4, 12, 26, 0.26) 42%,
-      rgba(4, 12, 26, 0.46) 74%,
-      rgba(3, 9, 20, 0.62) 100%
-    ),
-    url("/landing/explainaloud-shore-v1.webp") center / cover no-repeat;
+      rgba(4, 12, 26, 0.34) 0%,
+      rgba(4, 12, 26, 0.06) 42%,
+      rgba(4, 12, 26, 0.3) 74%,
+      rgba(3, 9, 20, 0.55) 100%
+    );
 }
 
 .lp-v2 .lp-sky-nav {
@@ -61,9 +102,9 @@ main.lp-v2 {
     rgba(9, 22, 44, 0.54)
   );
   transition:
-    background 320ms cubic-bezier(0.23, 1, 0.32, 1),
-    color 320ms cubic-bezier(0.23, 1, 0.32, 1),
-    border-color 320ms cubic-bezier(0.23, 1, 0.32, 1);
+    background 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 html:has(main.lp-v2) {
@@ -108,9 +149,12 @@ html:has(main.lp-v2) {
  * allowed here and nowhere else on the page: this is the one element that
  * genuinely sits over content scrolling underneath it. */
 .lp-v2 .lp-sky-nav.is-light {
-  background: rgba(249, 251, 254, 0.84);
-  backdrop-filter: saturate(1.4) blur(14px);
-  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  background: rgba(255, 255, 255, 0.94);
+  /* No `saturate()`. It was pulling colour out of whatever scrolled beneath
+     and pushing it into the bar, which is exactly the tint this is meant not
+     to have. Blur alone is what makes it read as glass. */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-color: var(--border);
   color: var(--strong);
 }

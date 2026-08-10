@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Check,
   Leaf,
-  Lightbulb,
   LockKeyhole,
   MessageCircle,
   Mic,
@@ -15,6 +14,7 @@ import {
 import Link from "next/link";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
+import { GlassMark } from "~/components/landing/glass-mark";
 
 const transcript = [
   { text: "Newton’s third law says forces come in pairs, ", tone: "plain" },
@@ -42,14 +42,42 @@ const steps = [
   },
 ] as const;
 
+/**
+ * The argument for the product, rather than a description of it.
+ *
+ * Every line here is about the method and can be checked by thinking about it.
+ * No competitor is named, and nothing is claimed about outcomes — `design.md`
+ * bans invented proof on the landing, and "students score higher" would be
+ * exactly that.
+ */
+const whyOutLoud = [
+  {
+    title: "Recognising is not knowing",
+    body: "Picking the right option means you can spot the answer when it is in front of you. It says nothing about whether you could produce it with nobody prompting you.",
+  },
+  {
+    title: "Gaps only show when you speak",
+    body: "Reading your notes again finds nothing wrong, because the page supplies every step. The missing one appears the moment you have to say it in order.",
+  },
+  {
+    title: "Marked against your material",
+    body: "Not a topic name and a generic question bank. The points come out of the file you uploaded, so the feedback answers to what you are actually responsible for.",
+  },
+] as const;
+
 const ease = [0.23, 1, 0.32, 1] as const;
 
-const closingShoreStyle: CSSProperties = {
+/* The same field closes the page. One crossing into light for the product and
+ * one back into dark to end, which is what `design.md` allows. */
+const closingFieldStyle: CSSProperties = {
   backgroundImage:
-    'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-shore-v1.webp")',
+    'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-field-v1.webp")',
   backgroundPosition: "center 60%",
   backgroundSize: "cover",
-  backgroundAttachment: "fixed",
+  /* Not `fixed`. A fixed attachment cannot be promoted to its own compositor
+   * layer, so the browser repaints the whole image on every scroll frame — the
+   * jump this band used to show, and on iOS Safari it does not work at all. */
+  backgroundAttachment: "scroll",
 };
 
 const waveform = [
@@ -265,67 +293,6 @@ const feedback = [
   },
 ] as const;
 
-function AhaMoment() {
-  const [open, setOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
-
-  return (
-    <div className="mt-4 overflow-hidden border border-border bg-card">
-      <motion.button
-        data-gsap-hover
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        whileTap={reduceMotion ? undefined : { scale: 0.985 }}
-        className="group flex w-full items-center gap-3 p-4 text-left text-strong"
-      >
-        <motion.span
-          animate={
-            open && !reduceMotion
-              ? { rotate: [0, -9, 8, 0], scale: [1, 1.12, 1] }
-              : { rotate: 0, scale: 1 }
-          }
-          transition={
-            open
-              ? { duration: 0.45, ease }
-              : { type: "spring", stiffness: 360, damping: 18 }
-          }
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
-            open
-              ? "bg-[var(--vague)] text-white"
-              : "bg-muted text-muted-foreground group-hover:text-foreground"
-          }`}
-        >
-          <Lightbulb className="h-4 w-4" />
-        </motion.span>
-        <span>
-          <span className="block font-semibold text-sm">
-            {open ? "That’s the missing idea" : "Find the aha moment"}
-          </span>
-          <span className="mt-0.5 block text-muted-foreground text-xs">
-            {open ? "Click to close" : "Click the bulb to reveal it"}
-          </span>
-        </span>
-        <span className="ml-auto text-muted-foreground text-xl">
-          {open ? "×" : "+"}
-        </span>
-      </motion.button>
-
-      {open && (
-        <div className="border-border border-t bg-muted px-4 pt-4 pb-5">
-          <p className="font-display text-[1.3rem] text-strong leading-snug">
-            The forces act on different objects.
-          </p>
-          <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
-            The wall pushes you while you push the wall, so the pair cannot
-            cancel on one object.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
-
 function IntroPanel() {
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
@@ -406,7 +373,7 @@ function IntroPanel() {
   );
 }
 
-const STAGE_MS = 3600;
+const STAGE_MS = 2200;
 
 /**
  * The three verdicts, cycling on their own.
@@ -551,7 +518,11 @@ function ResultsCarousel() {
                     opacity: isActive ? 1 : 0,
                     y: isActive || reduceMotion ? 0 : 10,
                   }}
-                  transition={{ duration: 0.4, ease }}
+                  transition={{
+                    duration: isActive ? 0.26 : 0.14,
+                    delay: isActive ? 0.14 : 0,
+                    ease,
+                  }}
                   className="col-start-1 row-start-1 flex flex-col"
                 >
                   <div
@@ -596,7 +567,11 @@ function ResultsCarousel() {
                 aria-hidden={index !== activeStage}
                 initial={false}
                 animate={{ opacity: index === activeStage ? 1 : 0 }}
-                transition={{ duration: 0.4, ease }}
+                transition={{
+                  duration: index === activeStage ? 0.26 : 0.14,
+                  delay: index === activeStage ? 0.14 : 0,
+                  ease,
+                }}
                 className="col-start-1 row-start-1 text-muted-foreground leading-relaxed"
               >
                 {item.detail}
@@ -733,34 +708,56 @@ export function LandingRedesign() {
   const reduceMotion = useReducedMotion();
   const pageRef = useRef<HTMLElement>(null);
   const heroRef = useRef<HTMLElement>(null);
-  const brandRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const navSentinelRef = useRef<HTMLDivElement>(null);
 
   /**
-   * The bar turns to glass once it is off the forest.
+   * The bar turns to glass once it is off the hero.
    *
    * Deliberately not a ScrollTrigger. Whether the wordmark is legible is not a
    * decoration, and everything GSAP does here arrives behind a dynamic import —
    * so on a slow connection the bar would spend the first seconds dark over
-   * warm stock. An observer on a sentinel at the foot of the hero costs
-   * nothing, runs on the first paint, and needs no refresh on resize.
+   * light stock.
+   *
+   * It was an IntersectionObserver, and that is what made it fail on a fast
+   * flick: the observer only reports when it next samples, and the browser
+   * coalesces those samples, so a scroll that crosses the whole hero between
+   * two samples can land on white with a navy bar still over it. An observer
+   * answers "is it on screen", which is not the question — the question is
+   * "where is the seam right now", and that has to be read on the frame it is
+   * needed.
+   *
+   * So: a passive scroll listener, coalesced into one `requestAnimationFrame`
+   * so it costs a single rect read per painted frame no matter how many events
+   * arrive. It cannot be skipped over, because scrolling and painting are the
+   * same loop.
    */
   useEffect(() => {
     const sentinel = navSentinelRef.current;
     const nav = navRef.current;
     if (!sentinel || !nav) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        nav.classList.toggle(
-          "is-light",
-          !entry.isIntersecting && entry.boundingClientRect.top < 0,
-        );
-      },
-      { rootMargin: "-64px 0px 0px 0px" },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+
+    let frame = 0;
+    const sync = () => {
+      frame = 0;
+      nav.classList.toggle(
+        "is-light",
+        sentinel.getBoundingClientRect().top <= 64,
+      );
+    };
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(sync);
+    };
+
+    sync();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
   }, []);
 
   useEffect(() => {
@@ -768,6 +765,7 @@ export function LandingRedesign() {
 
     let gsapContext: { revert: () => void } | undefined;
     let cancelled = false;
+    const docCleanups: Array<() => void> = [];
     const hoverCleanups: Array<() => void> = [];
     const generatedNodes: HTMLElement[] = [];
 
@@ -776,47 +774,127 @@ export function LandingRedesign() {
         if (cancelled || !heroRef.current || !pageRef.current) return;
         gsap.registerPlugin(ScrollTrigger);
         gsapContext = gsap.context(() => {
-          gsap
-            .timeline()
+          /* The intro is a `from()`: it hides the headline and animates it
+             back. That is a promise the page has to keep, and it was not
+             keeping it. GSAP's ticker stalls while the tab is hidden, so a
+             landing opened in a background tab froze part-way through and the
+             words stayed put. Measured mid-freeze, down the six words: 0.82,
+             0.73, 0.60, 0.43, 0.21, 0 — the last two lines of the headline
+             simply were not there.
+
+             The photograph hid this for months, because a faint headline over
+             a dark photo still looks like a dark photo. It only became obvious
+             once the backdrop got brighter.
+
+             So the animation is now something the page can afford to lose: if
+             nobody is looking it is skipped, and if they look away part-way it
+             snaps to the end. The words always exist. */
+          /* Every reveal on this page is a `from()`: it hides the element
+             and animates it back. That is a debt, and GSAP's ticker stalls
+             while the tab is hidden — so a tween that started and did not
+             finish leaves its content part-way, for good. Measured on the
+             product window after a background load: opacity 0.2018, transform
+             still mid-flight. The headline had the same failure and was fixed
+             in isolation; this is the same bug three more times, so it is
+             worth one mechanism rather than four patches.
+
+             Anything that hides content goes in here, and if nobody is
+             watching, it is snapped to its end state. */
+          const reveals: Array<{ progress: (value: number) => unknown }> = [];
+          const settleReveals = () => {
+            if (!document.hidden) return;
+            for (const reveal of reveals) reveal.progress(1);
+          };
+
+          const intro = gsap.timeline({
+            onComplete: () =>
+              gsap.set("[data-hero-word], [data-hero-secondary]", {
+                clearProps: "transform,opacity",
+              }),
+          });
+          reveals.push(intro);
+          const settleIntro = () => {
+            settleReveals();
+          };
+          document.addEventListener("visibilitychange", settleIntro);
+          docCleanups.push(() =>
+            document.removeEventListener("visibilitychange", settleIntro),
+          );
+
+          intro
+            /* No rotation. Each word used to come in tilted four degrees and
+               straighten as it landed, and a line of type that arrives crooked
+               reads as loose no matter how well it settles. Straight up from
+               behind the mask, tighter stagger, one ease. */
             .from("[data-hero-word]", {
-              yPercent: 125,
-              rotate: 4,
+              yPercent: 118,
               opacity: 0,
-              duration: 0.95,
-              stagger: 0.07,
-              ease: "power3.out",
+              duration: 0.72,
+              stagger: 0.055,
+              ease: "power4.out",
             })
             .from(
               "[data-hero-secondary]",
               {
-                y: 40,
+                y: 24,
                 opacity: 0,
-                duration: 0.85,
-                stagger: 0.15,
-                ease: "power3.out",
+                duration: 0.6,
+                stagger: 0.09,
+                ease: "power4.out",
               },
-              "-=0.4",
+              "-=0.34",
             );
 
-          if (!reduceMotion) {
-            gsap.to("[data-kinetic]", {
-              y: (index) => (index % 2 === 0 ? -7 : 6),
-              rotate: (index) => (index % 2 === 0 ? -1.2 : 1.2),
-              duration: (index) => 4.2 + index * 0.4,
-              stagger: 0.16,
-              repeat: -1,
-              yoyo: true,
-              ease: "sine.inOut",
-            });
+          // After the chain, never before it: the guard has to have tweens to
+          // fast-forward, and an empty timeline reports itself complete.
+          settleIntro();
 
-            gsap.to(".lp-atmosphere", {
-              backgroundPosition: "center 62%",
+          if (!reduceMotion) {
+            /* A `background-position` parallax on the hero lived here, and it
+               had to go for two reasons.
+
+               `background-position` applies to every layer in the shorthand.
+               The hero used to be one layer — a photograph — and is now two,
+               because the scrim sits in front of it. So the tween was dragging
+               the darkening across the page independently of anything it was
+               darkening, which is the "weird movement" this fixes.
+
+               And it was scrubbed at 1.2, meaning the picture lagged over a
+               second behind the scroll and then kept coasting after it stopped,
+               in both directions. Even on one layer that reads as the page
+               being broken rather than as depth.
+
+               Parallax on a photograph is doable, but it has to be a
+               transformed layer the compositor can move on the GPU, not a
+               background-position the browser repaints every frame. Worth
+               doing deliberately or not at all. */
+          }
+
+          if (!reduceMotion) {
+            /* The mark turns because the reader scrolls, not on a clock of its
+               own. A logo rotating by itself is a loading spinner, which is
+               the one thing an identity mark must never be mistaken for; the
+               same rotation tied to scroll is an object the reader is moving
+               around, which is the point.
+               
+               Same trigger window as the tween that flies it into the nav, so
+               the turn and the docking are one gesture: it spins up out of the
+               page and lands as the wordmark. */
+            gsap.to("#bg-logo-spin", {
+              /* Exactly one turn, not 460 degrees. The mark has to come to
+                 rest face-on, because where it comes to rest is the nav bar —
+                 and 460 left it sitting at 100 degrees, which is a wordmark
+                 turned nearly edge-on for the whole rest of the page. Any
+                 multiple of 360 is safe; nothing else is. */
+              rotationY: 360,
               ease: "none",
+              transformOrigin: "50% 50%",
               scrollTrigger: {
                 trigger: "#hero",
                 start: "top top",
-                end: "bottom top",
-                scrub: 1.2,
+                end: "48% top",
+                scrub: 0.8,
+                invalidateOnRefresh: true,
               },
             });
           }
@@ -827,102 +905,83 @@ export function LandingRedesign() {
             { x: 0, duration: 0.62, stagger: 0.06, ease: "expo.out" },
           );
 
-          if (brandRef.current) {
-            gsap.set("#bg-logo", {
-              x: 0,
-              xPercent: -50,
-              yPercent: -50,
-              transformOrigin: "50% 50%",
-            });
-            gsap
-              .timeline({
-                scrollTrigger: {
-                  trigger: "#hero",
-                  start: "top top",
-                  end: "45% top",
-                  scrub: reduceMotion ? false : 1,
-                  invalidateOnRefresh: true,
-                },
-              })
-              .to("#bg-logo", {
-                x: () => {
-                  const target = document
-                    .querySelector(".lp-nav-brand-mark-target")
-                    ?.getBoundingClientRect();
-                  return target
-                    ? target.left + target.width / 2 - window.innerWidth / 2
-                    : 0;
-                },
-                xPercent: -50,
-                y: () => {
-                  const target = document
-                    .querySelector(".lp-nav-brand-mark-target")
-                    ?.getBoundingClientRect();
-                  return target
-                    ? target.top + target.height / 2 - window.innerHeight / 2
-                    : -window.innerHeight / 2 + 32;
-                },
-                yPercent: -50,
-                scale: () => {
-                  const target = document.querySelector(
-                    ".lp-nav-brand-mark-target",
-                  ) as HTMLElement | null;
-                  return target && brandRef.current
-                    ? target.offsetWidth / brandRef.current.offsetWidth
-                    : 0.11;
-                },
-                color: "var(--primary-foreground)",
-                opacity: 1,
-                duration: 1,
-                ease: "power2.inOut",
-              });
-          }
+          /* The tween that flew the mark into the nav lived here and is gone.
+             It positioned a `fixed` element by computing offsets from the
+             viewport centre to a hidden landing pad in the bar — and when that
+             arithmetic did not land, the mark did not fall back to anything.
+             It simply stayed put: 128px of translucent glass parked over the
+             page, drifting across the rehearsal panel, the transcript and the
+             guidance column as the reader scrolled. Measured at six scroll
+             positions from 0 to past the product window, it never moved and
+             never shrank.
 
+             The mark is now `absolute` inside the hero, which already clips
+             its overflow, so it cannot reach the sections below whatever any
+             animation does or fails to do. The nav carries its own mark, which
+             is what the flight was for. */
+
+          /* `toggleActions`, not `once`.
+             `once: true` fires a reveal a single time and then throws the
+             trigger away, so scrolling back up and down again shows content
+             that has already arrived — the page is finished with you after one
+             pass. "play none none reverse" runs it on the way down and rewinds
+             it on the way back up, so the second descent looks like the first.
+
+             They stay in the hidden-tab register. It is tempting to argue a
+             reversible trigger repairs itself the next time it is crossed, but
+             that is wrong: while the tab is hidden the ticker is stalled, so
+             the trigger fires and the tween never advances. There is no "next
+             time" until somebody is already looking at a half-drawn page.
+             Measured that way, the product window sat at 0.19. */
           gsap.utils
             .toArray<HTMLElement>("[data-scroll-reveal]")
             .forEach((element) => {
-              gsap.from(element, {
-                y: 56,
-                opacity: 0,
-                duration: 0.9,
-                ease: "power3.out",
-                scrollTrigger: {
-                  trigger: element,
-                  start: "top 85%",
-                  once: true,
-                },
-              });
+              reveals.push(
+                gsap.from(element, {
+                  y: 56,
+                  opacity: 0,
+                  duration: 0.9,
+                  ease: "power3.out",
+                  scrollTrigger: {
+                    trigger: element,
+                    start: "top 85%",
+                    toggleActions: "play none none reverse",
+                  },
+                }),
+              );
             });
 
-          gsap.from(".lp-product-window", {
-            y: 120,
-            scale: 0.92,
-            rotate: -1.5,
-            opacity: 0,
-            duration: 1.15,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: ".lp-product-window",
-              start: "top 88%",
-              once: true,
-            },
-          });
+          reveals.push(
+            gsap.from(".lp-product-window", {
+              y: 120,
+              scale: 0.92,
+              opacity: 0,
+              duration: 1.15,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: ".lp-product-window",
+                start: "top 88%",
+                toggleActions: "play none none reverse",
+              },
+            }),
+          );
 
           gsap.utils
             .toArray<HTMLElement>("[data-feature-card]")
             .forEach((element, index) => {
-              gsap.from(element, {
-                x: index % 2 === 0 ? -110 : 110,
-                rotate: index % 2 === 0 ? -1.5 : 1.5,
-                opacity: 0,
-                duration: 1,
-                ease: "power3.out",
-                scrollTrigger: {
-                  trigger: element,
-                  start: "top 86%",
-                  once: true,
-                },
-              });
+              reveals.push(
+                gsap.from(element, {
+                  x: index % 2 === 0 ? -60 : 60,
+                  opacity: 0,
+                  duration: 1,
+                  ease: "power3.out",
+                  scrollTrigger: {
+                    trigger: element,
+                    start: "top 86%",
+                    toggleActions: "play none none reverse",
+                  },
+                }),
+              );
             });
 
           /* The cursor halo, orb and particle trail lived here.
@@ -967,6 +1026,10 @@ export function LandingRedesign() {
              `design.md` bans it, and a panel that rotates under the mouse
              makes a marked transcript harder to read, which is the one
              thing on this page that has to stay readable. */
+          // Last, once every reveal is registered. Called earlier it could
+          // only ever see the ones created so far, which is how the product
+          // window stayed at opacity 0.2 while the headline was fine.
+          settleReveals();
         }, pageRef);
       },
     );
@@ -974,6 +1037,9 @@ export function LandingRedesign() {
     return () => {
       cancelled = true;
       navRef.current?.classList.remove("is-light");
+      docCleanups.forEach((cleanup) => {
+        cleanup();
+      });
       hoverCleanups.forEach((cleanup) => {
         cleanup();
       });
@@ -989,14 +1055,6 @@ export function LandingRedesign() {
       ref={pageRef}
       className="lp-v2 min-h-screen overflow-x-clip bg-background font-sans text-foreground"
     >
-      <div
-        id="bg-logo"
-        ref={brandRef}
-        aria-hidden="true"
-        className="pointer-events-none fixed top-1/2 left-1/2 z-[60] h-[clamp(12rem,25vw,23rem)] w-[clamp(12rem,25vw,23rem)] -translate-x-1/2 -translate-y-1/2 text-[var(--ok-light)] opacity-[0.18] will-change-transform"
-      >
-        <ExplainaloudMark className="h-full w-full" strokeWidth={4.5} />
-      </div>
       <nav
         ref={navRef}
         className="lp-sky-nav fixed inset-x-0 top-0 z-50 border-white/20 border-b text-primary-foreground"
@@ -1024,10 +1082,7 @@ export function LandingRedesign() {
             <span className="lp-nav-brand-copy font-sans font-semibold text-sm tracking-[-0.02em]">
               Explainaloud
             </span>
-            <span
-              aria-hidden="true"
-              className="lp-nav-brand-mark-target h-6 w-6 shrink-0 opacity-0"
-            />
+            <ExplainaloudMark className="h-6 w-6 shrink-0" />
           </Link>
           <div className="flex items-center justify-self-end gap-2">
             <Link
@@ -1050,11 +1105,35 @@ export function LandingRedesign() {
       <section
         id="hero"
         ref={heroRef}
-        className="lp-atmosphere relative overflow-hidden border-white/15 border-b bg-primary px-5 text-primary-foreground md:px-8"
+        className="lp-atmosphere relative overflow-hidden bg-primary px-5 text-primary-foreground md:px-8"
       >
-        <div className="relative flex min-h-screen flex-col pt-20 md:pt-24">
-          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center">
-            <h1 className="relative mx-auto max-w-[12ch] font-display text-[clamp(2.9rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
+        <div
+          aria-hidden="true"
+          className="lp-hero-scrim absolute inset-0 z-[1]"
+        />
+
+        {/* Absolute, and inside the hero, which already clips its overflow.
+            A fixed ornament at the document root can always end up over
+            content — this one did, for the whole page. An absolute one in a
+            clipped section cannot reach past it. */}
+        <div
+          id="bg-logo"
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-[62%] z-[1] hidden h-[clamp(8rem,13vw,12rem)] w-[clamp(8rem,13vw,12rem)] -translate-y-1/2 text-[length:clamp(8rem,13vw,12rem)] opacity-45 [perspective:900px] will-change-transform lg:block"
+        >
+          {/* The spin is on its own element so nothing else is competing for
+              the same transform. */}
+          <div
+            id="bg-logo-spin"
+            className="h-full w-full will-change-transform"
+            style={{ transformStyle: "preserve-3d" }}
+          >
+            <GlassMark className="h-full w-full" />
+          </div>
+        </div>
+        <div className="relative z-[2] flex min-h-screen flex-col pt-20 md:pt-24">
+          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center lg:items-start lg:text-left">
+            <h1 className="relative mx-auto max-w-[12ch] font-display lg:mx-0 lg:max-w-[11ch] text-[clamp(2.9rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
               <span className="block overflow-hidden pb-[0.08em]">
                 <span data-hero-word className="inline-block">
                   Say
@@ -1087,41 +1166,19 @@ export function LandingRedesign() {
               </span>
             </h1>
 
-            <div
-              data-kinetic
-              aria-hidden="true"
-              className="absolute top-[19%] left-[2%] hidden -rotate-3 border border-white/35 bg-[var(--ok)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
-            >
-              Reached · main point
-            </div>
-            <div
-              data-kinetic
-              aria-hidden="true"
-              className="absolute top-[30%] right-[1%] hidden rotate-2 border border-white/35 bg-[var(--vague)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
-            >
-              Too thin · evidence
-            </div>
-            <div
-              data-kinetic
-              aria-hidden="true"
-              className="absolute bottom-[8%] left-[2%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
-            >
-              Missed · example
-            </div>
-
             <p
               data-hero-secondary
-              className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed"
+              className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
             >
-              Rehearse a presentation, or learn a subject, by explaining it out
-              loud. See which ideas landed, which were rushed, and which never
-              made it out of your head.
+              Upload your slides or your notes. Explain them out loud for three
+              minutes. Explainaloud marks what you said against the material —
+              sentence by sentence — and shows you the point you never reached.
             </p>
 
             <motion.div
               data-hero-secondary
               data-gsap-lock
-              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row"
+              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
             >
               <Link
                 href="/signup"
@@ -1139,16 +1196,9 @@ export function LandingRedesign() {
                 See how it works
               </a>
             </motion.div>
-
-            <p
-              data-hero-secondary
-              className="mt-6 max-w-[36rem] font-mono text-[0.6rem] text-primary-foreground/75 uppercase tracking-[0.12em]"
-            >
-              Speech and presentation rehearsal · Studying by the Feynman method
-            </p>
           </div>
 
-          <div className="relative z-10 pb-6">
+          <div className="relative z-10 pb-24 md:pb-28">
             <LiveRehearsalPanel />
           </div>
         </div>
@@ -1163,19 +1213,14 @@ export function LandingRedesign() {
           data-story-section
           data-gsap-lock
           data-gsap-hover
-          className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[1.6rem] border border-[rgba(15,35,64,0.2)] bg-card shadow-[10px_12px_0_rgba(6,18,38,0.82)]"
+          className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[20px] border border-border bg-card"
         >
           <div
             data-story-step
-            className="flex items-center border-border border-b px-5 py-4"
+            className="border-border border-b px-6 py-4 md:px-10 lg:px-12"
           >
-            <div className="flex gap-1.5" aria-hidden="true">
-              <span className="h-2.5 w-2.5 rounded-full bg-border" />
-              <span className="h-2.5 w-2.5 rounded-full bg-border" />
-              <span className="h-2.5 w-2.5 rounded-full bg-border" />
-            </div>
-            <span className="mx-auto -translate-x-5 font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
-              Live explanation · Physics
+            <span className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
+              You are explaining · Physics
             </span>
           </div>
 
@@ -1253,12 +1298,16 @@ export function LandingRedesign() {
             </div>
 
             <aside className="border-border border-t bg-muted p-6 text-left md:border-t-0 md:border-l md:p-7">
-              <p className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
-                What you missed
+              <p className="font-mono text-[0.65rem] text-brand-ink uppercase tracking-[0.12em]">
+                Do this next
+              </p>
+              <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+                While you talk, this column fills with the one thing worth
+                fixing before your next run.
               </p>
               <div
                 data-gsap-hover
-                className="mt-6 rounded-sm border border-white/10 border-l-2 border-l-miss bg-[var(--panel-deep)] p-5 shadow-[4px_4px_0_#000]"
+                className="mt-6 rounded-sm border border-white/10 border-l-2 border-l-miss bg-[var(--panel-deep)] p-5 shadow-[4px_4px_0_rgba(6,18,38,0.7)]"
               >
                 {/* The lit tint, not the fill. `--miss` is tuned to be read on
                     stock; on the deep panel it lands near 3:1 and the label
@@ -1273,13 +1322,42 @@ export function LandingRedesign() {
                   Reveal the idea that completes your explanation.
                 </p>
               </div>
-              <AhaMoment />
               <div className="mt-4 flex items-center gap-2 text-muted-foreground text-xs">
                 <LockKeyhole className="h-3.5 w-3.5" /> Audio is never stored
               </div>
             </aside>
           </div>
         </motion.div>
+      </section>
+
+      {/* The "why". The page demonstrated the product at length and never made
+          an argument for it: a reader who already owns flashcards had no reason
+          given to want this. Three contrasts, no competitor named and no
+          claim that cannot be checked by thinking about it. */}
+      <section
+        data-scroll-reveal
+        className="border-border border-y bg-card px-5 py-20 md:px-8 md:py-24"
+      >
+        <div className="mx-auto max-w-[76rem]">
+          <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
+            Why out loud
+          </p>
+          <h2 className="mt-5 max-w-[20ch] font-display text-[clamp(2.1rem,4vw,3.6rem)] text-strong leading-[1.02] tracking-[-0.04em]">
+            A quiz can be passed by recognising. Saying it cannot.
+          </h2>
+          <div className="mt-12 grid gap-10 border-border border-t pt-10 md:grid-cols-3 md:gap-12">
+            {whyOutLoud.map((item) => (
+              <article key={item.title}>
+                <h3 className="font-semibold text-lg text-strong tracking-[-0.02em]">
+                  {item.title}
+                </h3>
+                <p className="mt-3 text-muted-foreground leading-relaxed">
+                  {item.body}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
       </section>
 
       <ResultsCarousel />
@@ -1391,7 +1469,7 @@ export function LandingRedesign() {
 
       <section
         className="lp-closing-forest px-5 py-20 md:px-8 md:py-28"
-        style={closingShoreStyle}
+        style={closingFieldStyle}
       >
         <motion.div
           data-scroll-reveal
