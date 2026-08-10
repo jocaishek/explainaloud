@@ -1,23 +1,33 @@
 @import "tailwindcss";
 
+/* The landing's blue is sampled off the shore photograph rather than picked:
+ * its average is #30466f, its deep water #1b2052, its foam #95b8cc. Chrome
+ * that sits over a photograph has to come from the photograph or it reads as
+ * two products stapled together, which is what the forest green was doing to
+ * the navy.
+ *
+ * The three verdict colours are deliberately untouched. They are not brand —
+ * they mean correct, missed and vague, and they have to mean that on both
+ * sides of sign-in. Now that the accent is blue they stop competing with it
+ * and read purely as data, which is the one good thing about this change. */
 main.lp-v2 {
-  --background: #f2f0e7;
-  --foreground: #17372c;
-  --card: #fffdf4;
-  --panel-deep: #0b3023;
-  --card-foreground: #17372c;
-  --muted: #e7e9df;
-  --muted-foreground: #62766c;
-  --primary: #176447;
-  --primary-foreground: #f4f0eb;
-  --border: rgba(18, 61, 44, 0.18);
+  --background: #eceff5;
+  --foreground: #16253d;
+  --card: #fcfdff;
+  --panel-deep: #142744;
+  --card-foreground: #16253d;
+  --muted: #e0e5ee;
+  --muted-foreground: #5b6a82;
+  --primary: #1d3a63;
+  --primary-foreground: #eef2f8;
+  --border: rgba(21, 40, 68, 0.18);
   --brand: #ffffff;
-  --brand-ink: #287754;
-  --brand-deep: #19563e;
-  --brand-foreground: #143b2d;
-  --accent-solid: #fffdf8;
-  --accent-solid-hover: #e9f4ff;
-  --strong: #17372c;
+  --brand-ink: #2b5c8f;
+  --brand-deep: #1d3a63;
+  --brand-foreground: #122540;
+  --accent-solid: #fbfcff;
+  --accent-solid-hover: #e7eef8;
+  --strong: #16253d;
   --ok: #2f9b68;
   --ok-light: #bfe4cf;
   --vague: #c68a2d;
@@ -26,24 +36,29 @@ main.lp-v2 {
   --miss-light: #efc1bb;
 }
 
+/* The photograph is used as shot: no blur, no duotone, no crop beyond what
+ * `cover` does to fit the viewport. The one thing over it is a scrim, and it
+ * is shaped rather than flat — the foam runs diagonally through the lower
+ * half, which is exactly where the buttons and the tagline sit, and white
+ * type on bright surf is a coin toss. */
 .lp-v2 .lp-atmosphere {
   isolation: isolate;
   background:
-    linear-gradient(180deg, rgba(3, 23, 16, 0.28), rgba(4, 32, 22, 0.46)),
     linear-gradient(
-      90deg,
-      rgba(4, 28, 19, 0.18),
-      transparent 28% 72%,
-      rgba(4, 28, 19, 0.22)
+      180deg,
+      rgba(4, 12, 26, 0.5) 0%,
+      rgba(4, 12, 26, 0.26) 42%,
+      rgba(4, 12, 26, 0.46) 74%,
+      rgba(3, 9, 20, 0.62) 100%
     ),
-    url("/landing/explainaloud-forest-v1.jpg") center / cover no-repeat;
+    url("/landing/explainaloud-shore-v1.webp") center / cover no-repeat;
 }
 
 .lp-v2 .lp-sky-nav {
   background: linear-gradient(
     180deg,
-    rgba(5, 34, 23, 0.92),
-    rgba(5, 34, 23, 0.54)
+    rgba(9, 22, 44, 0.92),
+    rgba(9, 22, 44, 0.54)
   );
   transition:
     background 320ms cubic-bezier(0.23, 1, 0.32, 1),
@@ -62,7 +77,7 @@ html:has(main.lp-v2) {
 .lp-v2 .lp-nav-link {
   position: relative;
   padding-block: 0.45rem;
-  color: rgba(244, 240, 235, 0.76);
+  color: rgba(238, 242, 248, 0.76);
 }
 
 .lp-v2 .lp-nav-link::after {
@@ -93,7 +108,7 @@ html:has(main.lp-v2) {
  * allowed here and nowhere else on the page: this is the one element that
  * genuinely sits over content scrolling underneath it. */
 .lp-v2 .lp-sky-nav.is-light {
-  background: rgba(252, 251, 246, 0.82);
+  background: rgba(249, 251, 254, 0.84);
   backdrop-filter: saturate(1.4) blur(14px);
   -webkit-backdrop-filter: saturate(1.4) blur(14px);
   border-color: var(--border);

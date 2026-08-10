@@ -44,10 +44,10 @@ const steps = [
 
 const ease = [0.23, 1, 0.32, 1] as const;
 
-const closingForestStyle: CSSProperties = {
+const closingShoreStyle: CSSProperties = {
   backgroundImage:
-    'linear-gradient(180deg, rgba(5, 31, 22, 0.48), rgba(3, 23, 16, 0.72)), url("/landing/explainaloud-forest-v1.jpg")',
-  backgroundPosition: "center 72%",
+    'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-shore-v1.webp")',
+  backgroundPosition: "center 60%",
   backgroundSize: "cover",
   backgroundAttachment: "fixed",
 };
@@ -141,7 +141,7 @@ function LiveRehearsalPanel() {
   return (
     <section
       aria-label="What Explainaloud shows while you rehearse"
-      className="mx-auto w-full max-w-[46rem] border border-white/20 bg-[var(--panel-deep)] text-primary-foreground shadow-[6px_7px_0_rgba(3,20,14,0.72)]"
+      className="mx-auto w-full max-w-[46rem] border border-white/20 bg-[var(--panel-deep)] text-primary-foreground shadow-[6px_7px_0_rgba(4,14,32,0.72)]"
     >
       <div className="flex items-center gap-4 border-white/12 border-b px-4 py-3.5 sm:px-5">
         <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--miss)] text-white">
@@ -205,7 +205,7 @@ function LiveRehearsalPanel() {
                 style={{
                   backgroundColor: isRevealed
                     ? result.color
-                    : "rgba(244, 240, 235, 0.16)",
+                    : "rgba(238, 242, 248, 0.16)",
                 }}
               />
               <span
@@ -339,7 +339,7 @@ function IntroPanel() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 12, scale: 0.96 }}
             transition={{ type: "spring", stiffness: 340, damping: 25 }}
-            className="w-[min(21rem,calc(100vw-2.5rem))] border border-white/15 bg-[var(--panel-deep)] p-5 text-left text-primary-foreground shadow-[6px_6px_0_rgba(5,28,20,0.72)]"
+            className="w-[min(21rem,calc(100vw-2.5rem))] border border-white/15 bg-[var(--panel-deep)] p-5 text-left text-primary-foreground shadow-[6px_6px_0_rgba(6,18,38,0.72)]"
           >
             <div className="flex items-start gap-3">
               <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ok)] text-white">
@@ -376,7 +376,7 @@ function IntroPanel() {
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         whileTap={reduceMotion ? undefined : { scale: 0.9 }}
-        className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[var(--panel-deep)] text-primary-foreground shadow-[4px_4px_0_rgba(5,28,20,0.78)]"
+        className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[var(--panel-deep)] text-primary-foreground shadow-[4px_4px_0_rgba(6,18,38,0.78)]"
       >
         {!reduceMotion && (
           <motion.span
@@ -525,42 +525,54 @@ function ResultsCarousel() {
           })}
         </div>
 
-        <div className="relative overflow-hidden rounded-[1.1rem] border border-border bg-card p-4 shadow-[7px_8px_0_rgba(18,53,36,0.22)] md:p-6">
+        <div className="relative overflow-hidden rounded-[1.1rem] border border-border bg-card p-4 shadow-[7px_8px_0_rgba(15,35,64,0.22)] md:p-6">
           <div className="flex items-center justify-between font-mono text-[0.62rem] text-muted-foreground uppercase tracking-[0.12em]">
             <span>Live rehearsal · 01:42</span>
             <span>{activeStage + 1} / 3</span>
           </div>
+          {/* All three stages are laid into the same grid cell, so the panel
+              is always as tall as the longest of them and nothing moves when
+              one swaps for another. A `min-h` grew with whichever quote was
+              showing, which resized the page under the reader — and a fixed
+              height would only be that same bug with a magic number in front
+              of it, waiting for the next copy edit. */}
           <div
-            className={`mt-5 flex min-h-[19rem] flex-col rounded-none border-white/10 border-y border-r border-l-2 p-7 text-card-foreground transition-colors duration-500 md:p-9 ${stage.surface}`}
+            className={`mt-5 grid rounded-none border-white/10 border-y border-r border-l-2 p-7 text-card-foreground transition-colors duration-500 md:p-9 ${stage.surface}`}
             style={{ borderLeftColor: stage.color }}
           >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={stage.label}
-                initial={reduceMotion ? false : { opacity: 0, y: 14 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -10 }}
-                transition={{ duration: 0.4, ease }}
-                className="flex flex-1 flex-col"
-              >
-                <div
-                  className="flex items-center gap-3 font-mono text-[0.64rem] uppercase tracking-[0.12em]"
-                  style={{ color: stage.color }}
+            {stages.map((item, index) => {
+              const isActive = index === activeStage;
+              return (
+                <motion.div
+                  key={item.label}
+                  aria-hidden={!isActive}
+                  initial={false}
+                  animate={{
+                    opacity: isActive ? 1 : 0,
+                    y: isActive || reduceMotion ? 0 : 10,
+                  }}
+                  transition={{ duration: 0.4, ease }}
+                  className="col-start-1 row-start-1 flex flex-col"
                 >
-                  <span
-                    className="h-2.5 w-2.5"
-                    style={{ backgroundColor: stage.color }}
-                  />
-                  {stage.eyebrow}
-                </div>
-                <p className="mt-7 font-display text-[clamp(1.9rem,3vw,2.9rem)] text-white leading-[1.08] tracking-[-0.03em]">
-                  {stage.quote}
-                </p>
-                <p className="mt-auto max-w-[30rem] pt-7 text-primary-foreground/70 leading-relaxed">
-                  {stage.note}
-                </p>
-              </motion.div>
-            </AnimatePresence>
+                  <div
+                    className="flex items-center gap-3 font-mono text-[0.64rem] uppercase tracking-[0.12em]"
+                    style={{ color: item.color }}
+                  >
+                    <span
+                      className="h-2.5 w-2.5"
+                      style={{ backgroundColor: item.color }}
+                    />
+                    {item.eyebrow}
+                  </div>
+                  <p className="mt-7 font-display text-[clamp(1.9rem,3vw,2.9rem)] text-white leading-[1.08] tracking-[-0.03em]">
+                    {item.quote}
+                  </p>
+                  <p className="mt-auto max-w-[30rem] pt-7 text-primary-foreground/70 leading-relaxed">
+                    {item.note}
+                  </p>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
@@ -574,9 +586,23 @@ function ResultsCarousel() {
           <h2 className="mt-5 font-display text-[clamp(2.2rem,3.4vw,3.4rem)] text-strong leading-[1.02] tracking-[-0.04em]">
             Your points update as you speak.
           </h2>
-          <p className="mt-6 min-h-[3.5rem] text-muted-foreground leading-relaxed">
-            {stage.detail}
-          </p>
+          {/* Stacked for the same reason as the panel: these three run to
+              different line counts, and on a narrow column that is the
+              difference between two lines and four. */}
+          <div className="mt-6 grid">
+            {stages.map((item, index) => (
+              <motion.p
+                key={item.label}
+                aria-hidden={index !== activeStage}
+                initial={false}
+                animate={{ opacity: index === activeStage ? 1 : 0 }}
+                transition={{ duration: 0.4, ease }}
+                className="col-start-1 row-start-1 text-muted-foreground leading-relaxed"
+              >
+                {item.detail}
+              </motion.p>
+            ))}
+          </div>
         </div>
       </div>
     </section>
@@ -1064,21 +1090,21 @@ export function LandingRedesign() {
             <div
               data-kinetic
               aria-hidden="true"
-              className="absolute top-[19%] left-[2%] hidden -rotate-3 border border-white/35 bg-[var(--ok)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(5,28,20,0.75)] lg:block"
+              className="absolute top-[19%] left-[2%] hidden -rotate-3 border border-white/35 bg-[var(--ok)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
             >
               Reached · main point
             </div>
             <div
               data-kinetic
               aria-hidden="true"
-              className="absolute top-[30%] right-[1%] hidden rotate-2 border border-white/35 bg-[var(--vague)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(5,28,20,0.75)] lg:block"
+              className="absolute top-[30%] right-[1%] hidden rotate-2 border border-white/35 bg-[var(--vague)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
             >
               Too thin · evidence
             </div>
             <div
               data-kinetic
               aria-hidden="true"
-              className="absolute bottom-[8%] left-[2%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(5,28,20,0.75)] lg:block"
+              className="absolute bottom-[8%] left-[2%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
             >
               Missed · example
             </div>
@@ -1100,7 +1126,7 @@ export function LandingRedesign() {
               <Link
                 href="/signup"
                 data-gsap-hover
-                className="group inline-flex h-12 items-center gap-5 border border-[var(--accent-solid)] bg-[var(--accent-solid)] px-6 font-medium text-[var(--brand-foreground)] shadow-[4px_4px_0_rgba(5,28,20,0.85)]"
+                className="group inline-flex h-12 items-center gap-5 border border-[var(--accent-solid)] bg-[var(--accent-solid)] px-6 font-medium text-[var(--brand-foreground)] shadow-[4px_4px_0_rgba(6,18,38,0.85)]"
               >
                 Start explaining
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -1116,7 +1142,7 @@ export function LandingRedesign() {
 
             <p
               data-hero-secondary
-              className="mt-6 max-w-[36rem] font-mono text-[0.6rem] text-primary-foreground/55 uppercase tracking-[0.12em]"
+              className="mt-6 max-w-[36rem] font-mono text-[0.6rem] text-primary-foreground/75 uppercase tracking-[0.12em]"
             >
               Speech and presentation rehearsal · Studying by the Feynman method
             </p>
@@ -1137,7 +1163,7 @@ export function LandingRedesign() {
           data-story-section
           data-gsap-lock
           data-gsap-hover
-          className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[1.6rem] border border-[rgba(18,53,36,0.2)] bg-card shadow-[10px_12px_0_rgba(5,28,20,0.82)]"
+          className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[1.6rem] border border-[rgba(15,35,64,0.2)] bg-card shadow-[10px_12px_0_rgba(6,18,38,0.82)]"
         >
           <div
             data-story-step
@@ -1365,11 +1391,11 @@ export function LandingRedesign() {
 
       <section
         className="lp-closing-forest px-5 py-20 md:px-8 md:py-28"
-        style={closingForestStyle}
+        style={closingShoreStyle}
       >
         <motion.div
           data-scroll-reveal
-          className="mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-20 text-left text-primary-foreground shadow-[6px_6px_0_rgba(3,20,14,0.55)] md:px-12 md:py-28"
+          className="mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-20 text-left text-primary-foreground shadow-[6px_6px_0_rgba(4,14,32,0.55)] md:px-12 md:py-28"
         >
           <motion.span
             animate={
