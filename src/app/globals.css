@@ -115,54 +115,6 @@ html:has(main.lp-v2) {
   pointer-events: none;
 }
 
-.lp-v2 .lp-cursor-halo,
-.lp-v2 .lp-cursor-orb,
-.lp-v2 .lp-cursor-particle {
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 70;
-  border-radius: 999px;
-  pointer-events: none;
-  will-change: transform;
-}
-
-.lp-v2 .lp-cursor-halo {
-  width: 5.5rem;
-  height: 5.5rem;
-  border: 1px solid rgba(244, 240, 235, 0.34);
-  background: radial-gradient(
-    circle,
-    rgba(255, 253, 248, 0.12),
-    rgba(139, 196, 122, 0.07) 46%,
-    transparent 70%
-  );
-  transform: translate(-50%, -50%);
-  box-shadow: 0 0 0 1px rgba(87, 139, 99, 0.24);
-}
-
-.lp-v2 .lp-cursor-orb {
-  width: 1.1rem;
-  height: 1.1rem;
-  border: 1px solid rgba(244, 240, 235, 0.65);
-  background: rgba(216, 160, 75, 0.2);
-  transform: translate(-50%, -50%);
-}
-
-.lp-v2 .lp-cursor-particle {
-  width: 0.28rem;
-  height: 0.28rem;
-  background: var(--accent-solid);
-}
-
-@media (hover: none), (prefers-reduced-motion: reduce) {
-  .lp-v2 .lp-cursor-halo,
-  .lp-v2 .lp-cursor-orb,
-  .lp-v2 .lp-cursor-particle {
-    display: none;
-  }
-}
-
 .lp-v2 .lp-verdict-ok,
 .lp-v2 .lp-verdict-vague {
   font-style: italic;
