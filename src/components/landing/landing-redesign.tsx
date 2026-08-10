@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
+import { GlassMark } from "~/components/landing/glass-mark";
 
 const transcript = [
   { text: "Newton’s third law says forces come in pairs, ", tone: "plain" },
@@ -866,6 +867,35 @@ export function LandingRedesign() {
                doing deliberately or not at all. */
           }
 
+          if (!reduceMotion) {
+            /* The mark turns because the reader scrolls, not on a clock of its
+               own. A logo rotating by itself is a loading spinner, which is
+               the one thing an identity mark must never be mistaken for; the
+               same rotation tied to scroll is an object the reader is moving
+               around, which is the point.
+               
+               Same trigger window as the tween that flies it into the nav, so
+               the turn and the docking are one gesture: it spins up out of the
+               page and lands as the wordmark. */
+            gsap.to("#bg-logo-spin", {
+              /* Exactly one turn, not 460 degrees. The mark has to come to
+                 rest face-on, because where it comes to rest is the nav bar —
+                 and 460 left it sitting at 100 degrees, which is a wordmark
+                 turned nearly edge-on for the whole rest of the page. Any
+                 multiple of 360 is safe; nothing else is. */
+              rotationY: 360,
+              ease: "none",
+              transformOrigin: "50% 50%",
+              scrollTrigger: {
+                trigger: "#hero",
+                start: "top top",
+                end: "48% top",
+                scrub: 0.8,
+                invalidateOnRefresh: true,
+              },
+            });
+          }
+
           gsap.fromTo(
             "[data-gsap-lock]",
             { x: -42 },
@@ -1041,9 +1071,19 @@ export function LandingRedesign() {
         id="bg-logo"
         ref={brandRef}
         aria-hidden="true"
-        className="pointer-events-none fixed top-1/2 left-1/2 z-[60] h-[clamp(12rem,25vw,23rem)] w-[clamp(12rem,25vw,23rem)] -translate-x-1/2 -translate-y-1/2 text-white/70 opacity-[0.07] will-change-transform"
+        className="pointer-events-none fixed top-1/2 left-1/2 z-[60] h-[clamp(8rem,15vw,13rem)] w-[clamp(8rem,15vw,13rem)] -translate-x-1/2 -translate-y-1/2 text-[length:clamp(8rem,15vw,13rem)] opacity-45 [perspective:900px] will-change-transform"
       >
-        <ExplainaloudMark className="h-full w-full" strokeWidth={4.5} />
+        {/* The spin lives on its own element. The outer one is already
+            carrying the scroll tween that flies the mark into the nav, and
+            driving both rotation and position from one transform means the
+            two fight over it. */}
+        <div
+          id="bg-logo-spin"
+          className="h-full w-full will-change-transform"
+          style={{ transformStyle: "preserve-3d" }}
+        >
+          <GlassMark className="h-full w-full" />
+        </div>
       </div>
       <nav
         ref={navRef}
