@@ -868,16 +868,6 @@ export function LandingRedesign() {
           settleIntro();
 
           if (!reduceMotion) {
-            gsap.to("[data-kinetic]", {
-              y: (index) => (index % 2 === 0 ? -7 : 6),
-              rotate: (index) => (index % 2 === 0 ? -1.2 : 1.2),
-              duration: (index) => 4.2 + index * 0.4,
-              stagger: 0.16,
-              repeat: -1,
-              yoyo: true,
-              ease: "sine.inOut",
-            });
-
             /* A `background-position` parallax on the hero lived here, and it
                had to go for two reasons.
 
@@ -1210,28 +1200,6 @@ export function LandingRedesign() {
               </span>
             </h1>
 
-            <div
-              data-kinetic
-              aria-hidden="true"
-              className="absolute top-[14%] left-[54%] hidden -rotate-3 border border-white/35 bg-[var(--ok)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
-            >
-              Reached · main point
-            </div>
-            <div
-              data-kinetic
-              aria-hidden="true"
-              className="absolute top-[41%] right-[4%] hidden rotate-2 border border-white/35 bg-[var(--vague)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
-            >
-              Too thin · evidence
-            </div>
-            <div
-              data-kinetic
-              aria-hidden="true"
-              className="absolute bottom-[26%] left-[62%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
-            >
-              Missed · example
-            </div>
-
             <p
               data-hero-secondary
               className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
@@ -1262,28 +1230,11 @@ export function LandingRedesign() {
                 See how it works
               </a>
             </motion.div>
-
-            <p
-              data-hero-secondary
-              className="mt-6 max-w-[36rem] font-mono text-[0.6rem] text-primary-foreground uppercase tracking-[0.12em]"
-            >
-              Speech and presentation rehearsal · Studying by the Feynman method
-            </p>
           </div>
 
           <div className="relative z-10 pb-24 md:pb-28">
             <LiveRehearsalPanel />
           </div>
-
-          {/* The hero met the next section at a hard horizontal cut, which is
-              the one edge on the page where the eye has nothing to do but
-              notice it. The dark now dissolves into the stock the section
-              below is painted in, so the crossing is a resolve rather than a
-              join. Sits under the content, over the artwork. */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-40 bg-gradient-to-b from-transparent to-[var(--background)] md:h-52"
-          />
         </div>
         <div ref={navSentinelRef} aria-hidden="true" className="h-px w-full" />
       </section>
