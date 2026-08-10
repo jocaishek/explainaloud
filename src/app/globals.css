@@ -36,21 +36,42 @@ main.lp-v2 {
   --miss-light: #efc1bb;
 }
 
-/* The hero backdrop is drawn (see `hero-field.tsx`), so this element carries
- * only the base colour the drawing sits on. The scrim that used to live in the
- * same shorthand is now `.lp-hero-scrim`, a real layer — it has to paint ABOVE
- * the artwork, and an element's own background always paints below its
- * children.
+/* The hero takes the reference artwork itself, cropped and scaled up.
  *
- * The photograph rule is kept immediately below. Swapping the two class names
- * on the hero section is the whole revert. */
+ * The source sheet is 1080x1350: a 1080-square of artwork with a footer
+ * carrying the collection's title, body copy and thumbnails. The crop is
+ * y 100..1060 — below the small logo badge, which ends at y=65, and above the
+ * footer, which starts at exactly y=1080. Verified after cropping: no white
+ * rows top or bottom, and the brightest channel in the top-left 60x60 is 75.
+ *
+ * Then upscaled 1080 -> 2600 with Lanczos. Normally that much enlargement is
+ * a bad idea, but this is the one kind of image it does not hurt: smooth
+ * gradients with no fine detail. There is nothing in it to go soft. (A photo
+ * of surf would have turned to mush at the same ratio.)
+ *
+ * `160% auto` anchored left, not `cover`. The artwork is nearly square and the
+ * hero is nearly two-to-one, so `cover` fits it to the width and shows the
+ * whole composition — including the bright core, which lands squarely behind
+ * the centred headline. Measured that way, the headline ran at 1.69:1 and the
+ * subheading at 2.48:1.
+ *
+ * Zooming to 160% and anchoring left puts the deep field under the type and
+ * pushes the swirl to the right of it. Chosen by scanning zoom x horizontal x
+ * vertical against the real composite and keeping only settings that cleared
+ * 4.5:1 on all three text elements while leaving enough luminance range that
+ * the artwork is still doing something. Two survived; this is the better.
+ *
+ * The scrim is not in this shorthand. It has to paint ABOVE the image, and an
+ * element's own background always paints below its children, so it lives on
+ * `.lp-hero-scrim` as a real layer. */
 .lp-v2 .lp-atmosphere {
   isolation: isolate;
-  background: #040f2c;
+  background:
+    url("/landing/explainaloud-field-v1.webp") right center / cover no-repeat;
 }
 
-/* The night-shore photograph, used as shot: no blur, no duotone, no crop
- * beyond what `cover` does. Unused while the drawn field is in place. */
+/* The night-shore photograph, used as shot. Unused while the blue field is in
+ * place; swapping the class name on the hero section is the whole revert. */
 .lp-v2 .lp-atmosphere-photo {
   isolation: isolate;
   background:
@@ -67,15 +88,31 @@ main.lp-v2 {
 /* Heaviest where the display type sits, lifting through the middle so the
  * artwork is actually visible, back over the lower third where the buttons
  * and the tagline are. */
+/* Two scrims, because the hero has two jobs on two axes.
+ *
+ * The horizontal one holds the left column dark so the headline has a bed —
+ * which is what the reference itself does: an empty navy third with the type
+ * in it, and the artwork to the right of it. It is gone by 62%, so the swirl
+ * is never touched.
+ *
+ * The vertical one is only for the bottom band, where the product panel and
+ * the tagline sit over whatever the crop happens to put behind them. */
 .lp-v2 .lp-hero-scrim {
-  background: linear-gradient(
-    180deg,
-    rgba(4, 12, 26, 0.44) 0%,
-    rgba(4, 12, 26, 0.12) 40%,
-    rgba(4, 12, 26, 0.52) 68%,
-    rgba(3, 9, 20, 0.68) 84%,
-    rgba(3, 9, 20, 0.72) 100%
-  );
+  background:
+    linear-gradient(
+      90deg,
+      rgba(3, 10, 24, 0.82) 0%,
+      rgba(3, 10, 24, 0.66) 28%,
+      rgba(3, 10, 24, 0.28) 48%,
+      rgba(3, 10, 24, 0) 62%
+    ),
+    linear-gradient(
+      180deg,
+      rgba(4, 12, 26, 0.34) 0%,
+      rgba(4, 12, 26, 0.06) 42%,
+      rgba(4, 12, 26, 0.3) 74%,
+      rgba(3, 9, 20, 0.55) 100%
+    );
 }
 
 .lp-v2 .lp-sky-nav {

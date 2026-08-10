@@ -15,7 +15,6 @@ import {
 import Link from "next/link";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
-import { HeroField } from "~/components/landing/hero-field";
 
 const transcript = [
   { text: "Newton’s third law says forces come in pairs, ", tone: "plain" },
@@ -45,9 +44,9 @@ const steps = [
 
 const ease = [0.23, 1, 0.32, 1] as const;
 
-const closingShoreStyle: CSSProperties = {
+const closingFieldStyle: CSSProperties = {
   backgroundImage:
-    'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-shore-v1.webp")',
+    'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-field-v1.webp")',
   backgroundPosition: "center 60%",
   backgroundSize: "cover",
   /* Not `fixed`. A fixed attachment cannot be promoted to its own compositor
@@ -1101,14 +1100,13 @@ export function LandingRedesign() {
         ref={heroRef}
         className="lp-atmosphere relative overflow-hidden border-white/15 border-b bg-primary px-5 text-primary-foreground md:px-8"
       >
-        <HeroField />
         <div
           aria-hidden="true"
           className="lp-hero-scrim absolute inset-0 z-[1]"
         />
         <div className="relative z-[2] flex min-h-screen flex-col pt-20 md:pt-24">
-          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center">
-            <h1 className="relative mx-auto max-w-[12ch] font-display text-[clamp(2.9rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
+          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center lg:items-start lg:text-left">
+            <h1 className="relative mx-auto max-w-[12ch] font-display lg:mx-0 lg:max-w-[11ch] text-[clamp(2.9rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
               <span className="block overflow-hidden pb-[0.08em]">
                 <span data-hero-word className="inline-block">
                   Say
@@ -1144,28 +1142,28 @@ export function LandingRedesign() {
             <div
               data-kinetic
               aria-hidden="true"
-              className="absolute top-[19%] left-[2%] hidden -rotate-3 border border-white/35 bg-[var(--ok)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
+              className="absolute top-[14%] left-[54%] hidden -rotate-3 border border-white/35 bg-[var(--ok)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
             >
               Reached · main point
             </div>
             <div
               data-kinetic
               aria-hidden="true"
-              className="absolute top-[30%] right-[1%] hidden rotate-2 border border-white/35 bg-[var(--vague)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
+              className="absolute top-[41%] right-[4%] hidden rotate-2 border border-white/35 bg-[var(--vague)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
             >
               Too thin · evidence
             </div>
             <div
               data-kinetic
               aria-hidden="true"
-              className="absolute bottom-[8%] left-[2%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
+              className="absolute bottom-[26%] left-[62%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(6,18,38,0.75)] lg:block"
             >
               Missed · example
             </div>
 
             <p
               data-hero-secondary
-              className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed"
+              className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
             >
               Rehearse a presentation, or learn a subject, by explaining it out
               loud. See which ideas landed, which were rushed, and which never
@@ -1175,7 +1173,7 @@ export function LandingRedesign() {
             <motion.div
               data-hero-secondary
               data-gsap-lock
-              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row"
+              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
             >
               <Link
                 href="/signup"
@@ -1445,7 +1443,7 @@ export function LandingRedesign() {
 
       <section
         className="lp-closing-forest px-5 py-20 md:px-8 md:py-28"
-        style={closingShoreStyle}
+        style={closingFieldStyle}
       >
         <motion.div
           data-scroll-reveal
