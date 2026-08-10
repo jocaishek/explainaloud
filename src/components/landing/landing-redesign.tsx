@@ -246,7 +246,7 @@ function AhaMoment() {
   );
 }
 
-function ForestGuide() {
+function IntroPanel() {
   const [open, setOpen] = useState(false);
   const reduceMotion = useReducedMotion();
 
@@ -267,7 +267,7 @@ function ForestGuide() {
               </span>
               <div>
                 <p className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-[var(--ok-light)]">
-                  Forest guide
+                  Start here
                 </p>
                 <p className="mt-2 font-semibold leading-snug">
                   What do you need to say clearly today?
@@ -292,7 +292,7 @@ function ForestGuide() {
       <motion.button
         type="button"
         data-gsap-hover
-        aria-label={open ? "Close Forest Guide" : "Open Forest Guide"}
+        aria-label={open ? "Close the intro panel" : "What is Explainaloud?"}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         whileTap={reduceMotion ? undefined : { scale: 0.9 }}
@@ -400,7 +400,6 @@ function ScrollJourney() {
 
           <div
             data-gsap-hover
-            data-gsap-tilt
             className="relative overflow-hidden rounded-[1.1rem] border border-border bg-card p-4 shadow-[7px_8px_0_rgba(18,53,36,0.22)] md:p-6"
           >
             <div className="flex items-center justify-between font-mono text-[0.62rem] text-muted-foreground uppercase tracking-[0.12em]">
@@ -746,77 +745,13 @@ export function LandingRedesign() {
               });
             });
 
-          const hasFinePointer = window.matchMedia(
-            "(hover: hover) and (pointer: fine)",
-          ).matches;
-
-          if (!reduceMotion && hasFinePointer) {
-            const cursorHalo = document.createElement("span");
-            cursorHalo.className = "lp-cursor-halo";
-            cursorHalo.setAttribute("aria-hidden", "true");
-            const cursorOrb = document.createElement("span");
-            cursorOrb.className = "lp-cursor-orb";
-            cursorOrb.setAttribute("aria-hidden", "true");
-            pageRef.current?.append(cursorHalo, cursorOrb);
-            generatedNodes.push(cursorHalo, cursorOrb);
-
-            const haloX = gsap.quickTo(cursorHalo, "x", {
-              duration: 0.7,
-              ease: "power3.out",
-            });
-            const haloY = gsap.quickTo(cursorHalo, "y", {
-              duration: 0.7,
-              ease: "power3.out",
-            });
-            const cursorX = gsap.quickTo(cursorOrb, "x", {
-              duration: 0.18,
-              ease: "power3.out",
-            });
-            const cursorY = gsap.quickTo(cursorOrb, "y", {
-              duration: 0.18,
-              ease: "power3.out",
-            });
-            let lastParticleAt = 0;
-            const trackPointer = (event: PointerEvent) => {
-              cursorX(event.clientX);
-              cursorY(event.clientY);
-              haloX(event.clientX);
-              haloY(event.clientY);
-              pageRef.current?.style.setProperty(
-                "--cursor-x",
-                `${event.clientX}px`,
-              );
-              pageRef.current?.style.setProperty(
-                "--cursor-y",
-                `${event.clientY}px`,
-              );
-
-              const now = performance.now();
-              if (now - lastParticleAt < 70) return;
-              lastParticleAt = now;
-              const particle = document.createElement("span");
-              particle.className = "lp-cursor-particle";
-              particle.setAttribute("aria-hidden", "true");
-              pageRef.current?.append(particle);
-              generatedNodes.push(particle);
-              gsap.set(particle, { x: event.clientX, y: event.clientY });
-              gsap.to(particle, {
-                x: event.clientX + gsap.utils.random(-20, 20),
-                y: event.clientY + gsap.utils.random(-30, -12),
-                scale: 0,
-                opacity: 0,
-                duration: 0.85,
-                ease: "power2.out",
-                onComplete: () => particle.remove(),
-              });
-            };
-            window.addEventListener("pointermove", trackPointer, {
-              passive: true,
-            });
-            hoverCleanups.push(() =>
-              window.removeEventListener("pointermove", trackPointer),
-            );
-          }
+          /* The cursor halo, orb and particle trail lived here.
+             `design.md` bans cursor-following effects by name, and this was
+             three of them stacked: a lagging ring, a faster dot, and a
+             particle spawned every 70ms for as long as the pointer moved.
+             They also fought the thing the page is actually about — a
+             transcript being marked — by putting the liveliest motion on
+             screen somewhere the reader is not looking. */
 
           gsap.utils
             .toArray<HTMLElement>("[data-gsap-hover]")
@@ -841,89 +776,17 @@ export function LandingRedesign() {
               });
             });
 
-          if (!reduceMotion && hasFinePointer) {
-            gsap.utils
-              .toArray<HTMLElement>("button:not([disabled]), [data-gsap-hover]")
-              .forEach((element) => {
-                let engaged = false;
-                const move = (event: MouseEvent) => {
-                  engaged = true;
-                  const bounds = element.getBoundingClientRect();
-                  const offsetX =
-                    event.clientX - (bounds.left + bounds.width / 2);
-                  const offsetY =
-                    event.clientY - (bounds.top + bounds.height / 2);
-                  gsap.to(element, {
-                    x: offsetX * 0.2,
-                    y: offsetY * 0.26,
-                    duration: 0.28,
-                    ease: "power3.out",
-                    overwrite: "auto",
-                  });
-                };
-                const release = () => {
-                  if (!engaged) return;
-                  engaged = false;
-                  gsap.to(element, {
-                    x: 0,
-                    y: 0,
-                    duration: 0.65,
-                    ease: "elastic.out(1, 0.45)",
-                    overwrite: "auto",
-                  });
-                };
-                const releaseOutside = (event: PointerEvent) => {
-                  if (!engaged) return;
-                  const bounds = element.getBoundingClientRect();
-                  const isOutside =
-                    event.clientX < bounds.left ||
-                    event.clientX > bounds.right ||
-                    event.clientY < bounds.top ||
-                    event.clientY > bounds.bottom;
-                  if (isOutside) release();
-                };
-                element.addEventListener("mousemove", move);
-                element.addEventListener("mouseleave", release);
-                window.addEventListener("pointermove", releaseOutside, {
-                  passive: true,
-                });
-                hoverCleanups.push(() => {
-                  element.removeEventListener("mousemove", move);
-                  element.removeEventListener("mouseleave", release);
-                  window.removeEventListener("pointermove", releaseOutside);
-                });
-              });
-          }
+          /* Magnetic buttons lived here: every button and hover target drifted
+             toward the pointer and sprang back on elastic easing. Banned by
+             name in `design.md`, alongside the cursor trail above and the 3D
+             tilt below — all three are the same idea, which is decorating the
+             pointer instead of the page. */
 
-          gsap.utils
-            .toArray<HTMLElement>("[data-gsap-tilt]")
-            .forEach((element) => {
-              const move = (event: MouseEvent) => {
-                const bounds = element.getBoundingClientRect();
-                const x = (event.clientX - bounds.left) / bounds.width - 0.5;
-                const y = (event.clientY - bounds.top) / bounds.height - 0.5;
-                gsap.to(element, {
-                  rotateY: x * 2.2,
-                  rotateX: y * -2.2,
-                  transformPerspective: 1100,
-                  duration: 0.42,
-                  ease: "power3.out",
-                });
-              };
-              const reset = () =>
-                gsap.to(element, {
-                  rotateX: 0,
-                  rotateY: 0,
-                  duration: 0.55,
-                  ease: "power3.out",
-                });
-              element.addEventListener("mousemove", move);
-              element.addEventListener("mouseleave", reset);
-              hoverCleanups.push(() => {
-                element.removeEventListener("mousemove", move);
-                element.removeEventListener("mouseleave", reset);
-              });
-            });
+          /* 3D tilt on hover lived here — the last of the three pointer
+             effects. Removed for the same reason as the other two:
+             `design.md` bans it, and a panel that rotates under the mouse
+             makes a marked transcript harder to read, which is the one
+             thing on this page that has to stay readable. */
         }, pageRef);
       },
     );
@@ -1104,7 +967,6 @@ export function LandingRedesign() {
           data-story-section
           data-gsap-lock
           data-gsap-hover
-          data-gsap-tilt
           className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[1.6rem] border border-[rgba(18,53,36,0.2)] bg-card shadow-[10px_12px_0_rgba(5,28,20,0.82)]"
         >
           <div
@@ -1365,7 +1227,7 @@ export function LandingRedesign() {
         </motion.div>
       </section>
 
-      <ForestGuide />
+      <IntroPanel />
 
       <footer className="mx-auto flex max-w-[76rem] flex-wrap items-center gap-5 px-5 py-8 text-muted-foreground text-sm md:px-8">
         <span className="flex items-center gap-2 text-foreground">
