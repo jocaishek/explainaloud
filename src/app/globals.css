@@ -36,12 +36,22 @@ main.lp-v2 {
   --miss-light: #efc1bb;
 }
 
-/* The photograph is used as shot: no blur, no duotone, no crop beyond what
- * `cover` does to fit the viewport. The one thing over it is a scrim, and it
- * is shaped rather than flat — the foam runs diagonally through the lower
- * half, which is exactly where the buttons and the tagline sit, and white
- * type on bright surf is a coin toss. */
+/* The hero backdrop is drawn (see `hero-field.tsx`), so this element carries
+ * only the base colour the drawing sits on. The scrim that used to live in the
+ * same shorthand is now `.lp-hero-scrim`, a real layer — it has to paint ABOVE
+ * the artwork, and an element's own background always paints below its
+ * children.
+ *
+ * The photograph rule is kept immediately below. Swapping the two class names
+ * on the hero section is the whole revert. */
 .lp-v2 .lp-atmosphere {
+  isolation: isolate;
+  background: #040f2c;
+}
+
+/* The night-shore photograph, used as shot: no blur, no duotone, no crop
+ * beyond what `cover` does. Unused while the drawn field is in place. */
+.lp-v2 .lp-atmosphere-photo {
   isolation: isolate;
   background:
     linear-gradient(
@@ -52,6 +62,20 @@ main.lp-v2 {
       rgba(3, 9, 20, 0.62) 100%
     ),
     url("/landing/explainaloud-shore-v1.webp") center / cover no-repeat;
+}
+
+/* Heaviest where the display type sits, lifting through the middle so the
+ * artwork is actually visible, back over the lower third where the buttons
+ * and the tagline are. */
+.lp-v2 .lp-hero-scrim {
+  background: linear-gradient(
+    180deg,
+    rgba(4, 12, 26, 0.44) 0%,
+    rgba(4, 12, 26, 0.12) 40%,
+    rgba(4, 12, 26, 0.52) 68%,
+    rgba(3, 9, 20, 0.68) 84%,
+    rgba(3, 9, 20, 0.72) 100%
+  );
 }
 
 .lp-v2 .lp-sky-nav {

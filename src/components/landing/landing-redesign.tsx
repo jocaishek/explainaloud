@@ -15,6 +15,7 @@ import {
 import Link from "next/link";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
+import { HeroField } from "~/components/landing/hero-field";
 
 const transcript = [
   { text: "Newton’s third law says forces come in pairs, ", tone: "plain" },
@@ -772,6 +773,7 @@ export function LandingRedesign() {
 
     let gsapContext: { revert: () => void } | undefined;
     let cancelled = false;
+    const docCleanups: Array<() => void> = [];
     const hoverCleanups: Array<() => void> = [];
     const generatedNodes: HTMLElement[] = [];
 
@@ -780,8 +782,36 @@ export function LandingRedesign() {
         if (cancelled || !heroRef.current || !pageRef.current) return;
         gsap.registerPlugin(ScrollTrigger);
         gsapContext = gsap.context(() => {
-          gsap
-            .timeline()
+          /* The intro is a `from()`: it hides the headline and animates it
+             back. That is a promise the page has to keep, and it was not
+             keeping it. GSAP's ticker stalls while the tab is hidden, so a
+             landing opened in a background tab froze part-way through and the
+             words stayed put. Measured mid-freeze, down the six words: 0.82,
+             0.73, 0.60, 0.43, 0.21, 0 — the last two lines of the headline
+             simply were not there.
+
+             The photograph hid this for months, because a faint headline over
+             a dark photo still looks like a dark photo. It only became obvious
+             once the backdrop got brighter.
+
+             So the animation is now something the page can afford to lose: if
+             nobody is looking it is skipped, and if they look away part-way it
+             snaps to the end. The words always exist. */
+          const intro = gsap.timeline({
+            onComplete: () =>
+              gsap.set("[data-hero-word], [data-hero-secondary]", {
+                clearProps: "transform,opacity",
+              }),
+          });
+          const settleIntro = () => {
+            if (document.hidden) intro.progress(1);
+          };
+          document.addEventListener("visibilitychange", settleIntro);
+          docCleanups.push(() =>
+            document.removeEventListener("visibilitychange", settleIntro),
+          );
+
+          intro
             .from("[data-hero-word]", {
               yPercent: 125,
               rotate: 4,
@@ -801,6 +831,10 @@ export function LandingRedesign() {
               },
               "-=0.4",
             );
+
+          // After the chain, never before it: the guard has to have tweens to
+          // fast-forward, and an empty timeline reports itself complete.
+          settleIntro();
 
           if (!reduceMotion) {
             gsap.to("[data-kinetic]", {
@@ -986,6 +1020,9 @@ export function LandingRedesign() {
     return () => {
       cancelled = true;
       navRef.current?.classList.remove("is-light");
+      docCleanups.forEach((cleanup) => {
+        cleanup();
+      });
       hoverCleanups.forEach((cleanup) => {
         cleanup();
       });
@@ -1005,7 +1042,7 @@ export function LandingRedesign() {
         id="bg-logo"
         ref={brandRef}
         aria-hidden="true"
-        className="pointer-events-none fixed top-1/2 left-1/2 z-[60] h-[clamp(12rem,25vw,23rem)] w-[clamp(12rem,25vw,23rem)] -translate-x-1/2 -translate-y-1/2 text-[var(--ok-light)] opacity-[0.18] will-change-transform"
+        className="pointer-events-none fixed top-1/2 left-1/2 z-[60] h-[clamp(12rem,25vw,23rem)] w-[clamp(12rem,25vw,23rem)] -translate-x-1/2 -translate-y-1/2 text-white/70 opacity-[0.07] will-change-transform"
       >
         <ExplainaloudMark className="h-full w-full" strokeWidth={4.5} />
       </div>
@@ -1064,7 +1101,12 @@ export function LandingRedesign() {
         ref={heroRef}
         className="lp-atmosphere relative overflow-hidden border-white/15 border-b bg-primary px-5 text-primary-foreground md:px-8"
       >
-        <div className="relative flex min-h-screen flex-col pt-20 md:pt-24">
+        <HeroField />
+        <div
+          aria-hidden="true"
+          className="lp-hero-scrim absolute inset-0 z-[1]"
+        />
+        <div className="relative z-[2] flex min-h-screen flex-col pt-20 md:pt-24">
           <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center">
             <h1 className="relative mx-auto max-w-[12ch] font-display text-[clamp(2.9rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
               <span className="block overflow-hidden pb-[0.08em]">
@@ -1154,7 +1196,7 @@ export function LandingRedesign() {
 
             <p
               data-hero-secondary
-              className="mt-6 max-w-[36rem] font-mono text-[0.6rem] text-primary-foreground/75 uppercase tracking-[0.12em]"
+              className="mt-6 max-w-[36rem] font-mono text-[0.6rem] text-primary-foreground uppercase tracking-[0.12em]"
             >
               Speech and presentation rehearsal · Studying by the Feynman method
             </p>
