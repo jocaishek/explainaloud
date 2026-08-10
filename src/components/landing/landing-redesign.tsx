@@ -5,7 +5,6 @@ import {
   ArrowRight,
   Check,
   Leaf,
-  Lightbulb,
   LockKeyhole,
   MessageCircle,
   Mic,
@@ -269,67 +268,6 @@ const feedback = [
     light: "var(--miss-light)",
   },
 ] as const;
-
-function AhaMoment() {
-  const [open, setOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
-
-  return (
-    <div className="mt-4 overflow-hidden border border-border bg-card">
-      <motion.button
-        data-gsap-hover
-        type="button"
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        whileTap={reduceMotion ? undefined : { scale: 0.985 }}
-        className="group flex w-full items-center gap-3 p-4 text-left text-strong"
-      >
-        <motion.span
-          animate={
-            open && !reduceMotion
-              ? { rotate: [0, -9, 8, 0], scale: [1, 1.12, 1] }
-              : { rotate: 0, scale: 1 }
-          }
-          transition={
-            open
-              ? { duration: 0.45, ease }
-              : { type: "spring", stiffness: 360, damping: 18 }
-          }
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors ${
-            open
-              ? "bg-[var(--vague)] text-white"
-              : "bg-muted text-muted-foreground group-hover:text-foreground"
-          }`}
-        >
-          <Lightbulb className="h-4 w-4" />
-        </motion.span>
-        <span>
-          <span className="block font-semibold text-sm">
-            {open ? "That’s the missing idea" : "Find the aha moment"}
-          </span>
-          <span className="mt-0.5 block text-muted-foreground text-xs">
-            {open ? "Click to close" : "Click the bulb to reveal it"}
-          </span>
-        </span>
-        <span className="ml-auto text-muted-foreground text-xl">
-          {open ? "×" : "+"}
-        </span>
-      </motion.button>
-
-      {open && (
-        <div className="border-border border-t bg-muted px-4 pt-4 pb-5">
-          <p className="font-display text-[1.3rem] text-strong leading-snug">
-            The forces act on different objects.
-          </p>
-          <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
-            The wall pushes you while you push the wall, so the pair cannot
-            cancel on one object.
-          </p>
-        </div>
-      )}
-    </div>
-  );
-}
 
 function IntroPanel() {
   const [open, setOpen] = useState(false);
@@ -828,14 +766,32 @@ export function LandingRedesign() {
              So the animation is now something the page can afford to lose: if
              nobody is looking it is skipped, and if they look away part-way it
              snaps to the end. The words always exist. */
+          /* Every reveal on this page is a `from()`: it hides the element
+             and animates it back. That is a debt, and GSAP's ticker stalls
+             while the tab is hidden — so a tween that started and did not
+             finish leaves its content part-way, for good. Measured on the
+             product window after a background load: opacity 0.2018, transform
+             still mid-flight. The headline had the same failure and was fixed
+             in isolation; this is the same bug three more times, so it is
+             worth one mechanism rather than four patches.
+
+             Anything that hides content goes in here, and if nobody is
+             watching, it is snapped to its end state. */
+          const reveals: Array<{ progress: (value: number) => unknown }> = [];
+          const settleReveals = () => {
+            if (!document.hidden) return;
+            for (const reveal of reveals) reveal.progress(1);
+          };
+
           const intro = gsap.timeline({
             onComplete: () =>
               gsap.set("[data-hero-word], [data-hero-secondary]", {
                 clearProps: "transform,opacity",
               }),
           });
+          reveals.push(intro);
           const settleIntro = () => {
-            if (document.hidden) intro.progress(1);
+            settleReveals();
           };
           document.addEventListener("visibilitychange", settleIntro);
           docCleanups.push(() =>
@@ -977,48 +933,54 @@ export function LandingRedesign() {
           gsap.utils
             .toArray<HTMLElement>("[data-scroll-reveal]")
             .forEach((element) => {
-              gsap.from(element, {
-                y: 56,
-                opacity: 0,
-                duration: 0.9,
-                ease: "power3.out",
-                scrollTrigger: {
-                  trigger: element,
-                  start: "top 85%",
-                  once: true,
-                },
-              });
+              reveals.push(
+                gsap.from(element, {
+                  y: 56,
+                  opacity: 0,
+                  duration: 0.9,
+                  ease: "power3.out",
+                  scrollTrigger: {
+                    trigger: element,
+                    start: "top 85%",
+                    once: true,
+                  },
+                }),
+              );
             });
 
-          gsap.from(".lp-product-window", {
-            y: 120,
-            scale: 0.92,
-            rotate: -1.5,
-            opacity: 0,
-            duration: 1.15,
-            ease: "power3.out",
-            scrollTrigger: {
-              trigger: ".lp-product-window",
-              start: "top 88%",
-              once: true,
-            },
-          });
+          reveals.push(
+            gsap.from(".lp-product-window", {
+              y: 120,
+              scale: 0.92,
+              rotate: -1.5,
+              opacity: 0,
+              duration: 1.15,
+              ease: "power3.out",
+              scrollTrigger: {
+                trigger: ".lp-product-window",
+                start: "top 88%",
+                once: true,
+              },
+            }),
+          );
 
           gsap.utils
             .toArray<HTMLElement>("[data-feature-card]")
             .forEach((element, index) => {
-              gsap.from(element, {
-                x: index % 2 === 0 ? -110 : 110,
-                rotate: index % 2 === 0 ? -1.5 : 1.5,
-                opacity: 0,
-                duration: 1,
-                ease: "power3.out",
-                scrollTrigger: {
-                  trigger: element,
-                  start: "top 86%",
-                  once: true,
-                },
-              });
+              reveals.push(
+                gsap.from(element, {
+                  x: index % 2 === 0 ? -110 : 110,
+                  rotate: index % 2 === 0 ? -1.5 : 1.5,
+                  opacity: 0,
+                  duration: 1,
+                  ease: "power3.out",
+                  scrollTrigger: {
+                    trigger: element,
+                    start: "top 86%",
+                    once: true,
+                  },
+                }),
+              );
             });
 
           /* The cursor halo, orb and particle trail lived here.
@@ -1063,6 +1025,10 @@ export function LandingRedesign() {
              `design.md` bans it, and a panel that rotates under the mouse
              makes a marked transcript harder to read, which is the one
              thing on this page that has to stay readable. */
+          // Last, once every reveal is registered. Called earlier it could
+          // only ever see the ones created so far, which is how the product
+          // window stayed at opacity 0.2 while the headline was fine.
+          settleReveals();
         }, pageRef);
       },
     );
@@ -1247,18 +1213,13 @@ export function LandingRedesign() {
           data-story-section
           data-gsap-lock
           data-gsap-hover
-          className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[1.6rem] border border-[rgba(15,35,64,0.2)] bg-card shadow-[10px_12px_0_rgba(6,18,38,0.82)]"
+          className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[20px] border border-border bg-card"
         >
           <div
             data-story-step
-            className="flex items-center border-border border-b px-5 py-4"
+            className="border-border border-b px-6 py-4 md:px-10 lg:px-12"
           >
-            <div className="flex gap-1.5" aria-hidden="true">
-              <span className="h-2.5 w-2.5 rounded-full bg-border" />
-              <span className="h-2.5 w-2.5 rounded-full bg-border" />
-              <span className="h-2.5 w-2.5 rounded-full bg-border" />
-            </div>
-            <span className="mx-auto -translate-x-5 font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
+            <span className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
               You are explaining · Physics
             </span>
           </div>
@@ -1346,7 +1307,7 @@ export function LandingRedesign() {
               </p>
               <div
                 data-gsap-hover
-                className="mt-6 rounded-sm border border-white/10 border-l-2 border-l-miss bg-[var(--panel-deep)] p-5 shadow-[4px_4px_0_#000]"
+                className="mt-6 rounded-sm border border-white/10 border-l-2 border-l-miss bg-[var(--panel-deep)] p-5 shadow-[4px_4px_0_rgba(6,18,38,0.7)]"
               >
                 {/* The lit tint, not the fill. `--miss` is tuned to be read on
                     stock; on the deep panel it lands near 3:1 and the label
@@ -1361,7 +1322,6 @@ export function LandingRedesign() {
                   Reveal the idea that completes your explanation.
                 </p>
               </div>
-              <AhaMoment />
               <div className="mt-4 flex items-center gap-2 text-muted-foreground text-xs">
                 <LockKeyhole className="h-3.5 w-3.5" /> Audio is never stored
               </div>
