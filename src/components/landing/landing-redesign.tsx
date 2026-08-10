@@ -67,13 +67,17 @@ const whyOutLoud = [
 
 const ease = [0.23, 1, 0.32, 1] as const;
 
-/* Matches the hero: a ground, not a picture. The page opens dark, goes light
- * for the product, and comes back dark to close — one crossing each way, which
- * is what `design.md` allows, and the dark now means "this is the end" rather
- * than "here is another photograph". */
+/* The same field closes the page. One crossing into light for the product and
+ * one back into dark to end, which is what `design.md` allows. */
 const closingFieldStyle: CSSProperties = {
   backgroundImage:
-    "radial-gradient(110% 80% at 30% 20%, rgba(27, 62, 116, 0.5), transparent 60%), linear-gradient(160deg, #0e2549 0%, #0a1c3a 48%, #061227 100%)",
+    'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-field-v1.webp")',
+  backgroundPosition: "center 60%",
+  backgroundSize: "cover",
+  /* Not `fixed`. A fixed attachment cannot be promoted to its own compositor
+   * layer, so the browser repaints the whole image on every scroll frame — the
+   * jump this band used to show, and on iOS Safari it does not work at all. */
+  backgroundAttachment: "scroll",
 };
 
 const waveform = [
