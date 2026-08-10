@@ -1,23 +1,166 @@
 @import "tailwindcss";
 
 main.lp-v2 {
-  --background: #f3efe5;
-  --foreground: #29433e;
-  --card: #fffaf0;
-  --card-foreground: #173a35;
-  --muted: #e8e1d2;
-  --muted-foreground: #66736f;
-  --primary: #07594f;
-  --primary-foreground: #fff9df;
-  --border: rgba(7, 89, 79, 0.16);
-  --brand-ink: #176e62;
-  --brand-deep: #07594f;
-  --brand-foreground: #fff9df;
-  --strong: #123f38;
-  --ok: #0f7a3d;
-  --ok-light: #71d69a;
-  --vague-light: #f1c26d;
-  --miss-light: #ff8c83;
+  --background: #f2f0e7;
+  --foreground: #17372c;
+  --card: #fffdf4;
+  --panel-deep: #0b3023;
+  --card-foreground: #17372c;
+  --muted: #e7e9df;
+  --muted-foreground: #62766c;
+  --primary: #176447;
+  --primary-foreground: #f4f0eb;
+  --border: rgba(18, 61, 44, 0.18);
+  --brand: #ffffff;
+  --brand-ink: #287754;
+  --brand-deep: #19563e;
+  --brand-foreground: #143b2d;
+  --accent-solid: #fffdf8;
+  --accent-solid-hover: #e9f4ff;
+  --strong: #17372c;
+  --ok: #2f9b68;
+  --ok-light: #bfe4cf;
+  --vague: #c68a2d;
+  --vague-light: #f0d8ad;
+  --miss: #c94f43;
+  --miss-light: #efc1bb;
+}
+
+.lp-v2 .lp-atmosphere {
+  isolation: isolate;
+  background:
+    linear-gradient(180deg, rgba(3, 23, 16, 0.28), rgba(4, 32, 22, 0.46)),
+    linear-gradient(
+      90deg,
+      rgba(4, 28, 19, 0.18),
+      transparent 28% 72%,
+      rgba(4, 28, 19, 0.22)
+    ),
+    url("/landing/explainaloud-forest-v1.jpg") center / cover no-repeat;
+}
+
+.lp-v2 .lp-sky-nav {
+  background: linear-gradient(
+    180deg,
+    rgba(5, 34, 23, 0.92),
+    rgba(5, 34, 23, 0.54)
+  );
+}
+
+html:has(main.lp-v2) {
+  scroll-behavior: smooth;
+}
+
+.lp-v2 [id] {
+  scroll-margin-top: 4rem;
+}
+
+.lp-v2 .lp-nav-link {
+  position: relative;
+  padding-block: 0.45rem;
+  color: rgba(244, 240, 235, 0.76);
+}
+
+.lp-v2 .lp-nav-link::after {
+  position: absolute;
+  right: 0;
+  bottom: 0.12rem;
+  left: 0;
+  height: 1px;
+  background: currentColor;
+  content: "";
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.lp-v2 .lp-nav-link:hover {
+  color: var(--primary-foreground);
+}
+
+.lp-v2 .lp-nav-link:hover::after,
+.lp-v2 .lp-nav-link:focus-visible::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:has(main.lp-v2) {
+    scroll-behavior: auto;
+  }
+}
+
+.lp-v2 .lp-atmosphere::before {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+  content: "";
+  opacity: 0.13;
+  pointer-events: none;
+  mix-blend-mode: soft-light;
+}
+
+.lp-v2 .lp-atmosphere::after {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background: radial-gradient(
+    18rem circle at var(--cursor-x, 50vw) var(--cursor-y, 45vh),
+    rgba(255, 253, 248, 0.2),
+    rgba(139, 196, 122, 0.09) 42%,
+    transparent 72%
+  );
+  content: "";
+  pointer-events: none;
+}
+
+.lp-v2 .lp-cursor-halo,
+.lp-v2 .lp-cursor-orb,
+.lp-v2 .lp-cursor-particle {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 70;
+  border-radius: 999px;
+  pointer-events: none;
+  will-change: transform;
+}
+
+.lp-v2 .lp-cursor-halo {
+  width: 5.5rem;
+  height: 5.5rem;
+  border: 1px solid rgba(244, 240, 235, 0.34);
+  background: radial-gradient(
+    circle,
+    rgba(255, 253, 248, 0.12),
+    rgba(139, 196, 122, 0.07) 46%,
+    transparent 70%
+  );
+  transform: translate(-50%, -50%);
+  box-shadow: 0 0 0 1px rgba(87, 139, 99, 0.24);
+}
+
+.lp-v2 .lp-cursor-orb {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 1px solid rgba(244, 240, 235, 0.65);
+  background: rgba(216, 160, 75, 0.2);
+  transform: translate(-50%, -50%);
+}
+
+.lp-v2 .lp-cursor-particle {
+  width: 0.28rem;
+  height: 0.28rem;
+  background: var(--accent-solid);
+}
+
+@media (hover: none), (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-cursor-halo,
+  .lp-v2 .lp-cursor-orb,
+  .lp-v2 .lp-cursor-particle {
+    display: none;
+  }
 }
 
 .lp-v2 .lp-verdict-ok,
