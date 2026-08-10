@@ -49,7 +49,11 @@ const closingShoreStyle: CSSProperties = {
     'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-shore-v1.webp")',
   backgroundPosition: "center 60%",
   backgroundSize: "cover",
-  backgroundAttachment: "fixed",
+  /* Not `fixed`. A fixed attachment cannot be promoted to its own compositor
+   * layer, so the browser repaints the whole photograph on every scroll frame
+   * — which is the jump and stutter this band was showing, and on iOS Safari
+   * it does not work at all. */
+  backgroundAttachment: "scroll",
 };
 
 const waveform = [
@@ -809,16 +813,24 @@ export function LandingRedesign() {
               ease: "sine.inOut",
             });
 
-            gsap.to(".lp-atmosphere", {
-              backgroundPosition: "center 62%",
-              ease: "none",
-              scrollTrigger: {
-                trigger: "#hero",
-                start: "top top",
-                end: "bottom top",
-                scrub: 1.2,
-              },
-            });
+            /* A `background-position` parallax on the hero lived here, and it
+               had to go for two reasons.
+
+               `background-position` applies to every layer in the shorthand.
+               The hero used to be one layer — a photograph — and is now two,
+               because the scrim sits in front of it. So the tween was dragging
+               the darkening across the page independently of anything it was
+               darkening, which is the "weird movement" this fixes.
+
+               And it was scrubbed at 1.2, meaning the picture lagged over a
+               second behind the scroll and then kept coasting after it stopped,
+               in both directions. Even on one layer that reads as the page
+               being broken rather than as depth.
+
+               Parallax on a photograph is doable, but it has to be a
+               transformed layer the compositor can move on the GPU, not a
+               background-position the browser repaints every frame. Worth
+               doing deliberately or not at all. */
           }
 
           gsap.fromTo(
