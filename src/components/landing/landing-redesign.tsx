@@ -10,10 +10,13 @@ import {
 import {
   ArrowRight,
   Check,
+  Leaf,
   Lightbulb,
   LockKeyhole,
+  MessageCircle,
   Mic,
   Sparkles,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
@@ -47,6 +50,14 @@ const steps = [
 
 const ease = [0.23, 1, 0.32, 1] as const;
 
+const closingForestStyle: CSSProperties = {
+  backgroundImage:
+    'linear-gradient(180deg, rgba(5, 31, 22, 0.48), rgba(3, 23, 16, 0.72)), url("/landing/explainaloud-forest-v1.jpg")',
+  backgroundPosition: "center 72%",
+  backgroundSize: "cover",
+  backgroundAttachment: "fixed",
+};
+
 const waveform = [
   { id: "a", height: 10 },
   { id: "b", height: 22 },
@@ -61,25 +72,6 @@ const waveform = [
   { id: "k", height: 12 },
   { id: "l", height: 22 },
 ] as const;
-
-const marqueeCopy =
-  "I covered the customer problem clearly, explained why it matters, and connected the plan to next quarter.  ·  The timeline is ready, the owners are aligned, and the final risk is still waiting on legal.  ·  ";
-
-const trackingWave = [
-  { id: "track-a", height: 18 },
-  { id: "track-b", height: 30 },
-  { id: "track-c", height: 22 },
-  { id: "track-d", height: 42 },
-  { id: "track-e", height: 27 },
-  { id: "track-f", height: 50 },
-  { id: "track-g", height: 34 },
-  { id: "track-h", height: 56 },
-  { id: "track-i", height: 38 },
-  { id: "track-j", height: 48 },
-  { id: "track-k", height: 25 },
-  { id: "track-l", height: 40 },
-  { id: "track-m", height: 20 },
-];
 
 const liveResults = [
   { label: "Reached: customer problem", color: "var(--ok)" },
@@ -103,91 +95,62 @@ function MarqueeRibbon() {
 
   return (
     <section
-      aria-label="How Explainaloud works"
-      className="relative h-full overflow-hidden"
+      aria-label="Live voice recording preview"
+      className="absolute inset-x-0 bottom-5 mx-auto w-[min(44rem,calc(100%_-_1.5rem))] border border-white/20 bg-[var(--panel-deep)] text-primary-foreground shadow-[5px_6px_0_rgba(3,20,14,0.72)]"
     >
-      <svg
-        aria-hidden="true"
-        viewBox="0 0 1600 900"
-        preserveAspectRatio="xMidYMid slice"
-        className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-      >
-        <defs>
-          <path
-            id="continuous-speech-path"
-            d="M -120 520 C 20 520 0 180 220 170 C 410 160 455 390 350 535 C 250 675 130 660 40 590 C 200 720 410 770 650 774 C 674 774 696 774 720 774 L 880 774 C 1070 774 1210 726 1370 714 C 1470 706 1560 720 1720 748"
+      <div className="flex items-center gap-4 px-4 py-3.5 sm:px-5">
+        <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--miss)] text-white">
+          <span className="absolute inset-0 animate-ping rounded-full border border-white/35 opacity-40" />
+          <Mic className="relative h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <span className="font-mono text-[0.62rem] uppercase tracking-[0.15em]">
+              Recording
+            </span>
+            <span className="font-mono text-[0.62rem] text-primary-foreground/60 tracking-[0.12em]">
+              00:17
+            </span>
+          </div>
+          <div
+            className="mt-2 flex h-8 items-center justify-center gap-[3px]"
+            aria-hidden="true"
           >
-            {!reduceMotion && (
-              <animate
-                attributeName="d"
-                dur="16s"
-                repeatCount="indefinite"
-                values="M -120 520 C 20 520 0 180 220 170 C 410 160 455 390 350 535 C 250 675 130 660 40 590 C 200 720 410 770 650 774 C 674 774 696 774 720 774 L 880 774 C 1070 774 1210 726 1370 714 C 1470 706 1560 720 1720 748;M -120 520 C 20 510 6 190 224 176 C 402 164 463 380 356 531 C 258 665 134 666 40 590 C 200 714 410 764 650 774 C 674 774 696 774 720 774 L 880 774 C 1070 774 1210 718 1370 708 C 1470 702 1560 718 1720 748;M -120 520 C 20 520 0 180 220 170 C 410 160 455 390 350 535 C 250 675 130 660 40 590 C 200 720 410 770 650 774 C 674 774 696 774 720 774 L 880 774 C 1070 774 1210 726 1370 714 C 1470 706 1560 720 1720 748"
+            {waveform.map(({ id, height }, index) => (
+              <motion.span
+                key={id}
+                animate={
+                  reduceMotion
+                    ? { height: Math.max(5, height * 0.62) }
+                    : {
+                        height: [
+                          Math.max(5, height * 0.42),
+                          Math.max(8, height * 0.82),
+                          Math.max(5, height * 0.5),
+                        ],
+                      }
+                }
+                transition={{
+                  duration: 1.35 + index * 0.04,
+                  repeat: Number.POSITIVE_INFINITY,
+                  delay: index * 0.055,
+                  ease: "easeInOut",
+                }}
+                className="w-1 rounded-full bg-[var(--ok-light)]"
               />
-            )}
-          </path>
-        </defs>
-        <text className="fill-primary-foreground/80 font-sans font-medium text-[18px] tracking-normal">
-          <motion.textPath
-            href="#continuous-speech-path"
-            animate={reduceMotion ? undefined : { startOffset: ["-55%", "0%"] }}
-            transition={{
-              duration: 42,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "linear",
-            }}
-          >
-            {marqueeCopy.repeat(5)}
-          </motion.textPath>
-        </text>
-      </svg>
-      <motion.div
-        animate={
-          reduceMotion ? undefined : { y: [0, -3, 0], scale: [1, 1.012, 1] }
-        }
-        transition={{
-          duration: 5.8,
-          repeat: Number.POSITIVE_INFINITY,
-          ease: "easeInOut",
-        }}
-        className="absolute top-[86%] left-1/2 z-10 flex h-[5.5rem] w-[min(44vw,10.5rem)] -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-[2.8rem_2.45rem_2.9rem_2.55rem] border-[3px] border-strong bg-primary-foreground px-4 shadow-[0_18px_45px_-22px_rgba(0,20,17,0.72)]"
-      >
-        <div
-          className="absolute -top-12 left-1/2 flex min-w-max -translate-x-1/2 items-center gap-2 rounded-full px-4 py-2.5 font-semibold text-sm text-white shadow-[0_12px_28px_-16px_rgba(0,20,17,0.7)]"
-          style={{ backgroundColor: activeResult.color }}
-        >
-          <span className="h-2 w-2 rounded-full bg-white/80" />
-          {activeResult.label}
+            ))}
+          </div>
         </div>
-
-        <div
-          role="img"
-          aria-label="Live speech waveform showing reached, thin, and missed points"
-          className="flex h-16 items-center justify-center gap-1.5"
-        >
-          {trackingWave.map(({ id, height }, index) => (
-            <motion.span
-              key={id}
-              animate={
-                reduceMotion
-                  ? { height, opacity: 0.9 }
-                  : {
-                      height: [height * 0.42, height * 0.78, height * 0.54],
-                      opacity: [0.62, 1, 0.78],
-                    }
-              }
-              transition={{
-                duration: 2.7 + (index % 4) * 0.24,
-                repeat: Number.POSITIVE_INFINITY,
-                delay: index * 0.11,
-                ease: "easeInOut",
-              }}
-              className="w-1 rounded-full bg-strong"
-            />
-          ))}
-        </div>
-      </motion.div>
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-white/15" />
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-white/25">
+          <span className="h-3 w-3 rounded-[2px] bg-primary-foreground" />
+        </span>
+      </div>
+      <div className="flex items-center justify-between gap-3 border-white/15 border-t px-4 py-2 font-mono text-[0.58rem] uppercase tracking-[0.12em] sm:px-5">
+        <span className="text-primary-foreground/55">
+          Listening for key points
+        </span>
+        <span style={{ color: activeResult.color }}>{activeResult.label}</span>
+      </div>
     </section>
   );
 }
@@ -229,11 +192,12 @@ function AhaMoment() {
   return (
     <div className="mt-4 overflow-hidden border border-border bg-card">
       <motion.button
+        data-gsap-hover
         type="button"
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
         whileTap={reduceMotion ? undefined : { scale: 0.985 }}
-        className="group flex w-full items-center gap-3 p-4 text-left"
+        className="group flex w-full items-center gap-3 p-4 text-left text-strong"
       >
         <motion.span
           animate={
@@ -268,7 +232,7 @@ function AhaMoment() {
       </motion.button>
 
       {open && (
-        <div className="border-border border-t bg-muted/45 px-4 pt-4 pb-5">
+        <div className="border-border border-t bg-muted px-4 pt-4 pb-5">
           <p className="font-display text-[1.3rem] text-strong leading-snug">
             The forces act on different objects.
           </p>
@@ -282,10 +246,89 @@ function AhaMoment() {
   );
 }
 
+function ForestGuide() {
+  const [open, setOpen] = useState(false);
+  const reduceMotion = useReducedMotion();
+
+  return (
+    <div className="fixed right-5 bottom-5 z-[80] flex flex-col items-end gap-3">
+      <AnimatePresence>
+        {open && (
+          <motion.aside
+            initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.94 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.96 }}
+            transition={{ type: "spring", stiffness: 340, damping: 25 }}
+            className="w-[min(21rem,calc(100vw-2.5rem))] border border-white/15 bg-[var(--panel-deep)] p-5 text-left text-primary-foreground shadow-[6px_6px_0_rgba(5,28,20,0.72)]"
+          >
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ok)] text-white">
+                <Leaf className="h-4 w-4" />
+              </span>
+              <div>
+                <p className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-[var(--ok-light)]">
+                  Forest guide
+                </p>
+                <p className="mt-2 font-semibold leading-snug">
+                  What do you need to say clearly today?
+                </p>
+              </div>
+            </div>
+            <p className="mt-4 text-primary-foreground/68 text-sm leading-relaxed">
+              Bring your notes and talk through them once. We’ll show what
+              landed, what felt thin, and what never made it out.
+            </p>
+            <Link
+              href="/signup"
+              data-gsap-hover
+              className="mt-5 inline-flex h-10 items-center gap-3 bg-card px-4 font-medium text-card-foreground text-sm"
+            >
+              Start a rehearsal <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      <motion.button
+        type="button"
+        data-gsap-hover
+        aria-label={open ? "Close Forest Guide" : "Open Forest Guide"}
+        aria-expanded={open}
+        onClick={() => setOpen((value) => !value)}
+        whileTap={reduceMotion ? undefined : { scale: 0.9 }}
+        className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[var(--panel-deep)] text-primary-foreground shadow-[4px_4px_0_rgba(5,28,20,0.78)]"
+      >
+        {!reduceMotion && (
+          <motion.span
+            aria-hidden="true"
+            animate={{ scale: [1, 1.42, 1], opacity: [0.42, 0, 0.42] }}
+            transition={{ duration: 2.8, repeat: Number.POSITIVE_INFINITY }}
+            className="absolute inset-0 rounded-full border border-[var(--ok-light)]"
+          />
+        )}
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.span
+            key={open ? "close" : "chat"}
+            initial={{ rotate: -20, scale: 0.7, opacity: 0 }}
+            animate={{ rotate: 0, scale: 1, opacity: 1 }}
+            exit={{ rotate: 20, scale: 0.7, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {open ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <MessageCircle className="h-5 w-5" />
+            )}
+          </motion.span>
+        </AnimatePresence>
+      </motion.button>
+    </div>
+  );
+}
+
 function ScrollJourney() {
   const sectionRef = useRef<HTMLElement>(null);
   const [activeStage, setActiveStage] = useState(0);
-  const reduceMotion = useReducedMotion();
   const { scrollYProgress } = useScroll({
     target: sectionRef,
     offset: ["start start", "end end"],
@@ -300,12 +343,12 @@ function ScrollJourney() {
     {
       label: "Reached",
       eyebrow: "Hit · the point",
-      quote: "We grew qualified leads by 24% this quarter.",
+      quote: "The forces act on different objects, so they do not cancel.",
       note: "Clear, specific, and matched to your intended talking point.",
       detail:
         "Explainaloud checks off the point the moment your meaning lands.",
       color: "var(--ok)",
-      surface: "bg-[var(--ok-light)]",
+      surface: "bg-[var(--panel-deep)]",
     },
     {
       label: "Too thin",
@@ -314,7 +357,7 @@ function ScrollJourney() {
       note: "You touched the point, but did not give the evidence you planned.",
       detail: "Amber means you said it, but too thinly to count as complete.",
       color: "var(--vague)",
-      surface: "bg-[var(--vague-light)]",
+      surface: "bg-[var(--panel-deep)]",
     },
     {
       label: "Missed",
@@ -323,38 +366,27 @@ function ScrollJourney() {
       note: "This key point never appeared in your rehearsal.",
       detail: "Red turns the omission into a precise prompt for your next run.",
       color: "var(--miss)",
-      surface: "bg-[var(--miss-light)]",
+      surface: "bg-[var(--panel-deep)]",
     },
   ] as const;
   const stage = stages[activeStage];
 
   return (
-    <section ref={sectionRef} className="relative h-[260vh] bg-background">
-      <div className="sticky top-0 flex h-screen items-center overflow-hidden px-5 pt-20 md:px-8">
+    <section
+      id="results"
+      ref={sectionRef}
+      className="relative h-[220vh] bg-background"
+    >
+      <div className="sticky top-0 flex h-screen items-start overflow-hidden border-white/10 border-y px-5 pt-28 md:px-8">
         <div
-          aria-hidden="true"
-          className="absolute inset-0 bg-[radial-gradient(circle_at_18%_20%,rgba(113,214,154,0.18),transparent_30%),radial-gradient(circle_at_82%_78%,rgba(255,140,131,0.12),transparent_34%)]"
-        />
-        <motion.div
-          aria-hidden="true"
-          animate={
-            reduceMotion
-              ? undefined
-              : { rotate: [-7, 5, -7], scale: [1, 1.05, 1] }
-          }
-          transition={{
-            duration: 22,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-          }}
-          className="absolute -right-[12rem] -bottom-[15rem] h-[31rem] w-[50rem] rounded-[50%] border-[4.5rem] border-[var(--miss)]/7"
-        />
-        <div className="relative mx-auto grid w-full max-w-[72rem] gap-7 lg:grid-cols-[10rem_34rem_minmax(14rem,1fr)] lg:items-center">
+          data-scroll-reveal
+          className="relative mx-auto grid w-full max-w-[72rem] gap-7 lg:grid-cols-[10rem_34rem_minmax(14rem,1fr)] lg:items-center"
+        >
           <div className="hidden space-y-2 lg:block">
             {stages.map((item, index) => (
               <div
                 key={item.label}
-                className={`border-l-4 py-3 pl-5 font-display text-2xl ${
+                className={`border-l-2 py-3 pl-5 font-mono text-xs uppercase tracking-[0.14em] ${
                   index === activeStage
                     ? "border-[var(--stage-color)] text-strong"
                     : "border-border text-muted-foreground/55"
@@ -366,28 +398,33 @@ function ScrollJourney() {
             ))}
           </div>
 
-          <div className="relative overflow-hidden rounded-[2.6rem_2rem_2.8rem_2.2rem] bg-primary p-4 shadow-[0_34px_90px_-44px_rgba(7,89,79,0.65)] md:p-6">
-            <div className="flex items-center justify-between font-mono text-[0.62rem] text-primary-foreground/75 uppercase tracking-[0.12em]">
+          <div
+            data-gsap-hover
+            data-gsap-tilt
+            className="relative overflow-hidden rounded-[1.1rem] border border-border bg-card p-4 shadow-[7px_8px_0_rgba(18,53,36,0.22)] md:p-6"
+          >
+            <div className="flex items-center justify-between font-mono text-[0.62rem] text-muted-foreground uppercase tracking-[0.12em]">
               <span>Live rehearsal · 01:42</span>
               <span>{activeStage + 1} / 3</span>
             </div>
             <div
-              className={`mt-5 flex min-h-[20rem] flex-col rounded-[2.1rem_1.65rem_2.3rem_1.8rem] p-7 text-card-foreground md:p-9 ${stage.surface}`}
+              className={`mt-5 flex min-h-[20rem] flex-col rounded-none border-white/10 border-y border-r border-l-2 p-7 text-card-foreground md:p-9 ${stage.surface}`}
+              style={{ borderLeftColor: stage.color }}
             >
               <div
                 className="flex items-center gap-3 font-mono text-[0.64rem] uppercase tracking-[0.12em]"
                 style={{ color: stage.color }}
               >
                 <span
-                  className="h-2.5 w-2.5 rounded-full"
+                  className="h-2.5 w-2.5"
                   style={{ backgroundColor: stage.color }}
                 />
                 {stage.eyebrow}
               </div>
-              <p className="mt-7 max-w-full font-display text-[clamp(2.1rem,3.35vw,3.45rem)] leading-[0.98] tracking-[-0.035em]">
+              <p className="mt-7 max-w-full font-sans font-bold text-[clamp(2.1rem,3.35vw,3.45rem)] text-white leading-[0.98] tracking-[-0.045em]">
                 {stage.quote}
               </p>
-              <p className="mt-auto max-w-[30rem] pt-7 text-foreground/70 leading-relaxed">
+              <p className="mt-auto max-w-[30rem] pt-7 text-primary-foreground/70 leading-relaxed">
                 {stage.note}
               </p>
             </div>
@@ -400,7 +437,7 @@ function ScrollJourney() {
             >
               Rehearsal, made visible
             </p>
-            <h2 className="mt-5 font-display text-[clamp(2.35rem,3.5vw,3.8rem)] text-strong leading-[0.98] tracking-[-0.04em]">
+            <h2 className="mt-5 font-sans font-bold text-[clamp(2.35rem,3.5vw,3.8rem)] text-strong uppercase leading-[0.92] tracking-[-0.05em]">
               Your points update as you speak.
             </h2>
             <p className="mt-6 text-muted-foreground leading-relaxed">
@@ -419,14 +456,17 @@ function FeedbackDemo() {
   const item = feedback[active];
 
   return (
-    <motion.section className="relative z-20 rounded-t-[3.5rem] bg-background px-5 pt-16 pb-24 shadow-[0_-24px_60px_-45px_rgba(7,89,79,0.4)] md:px-8 md:pt-20 md:pb-32">
-      <div className="mx-auto max-w-[76rem]">
+    <motion.section
+      id="feedback"
+      className="relative z-20 border-white/10 border-t bg-background px-5 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
+    >
+      <div data-scroll-reveal className="mx-auto max-w-[76rem]">
         <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="font-mono text-[0.67rem] text-muted-foreground uppercase tracking-[0.14em]">
               See the feedback
             </p>
-            <h2 className="mt-5 max-w-[14ch] font-display text-[clamp(2.7rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]">
+            <h2 className="mt-5 max-w-[14ch] font-sans font-bold text-[clamp(2.7rem,5vw,5rem)] text-strong uppercase leading-[0.9] tracking-[-0.055em]">
               One explanation. Three useful answers.
             </h2>
           </div>
@@ -473,11 +513,7 @@ function FeedbackDemo() {
                     <motion.span
                       layoutId="feedback-tab"
                       className="absolute inset-0 bg-white"
-                      transition={{
-                        type: "spring",
-                        stiffness: 420,
-                        damping: 34,
-                      }}
+                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
                     />
                   )}
                   <span
@@ -536,31 +572,424 @@ function FeedbackDemo() {
 
 export function LandingRedesign() {
   const reduceMotion = useReducedMotion();
+  const pageRef = useRef<HTMLElement>(null);
+  const heroRef = useRef<HTMLElement>(null);
+  const brandRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!heroRef.current || !pageRef.current) return;
+
+    let gsapContext: { revert: () => void } | undefined;
+    let cancelled = false;
+    const hoverCleanups: Array<() => void> = [];
+    const generatedNodes: HTMLElement[] = [];
+
+    void Promise.all([import("gsap"), import("gsap/ScrollTrigger")]).then(
+      ([{ gsap }, { ScrollTrigger }]) => {
+        if (cancelled || !heroRef.current || !pageRef.current) return;
+        gsap.registerPlugin(ScrollTrigger);
+        gsapContext = gsap.context(() => {
+          gsap
+            .timeline()
+            .from("[data-hero-word]", {
+              yPercent: 125,
+              rotate: 4,
+              opacity: 0,
+              duration: 0.95,
+              stagger: 0.07,
+              ease: "power3.out",
+            })
+            .from(
+              "[data-hero-secondary]",
+              {
+                y: 40,
+                opacity: 0,
+                duration: 0.85,
+                stagger: 0.15,
+                ease: "power3.out",
+              },
+              "-=0.4",
+            );
+
+          if (!reduceMotion) {
+            gsap.to("[data-kinetic]", {
+              y: (index) => (index % 2 === 0 ? -7 : 6),
+              rotate: (index) => (index % 2 === 0 ? -1.2 : 1.2),
+              duration: (index) => 4.2 + index * 0.4,
+              stagger: 0.16,
+              repeat: -1,
+              yoyo: true,
+              ease: "sine.inOut",
+            });
+
+            gsap.to(".lp-atmosphere", {
+              backgroundPosition: "center 62%",
+              ease: "none",
+              scrollTrigger: {
+                trigger: "#hero",
+                start: "top top",
+                end: "bottom top",
+                scrub: 1.2,
+              },
+            });
+          }
+
+          gsap.fromTo(
+            "[data-gsap-lock]",
+            { x: -42 },
+            { x: 0, duration: 0.62, stagger: 0.06, ease: "expo.out" },
+          );
+
+          if (brandRef.current) {
+            gsap.set("#bg-logo", {
+              x: 0,
+              xPercent: -50,
+              yPercent: -50,
+              transformOrigin: "50% 50%",
+            });
+            gsap
+              .timeline({
+                scrollTrigger: {
+                  trigger: "#hero",
+                  start: "top top",
+                  end: "45% top",
+                  scrub: reduceMotion ? false : 1,
+                  invalidateOnRefresh: true,
+                },
+              })
+              .to("#bg-logo", {
+                x: () => {
+                  const target = document
+                    .querySelector(".lp-nav-brand-mark-target")
+                    ?.getBoundingClientRect();
+                  return target
+                    ? target.left + target.width / 2 - window.innerWidth / 2
+                    : 0;
+                },
+                xPercent: -50,
+                y: () => {
+                  const target = document
+                    .querySelector(".lp-nav-brand-mark-target")
+                    ?.getBoundingClientRect();
+                  return target
+                    ? target.top + target.height / 2 - window.innerHeight / 2
+                    : -window.innerHeight / 2 + 32;
+                },
+                yPercent: -50,
+                scale: () => {
+                  const target = document.querySelector(
+                    ".lp-nav-brand-mark-target",
+                  ) as HTMLElement | null;
+                  return target && brandRef.current
+                    ? target.offsetWidth / brandRef.current.offsetWidth
+                    : 0.11;
+                },
+                color: "var(--primary-foreground)",
+                opacity: 1,
+                duration: 1,
+                ease: "power2.inOut",
+              })
+              .to(
+                ".lp-sky-nav",
+                {
+                  backgroundColor: "rgba(5, 34, 23, 0.98)",
+                  duration: 0.35,
+                },
+                0.55,
+              );
+          }
+
+          gsap.utils
+            .toArray<HTMLElement>("[data-scroll-reveal]")
+            .forEach((element) => {
+              gsap.from(element, {
+                y: 56,
+                opacity: 0,
+                duration: 0.9,
+                ease: "power3.out",
+                scrollTrigger: {
+                  trigger: element,
+                  start: "top 85%",
+                  once: true,
+                },
+              });
+            });
+
+          gsap.from(".lp-product-window", {
+            y: 120,
+            scale: 0.92,
+            rotate: -1.5,
+            opacity: 0,
+            duration: 1.15,
+            ease: "power3.out",
+            scrollTrigger: {
+              trigger: ".lp-product-window",
+              start: "top 88%",
+              once: true,
+            },
+          });
+
+          gsap.utils
+            .toArray<HTMLElement>("[data-feature-card]")
+            .forEach((element, index) => {
+              gsap.from(element, {
+                x: index % 2 === 0 ? -110 : 110,
+                rotate: index % 2 === 0 ? -1.5 : 1.5,
+                opacity: 0,
+                duration: 1,
+                ease: "power3.out",
+                scrollTrigger: {
+                  trigger: element,
+                  start: "top 86%",
+                  once: true,
+                },
+              });
+            });
+
+          const hasFinePointer = window.matchMedia(
+            "(hover: hover) and (pointer: fine)",
+          ).matches;
+
+          if (!reduceMotion && hasFinePointer) {
+            const cursorHalo = document.createElement("span");
+            cursorHalo.className = "lp-cursor-halo";
+            cursorHalo.setAttribute("aria-hidden", "true");
+            const cursorOrb = document.createElement("span");
+            cursorOrb.className = "lp-cursor-orb";
+            cursorOrb.setAttribute("aria-hidden", "true");
+            pageRef.current?.append(cursorHalo, cursorOrb);
+            generatedNodes.push(cursorHalo, cursorOrb);
+
+            const haloX = gsap.quickTo(cursorHalo, "x", {
+              duration: 0.7,
+              ease: "power3.out",
+            });
+            const haloY = gsap.quickTo(cursorHalo, "y", {
+              duration: 0.7,
+              ease: "power3.out",
+            });
+            const cursorX = gsap.quickTo(cursorOrb, "x", {
+              duration: 0.18,
+              ease: "power3.out",
+            });
+            const cursorY = gsap.quickTo(cursorOrb, "y", {
+              duration: 0.18,
+              ease: "power3.out",
+            });
+            let lastParticleAt = 0;
+            const trackPointer = (event: PointerEvent) => {
+              cursorX(event.clientX);
+              cursorY(event.clientY);
+              haloX(event.clientX);
+              haloY(event.clientY);
+              pageRef.current?.style.setProperty(
+                "--cursor-x",
+                `${event.clientX}px`,
+              );
+              pageRef.current?.style.setProperty(
+                "--cursor-y",
+                `${event.clientY}px`,
+              );
+
+              const now = performance.now();
+              if (now - lastParticleAt < 70) return;
+              lastParticleAt = now;
+              const particle = document.createElement("span");
+              particle.className = "lp-cursor-particle";
+              particle.setAttribute("aria-hidden", "true");
+              pageRef.current?.append(particle);
+              generatedNodes.push(particle);
+              gsap.set(particle, { x: event.clientX, y: event.clientY });
+              gsap.to(particle, {
+                x: event.clientX + gsap.utils.random(-20, 20),
+                y: event.clientY + gsap.utils.random(-30, -12),
+                scale: 0,
+                opacity: 0,
+                duration: 0.85,
+                ease: "power2.out",
+                onComplete: () => particle.remove(),
+              });
+            };
+            window.addEventListener("pointermove", trackPointer, {
+              passive: true,
+            });
+            hoverCleanups.push(() =>
+              window.removeEventListener("pointermove", trackPointer),
+            );
+          }
+
+          gsap.utils
+            .toArray<HTMLElement>("[data-gsap-hover]")
+            .forEach((element) => {
+              const enter = () =>
+                gsap.to(element, {
+                  scale: 1.03,
+                  duration: 0.24,
+                  ease: "power3.out",
+                });
+              const leave = () =>
+                gsap.to(element, {
+                  scale: 1,
+                  duration: 0.3,
+                  ease: "power3.out",
+                });
+              element.addEventListener("mouseenter", enter);
+              element.addEventListener("mouseleave", leave);
+              hoverCleanups.push(() => {
+                element.removeEventListener("mouseenter", enter);
+                element.removeEventListener("mouseleave", leave);
+              });
+            });
+
+          if (!reduceMotion && hasFinePointer) {
+            gsap.utils
+              .toArray<HTMLElement>("button:not([disabled]), [data-gsap-hover]")
+              .forEach((element) => {
+                let engaged = false;
+                const move = (event: MouseEvent) => {
+                  engaged = true;
+                  const bounds = element.getBoundingClientRect();
+                  const offsetX =
+                    event.clientX - (bounds.left + bounds.width / 2);
+                  const offsetY =
+                    event.clientY - (bounds.top + bounds.height / 2);
+                  gsap.to(element, {
+                    x: offsetX * 0.2,
+                    y: offsetY * 0.26,
+                    duration: 0.28,
+                    ease: "power3.out",
+                    overwrite: "auto",
+                  });
+                };
+                const release = () => {
+                  if (!engaged) return;
+                  engaged = false;
+                  gsap.to(element, {
+                    x: 0,
+                    y: 0,
+                    duration: 0.65,
+                    ease: "elastic.out(1, 0.45)",
+                    overwrite: "auto",
+                  });
+                };
+                const releaseOutside = (event: PointerEvent) => {
+                  if (!engaged) return;
+                  const bounds = element.getBoundingClientRect();
+                  const isOutside =
+                    event.clientX < bounds.left ||
+                    event.clientX > bounds.right ||
+                    event.clientY < bounds.top ||
+                    event.clientY > bounds.bottom;
+                  if (isOutside) release();
+                };
+                element.addEventListener("mousemove", move);
+                element.addEventListener("mouseleave", release);
+                window.addEventListener("pointermove", releaseOutside, {
+                  passive: true,
+                });
+                hoverCleanups.push(() => {
+                  element.removeEventListener("mousemove", move);
+                  element.removeEventListener("mouseleave", release);
+                  window.removeEventListener("pointermove", releaseOutside);
+                });
+              });
+          }
+
+          gsap.utils
+            .toArray<HTMLElement>("[data-gsap-tilt]")
+            .forEach((element) => {
+              const move = (event: MouseEvent) => {
+                const bounds = element.getBoundingClientRect();
+                const x = (event.clientX - bounds.left) / bounds.width - 0.5;
+                const y = (event.clientY - bounds.top) / bounds.height - 0.5;
+                gsap.to(element, {
+                  rotateY: x * 2.2,
+                  rotateX: y * -2.2,
+                  transformPerspective: 1100,
+                  duration: 0.42,
+                  ease: "power3.out",
+                });
+              };
+              const reset = () =>
+                gsap.to(element, {
+                  rotateX: 0,
+                  rotateY: 0,
+                  duration: 0.55,
+                  ease: "power3.out",
+                });
+              element.addEventListener("mousemove", move);
+              element.addEventListener("mouseleave", reset);
+              hoverCleanups.push(() => {
+                element.removeEventListener("mousemove", move);
+                element.removeEventListener("mouseleave", reset);
+              });
+            });
+        }, pageRef);
+      },
+    );
+
+    return () => {
+      cancelled = true;
+      hoverCleanups.forEach((cleanup) => {
+        cleanup();
+      });
+      generatedNodes.forEach((node) => {
+        node.remove();
+      });
+      gsapContext?.revert();
+    };
+  }, [reduceMotion]);
 
   return (
-    <main className="lp-v2 min-h-screen overflow-x-clip bg-background text-foreground">
-      <nav className="fixed inset-x-0 top-0 z-50 px-3 pt-3 md:px-6 md:pt-5">
-        <div className="mx-auto flex h-16 max-w-[76rem] items-center rounded-[1.8rem_1.35rem_1.7rem_1.45rem] border border-white/60 bg-card/78 px-5 shadow-[0_16px_48px_-28px_rgba(0,40,34,0.55)] backdrop-blur-2xl md:px-7">
+    <main
+      ref={pageRef}
+      className="lp-v2 min-h-screen overflow-x-clip bg-background font-sans text-foreground"
+    >
+      <div
+        id="bg-logo"
+        ref={brandRef}
+        aria-hidden="true"
+        className="pointer-events-none fixed top-1/2 left-1/2 z-[60] h-[clamp(12rem,25vw,23rem)] w-[clamp(12rem,25vw,23rem)] -translate-x-1/2 -translate-y-1/2 text-[var(--ok-light)] opacity-[0.18] will-change-transform"
+      >
+        <ExplainaloudMark className="h-full w-full" strokeWidth={4.5} />
+      </div>
+      <nav className="lp-sky-nav fixed inset-x-0 top-0 z-50 border-white/20 border-b text-primary-foreground">
+        <div className="mx-auto grid h-16 max-w-[76rem] grid-cols-[1fr_auto_1fr] items-center px-5 md:px-8">
+          <div className="hidden items-center gap-5 text-[0.78rem] lg:flex">
+            <a href="#live-demo" className="lp-nav-link">
+              Live demo
+            </a>
+            <a href="#results" className="lp-nav-link">
+              Results
+            </a>
+            <a href="#feedback" className="lp-nav-link">
+              Feedback
+            </a>
+            <a href="#how-it-works" className="lp-nav-link">
+              How it works
+            </a>
+          </div>
           <Link
             href="/"
-            className="flex items-center gap-2.5"
+            className="lp-nav-brand flex h-8 min-w-44 items-center justify-center gap-2.5 text-primary-foreground"
             aria-label="Explainaloud home"
           >
-            <ExplainaloudMark className="h-6 w-6" />
-            <span className="font-semibold tracking-[-0.025em]">
+            <span className="lp-nav-brand-copy font-sans font-semibold text-sm tracking-[-0.02em]">
               Explainaloud
             </span>
+            <span
+              aria-hidden="true"
+              className="lp-nav-brand-mark-target h-6 w-6 shrink-0 opacity-0"
+            />
           </Link>
-          <div className="ml-auto flex items-center gap-2">
-            <Link
-              href="/login"
-              className="rounded-full px-4 py-2 text-sm transition-colors hover:bg-muted"
-            >
+          <div className="flex items-center justify-self-end gap-2">
+            <Link href="/login" className="px-4 py-2 text-sm hover:text-white">
               Log in
             </Link>
             <Link
               href="/signup"
-              className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-primary-foreground text-sm transition-opacity hover:opacity-85"
+              data-gsap-hover
+              className="inline-flex items-center gap-2 border border-card bg-card px-4 py-2 text-card-foreground text-sm"
             >
               Start free <ArrowRight className="h-3.5 w-3.5" />
             </Link>
@@ -568,98 +997,93 @@ export function LandingRedesign() {
         </div>
       </nav>
 
-      <section className="relative overflow-hidden bg-primary px-5 pb-20 text-primary-foreground md:px-8 md:pb-28">
+      <section
+        id="hero"
+        ref={heroRef}
+        className="lp-atmosphere relative overflow-hidden border-white/15 border-b bg-primary px-5 pb-20 text-primary-foreground md:px-8 md:pb-28"
+      >
         <div className="relative min-h-screen pt-24 md:pt-28">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_18%,rgba(113,214,154,0.2),transparent_27%),radial-gradient(circle_at_88%_34%,rgba(255,140,131,0.14),transparent_31%)]"
-          />
-          <motion.div
-            aria-hidden="true"
-            animate={
-              reduceMotion
-                ? undefined
-                : { x: ["-3%", "3%", "-3%"], scale: [1, 1.025, 1] }
-            }
-            transition={{
-              duration: 20,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-            className="pointer-events-none absolute top-[16%] left-1/2 -translate-x-1/2 whitespace-nowrap font-black text-[clamp(7rem,18vw,18rem)] text-white/[0.035] uppercase leading-none tracking-[-0.08em]"
-          >
-            Explainaloud
-          </motion.div>
-          <motion.div
-            aria-hidden="true"
-            animate={
-              reduceMotion
-                ? undefined
-                : { rotate: [12, 18, 12], scale: [1, 1.06, 1] }
-            }
-            transition={{
-              duration: 24,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-            className="pointer-events-none absolute -top-[14rem] -left-[18rem] h-[38rem] w-[55rem] rounded-[50%] border-[5rem] border-[var(--miss-light)]/8"
-          />
-          <motion.div
-            aria-hidden="true"
-            animate={reduceMotion ? undefined : { x: ["-12%", "12%", "-12%"] }}
-            transition={{
-              duration: 18,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-            className="pointer-events-none absolute top-28 left-1/2 h-px w-[44rem] -translate-x-1/2 bg-gradient-to-r from-transparent via-white/25 to-transparent"
-          />
-          <div className="relative z-10 mx-auto max-w-[76rem] text-center">
-            <motion.p
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease }}
-              className="font-mono text-[0.67rem] text-primary-foreground/75 uppercase tracking-[0.15em]"
-            >
-              Rehearse anything you have to say out loud
-            </motion.p>
+          <div className="relative z-10 mx-auto flex min-h-[calc(100vh-12rem)] max-w-[76rem] flex-col items-center justify-center pb-48 text-center md:pb-44">
+            <h1 className="relative mx-auto max-w-[12ch] font-display text-[clamp(3.35rem,6.8vw,7rem)] text-primary-foreground leading-[0.88] tracking-[-0.055em]">
+              <span className="block overflow-hidden pb-[0.08em]">
+                <span data-hero-word className="inline-block">
+                  Say
+                </span>{" "}
+                <span data-hero-word className="inline-block">
+                  what
+                </span>{" "}
+                <span data-hero-word className="inline-block">
+                  you
+                </span>
+              </span>
+              <span className="block overflow-hidden pb-[0.08em]">
+                <span data-hero-word className="inline-block">
+                  know.
+                </span>{" "}
+                <span
+                  data-hero-word
+                  className="inline-block text-[var(--accent-solid)] italic"
+                >
+                  See
+                </span>
+              </span>
+              <span className="block overflow-hidden pb-[0.08em]">
+                <span
+                  data-hero-word
+                  className="inline-block text-[var(--accent-solid)] italic"
+                >
+                  what you missed.
+                </span>
+              </span>
+            </h1>
 
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.08, duration: 0.75, ease }}
-              className="mx-auto mt-4 max-w-[15ch] font-display text-[clamp(3.1rem,5.5vw,5.2rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]"
+            <div
+              data-kinetic
+              aria-hidden="true"
+              className="absolute top-[19%] left-[2%] hidden -rotate-3 border border-white/35 bg-[var(--ok)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(5,28,20,0.75)] lg:block"
             >
-              Say what you know.{" "}
-              <em className="font-normal">See what you missed.</em>
-            </motion.h1>
+              Reached · main point
+            </div>
+            <div
+              data-kinetic
+              aria-hidden="true"
+              className="absolute top-[30%] right-[1%] hidden rotate-2 border border-white/35 bg-[var(--vague)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(5,28,20,0.75)] lg:block"
+            >
+              Too thin · evidence
+            </div>
+            <div
+              data-kinetic
+              aria-hidden="true"
+              className="absolute bottom-[24%] left-[8%] hidden rotate-1 border border-white/35 bg-[var(--miss)] px-4 py-3 font-mono text-[0.65rem] text-white uppercase tracking-[0.12em] shadow-[4px_4px_0_rgba(5,28,20,0.75)] lg:block"
+            >
+              Missed · example
+            </div>
 
-            <motion.p
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.16, duration: 0.7, ease }}
-              className="mx-auto mt-5 max-w-[42rem] text-[clamp(1rem,1.7vw,1.2rem)] text-primary-foreground/85 leading-relaxed"
+            <p
+              data-hero-secondary
+              className="mt-7 max-w-[34rem] text-primary-foreground/85 text-lg leading-relaxed"
             >
-              Bring the points you intend to make, talk them through naturally,
-              and see what you reached, rushed, or never got to.
-            </motion.p>
+              Rehearse out loud. See which ideas landed, which were rushed, and
+              which never made it into your explanation.
+            </p>
 
             <motion.div
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.24, duration: 0.65, ease }}
-              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row"
+              data-hero-secondary
+              data-gsap-lock
+              className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
             >
               <Link
                 href="/signup"
-                className="group inline-flex h-12 items-center gap-2 rounded-[1.4rem_1rem_1.4rem_1.1rem] bg-card px-6 text-card-foreground font-medium shadow-[0_12px_30px_-16px_rgba(0,40,34,0.6)] transition-transform hover:scale-[1.025] active:scale-[0.98]"
+                data-gsap-hover
+                className="group inline-flex h-12 items-center gap-5 border border-[var(--accent-solid)] bg-[var(--accent-solid)] px-6 font-medium text-[var(--brand-foreground)] shadow-[4px_4px_0_rgba(5,28,20,0.85)]"
               >
                 Start explaining
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <a
                 href="#how-it-works"
-                className="inline-flex h-12 items-center rounded-[1.2rem] border border-white/30 bg-white/5 px-6 font-medium text-primary-foreground backdrop-blur-md transition-colors hover:bg-white/10"
+                data-gsap-hover
+                className="inline-flex h-12 items-center border border-white/30 px-6 font-medium text-primary-foreground"
               >
                 See how it works
               </a>
@@ -670,14 +1094,23 @@ export function LandingRedesign() {
             <MarqueeRibbon />
           </div>
         </div>
+      </section>
 
+      <section
+        id="live-demo"
+        className="bg-background px-5 pt-16 pb-20 md:px-8 md:pt-20 md:pb-28"
+      >
         <motion.div
-          initial={{ opacity: 0, y: 34, scale: 0.985 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ delay: 0.3, duration: 0.9, ease }}
-          className="lp-product-window mx-auto mt-16 max-w-[68rem] overflow-hidden rounded-[3rem_2rem_3.2rem_2.3rem] border border-white/60 bg-card/82 shadow-[0_38px_100px_-50px_rgba(0,40,34,0.5)] backdrop-blur-2xl md:mt-20"
+          data-story-section
+          data-gsap-lock
+          data-gsap-hover
+          data-gsap-tilt
+          className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[1.6rem] border border-[rgba(18,53,36,0.2)] bg-card shadow-[10px_12px_0_rgba(5,28,20,0.82)]"
         >
-          <div className="flex items-center border-border border-b px-5 py-4">
+          <div
+            data-story-step
+            className="flex items-center border-border border-b px-5 py-4"
+          >
             <div className="flex gap-1.5" aria-hidden="true">
               <span className="h-2.5 w-2.5 rounded-full bg-border" />
               <span className="h-2.5 w-2.5 rounded-full bg-border" />
@@ -688,7 +1121,10 @@ export function LandingRedesign() {
             </span>
           </div>
 
-          <div className="grid min-h-[31rem] md:grid-cols-[1fr_18rem]">
+          <div
+            data-story-step
+            className="grid min-h-[31rem] md:grid-cols-[1fr_18rem]"
+          >
             <div className="flex flex-col p-6 text-left md:p-10 lg:p-12">
               <div className="flex items-center justify-between gap-4">
                 <span className="inline-flex items-center gap-2 font-mono text-[0.68rem] text-muted-foreground uppercase tracking-[0.11em]">
@@ -719,11 +1155,10 @@ export function LandingRedesign() {
 
               <div className="mt-auto flex items-center gap-3 pt-12">
                 <motion.button
+                  data-gsap-hover
                   type="button"
                   aria-label="Recording example"
-                  whileHover={{ scale: 1.06 }}
                   whileTap={{ scale: 0.94 }}
-                  transition={{ type: "spring", stiffness: 420, damping: 24 }}
                   className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground"
                 >
                   <Mic className="h-5 w-5" />
@@ -759,18 +1194,21 @@ export function LandingRedesign() {
               </div>
             </div>
 
-            <aside className="border-border border-t bg-muted/55 p-6 text-left md:border-t-0 md:border-l md:p-7">
+            <aside className="border-border border-t bg-muted p-6 text-left md:border-t-0 md:border-l md:p-7">
               <p className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
                 What you missed
               </p>
-              <div className="mt-6 rounded-2xl border border-miss/20 bg-card p-5 shadow-sm">
+              <div
+                data-gsap-hover
+                className="mt-6 rounded-sm border border-white/10 border-l-2 border-l-miss bg-[var(--panel-deep)] p-5 shadow-[4px_4px_0_#000]"
+              >
                 <span className="font-mono text-[0.62rem] text-miss uppercase tracking-[0.12em]">
                   Missing step
                 </span>
-                <p className="mt-3 font-display text-[1.45rem] text-strong leading-snug">
+                <p className="mt-3 font-display text-[1.45rem] text-primary-foreground leading-snug">
                   You named the rule, but skipped why the forces do not cancel.
                 </p>
-                <p className="mt-3 text-muted-foreground text-sm leading-relaxed">
+                <p className="mt-3 text-primary-foreground/65 text-sm leading-relaxed">
                   Reveal the idea that completes your explanation.
                 </p>
               </div>
@@ -789,29 +1227,30 @@ export function LandingRedesign() {
 
       <section
         id="how-it-works"
+        data-story-section
+        data-scroll-reveal
         className="border-border border-t bg-card px-5 py-24 md:px-8 md:py-32"
       >
         <div className="mx-auto max-w-[76rem]">
           <motion.p
-            initial={{ opacity: 0, x: -14 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
+            data-story-step
             className="font-mono text-[0.68rem] text-brand-ink uppercase tracking-[0.13em]"
           >
             A better study loop
           </motion.p>
           <div className="mt-5 grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
-            <h2 className="max-w-[12ch] font-display text-[clamp(2.8rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]">
+            <h2
+              data-story-step
+              className="max-w-[12ch] font-display text-[clamp(2.8rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]"
+            >
               Understanding shows up when you speak.
             </h2>
             <div className="border-border border-t">
-              {steps.map((step, index) => (
+              {steps.map((step) => (
                 <motion.article
                   key={step.number}
-                  initial={{ opacity: 0, x: 28 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  viewport={{ once: true, amount: 0.55 }}
-                  transition={{ delay: index * 0.08, duration: 0.55, ease }}
+                  data-story-step
+                  data-feature-card
                   className="grid gap-4 border-border border-b py-7 sm:grid-cols-[4rem_0.7fr_1fr] sm:items-start"
                 >
                   <span className="font-mono text-[0.67rem] text-muted-foreground">
@@ -833,7 +1272,10 @@ export function LandingRedesign() {
       <section className="px-5 py-24 md:px-8 md:py-32">
         <div className="mx-auto max-w-[76rem] border-border border-y">
           <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
-            <article className="border-border py-12 pr-0 lg:border-r lg:py-20 lg:pr-16">
+            <article
+              data-feature-card
+              className="border-border py-12 pr-0 lg:border-r lg:py-20 lg:pr-16"
+            >
               <p className="font-mono text-[0.67rem] text-muted-foreground uppercase tracking-[0.13em]">
                 Grounded in your material
               </p>
@@ -848,7 +1290,10 @@ export function LandingRedesign() {
             </article>
 
             <div className="grid border-border border-t lg:border-t-0">
-              <article className="border-border border-b py-10 lg:py-12 lg:pl-14">
+              <article
+                data-feature-card
+                className="border-border border-b py-10 lg:py-12 lg:pl-14"
+              >
                 <span className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
                   While the thought is fresh
                 </span>
@@ -860,7 +1305,7 @@ export function LandingRedesign() {
                   time—not as a score waiting on another screen.
                 </p>
               </article>
-              <article className="py-10 lg:py-12 lg:pl-14">
+              <article data-feature-card className="py-10 lg:py-12 lg:pl-14">
                 <span className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
                   Your pace, not a population
                 </span>
@@ -877,13 +1322,13 @@ export function LandingRedesign() {
         </div>
       </section>
 
-      <section className="px-5 pb-8 md:px-8">
+      <section
+        className="lp-closing-forest px-5 py-20 md:px-8 md:py-28"
+        style={closingForestStyle}
+      >
         <motion.div
-          initial={{ opacity: 0, y: 28 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.25 }}
-          transition={{ duration: 0.75, ease }}
-          className="mx-auto max-w-[76rem] rounded-[2.2rem] bg-primary px-6 py-20 text-center text-primary-foreground md:px-12 md:py-28"
+          data-scroll-reveal
+          className="mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-20 text-left text-primary-foreground shadow-[6px_6px_0_rgba(3,20,14,0.55)] md:px-12 md:py-28"
         >
           <motion.span
             animate={
@@ -896,7 +1341,7 @@ export function LandingRedesign() {
               repeat: Number.POSITIVE_INFINITY,
               ease: "easeInOut",
             }}
-            className="mx-auto mb-6 flex h-11 w-11 items-center justify-center rounded-full border border-white/20"
+            className="mx-auto mb-6 flex h-11 w-11 items-center justify-center rounded-full border border-white/25"
           >
             <Sparkles className="h-4 w-4" />
           </motion.span>
@@ -908,7 +1353,8 @@ export function LandingRedesign() {
           </h2>
           <Link
             href="/signup"
-            className="group mt-9 inline-flex h-12 items-center gap-2 rounded-full bg-card px-6 text-card-foreground font-medium transition-transform hover:scale-[1.025] active:scale-[0.98]"
+            data-gsap-hover
+            className="group mt-9 inline-flex h-12 items-center gap-2 bg-card px-6 font-medium text-card-foreground"
           >
             Start free
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -918,6 +1364,8 @@ export function LandingRedesign() {
           </p>
         </motion.div>
       </section>
+
+      <ForestGuide />
 
       <footer className="mx-auto flex max-w-[76rem] flex-wrap items-center gap-5 px-5 py-8 text-muted-foreground text-sm md:px-8">
         <span className="flex items-center gap-2 text-foreground">
