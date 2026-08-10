@@ -684,7 +684,6 @@ export function LandingRedesign() {
   const reduceMotion = useReducedMotion();
   const pageRef = useRef<HTMLElement>(null);
   const heroRef = useRef<HTMLElement>(null);
-  const brandRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const navSentinelRef = useRef<HTMLDivElement>(null);
 
@@ -879,56 +878,20 @@ export function LandingRedesign() {
             { x: 0, duration: 0.62, stagger: 0.06, ease: "expo.out" },
           );
 
-          if (brandRef.current) {
-            gsap.set("#bg-logo", {
-              x: 0,
-              xPercent: -50,
-              yPercent: -50,
-              transformOrigin: "50% 50%",
-            });
-            gsap
-              .timeline({
-                scrollTrigger: {
-                  trigger: "#hero",
-                  start: "top top",
-                  end: "45% top",
-                  scrub: reduceMotion ? false : 1,
-                  invalidateOnRefresh: true,
-                },
-              })
-              .to("#bg-logo", {
-                x: () => {
-                  const target = document
-                    .querySelector(".lp-nav-brand-mark-target")
-                    ?.getBoundingClientRect();
-                  return target
-                    ? target.left + target.width / 2 - window.innerWidth / 2
-                    : 0;
-                },
-                xPercent: -50,
-                y: () => {
-                  const target = document
-                    .querySelector(".lp-nav-brand-mark-target")
-                    ?.getBoundingClientRect();
-                  return target
-                    ? target.top + target.height / 2 - window.innerHeight / 2
-                    : -window.innerHeight / 2 + 32;
-                },
-                yPercent: -50,
-                scale: () => {
-                  const target = document.querySelector(
-                    ".lp-nav-brand-mark-target",
-                  ) as HTMLElement | null;
-                  return target && brandRef.current
-                    ? target.offsetWidth / brandRef.current.offsetWidth
-                    : 0.11;
-                },
-                color: "var(--primary-foreground)",
-                opacity: 1,
-                duration: 1,
-                ease: "power2.inOut",
-              });
-          }
+          /* The tween that flew the mark into the nav lived here and is gone.
+             It positioned a `fixed` element by computing offsets from the
+             viewport centre to a hidden landing pad in the bar — and when that
+             arithmetic did not land, the mark did not fall back to anything.
+             It simply stayed put: 128px of translucent glass parked over the
+             page, drifting across the rehearsal panel, the transcript and the
+             guidance column as the reader scrolled. Measured at six scroll
+             positions from 0 to past the product window, it never moved and
+             never shrank.
+
+             The mark is now `absolute` inside the hero, which already clips
+             its overflow, so it cannot reach the sections below whatever any
+             animation does or fails to do. The nav carries its own mark, which
+             is what the flight was for. */
 
           gsap.utils
             .toArray<HTMLElement>("[data-scroll-reveal]")
@@ -1054,24 +1017,6 @@ export function LandingRedesign() {
       ref={pageRef}
       className="lp-v2 min-h-screen overflow-x-clip bg-background font-sans text-foreground"
     >
-      <div
-        id="bg-logo"
-        ref={brandRef}
-        aria-hidden="true"
-        className="pointer-events-none fixed top-1/2 left-1/2 z-[60] h-[clamp(8rem,15vw,13rem)] w-[clamp(8rem,15vw,13rem)] -translate-x-1/2 -translate-y-1/2 text-[length:clamp(8rem,15vw,13rem)] opacity-45 [perspective:900px] will-change-transform"
-      >
-        {/* The spin lives on its own element. The outer one is already
-            carrying the scroll tween that flies the mark into the nav, and
-            driving both rotation and position from one transform means the
-            two fight over it. */}
-        <div
-          id="bg-logo-spin"
-          className="h-full w-full will-change-transform"
-          style={{ transformStyle: "preserve-3d" }}
-        >
-          <GlassMark className="h-full w-full" />
-        </div>
-      </div>
       <nav
         ref={navRef}
         className="lp-sky-nav fixed inset-x-0 top-0 z-50 border-white/20 border-b text-primary-foreground"
@@ -1099,10 +1044,7 @@ export function LandingRedesign() {
             <span className="lp-nav-brand-copy font-sans font-semibold text-sm tracking-[-0.02em]">
               Explainaloud
             </span>
-            <span
-              aria-hidden="true"
-              className="lp-nav-brand-mark-target h-6 w-6 shrink-0 opacity-0"
-            />
+            <ExplainaloudMark className="h-6 w-6 shrink-0" />
           </Link>
           <div className="flex items-center justify-self-end gap-2">
             <Link
@@ -1131,6 +1073,26 @@ export function LandingRedesign() {
           aria-hidden="true"
           className="lp-hero-scrim absolute inset-0 z-[1]"
         />
+
+        {/* Absolute, and inside the hero, which already clips its overflow.
+            A fixed ornament at the document root can always end up over
+            content — this one did, for the whole page. An absolute one in a
+            clipped section cannot reach past it. */}
+        <div
+          id="bg-logo"
+          aria-hidden="true"
+          className="pointer-events-none absolute top-1/2 left-[62%] z-[1] hidden h-[clamp(8rem,13vw,12rem)] w-[clamp(8rem,13vw,12rem)] -translate-y-1/2 text-[length:clamp(8rem,13vw,12rem)] opacity-45 [perspective:900px] will-change-transform lg:block"
+        >
+          {/* The spin is on its own element so nothing else is competing for
+              the same transform. */}
+          <div
+            id="bg-logo-spin"
+            className="h-full w-full will-change-transform"
+            style={{ transformStyle: "preserve-3d" }}
+          >
+            <GlassMark className="h-full w-full" />
+          </div>
+        </div>
         <div className="relative z-[2] flex min-h-screen flex-col pt-20 md:pt-24">
           <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center lg:items-start lg:text-left">
             <h1 className="relative mx-auto max-w-[12ch] font-display lg:mx-0 lg:max-w-[11ch] text-[clamp(2.9rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
