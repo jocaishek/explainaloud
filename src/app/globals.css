@@ -122,9 +122,9 @@ main.lp-v2 {
     rgba(9, 22, 44, 0.54)
   );
   transition:
-    background 320ms cubic-bezier(0.23, 1, 0.32, 1),
-    color 320ms cubic-bezier(0.23, 1, 0.32, 1),
-    border-color 320ms cubic-bezier(0.23, 1, 0.32, 1);
+    background 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    color 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 html:has(main.lp-v2) {
@@ -169,9 +169,12 @@ html:has(main.lp-v2) {
  * allowed here and nowhere else on the page: this is the one element that
  * genuinely sits over content scrolling underneath it. */
 .lp-v2 .lp-sky-nav.is-light {
-  background: rgba(249, 251, 254, 0.84);
-  backdrop-filter: saturate(1.4) blur(14px);
-  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  background: rgba(255, 255, 255, 0.94);
+  /* No `saturate()`. It was pulling colour out of whatever scrolled beneath
+     and pushing it into the bar, which is exactly the tint this is meant not
+     to have. Blur alone is what makes it read as glass. */
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border-color: var(--border);
   color: var(--strong);
 }

@@ -411,7 +411,7 @@ function IntroPanel() {
   );
 }
 
-const STAGE_MS = 3600;
+const STAGE_MS = 2200;
 
 /**
  * The three verdicts, cycling on their own.
@@ -556,7 +556,11 @@ function ResultsCarousel() {
                     opacity: isActive ? 1 : 0,
                     y: isActive || reduceMotion ? 0 : 10,
                   }}
-                  transition={{ duration: 0.4, ease }}
+                  transition={{
+                    duration: isActive ? 0.26 : 0.14,
+                    delay: isActive ? 0.14 : 0,
+                    ease,
+                  }}
                   className="col-start-1 row-start-1 flex flex-col"
                 >
                   <div
@@ -601,7 +605,11 @@ function ResultsCarousel() {
                 aria-hidden={index !== activeStage}
                 initial={false}
                 animate={{ opacity: index === activeStage ? 1 : 0 }}
-                transition={{ duration: 0.4, ease }}
+                transition={{
+                  duration: index === activeStage ? 0.26 : 0.14,
+                  delay: index === activeStage ? 0.14 : 0,
+                  ease,
+                }}
                 className="col-start-1 row-start-1 text-muted-foreground leading-relaxed"
               >
                 {item.detail}
@@ -743,29 +751,52 @@ export function LandingRedesign() {
   const navSentinelRef = useRef<HTMLDivElement>(null);
 
   /**
-   * The bar turns to glass once it is off the forest.
+   * The bar turns to glass once it is off the hero.
    *
    * Deliberately not a ScrollTrigger. Whether the wordmark is legible is not a
    * decoration, and everything GSAP does here arrives behind a dynamic import —
    * so on a slow connection the bar would spend the first seconds dark over
-   * warm stock. An observer on a sentinel at the foot of the hero costs
-   * nothing, runs on the first paint, and needs no refresh on resize.
+   * light stock.
+   *
+   * It was an IntersectionObserver, and that is what made it fail on a fast
+   * flick: the observer only reports when it next samples, and the browser
+   * coalesces those samples, so a scroll that crosses the whole hero between
+   * two samples can land on white with a navy bar still over it. An observer
+   * answers "is it on screen", which is not the question — the question is
+   * "where is the seam right now", and that has to be read on the frame it is
+   * needed.
+   *
+   * So: a passive scroll listener, coalesced into one `requestAnimationFrame`
+   * so it costs a single rect read per painted frame no matter how many events
+   * arrive. It cannot be skipped over, because scrolling and painting are the
+   * same loop.
    */
   useEffect(() => {
     const sentinel = navSentinelRef.current;
     const nav = navRef.current;
     if (!sentinel || !nav) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        nav.classList.toggle(
-          "is-light",
-          !entry.isIntersecting && entry.boundingClientRect.top < 0,
-        );
-      },
-      { rootMargin: "-64px 0px 0px 0px" },
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
+
+    let frame = 0;
+    const sync = () => {
+      frame = 0;
+      nav.classList.toggle(
+        "is-light",
+        sentinel.getBoundingClientRect().top <= 64,
+      );
+    };
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(sync);
+    };
+
+    sync();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
   }, []);
 
   useEffect(() => {
@@ -1138,7 +1169,7 @@ export function LandingRedesign() {
       <section
         id="hero"
         ref={heroRef}
-        className="lp-atmosphere relative overflow-hidden border-white/15 border-b bg-primary px-5 text-primary-foreground md:px-8"
+        className="lp-atmosphere relative overflow-hidden bg-primary px-5 text-primary-foreground md:px-8"
       >
         <div
           aria-hidden="true"
@@ -1240,9 +1271,19 @@ export function LandingRedesign() {
             </p>
           </div>
 
-          <div className="relative z-10 pb-6">
+          <div className="relative z-10 pb-24 md:pb-28">
             <LiveRehearsalPanel />
           </div>
+
+          {/* The hero met the next section at a hard horizontal cut, which is
+              the one edge on the page where the eye has nothing to do but
+              notice it. The dark now dissolves into the stock the section
+              below is painted in, so the crossing is a resolve rather than a
+              join. Sits under the content, over the artwork. */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-40 bg-gradient-to-b from-transparent to-[var(--background)] md:h-52"
+          />
         </div>
         <div ref={navSentinelRef} aria-hidden="true" className="h-px w-full" />
       </section>
@@ -1267,7 +1308,7 @@ export function LandingRedesign() {
               <span className="h-2.5 w-2.5 rounded-full bg-border" />
             </div>
             <span className="mx-auto -translate-x-5 font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
-              Live explanation · Physics
+              You are explaining · Physics
             </span>
           </div>
 
@@ -1345,8 +1386,12 @@ export function LandingRedesign() {
             </div>
 
             <aside className="border-border border-t bg-muted p-6 text-left md:border-t-0 md:border-l md:p-7">
-              <p className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
-                What you missed
+              <p className="font-mono text-[0.65rem] text-brand-ink uppercase tracking-[0.12em]">
+                Do this next
+              </p>
+              <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
+                While you talk, this column fills with the one thing worth
+                fixing before your next run.
               </p>
               <div
                 data-gsap-hover
