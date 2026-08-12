@@ -629,7 +629,6 @@ export function FlowField({ className }: { className?: string }) {
     let visible = true;
     let start = performance.now();
     let elapsed = 0;
-    let lastFrame = performance.now();
 
     /* The pointer, as the segment it covered since the last frame.
        `from` is where it was when the last frame drew and `to` is where it is
@@ -687,7 +686,6 @@ export function FlowField({ className }: { className?: string }) {
          surface would explode rather than lag. Fixed steps mean ripples travel
          slightly slower on a slow machine, which nobody can see, instead of
          the simulation coming apart, which everybody can. */
-      lastFrame = now;
       elapsed = (now - start) / 1000;
 
       const moved = Math.hypot(seg.toX - seg.fromX, seg.toY - seg.fromY);
@@ -745,12 +743,11 @@ export function FlowField({ className }: { className?: string }) {
     /* It only runs while it is being looked at. The hero is one screen of a
        long page, so this is off for most of a visit, and a fullscreen fragment
        shader running behind content nobody can see is the difference between a
-       background and a battery complaint. `start` and `lastFrame` are rebased
+       background and a battery complaint. `start` is rebased
        on resume so the field picks up where it left off instead of jumping. */
     const run = () => {
       if (frame || !visible) return;
       start = performance.now() - elapsed * 1000;
-      lastFrame = performance.now();
       frame = requestAnimationFrame(draw);
     };
     const stop = () => {
