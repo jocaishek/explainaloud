@@ -535,8 +535,19 @@ html:has(main.lp-v2) {
   /* Three radii. Panels at 20, controls at 12, pills round. A fourth value is
      how a system starts drifting, so there is deliberately nowhere to put
      one. */
+  /* The demo's shapes, because the app is what the demo is advertising.
+     A visitor watches a panel of square-cornered fields and chips get filled
+     in, signs up, and lands on pill buttons and soft rounded cards. That is a
+     different product as far as the eye is concerned, however well the colours
+     match — shape is read faster than hue.
+
+     `--r-card` stays at 20, which is the radius of the demo's own outer
+     window. `--r-control` goes to zero, which is every field, chip and button
+     inside it. Buttons were the loudest offender: `rounded-full` was hardcoded
+     into the shared component, so every control in the product was a pill no
+     matter what this token said. */
   --r-card: 20px;
-  --r-control: 12px;
+  --r-control: 0px;
 
   /* Elevation, tinted with the text hue rather than pure black — a neutral
      shadow on a slightly warm canvas reads as dirt. Three steps and no more:

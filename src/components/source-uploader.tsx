@@ -162,7 +162,7 @@ export function SourceUploader({
           if (files.length) void uploadAll(files);
         }}
         className={cn(
-          "flex flex-col items-center gap-3 rounded-xl border border-dashed px-6 py-10 text-center transition-[border-color,background-color,transform] duration-200 ease-out",
+          "flex flex-col items-center gap-3 rounded-control border border-dashed px-6 py-10 text-center transition-[border-color,background-color,transform] duration-200 ease-out",
           dragActive
             ? "scale-[1.01] border-brand bg-brand/[0.06]"
             : "border-border bg-surface",
@@ -189,7 +189,7 @@ export function SourceUploader({
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={!!busy || atLimit}
-          className="rounded-full border border-input bg-background px-4 py-1.5 text-xs font-medium text-strong transition-transform duration-200 ease-out hover:border-brand/40 active:scale-[0.97] disabled:opacity-50"
+          className="rounded-control border border-input bg-background px-4 py-1.5 text-xs font-medium text-strong transition-transform duration-200 ease-out hover:border-brand/40 active:scale-[0.97] disabled:opacity-50"
         >
           {busy ? `Reading ${busy}…` : "Browse your computer"}
         </button>
@@ -218,7 +218,7 @@ export function SourceUploader({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, x: -8 }}
             transition={{ duration: 0.22, ease: EASE }}
-            className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+            className="flex items-center gap-3 rounded-control border border-border bg-surface px-3 py-2"
           >
             <span className="min-w-0 flex-1 truncate text-sm text-strong">
               {source.filename}
@@ -231,7 +231,7 @@ export function SourceUploader({
               aria-label={`Preview ${source.filename}`}
               onClick={() => void openPreview(source.id)}
               disabled={previewing === source.id}
-              className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors hover:bg-surface hover:text-strong disabled:opacity-50"
+              className="shrink-0 rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors hover:bg-surface hover:text-strong disabled:opacity-50"
             >
               {previewing === source.id ? "Opening…" : "Preview"}
             </button>
@@ -245,7 +245,7 @@ export function SourceUploader({
                   type="button"
                   onClick={() => void remove(source.id)}
                   disabled={removingId === source.id}
-                  className="rounded-md bg-destructive px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
+                  className="rounded-control bg-destructive px-2 py-1 text-[11px] font-semibold text-white transition-colors hover:bg-destructive/90 disabled:opacity-50"
                 >
                   {removingId === source.id ? "Removing…" : "Yes"}
                 </button>
@@ -253,7 +253,7 @@ export function SourceUploader({
                   type="button"
                   onClick={() => setConfirmRemoveId(null)}
                   disabled={removingId === source.id}
-                  className="rounded-md px-2 py-1 text-[11px] text-subtle transition-colors hover:bg-muted hover:text-strong disabled:opacity-50"
+                  className="rounded-control px-2 py-1 text-[11px] text-subtle transition-colors hover:bg-muted hover:text-strong disabled:opacity-50"
                 >
                   No
                 </button>
@@ -263,7 +263,7 @@ export function SourceUploader({
                 type="button"
                 aria-label={`Remove ${source.filename}`}
                 onClick={() => setConfirmRemoveId(source.id)}
-                className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:bg-destructive/10"
+                className="shrink-0 rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:bg-destructive/10"
               >
                 Remove
               </button>
@@ -305,7 +305,7 @@ export function SourceUploader({
                 <button
                   type="button"
                   onClick={() => setPreview(null)}
-                  className="shrink-0 rounded-md px-2 py-1 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase hover:text-strong"
+                  className="shrink-0 rounded-control px-2 py-1 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase hover:text-strong"
                 >
                   Close
                 </button>

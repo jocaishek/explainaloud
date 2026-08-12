@@ -92,7 +92,7 @@ export default async function ReTeachPage({
           </p>
           <Link
             href={`/home/${slug}/record`}
-            className="w-fit rounded-full bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
+            className="w-fit rounded-control bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
           >
             Start explaining
           </Link>
@@ -155,7 +155,7 @@ export default async function ReTeachPage({
               {section && (
                 <Link
                   href={`/home/${slug}#${courseSectionId(sectionIndex)}`}
-                  className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  className="w-fit rounded-control border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   Review “{section.title}” in your course →
                 </Link>
@@ -166,7 +166,7 @@ export default async function ReTeachPage({
 
         <Link
           href={`/home/${slug}/record`}
-          className="w-fit rounded-full bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
+          className="w-fit rounded-control bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
         >
           Record another explanation
         </Link>

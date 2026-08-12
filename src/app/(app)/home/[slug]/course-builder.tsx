@@ -199,7 +199,7 @@ export function CourseBuilder({
           type="button"
           onClick={generate}
           disabled={generating}
-          className="h-11 gap-2 rounded-full bg-accent-solid px-6 font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97] disabled:opacity-50"
+          className="h-11 gap-2 rounded-control bg-accent-solid px-6 font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97] disabled:opacity-50"
         >
           {generating
             ? "Reading your sources…"
@@ -241,7 +241,7 @@ export function CourseBuilder({
                 of it. Saying so here turns a confusing score into an
                 understood one, before the recording rather than after it. */}
             {course.scope_note && (
-              <aside className="rounded-xl border border-amber-500/30 bg-amber-500/[0.06] p-4">
+              <aside className="rounded-control border border-amber-500/30 bg-amber-500/[0.06] p-4">
                 <p className="text-sm font-semibold text-strong">
                   This topic is quite broad
                 </p>
@@ -285,7 +285,7 @@ export function CourseBuilder({
                   {course.notes.map((note) => (
                     <li
                       key={note}
-                      className="flex gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground"
+                      className="flex gap-3 rounded-control border border-border bg-surface px-3 py-2 text-sm text-foreground"
                     >
                       <span aria-hidden className="text-brand-ink">
                         —
@@ -319,7 +319,7 @@ export function CourseBuilder({
                 <Field label="Analogy" body={section.analogy} />
                 <Field label="Technical" body={section.technical} />
                 <Field label="Example" body={section.example} />
-                <p className="rounded-lg border border-brand/20 bg-brand/[0.06] px-3 py-2 text-sm font-medium text-strong">
+                <p className="rounded-control border border-brand/20 bg-brand/[0.06] px-3 py-2 text-sm font-medium text-strong">
                   {section.quiz}
                 </p>
                 <CitationMarks
@@ -342,7 +342,7 @@ export function CourseBuilder({
                       href={video.url}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:text-strong"
+                      className="flex items-center gap-3 rounded-control border border-border bg-surface px-3 py-2 text-sm text-foreground transition-colors hover:border-brand/40 hover:text-strong"
                     >
                       <span className="min-w-0 flex-1">{video.title}</span>
                       <span
@@ -401,7 +401,7 @@ export function CourseBuilder({
                       href={resource.url}
                       target="_blank"
                       rel="noreferrer noopener"
-                      className="flex items-start gap-3 rounded-lg border border-border bg-surface px-3 py-2 transition-colors hover:border-brand/40"
+                      className="flex items-start gap-3 rounded-control border border-border bg-surface px-3 py-2 transition-colors hover:border-brand/40"
                     >
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium text-strong">
@@ -447,7 +447,7 @@ export function CourseBuilder({
             ) : null}
 
             {course.uncovered.length > 0 && (
-              <section className="rounded-lg border border-border bg-surface p-3">
+              <section className="rounded-control border border-border bg-surface p-3">
                 <h2 className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
                   Not covered by your sources
                 </h2>
@@ -530,7 +530,7 @@ function CitationMarks({
             key={citationKey(citation)}
             href={`#course-source-${number}`}
             title={`${citation.source}: ${citation.quote}`}
-            className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-brand/25 bg-brand/[0.07] px-1.5 font-mono text-[10px] font-semibold text-brand-ink transition-colors hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
+            className="inline-flex h-6 min-w-6 items-center justify-center rounded-control border border-brand/25 bg-brand/[0.07] px-1.5 font-mono text-[10px] font-semibold text-brand-ink transition-colors hover:border-brand/50 hover:bg-brand/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand"
           >
             [{number}]
           </a>

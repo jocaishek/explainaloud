@@ -199,7 +199,7 @@ export function FolderHeader({
         type="button"
         aria-label={`Rename ${folder.name}`}
         onClick={() => setEditing(true)}
-        className="ml-auto rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors duration-200 hover:bg-surface hover:text-strong"
+        className="ml-auto rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors duration-200 hover:bg-surface hover:text-strong"
       >
         Rename
       </button>
@@ -250,7 +250,7 @@ function FolderEditRow({
           type="submit"
           size="sm"
           disabled={pending}
-          className="h-8 rounded-full bg-accent-solid px-3 text-xs font-semibold text-accent-contrast hover:bg-accent-solid-hover"
+          className="h-8 rounded-control bg-accent-solid px-3 text-xs font-semibold text-accent-contrast hover:bg-accent-solid-hover"
         >
           {pending ? "Saving…" : "Save"}
         </Button>
@@ -259,7 +259,7 @@ function FolderEditRow({
           size="sm"
           variant="ghost"
           onClick={onDone}
-          className="h-8 rounded-full px-3 text-xs"
+          className="h-8 rounded-control px-3 text-xs"
         >
           Cancel
         </Button>
@@ -272,7 +272,7 @@ function FolderEditRow({
           size="sm"
           variant="ghost"
           disabled={removing}
-          className="h-7 gap-1.5 rounded-full px-2 text-xs text-destructive hover:bg-destructive/10"
+          className="h-7 gap-1.5 rounded-control px-2 text-xs text-destructive hover:bg-destructive/10"
         >
           {removing ? "Deleting…" : "Delete folder"}
         </Button>

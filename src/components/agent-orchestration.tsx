@@ -214,7 +214,7 @@ export function AgentOrchestration({
                   </span>
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 text-[11px] font-medium",
+                      "rounded-control px-2 py-0.5 text-[11px] font-medium",
                       (agent.status === "queued" ||
                         agent.status === "skipped") &&
                         "bg-muted-foreground/10 text-subtle",
