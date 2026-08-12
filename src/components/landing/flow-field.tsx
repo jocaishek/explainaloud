@@ -206,13 +206,31 @@ void main() {
   float d = texture2D(u_prev, uv - vec2(0.0, px.y)).r * 2.0 - 1.0;
   float u = texture2D(u_prev, uv + vec2(0.0, px.y)).r * 2.0 - 1.0;
 
-  /* The wave equation. 0.34 is c², comfortably inside the 0.5 the explicit
-     scheme is stable below. */
-  float next = 2.0 * h - hPrev + 0.34 * ((l + r + d + u) - 4.0 * h);
+  /* The diagonals too, which is what makes the ripples round.
+     A five point Laplacian only knows about its four axis neighbours, so a
+     wave spreads faster along the grid than across it and an expanding ring
+     comes out as a diamond with flat sides — the single most recognisable
+     "this is a simulation on a square grid" artefact there is. The nine point
+     stencil weights the diagonals at half, which makes the operator isotropic
+     to second order: the ring is a ring in every direction. Four extra texture
+     reads on the cheap pass, and it is the difference between water and
+     graph paper. */
+  float ul = texture2D(u_prev, uv + vec2(-px.x, px.y)).r * 2.0 - 1.0;
+  float ur = texture2D(u_prev, uv + vec2(px.x, px.y)).r * 2.0 - 1.0;
+  float dl = texture2D(u_prev, uv + vec2(-px.x, -px.y)).r * 2.0 - 1.0;
+  float dr = texture2D(u_prev, uv + vec2(px.x, -px.y)).r * 2.0 - 1.0;
+
+  float lap =
+    0.5 * (l + r + u + d) + 0.25 * (ul + ur + dl + dr) - 3.0 * h;
+
+  /* 0.28 rather than 0.34: the nine point stencil has a larger effective
+     coefficient, so the stable ceiling comes down with it. Still the Courant
+     limit, still not a dial. */
+  float next = 2.0 * h - hPrev + 0.28 * lap;
 
   /* Damping. Without it the frame fills with standing waves that never die
      and the surface never returns to rest. About two seconds to quiet. */
-  next *= 0.9915;
+  next *= 0.9945;
 
   /* The hand entering the water. A negative push, because something pressed
      into a surface makes a trough first and the ring rises around it. */
@@ -220,7 +238,14 @@ void main() {
   vec2 p = vec2(uv.x * aspect, uv.y);
   vec2 a = vec2(u_seg.x * aspect, u_seg.y);
   vec2 b = vec2(u_seg.z * aspect, u_seg.w);
-  next -= smoothstep(0.055, 0.0, segDist(p, a, b)) * u_strength;
+  /* A broad, soft dent rather than a sharp poke. An impulse with a hard edge
+     contains spatial frequencies finer than the grid can represent, and a grid
+     cannot carry what it cannot represent — it turns them into noise that
+     spreads outward with the wave. Squaring the falloff rounds the shoulders
+     of the dent so everything injected is something the solver can actually
+     propagate. */
+  float dent = smoothstep(0.1, 0.0, segDist(p, a, b));
+  next -= dent * dent * u_strength;
 
   /* Held well inside the range the byte fallback can store, and a hard bound
      on anything the solver could do if a frame arrives out of order. */
@@ -266,13 +291,16 @@ void main() {
   float hU = texture2D(u_sim, uv + vec2(0.0, sp.y)).r * 2.0 - 1.0;
   vec2 slope = vec2(hR - hL, hU - hD);
 
-  p += slope * 1.6;
+  p += slope * 1.9;
 
-  vec3 normal = normalize(vec3(-slope * 9.0, 1.0));
-  float spec = pow(
-    clamp(dot(normal, normalize(vec3(-0.35, 0.5, 0.79))), 0.0, 1.0),
-    22.0
-  );
+  /* Two lobes, not one. A single tight highlight on a surface this small
+     scintillates: individual pixels cross the threshold from frame to frame
+     and the ripples sparkle like glitter rather than shining like water. A
+     broad low lobe carries the sheen, a narrower one carries the glint, and
+     between them the response is smooth enough that nothing flickers. */
+  vec3 normal = normalize(vec3(-slope * 7.0, 1.0));
+  float facing = clamp(dot(normal, normalize(vec3(-0.35, 0.5, 0.79))), 0.0, 1.0);
+  float spec = pow(facing, 6.0) * 0.35 + pow(facing, 20.0) * 0.65;
   float wake = abs(texture2D(u_sim, uv).r * 2.0 - 1.0);
 
   vec2 q = vec2(fbm(p * 1.6 + vec2(0.0, t)), fbm(p * 1.6 + vec2(5.2, -t * 0.8)));
@@ -350,7 +378,7 @@ void main() {
      reflection off a surface carries the colour of the sky and light coming
      through carries the colour of the water. */
   col += lit * (veinA + veinB) * wake * 0.55;
-  col += hot * spec * 0.6;
+  col += hot * spec * 0.42;
   col += lit * wake * 0.12;
 
   /* Scaled by aspect, because "the left third" is only a place on a wide
