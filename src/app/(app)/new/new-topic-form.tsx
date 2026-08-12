@@ -299,7 +299,7 @@ export function NewTopicForm({
           }
           value={notes}
           onChange={(event) => setNotes(event.target.value)}
-          className="resize-none rounded-md border border-input bg-surface p-3 text-sm text-strong placeholder:text-subtle focus:outline-none disabled:opacity-60"
+          className="resize-none rounded-control border border-input bg-surface p-3 text-sm text-strong placeholder:text-subtle focus:outline-none disabled:opacity-60"
         />
         {/* Said before submitting, not discovered afterwards.
          *
@@ -350,7 +350,7 @@ export function NewTopicForm({
           onDragLeave={leaveDragTarget}
           onDrop={handleDrop}
           className={cn(
-            "flex flex-col items-center gap-2 rounded-xl border border-dashed px-5 py-6 text-center transition-[border-color,background-color,transform] duration-200",
+            "flex flex-col items-center gap-2 rounded-control border border-dashed px-5 py-6 text-center transition-[border-color,background-color,transform] duration-200",
             dragActive
               ? "scale-[1.01] border-brand bg-brand/[0.06]"
               : "border-border bg-surface",
@@ -428,7 +428,7 @@ export function NewTopicForm({
             {files.map((file) => (
               <li
                 key={fileKey(file)}
-                className="flex items-center gap-3 rounded-lg border border-border bg-surface px-3 py-2"
+                className="flex items-center gap-3 rounded-control border border-border bg-surface px-3 py-2"
               >
                 <span className="min-w-0 flex-1 truncate text-sm text-strong">
                   {file.name}
@@ -444,7 +444,7 @@ export function NewTopicForm({
                       current.filter((item) => fileKey(item) !== fileKey(file)),
                     )
                   }
-                  className="shrink-0 rounded-md px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                  className="shrink-0 rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:bg-destructive/10 disabled:opacity-50"
                 >
                   Remove
                 </button>

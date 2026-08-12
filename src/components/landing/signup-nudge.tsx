@@ -60,36 +60,30 @@ export function SignupNudge() {
           animate={{ opacity: 1, y: 0 }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
           transition={reduceMotion ? { duration: 0.2 } : transitions.spring}
-          className="fixed right-4 bottom-4 z-[80] w-[min(20rem,calc(100vw-2rem))] border border-white/15 bg-[var(--panel-deep)] p-5 text-primary-foreground shadow-[6px_6px_0_rgba(4,14,32,0.6)] md:right-6 md:bottom-6"
+          className="fixed right-4 bottom-4 z-[80] w-[min(12.5rem,calc(100vw-2rem))] border border-white/15 bg-[var(--panel-deep)] p-3 text-primary-foreground shadow-[3px_3px_0_rgba(4,14,32,0.6)] md:right-4 md:bottom-4"
         >
           <button
             type="button"
             onClick={() => setDismissed(true)}
             aria-label="Dismiss"
-            className="absolute top-3 right-3 text-primary-foreground/50 transition-colors hover:text-primary-foreground"
+            className="absolute top-2.5 right-2.5 text-primary-foreground/50 transition-colors hover:text-primary-foreground"
           >
-            <X className="h-4 w-4" />
+            <X className="h-3 w-3" />
           </button>
 
-          <p className="font-mono text-[0.6rem] text-[var(--ok-light)] uppercase tracking-[0.13em]">
+          <p className="font-mono text-[0.55rem] text-[var(--ok-light)] uppercase tracking-[0.13em]">
             That was an example
           </p>
-          <p className="mt-2.5 pr-5 font-display text-[1.15rem] leading-snug">
+          <p className="mt-1 pr-3 font-display text-[0.88rem] leading-snug">
             Run it on your own material.
-          </p>
-          <p className="mt-2 text-primary-foreground/70 text-sm leading-relaxed">
-            Upload a file, talk for three minutes, read back what you missed.
           </p>
 
           <Link
             href="/signup"
-            className="mt-4 inline-flex h-10 items-center gap-2.5 bg-[var(--accent-solid)] px-4 font-medium text-[var(--brand-foreground)] text-sm transition-transform duration-200 hover:scale-[1.02]"
+            className="mt-2.5 inline-flex h-7 items-center gap-1.5 bg-[var(--accent-solid)] px-2.5 font-medium text-[0.75rem] text-[var(--brand-foreground)] transition-transform duration-200 hover:scale-[1.03]"
           >
-            Start free <ArrowRight className="h-3.5 w-3.5" />
+            Start free <ArrowRight className="h-3 w-3" />
           </Link>
-          <p className="mt-3 text-primary-foreground/50 text-xs">
-            No audio stored.
-          </p>
         </motion.aside>
       )}
     </AnimatePresence>

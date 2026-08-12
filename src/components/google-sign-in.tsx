@@ -118,7 +118,11 @@ export function GoogleSignIn({
         theme: resolvedTheme === "dark" ? "filled_black" : "outline",
         size: "large",
         text: "continue_with",
-        shape: "pill",
+        /* Rectangular, to match every other control. The product's controls
+           are square now — the demo the visitor just watched is square-cornered
+           throughout — and a single pill on the sign-in form is the one shape
+           on screen that belongs to somebody else. */
+        shape: "rectangular",
         logo_alignment: "left",
         width: Math.min(Math.round(host.current.clientWidth) || 320, 400),
       });
@@ -164,8 +168,10 @@ export function GoogleSignIn({
      * clipping it there left an edgeless smudge. The ring is only ever a
      * problem against a dark form.
      *
-     * `overflow-hidden rounded-full` stays as the coarser guard, for a
-     * variant that ignores `shape` and draws square corners.
+     * `overflow-hidden rounded-control` stays as the coarser guard, for the
+     * case where Google ignores `shape` — which it is entitled to do, since
+     * `shape` is a request. The clip and the request now agree on square, so
+     * whichever one wins the result is the same.
      *
      * `min-h-11` holds the height before the button arrives so the form does
      * not jump, and pointer events are off while an email submit is in flight.
@@ -173,7 +179,7 @@ export function GoogleSignIn({
     <div
       ref={host}
       className={cn(
-        "flex min-h-11 justify-center overflow-hidden rounded-full",
+        "flex min-h-11 justify-center overflow-hidden rounded-control",
         // The `dark:` variant rather than a `resolvedTheme === "dark"` branch.
         // next-themes cannot know the theme on the server, so branching in JS
         // here rendered one className on the server and another on the client,

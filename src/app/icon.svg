@@ -1,32 +1,41 @@
 <!--
-  The mark: amber on a dark disc.
+  The mark: lit blue on a deep navy disc.
 
-  This was a #c2410c disc with a white mark, and beside the in-app mark — which
-  takes `currentColor` and so comes out amber — it read as a different logo
-  rather than the same one twice.
+  This is what Google shows beside the result when somebody searches the
+  product, and what sits in the browser tab, so it is the logo most people see
+  most often. It has to be the same logo as the one in the app.
 
-  Amber could not simply become the fill. #f59e0b against white is 2.15:1,
-  which is why `design.md` says dark ink on the fill and never white, and an
-  amber disc on the #f2f2f0 stock is 1.92:1, so the tile would have had no edge
-  at all. Inverting solves both: the glyph is #f59e0b on #1a1206 at 8.63:1, the
-  disc keeps a hard edge on every ground the product uses, and it matches what
-  the mark already looks like everywhere else in the app.
+  It was amber on #1a1206, which was correct while the product was amber. The
+  app and the landing are navy now, and an amber tab icon above a navy page
+  reads as a different company's site.
 
-  #1a1206 is the accent-contrast token from the amber register, not a new
-  colour. Written without its leading dashes on purpose: a double hyphen is
-  illegal inside an XML comment and silently breaks the whole file.
+  The numbers, because a favicon is judged at 16px where a near miss on
+  contrast is simply an illegible smudge:
+
+    glyph #9cc8f2 on disc #142744  8.52:1
+    disc  #142744 on white         14.96:1
+    disc  #142744 on the stock     12.99:1
+
+  #eef2f8 would reach 13.32:1, and is not used: at that value the mark reads as
+  plain white and loses the one bit of brand colour a 16px square can carry.
+  8.5:1 is far past what is needed to be legible, so the remaining headroom is
+  better spent being recognisable.
+
+  Both colours are tokens, not new values: #142744 is panel-deep and #9cc8f2 is
+  brand-high. Written without leading dashes on purpose, because a double
+  hyphen is illegal inside an XML comment and silently breaks the whole file.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <circle cx="32" cy="32" r="32" fill="#1a1206" />
+  <circle cx="32" cy="32" r="32" fill="#142744" />
   <g transform="translate(32 32) scale(0.78) translate(-30 -33)">
     <path
       d="M 19.1 13.9 L 33.9 20.6 Q 38 22.5 33.9 24.4 L 19.1 31.1 Q 15 33 15 28.5 L 15 16.5 Q 15 12 19.1 13.9 Z"
-      fill="#f59e0b"
+      fill="#9cc8f2"
     />
     <path
       d="M 17.5 39.5 A 18 18 0 0 0 42.5 50.5"
       fill="none"
-      stroke="#f59e0b"
+      stroke="#9cc8f2"
       stroke-width="5"
       stroke-linecap="round"
     />

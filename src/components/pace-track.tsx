@@ -207,14 +207,29 @@ export function PaceTrack({
         >
           Pace through the take
         </h2>
-        <Slug>{bars.length} windows</Slug>
+        <div className="flex items-baseline gap-4">
+          {/* The baseline reading lives here now, not inside the plot.
+              It used to be an opaque chip pinned to the right end of the rule,
+              which put it directly on top of whichever bars happened to be
+              tall — the label covered the data it was there to explain. A
+              legend belongs outside the plot area; the dashed rule inside is
+              enough to say where the value falls. */}
+          {baselineWpm ? (
+            <Slug>
+              Baseline <span className="text-strong">{baselineWpm}</span> wpm
+            </Slug>
+          ) : null}
+          <Slug>{bars.length} windows</Slug>
+        </div>
       </div>
 
       {/* A label column on the left, where the landing page runs its timecode
           gutter. Fixed rather than `var(--gutter)`, which only exists inside
           the marketing page's own type world. */}
       <div className="grid grid-cols-[2.25rem_1fr] gap-x-3 sm:grid-cols-[3rem_1fr]">
-        <Slug className="pt-1">wpm</Slug>
+        <Slug className="flex h-[clamp(8rem,22vw,12rem)] items-center">
+          wpm
+        </Slug>
         <div className="min-w-0">
           <div className="relative flex h-[clamp(8rem,22vw,12rem)] items-end gap-[3px]">
             {bars.map((point, i) => {
@@ -280,29 +295,8 @@ export function PaceTrack({
                     : `opacity 500ms ${EASE} 720ms`,
                 }}
               >
-                {/* Pinned to the rule itself, on an opaque chip, so neither
-                    the dashed line nor a bar behind it runs through the
-                    words.
-
-                    `bg-surface` is wrong here and was the first attempt:
-                    it is a tint meant to be laid over something, so the chip
-                    stayed transparent and the bars read straight through the
-                    label. `color-mix` was the second, and failed differently —
-                    it averages the two colours *including* their alpha,
-                    landing on 52% opaque rather than solid.
-
-                    Now that the panel itself is the card colour, the chip can
-                    simply be that — but as the `bg-card` *utility*, not as
-                    `var(--color-card)` in an inline style. Those are not the
-                    same thing: a `@theme` variable read inline resolves at
-                    `:root`, so in dark mode the chip came back `#171717`
-                    while the panel behind it stayed white, and the label was
-                    dark text on a black slab in the middle of the chart. The
-                    utility resolves against `.register-app` exactly as the
-                    panel's own `bg-card` does, so the two cannot disagree. */}
-                <Slug className="absolute right-0 bottom-1.5 bg-card px-2 text-strong">
-                  Your baseline {baselineWpm}
-                </Slug>
+                {/* No label on the rule. It reads against the header, which
+                    is where the number now is. */}
               </div>
             )}
           </div>

@@ -14,17 +14,17 @@ const steps = [
   {
     number: "01",
     title: "Bring your talk or your material",
-    body: "Upload slides and speaker notes for a presentation, or notes and a chapter for a subject. Explainaloud pulls out the key points you are meant to hit.",
+    body: "Slides, notes, a chapter. We pull out the points you need to hit.",
   },
   {
     number: "02",
     title: "Say it in your own words",
-    body: "Talk for about three minutes, with nothing to read off. Your explanation is transcribed and checked against those points claim by claim, as you speak.",
+    body: "Three minutes, nothing to read off. Checked claim by claim as you speak.",
   },
   {
     number: "03",
     title: "Know exactly what to fix",
-    body: "See what landed, what was too thin to count, and the point you never reached. Then run it again with those in front of you.",
+    body: "What landed, what was too thin, what you never reached. Then run it again.",
   },
 ] as const;
 
@@ -43,7 +43,7 @@ const whyOutLoud = [
   },
   {
     title: "Gaps only show when you speak",
-    body: "Re-reading finds nothing wrong. The page supplies every step for you.",
+    body: "Re-reading finds nothing wrong. The page supplies every step.",
   },
   {
     title: "Marked against your material",
@@ -326,9 +326,8 @@ function ResultsCarousel() {
       label: "Reached",
       eyebrow: "Hit · the point",
       quote: "The forces act on different objects, so they do not cancel.",
-      note: "Clear, specific, and matched to your intended talking point.",
-      detail:
-        "Explainaloud checks off the point the moment your meaning lands.",
+      note: "Clear, specific, matched to your point.",
+      detail: "Checked off the moment your meaning lands.",
       color: "var(--ok)",
       surface: "bg-[var(--panel-deep)]",
     },
@@ -336,8 +335,8 @@ function ResultsCarousel() {
       label: "Too thin",
       eyebrow: "Rushed · needs support",
       quote: "The launch went pretty well overall.",
-      note: "You touched the point, but did not give the evidence you planned.",
-      detail: "Amber means you said it, but too thinly to count as complete.",
+      note: "You touched it, but gave no evidence.",
+      detail: "Said, but too thinly to count.",
       color: "var(--vague)",
       surface: "bg-[var(--panel-deep)]",
     },
@@ -345,8 +344,8 @@ function ResultsCarousel() {
       label: "Missed",
       eyebrow: "Missed · next rehearsal cue",
       quote: "Explain how the customer handoff will work.",
-      note: "This key point never appeared in your rehearsal.",
-      detail: "Red turns the omission into a precise prompt for your next run.",
+      note: "Never appeared in your rehearsal.",
+      detail: "A precise prompt for your next run.",
       color: "var(--miss)",
       surface: "bg-[var(--panel-deep)]",
     },
@@ -1136,36 +1135,77 @@ export function LandingRedesign() {
               );
             });
 
-          /* The page marks its own copy.
-             This is the one piece of motion here that belongs to this product
-             and could not be lifted onto another site. Everything else in
-             this file is a well made generic: things rise as they arrive, a
-             rule draws, a bar tracks scroll. None of them say what the thing
-             does. This does, because it is the exact gesture the grader makes
-             on a transcript, in the exact three colours, so by the time a
-             reader reaches the demo they can already read a mark without
-             having been shown a legend.
+          /* The page's own claims get judged, in colour, one word at a time.
+             This was a rule drawn under the phrase — the literal gesture a
+             grader makes on paper. It was the right idea and the wrong object:
+             a coloured underline appearing beneath a headline is the single
+             most common "look, emphasis" device on the internet, it fought the
+             baseline at every size, and it said nothing a reader could learn
+             from. It also had to be fixed twice for colliding with the line
+             below it, which is usually the sign that a thing does not want to
+             be there.
 
-             Not scrubbed. A grader does not underline a phrase gradually as
-             you scroll toward it; it decides, and then the rule goes down at
-             one speed. Scrubbing this would turn a verdict into a slider,
-             which is precisely the wrong idea about the product.
+             What replaces it is the judgement itself, arriving through the
+             words: each character takes the verdict colour in turn, left to
+             right, at reading speed. The phrase changes state in front of you
+             rather than acquiring a decoration, which is much closer to what
+             the product actually does — and because the colour lands *on* the
+             words, the reader learns the association without a legend. By the
+             time green, amber and red appear in the demo they already mean
+             something.
 
-             `toggleActions` for the same reason every other reveal has it:
-             coming back up the page and down again should mark them again
-             rather than present a page that is finished with you. */
-          gsap.utils.toArray<HTMLElement>(".lp-mark").forEach((mark) => {
+             Colour is never the only carrier: the weight goes up with it, so
+             the emphasis survives greyscale and colour blindness, and every
+             marked phrase is announced to assistive tech by the label below. */
+          gsap.utils.toArray<HTMLElement>("[data-verdict]").forEach((mark) => {
+            const verdict = mark.dataset.verdict;
+            if (!verdict) return;
+
+            const sentence = mark.textContent ?? "";
+            if (!sentence.trim()) return;
+
+            /* Split to characters, keeping words unbreakable so the headline
+               wraps exactly where it did before. A split that re-wraps the
+               line is a layout shift wearing an animation's clothes. */
+            mark.textContent = "";
+            const letters: HTMLElement[] = [];
+            const words = sentence.split(/(\s+)/);
+            for (const word of words) {
+              if (/^\s+$/.test(word)) {
+                const gap = document.createElement("span");
+                gap.className = "whitespace-pre";
+                gap.textContent = word;
+                mark.append(gap);
+                continue;
+              }
+              const wrap = document.createElement("span");
+              wrap.className = "inline-block whitespace-nowrap";
+              for (const character of word) {
+                const span = document.createElement("span");
+                span.className = "inline-block";
+                span.textContent = character;
+                wrap.append(span);
+                letters.push(span);
+              }
+              mark.append(wrap);
+            }
+
             reveals.push(
               gsap.fromTo(
-                mark,
-                { backgroundSize: "0% 0.085em" },
+                letters,
+                { color: "inherit", fontWeight: "inherit" },
                 {
-                  backgroundSize: "100% 0.085em",
-                  duration: 0.62,
-                  ease: "power2.inOut",
+                  color: `var(--${verdict}-mark)`,
+                  fontWeight: 700,
+                  duration: 0.5,
+                  /* Spread across a fixed span rather than per character, so
+                     a two-word phrase and a five-word one resolve at the same
+                     pace instead of the long one taking twice as long. */
+                  stagger: { amount: 0.55, from: "start" },
+                  ease: "none",
                   scrollTrigger: {
                     trigger: mark,
-                    start: "top 78%",
+                    start: "top 80%",
                     toggleActions: "play none none reverse",
                   },
                 },
@@ -1173,11 +1213,6 @@ export function LandingRedesign() {
             );
           });
 
-          /* The rule draws itself across the three steps. Scrubbed, so it is
-             a readout of where the reader is in the section rather than an
-             animation that happens at them — and `scaleX` on a hairline is a
-             composited transform, which is why this is affordable where a
-             pinned track was not. */
           /* The step numbers roll. 01, 02, 03 count up from zero as the
              section arrives — a different mechanism from everything else here,
              and the one that suits three ordered things: you watch the
@@ -1385,7 +1420,8 @@ export function LandingRedesign() {
                 <span data-hero-word className="inline-block">
                   <span
                     data-hero-mark="ok"
-                    className="lp-mark lp-mark-ok whitespace-nowrap"
+                    data-verdict="ok"
+                    className="lp-verdict whitespace-nowrap"
                   >
                     know.
                   </span>
@@ -1410,7 +1446,8 @@ export function LandingRedesign() {
                   what you{" "}
                   <span
                     data-hero-mark="miss"
-                    className="lp-mark lp-mark-miss whitespace-nowrap"
+                    data-verdict="miss"
+                    className="lp-verdict whitespace-nowrap"
                   >
                     missed.
                   </span>
@@ -1422,9 +1459,8 @@ export function LandingRedesign() {
               data-hero-secondary
               className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
             >
-              Upload your slides or your notes. Explain them out loud for three
-              minutes. Get back every point you nailed, rushed, or never
-              reached.
+              Explain your notes out loud for three minutes. Get back every
+              point you nailed, rushed, or never reached.
             </p>
 
             <div
@@ -1483,11 +1519,14 @@ export function LandingRedesign() {
               className="mt-5 max-w-[16ch] font-display text-[clamp(1.75rem,4.2vw,3.9rem)] text-strong leading-[1] tracking-[-0.04em]"
             >
               Watch a take get marked,{" "}
-              <span className="lp-mark lp-mark-ok">line by line</span>.
+              <span data-verdict="ok" className="lp-verdict">
+                line by line
+              </span>
+              .
             </h2>
           </div>
           <p className="max-w-[30rem] text-muted-foreground leading-relaxed md:pb-2">
-            Press play. Drag the rail to replay any part.
+            Upload, talk, read back the gaps. Pick a subject to switch it.
           </p>
         </div>
         <div className="lp-product-window">
@@ -1566,9 +1605,8 @@ export function LandingRedesign() {
               data-story-step
               className="max-w-[36rem] text-muted-foreground leading-relaxed"
             >
-              Feynman&rsquo;s method: explain it plainly, out loud, and watch
-              for the place you get stuck. That is the part you did not really
-              have.
+              Feynman&rsquo;s method: explain it plainly out loud, and watch for
+              the place you get stuck.
             </p>
           </div>
         </div>
@@ -1640,7 +1678,10 @@ export function LandingRedesign() {
                 className="mt-6 max-w-[13ch] font-display text-[clamp(1.85rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]"
               >
                 Not another quiz generated from{" "}
-                <span className="lp-mark lp-mark-miss">a topic name</span>.
+                <span data-verdict="miss" className="lp-verdict">
+                  a topic name
+                </span>
+                .
               </h2>
               <p className="mt-7 max-w-[38rem] text-[1.08rem] text-muted-foreground leading-relaxed">
                 Every claim stays tied to a quote from your own file.
@@ -1718,7 +1759,7 @@ export function LandingRedesign() {
               is what has to give. */}
           <h2 className="mx-auto mt-5 max-w-[17ch] font-display text-[clamp(1.9rem,4.6vw,4.4rem)] leading-[1.28] tracking-[-0.045em]">
             Turn{" "}
-            <span className="lp-mark lp-mark-vague whitespace-nowrap">
+            <span data-verdict="vague" className="lp-verdict whitespace-nowrap">
               “I think I know it”
             </span>{" "}
             into certainty.

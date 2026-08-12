@@ -95,7 +95,7 @@ export function TopicCard({
             aria-label={`Rename ${title}`}
             onClick={() => setEditing(true)}
             className={cn(
-              "absolute top-2 right-2 rounded-full px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase",
+              "absolute top-2 right-2 rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase",
               "opacity-0 transition-[opacity,color,background-color] duration-200 group-hover:opacity-100 focus-visible:opacity-100",
               "hover:bg-surface hover:text-strong",
             )}
@@ -153,7 +153,7 @@ function RenameCard({
             type="submit"
             size="sm"
             disabled={pending}
-            className="h-7 flex-1 rounded-full bg-accent-solid px-2 font-semibold text-accent-contrast text-xs hover:bg-accent-solid-hover"
+            className="h-7 flex-1 rounded-control bg-accent-solid px-2 font-semibold text-accent-contrast text-xs hover:bg-accent-solid-hover"
           >
             {pending ? "Saving…" : "Save"}
           </Button>
@@ -162,7 +162,7 @@ function RenameCard({
             size="sm"
             variant="ghost"
             onClick={onDone}
-            className="h-7 rounded-full px-2 text-xs"
+            className="h-7 rounded-control px-2 text-xs"
           >
             Cancel
           </Button>
@@ -260,7 +260,7 @@ function DeleteTopic({ course }: { course: Course }) {
       <button
         type="submit"
         disabled={pending}
-        className="rounded-full bg-destructive px-2 py-1 font-semibold text-[11px] text-white"
+        className="rounded-control bg-destructive px-2 py-1 font-semibold text-[11px] text-white"
       >
         {pending ? "Deleting…" : "Yes"}
       </button>
