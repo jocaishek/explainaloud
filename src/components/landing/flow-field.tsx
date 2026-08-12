@@ -280,7 +280,7 @@ void main() {
      is trying to read a headline on competes with the headline every frame it
      is noticeable, and the one thing here that is meant to catch the eye is
      the ripple a hand makes. */
-  float t = u_time * 0.011;
+  float t = u_time * 0.05;
 
   /* The surface, read as a surface.
      The height field from the solver is turned into a normal the ordinary
@@ -316,25 +316,22 @@ void main() {
   float spec = pow(facing, 6.0) * 0.35 + pow(facing, 20.0) * 0.65;
   float wake = abs(texture2D(u_sim, uv).r * 2.0 - 1.0);
 
-  vec2 q = vec2(fbm(p * 1.6 + vec2(0.0, t)), fbm(p * 1.6 + vec2(5.2, -t * 0.8)));
-  vec2 r = vec2(
-    fbm(p * 1.9 + 4.0 * q + vec2(1.7, 9.2) + t * 0.6),
-    fbm(p * 1.9 + 4.0 * q + vec2(8.3, 2.8) - t * 0.5)
-  );
-  /* 1.7, not 2.3. The higher frequency bought more caustic lines and put the
-     field close to one cycle per pixel, where any displacement at all turns
-     into aliasing rather than motion. Density comes from the contour count
-     below instead, which costs nothing and cannot alias. */
-  /* Frequency is what sets how *wide* a caustic band is, not the exponent
-     alone: a band's width on screen is its width in the field divided by how
-     fast the field changes. At 1.7 the field crawls, so even a moderate
-     exponent produced bands several centimetres across — long smooth tubes
-     winding over the frame, which is a game about snakes rather than a pool.
+  /* One warp stage, not two.
+     This warped the domain twice — sample the noise, displace by it, sample
+     again, displace by that — which is five fbm evaluations per pixel at four
+     octaves each, about eighteen million noise samples a frame at this size.
+     That is what made the field expensive enough to drop frames, and a slow
+     animation at a low frame rate does not read as slow: it reads as
+     flashing, because each frame jumps a visible distance from the last.
 
-     Raising the frequency and leaving the exponents alone turns the same
-     contours into a fine net of many thin soft lines, which is what caustics
-     actually are. It also costs nothing: same fbm, different argument. */
-  float f = fbm(p * 3.6 + 2.2 * r);
+     A single stage warps plenty for a field being read through three soft
+     contours, and it is forty per cent of the cost gone. The motion can then
+     be a real drift rather than a crawl chosen to hide the stutter. */
+  vec2 warp = vec2(
+    fbm(p * 1.7 + vec2(0.0, t)),
+    fbm(p * 1.7 + vec2(5.2, -t * 0.8))
+  );
+  float f = fbm(p * 3.2 + 2.6 * warp);
 
   /* ── The water. It is the background, all of it, all the time.
      A previous revision gated the caustics behind the cursor so the resting
@@ -616,7 +613,7 @@ export function FlowField({ className }: { className?: string }) {
        "pixelated" was. Halving the step is four times the sim pixels, and the
        sim is the cheap pass — three texture reads and some arithmetic against
        the visible pass's seven fractal-noise evaluations per pixel. */
-    const SIM_SCALE = 2;
+    const SIM_SCALE = 3;
 
     /* A float buffer if the device has one.
        The disturbance is stored in a texture and the visible pass reads its
