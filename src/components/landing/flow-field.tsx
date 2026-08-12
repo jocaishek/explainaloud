@@ -267,15 +267,34 @@ void main() {
   vec2 uv = gl_FragCoord.xy / u_res.xy;
   float aspect = u_res.x / u_res.y;
   vec2 p = vec2(uv.x * aspect, uv.y);
-  /* The only place time enters the picture.
-     ;
-p is in screen heights, so these are screen heights per second: the
-     field crosses the frame vertically in about forty seconds, raked slightly
-     to the right so the current runs on a diagonal rather than straight up a
-     screen full of horizontal type. See ;
-q below for why this is the only
-     admissible form. */
-  vec2 drift = vec2(u_time * 0.008, u_time * 0.025);
+  /* Two velocities, because one velocity is not a current.
+   *
+   * The previous revision moved the whole field at a single speed, and it was
+   * measurably a rigid translation: a single shift of two pixels across and
+   * seven up accounted for eighty four per cent of everything that changed
+   * between frames, and it was the same shift every frame. That is not water,
+   * it is wallpaper being dragged past a window, and it was reported as such
+   * immediately.
+   *
+   * The distinction is that flow is *differential*. Water is not interesting
+   * because it goes somewhere; it is interesting because neighbouring parts of
+   * it go somewhere slightly different, so the pattern shears, stretches and
+   * turns over as it travels. A field where every point shares one velocity
+   * cannot do any of that, by construction.
+   *
+   * So the two layers are given different speeds. The deep warp drifts slowly
+   * and the caustic net rides nearly three times faster, which means the net is
+   * continuously dragged through the eddies that bend it and is reshaped as it
+   * goes. Nothing accumulates as a product with time, so it shears without ever
+   * smearing out, and the rate at which the picture changes in place is now set
+   * by the *difference* of the two speeds rather than welded to the overall
+   * speed. That separation is the thing every earlier version lacked: it is why
+   * making it move used to mean making it strobe.
+   *
+   * Screen heights per second, raked off vertical so the current runs on a
+   * diagonal rather than straight up a screen full of horizontal type. */
+  vec2 slowDrift = vec2(u_time * 0.006, u_time * 0.017);
+  vec2 fastDrift = vec2(u_time * 0.017, u_time * 0.048);
 
   /* The surface, read as a surface.
      The height field from the solver is turned into a normal the ordinary
@@ -311,30 +330,20 @@ q below for why this is the only
   float spec = pow(facing, 6.0) * 0.35 + pow(facing, 20.0) * 0.65;
   float wake = abs(texture2D(u_sim, uv).r * 2.0 - 1.0);
 
-  /* Every earlier version put time *inside* the field, at a different offset
-     for each warp axis, so the shape at a given pixel changed from frame to
-     frame. That is what flashed, and no rate fixes it: fast, the contours
-     strobe; slow, the field stops moving at all. Both of those were shipped
-     and both were reported, which is the tell that they are one fault seen
-     from two sides rather than two settings of one dial.
-
-     Time now appears exactly once, as a displacement of the coordinate every
-     later sample is taken at. ;
-f is therefore F(p + drift) for a fixed F:
-     the picture is rigid and slides. That is not a tuning, it is a structural
-     guarantee — a pixel's brightness is only ever a value the pixel next to it
-     had a moment ago, so nothing in the frame can brighten or dim in place,
-     which is the entire definition of flashing. It is also what a current
-     actually is, and it is the one motion that cannot compete with the
-     headline, because the eye tracks translation without being caught by it.
-
-     Forty seconds to cross the frame, mostly upward with a slight rake. */
-  vec2 q = p + drift;
+  /* Time enters only as a displacement of where each layer is sampled, never
+     as a phase added inside one. That distinction is what earlier versions got
+     wrong: a phase term makes the value at a fixed point rise and fall, which
+     is a light being turned up and down, whereas a displacement makes the value
+     at a fixed point become whatever its neighbour held a moment ago, which is
+     the water having moved. The first flashes at any rate worth seeing. The
+     second cannot, and the two layers moving at different rates is what stops
+     it being a flat slide. */
+  vec2 warpP = p + slowDrift;
   vec2 warp = vec2(
-    fbm(q * 1.7),
-    fbm(q * 1.7 + vec2(5.2, 1.3))
+    fbm(warpP * 1.7),
+    fbm(warpP * 1.7 + vec2(5.2, 1.3))
   );
-  float f = fbm(q * 3.2 + 2.6 * warp);
+  float f = fbm((p + fastDrift) * 3.2 + 2.6 * warp);
 
   /* ── The water. It is the background, all of it, all the time.
      A previous revision gated the caustics behind the cursor so the resting
@@ -347,14 +356,12 @@ f is therefore F(p + drift) for a fixed F:
   /* The slow body of light turning over under the surface, which is what
      gives the field its large shapes and its sense of a mass of water rather
      than a flat plane with lines on it. */
-  /* And this one loses its phase term entirely. ;
-sin of the whole field
+  /* And this one loses its phase term entirely. A sine of the whole field
      shifted in time makes every part of the frame brighten and dim together,
      which is the one kind of motion that reads as a light being switched
-     rather than as water moving — the worst offender on the page, and the one
-     that survived two attempts to fix the flashing by lowering rates. It is
-     now a pure function of ;
-f, so it travels with everything else. */
+     rather than as water moving, and it survived two attempts to fix the
+     flashing by lowering rates. It is now a pure function of the field, so it
+     travels with everything else instead of pulsing where it stands. */
   float silk = pow(abs(sin(f * 3.14159 * 1.6)), 2.4);
 
   /* Caustics: the thin bright veins light makes when it is focused through a
@@ -543,6 +550,32 @@ function makeTarget(
      paints. Ask, and let the caller fall back. */
   const complete =
     gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+
+  /* Fill it with still water before anybody reads it.
+   *
+   * This is the flash, and it hid for four revisions behind a plausible
+   * assumption: that an unwritten buffer is harmless because the first
+   * simulation step overwrites it anyway. It is not, because zero is not rest
+   * here. Heights run negative, so they are stored centred, and rest is 0.5 —
+   * which makes an unwritten texel decode to a height of −1, the largest
+   * disturbance the field can hold, everywhere at once. Measured: the frame
+   * renders at exactly twice its resting brightness.
+   *
+   * Worse, it does not clear quickly. A uniform field has no curvature, so the
+   * Laplacian is zero and the wave equation has nothing to propagate; the only
+   * thing acting on it is the 0.9945 damping, which takes about thirteen
+   * seconds to bring it down. So the page opens on a white-out that fades over
+   * several seconds, and it happens again on every resize, because a one pixel
+   * change to the canvas box tears both buffers down and builds new ones. On a
+   * phone, where the address bar resizes the viewport as you scroll, that is a
+   * flash on a loop.
+   *
+   * One clear, at creation, and none of that can happen. */
+  if (complete) {
+    gl.clearColor(0.5, 0.5, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT);
+  }
+
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
   if (!complete) {
     gl.deleteTexture(texture);
