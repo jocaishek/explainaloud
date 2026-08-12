@@ -273,8 +273,14 @@ void main() {
      everything crosses the screen. Many thin bright lines sweeping quickly is
      not motion, it is flicker — the frame appears to pulse. The phase rate
      comes down by more than the frequency went up, so the net drifts rather
-     than races. */
-  float t = u_time * 0.028;
+     than races.
+
+     0.011 and not 0.028: at a glance the field should look still, and only
+     reward a second look by having changed. Ambient motion on a page somebody
+     is trying to read a headline on competes with the headline every frame it
+     is noticeable, and the one thing here that is meant to catch the eye is
+     the ripple a hand makes. */
+  float t = u_time * 0.011;
 
   /* The surface, read as a surface.
      The height field from the solver is turned into a normal the ordinary
