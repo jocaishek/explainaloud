@@ -53,7 +53,7 @@ export default function AppleIcon() {
           alignItems: "center",
           justifyContent: "center",
           borderRadius: "50%",
-          background: "#1a1206",
+          background: "#142744",
         }}
       >
         {/* Rasterised to PNG, so the label is inert here — but the lint rule is
@@ -67,10 +67,10 @@ export default function AppleIcon() {
           role="img"
           aria-label="Explainaloud"
         >
-          <path d={EYE} fill="#f59e0b" />
+          <path d={EYE} fill="#9cc8f2" />
           <path
             d={SMILE}
-            stroke="#f59e0b"
+            stroke="#9cc8f2"
             strokeWidth="5"
             strokeLinecap="round"
           />

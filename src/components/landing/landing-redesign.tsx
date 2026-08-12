@@ -14,17 +14,17 @@ const steps = [
   {
     number: "01",
     title: "Bring your talk or your material",
-    body: "Upload slides and speaker notes for a presentation, or notes and a chapter for a subject. Explainaloud pulls out the key points you are meant to hit.",
+    body: "Slides, notes, a chapter. We pull out the points you need to hit.",
   },
   {
     number: "02",
     title: "Say it in your own words",
-    body: "Talk for about three minutes, with nothing to read off. Your explanation is transcribed and checked against those points claim by claim, as you speak.",
+    body: "Three minutes, nothing to read off. Checked claim by claim as you speak.",
   },
   {
     number: "03",
     title: "Know exactly what to fix",
-    body: "See what landed, what was too thin to count, and the point you never reached. Then run it again with those in front of you.",
+    body: "What landed, what was too thin, what you never reached. Then run it again.",
   },
 ] as const;
 
@@ -43,7 +43,7 @@ const whyOutLoud = [
   },
   {
     title: "Gaps only show when you speak",
-    body: "Re-reading finds nothing wrong. The page supplies every step for you.",
+    body: "Re-reading finds nothing wrong. The page supplies every step.",
   },
   {
     title: "Marked against your material",
@@ -326,9 +326,8 @@ function ResultsCarousel() {
       label: "Reached",
       eyebrow: "Hit · the point",
       quote: "The forces act on different objects, so they do not cancel.",
-      note: "Clear, specific, and matched to your intended talking point.",
-      detail:
-        "Explainaloud checks off the point the moment your meaning lands.",
+      note: "Clear, specific, matched to your point.",
+      detail: "Checked off the moment your meaning lands.",
       color: "var(--ok)",
       surface: "bg-[var(--panel-deep)]",
     },
@@ -336,8 +335,8 @@ function ResultsCarousel() {
       label: "Too thin",
       eyebrow: "Rushed · needs support",
       quote: "The launch went pretty well overall.",
-      note: "You touched the point, but did not give the evidence you planned.",
-      detail: "Amber means you said it, but too thinly to count as complete.",
+      note: "You touched it, but gave no evidence.",
+      detail: "Said, but too thinly to count.",
       color: "var(--vague)",
       surface: "bg-[var(--panel-deep)]",
     },
@@ -345,8 +344,8 @@ function ResultsCarousel() {
       label: "Missed",
       eyebrow: "Missed · next rehearsal cue",
       quote: "Explain how the customer handoff will work.",
-      note: "This key point never appeared in your rehearsal.",
-      detail: "Red turns the omission into a precise prompt for your next run.",
+      note: "Never appeared in your rehearsal.",
+      detail: "A precise prompt for your next run.",
       color: "var(--miss)",
       surface: "bg-[var(--panel-deep)]",
     },
@@ -1422,9 +1421,8 @@ export function LandingRedesign() {
               data-hero-secondary
               className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
             >
-              Upload your slides or your notes. Explain them out loud for three
-              minutes. Get back every point you nailed, rushed, or never
-              reached.
+              Explain your notes out loud for three minutes. Get back every
+              point you nailed, rushed, or never reached.
             </p>
 
             <div
@@ -1566,9 +1564,8 @@ export function LandingRedesign() {
               data-story-step
               className="max-w-[36rem] text-muted-foreground leading-relaxed"
             >
-              Feynman&rsquo;s method: explain it plainly, out loud, and watch
-              for the place you get stuck. That is the part you did not really
-              have.
+              Feynman&rsquo;s method: explain it plainly out loud, and watch for
+              the place you get stuck.
             </p>
           </div>
         </div>

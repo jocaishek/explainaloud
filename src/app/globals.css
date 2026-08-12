@@ -320,29 +320,29 @@ html:has(main.lp-v2) {
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
   --destructive: oklch(0.577 0.245 27.325);
-  --ring: #f97316;
+  --ring: #2b5c8f;
   /* Brand text on a near-white surface, in the deep stop rather than the
      luminous one. This was `#fbbf24` — amber, carried over from the dark
      register, and about 1.7:1 on white, so any word set in it was very nearly
      invisible. The deep stop clears 4.8:1 and is the same colour the app
      register already answers this token with. */
-  --brand-ink: #c2410c;
+  --brand-ink: #2b5c8f;
   /* The three stops as variables rather than as literals in `@theme`.
      Twenty-five files across the app already ask for `bg-brand-deep` or
      `text-brand-ink` and are right to — those names say what the colour is
      for. Making them indirect is what lets the app register answer with its
      own accent without a rename touching every one of those files, and it is
      why there is no mass find-and-replace in this change. */
-  --brand: #f97316;
-  --brand-deep: #c2410c;
+  --brand: #1d3a63;
+  --brand-deep: #16253d;
   /* The gold at the top of the ramp. It is what the landing's glass edges and
      ground glows are made of, and the app now reads its accent from this end
      of the ramp rather than the red end — so it needs a name on both sides. */
-  --brand-high: #fbbf24;
+  --brand-high: #9cc8f2;
   /* Dark ink on the sunset, not white. #f97316 is a light, luminous colour —
      white type on it sits at 2.6:1, and the label on the one button somebody
      is meant to press cannot be the least readable text on the page. */
-  --brand-foreground: #1a1206;
+  --brand-foreground: #eef2f8;
 
   /* Strong/among-text pairs used across the app so a component never has to
      hardcode a hex to get "brighter than body copy" or "dimmer than it". */
@@ -385,7 +385,7 @@ html:has(main.lp-v2) {
   --accent: #1e1e1e;
   --accent-foreground: #ffffff;
   --destructive: oklch(0.637 0.237 25.331);
-  --ring: #f97316;
+  --ring: #9cc8f2;
   /* Brand text on a near-black surface, lightened.
 
      The deep stop is dark enough to carry a white label and therefore too
@@ -393,7 +393,7 @@ html:has(main.lp-v2) {
      4.5:1 a paragraph needs. This tint of the same hue clears it without
      reading as a different colour. `#8f8bff` was the ultramarine version of
      exactly this decision, left behind when the accent changed. */
-  --brand-ink: #fb923c;
+  --brand-ink: #9cc8f2;
 
   --strong: #ffffff;
   --subtle: #71717a;
@@ -585,42 +585,63 @@ html:has(main.lp-v2) {
  * just as luminous at night. `--brand-ink` does move — the deep stop is too
  * dark to set words in against carbon. */
 .dark .register-app {
-  /* Warm charcoal, not the landing's tarmac.
+  /* Navy, not carbon-and-amber.
    *
-   * The first pass used `#14100c` — the same near-black `ground-deep` carries.
-   * That is right for a full-bleed band you scroll past in three seconds and
-   * wrong for a screen somebody works inside for twenty minutes: at that value
-   * white text on it haloes, and the contrast between page and card is so
-   * small that everything reads as one flat void. These sit several steps up
-   * the same warm ramp, which is easier to look at for a long time and leaves
-   * real daylight between the canvas and the cards on it. */
-  --background: #221d17;
-  --card: #2c2620;
-  --popover: #2c2620;
-  --muted: #382f27;
-  --secondary: #382f27;
+   * This block was the one place the amber survived a full pass at the token
+   * layer, and it is the block that actually ships: the app runs in dark mode,
+   * so a signed-in user only ever saw `#221d17` warm brown with `#fbbf24`
+   * accents while the landing they arrived from was navy water. The light
+   * variant above had already been repointed, which made it worse — the two
+   * halves of the same register disagreed with each other.
+   *
+   * The card is `#142744`, which is `--panel-deep`: the exact value the
+   * landing's rehearsal panel and demo console are drawn in. A card in the app
+   * and a panel on the landing are now literally the same colour.
+   *
+   * Measured on this ground, because a dark theme is where contrast quietly
+   * fails: body 15.4:1 on the page and 12.6:1 on a card, secondary text 8.3
+   * and 6.8, the accent 10.4 and 8.5. Nothing here is close to the line.
+   */
+  --background: #0a1526;
+  --card: #142744;
+  --popover: #142744;
+  --muted: #1c3355;
+  --secondary: #1c3355;
 
-  --foreground: #f0ece4;
-  --card-foreground: #f0ece4;
-  --popover-foreground: #f0ece4;
-  --secondary-foreground: #f0ece4;
-  --muted-foreground: #b5aca0;
+  --foreground: #e5ecf6;
+  --card-foreground: #e5ecf6;
+  --popover-foreground: #e5ecf6;
+  --secondary-foreground: #e5ecf6;
+  --muted-foreground: #9fb0c9;
   --strong: #ffffff;
-  --subtle: #b5aca0;
+  --subtle: #9fb0c9;
 
-  --border: #453d33;
-  --input: #574d41;
-  --surface: rgba(240, 236, 228, 0.05);
-  --surface-border: rgba(240, 236, 228, 0.12);
+  --border: rgba(238, 242, 248, 0.13);
+  --input: rgba(238, 242, 248, 0.26);
+  --surface: rgba(238, 242, 248, 0.05);
+  --surface-border: rgba(238, 242, 248, 0.12);
 
-  /* Lifted for a dark canvas. The deep stop carries a white label and is
-     therefore too dark to be one — as body text on carbon it is under the
-     4.5:1 a paragraph needs. */
-  --brand-ink: #fbbf24;
+  /* The polarity inverts on a dark ground, and both halves have to move
+     together. In light the primary is a deep navy fill carrying light type; on
+     carbon that fill is invisible against the page, so it becomes the lit blue
+     carrying dark type. A button whose fill flipped without its label is how a
+     control ends up with 2:1 text on it. */
+  --accent-solid: #9cc8f2;
+  --accent-solid-hover: #cfe6ff;
+  --accent-contrast: #0a1526;
+  --accent-ring: rgba(156, 200, 242, 0.4);
+  --accent-wash: rgba(156, 200, 242, 0.12);
+  --ring: #9cc8f2;
 
-  /* Elevation on a dark canvas is a shadow nobody can see. What separates a
-     card from the page here is that the card is *lighter*, so the shadows go
-     to near-black and do the softening rather than the lifting. */
+  --brand: #9cc8f2;
+  --brand-deep: #cfe6ff;
+  --brand-high: #eaf4ff;
+  --brand-ink: #9cc8f2;
+  --brand-foreground: #0a1526;
+
+  /* Shadows go to near-black on a dark card, doing the softening rather than
+     the lifting — the separation here comes from the card being lighter than
+     the page, not from elevation. */
   --elev-rest:
     0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -18px rgba(0, 0, 0, 0.7);
   --elev-hover:
@@ -628,9 +649,10 @@ html:has(main.lp-v2) {
   --elev-float:
     0 1px 3px rgba(0, 0, 0, 0.4), 0 20px 45px -22px rgba(0, 0, 0, 0.75);
 
-  /* The verdicts, lifted exactly as `ground-deep` lifts them. `#0f7a3d` green
-     sits at 2.4:1 on this canvas, well under what a marked word needs, and
-     these three have to keep meaning what they mean on both sides. */
+  /* The three verdicts, in their dark-ground cuts. Re-checked against this
+     canvas rather than carried over on trust: 10.5, 6.8 and 10.4 on the page.
+     They mean the same thing on both sides of signing in and are the one part
+     of this file that never follows the brand. */
   --ok: #4ade80;
   --miss: #fb7185;
   --vague: #d6c19a;
@@ -2630,56 +2652,73 @@ html:has(main.lp-v2) {
   }
 }
 
-/* ── The auth card, in the landing's colours ─────────────────────────────
+/* ── The auth card, as one of the landing's panels ──────────────────────
  *
- * `register-app` is scoped to the card on the sign-in screen so the inputs and
- * buttons keep the app's radii, elevation and density, which is right: a form
- * rendered against the landing's flat, square, shadowless card tokens looks
- * like an unstyled fallback.
+ * The card was light, and it was wrong twice over.
  *
- * What it must not also bring is the app's amber. `register-app` re-declares
- * the accent from `:root`, so a card nested inside `.lp-v2` was getting navy
- * everywhere around it and a gold button in the middle of it: the exact seam
- * the whole exercise was meant to close, now a single screen before the
- * password field.
+ * It rendered as a murky grey box with an orange edge, because `.glass-panel`
+ * is a warm translucent white with an amber border — a treatment built for
+ * warm stock, laid over navy water, where the translucency picks up the
+ * background and the amber edge has nothing to do with anything on screen.
  *
- * So the shape tokens stay and the colour tokens are handed back to the
- * landing. This is the one place the two registers overlap, and it is
- * deliberately narrow: only what a control needs to look like a control.
+ * And even fixed, a white rounded rectangle floating on a photograph is the
+ * default sign-in page. The landing already has a vocabulary for "a panel with
+ * product inside it": the deep navy field, a hairline border, square corners
+ * and a hard offset shadow. The rehearsal panel in the hero is exactly that.
+ * So the sign-in form is one of those, and the screen stops being a form on a
+ * background and becomes the next panel in the same page.
+ *
+ * The card's radii and density still come from `register-app`, because those
+ * are what a control needs. Only the colour and the surface treatment are the
+ * landing's.
  */
 .lp-v2 .register-app {
-  --background: #eceff5;
-  --card: #fcfdff;
-  --popover: #fcfdff;
-  --muted: #e0e5ee;
-  --secondary: #e0e5ee;
+  --background: transparent;
+  --card: #142744;
+  --popover: #142744;
+  --muted: #1c3355;
+  --secondary: #1c3355;
 
-  --foreground: #16253d;
-  --card-foreground: #16253d;
-  --popover-foreground: #16253d;
-  --secondary-foreground: #16253d;
-  --muted-foreground: #5b6a82;
-  --strong: #16253d;
-  --subtle: #5b6a82;
+  --foreground: #e5ecf6;
+  --card-foreground: #e5ecf6;
+  --popover-foreground: #e5ecf6;
+  --secondary-foreground: #e5ecf6;
+  --muted-foreground: #a9b8ce;
+  --strong: #ffffff;
+  --subtle: #a9b8ce;
 
-  --border: rgba(21, 40, 68, 0.18);
-  --input: rgba(21, 40, 68, 0.28);
-  --surface: rgba(21, 40, 68, 0.03);
-  --surface-border: rgba(21, 40, 68, 0.1);
+  --border: rgba(238, 242, 248, 0.14);
+  --input: rgba(238, 242, 248, 0.28);
+  --surface: rgba(238, 242, 248, 0.05);
+  --surface-border: rgba(238, 242, 248, 0.12);
 
-  /* The landing's primary is a deep navy with light type on it, which is the
-     opposite arrangement to the app's luminous amber with dark ink. Both
-     tokens have to move together or the label disappears into the fill. */
-  --accent-solid: #1d3a63;
-  --accent-solid-hover: #16253d;
-  --accent-contrast: #eef2f8;
-  --accent-wash: rgba(29, 58, 99, 0.08);
+  /* Lit blue carrying dark ink, the same polarity the app uses on its dark
+     ground. A navy fill would be invisible against a navy panel. */
+  --accent-solid: #9cc8f2;
+  --accent-solid-hover: #cfe6ff;
+  --accent-contrast: #0a1526;
+  --accent-ring: rgba(156, 200, 242, 0.4);
+  --accent-wash: rgba(156, 200, 242, 0.12);
+  --ring: #9cc8f2;
 
-  --primary: #1d3a63;
-  --primary-foreground: #eef2f8;
-  --brand: #1d3a63;
-  --brand-deep: #16253d;
-  --brand-ink: #2b5c8f;
-  --brand-foreground: #eef2f8;
-  --ring: #2b5c8f;
+  --brand: #9cc8f2;
+  --brand-deep: #cfe6ff;
+  --brand-high: #eaf4ff;
+  --brand-ink: #9cc8f2;
+  --brand-foreground: #0a1526;
+}
+
+/* The panel itself. Square and ruled rather than blurred and rounded: this is
+ * the hero's rehearsal panel, reused. `backdrop-filter` is deliberately off —
+ * `design.md` allows blur only for a bar floating over scrolling content, and
+ * a translucent card over a moving water shader would shimmer as the field
+ * moves underneath it. */
+.lp-v2 .register-app .glass-panel {
+  background: var(--panel-deep);
+  border: 1px solid rgba(238, 242, 248, 0.15);
+  border-radius: 0;
+  --glass-blur: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 6px 7px 0 rgba(4, 14, 32, 0.62);
 }
