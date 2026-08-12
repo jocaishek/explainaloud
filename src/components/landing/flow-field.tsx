@@ -178,6 +178,18 @@ void main() {
      line is the difference between a wake that travels and a stain that sits
      where it was painted. */
   vec2 vel = flowAt(p * 1.5, u_time) * 0.22;
+
+  /* The wake does NOT steer its own advection.
+     A term here fed the disturbance's own gradient back into the velocity, on
+     the reasoning that a hand should stir the water it is in. It is positive
+     feedback: a steeper wake makes a faster flow, which piles the wake up
+     steeper still. Byte textures hid it by clamping every intermediate value;
+     on the half-float buffer there is no such floor and it ran away within a
+     second or two of a stroke, which is what "glitching" was.
+
+     The circulation is done in the visible pass instead, where it is read-only
+     and cannot compound. */
+
   vec2 back = uv - vel * u_dt;
   float prev = texture2D(u_prev, back).r;
 
@@ -194,13 +206,13 @@ void main() {
 
   /* Decay. About two seconds from a full stroke to nothing, which is long
      enough that the tail is still visible while the head is being drawn. */
-  prev *= 0.986;
+  prev *= 0.976;
 
   /* Injection along this frame's segment. */
   vec2 a = vec2(u_seg.x * aspect, u_seg.y);
   vec2 b = vec2(u_seg.z * aspect, u_seg.w);
   float d = segDist(p, a, b);
-  float brush = smoothstep(0.13, 0.0, d) * u_strength;
+  float brush = smoothstep(0.17, 0.0, d) * u_strength;
 
   gl_FragColor = vec4(clamp(prev + brush, 0.0, 1.0), 0.0, 0.0, 1.0);
 }
@@ -226,7 +238,11 @@ void main() {
      them. Taking the gradient means the effect is strongest along the sides of
      the stroke and vanishes in its middle, which is how a real disturbance in
      water reads. */
-  vec2 px = 1.0 / u_res;
+  /* Three texels apart, not one. A one-texel difference is the noisiest
+     possible estimate of a direction: it swings with every ripple in the
+     buffer, and since it steers a displacement that noise becomes visible
+     jitter. A wider stencil is a low-pass filter for free. */
+  vec2 px = 3.0 / u_res;
   float wake = texture2D(u_sim, uv).r;
   float wx =
     texture2D(u_sim, uv + vec2(px.x, 0.0)).r -
@@ -236,32 +252,64 @@ void main() {
     texture2D(u_sim, uv - vec2(0.0, px.y)).r;
   vec2 slope = vec2(wx, wy);
 
-  /* The pointer lights the water. It does not push it.
-     Every version of this before now displaced geometry: pull the domain
-     toward the cursor, drag it along a heading, refract it through the slope
-     of the wake. All four failed the same way and it took four goes to see
-     that the failure was the mechanism, not the tuning. Displacing geometry
-     means inventing a shape, and an invented shape is a disc, or a ring, or a
-     row of lumps. There is no tuning that makes an invented shape look like
-     water, because the water already has shapes in it and the invented one is
-     not one of them.
+  /* The water flows around the hand.
+     Four earlier versions pushed the domain *away* from the disturbance, and
+     every one of them looked like a disc sliding under the picture. The fifth
+     gave up and only brightened what was already there, which was honest and
+     lifeless: a hand in water does displace it.
 
-     So nothing moves. The wake only changes how brightly the caustics that
-     are already there burn. Those veins are the water, so a disturbance
-     expressed through them can only ever be water-shaped: it threads along
-     the existing ripple lines, forks where they fork, and cannot form a
-     circle because there are no circles in the field to light up.
+     The error in all four was the direction. Pushing radially outward is what
+     an expanding balloon does, and a balloon is a circle however it is tuned.
+     Water moving past an obstacle goes *around* it — the flow is tangential to
+     the disturbance, not normal to it. Rotating the gradient ninety degrees is
+     the whole fix: perp is the direction along the contour of the wake
+     rather than across it, so the field circulates around the stroke instead
+     of being shoved out of it. That circulation cannot form a disc, because it
+     never points away from a centre.
 
-     It still flows, because the buffer it reads is still advected: the lit
-     region drifts downstream after the pointer has gone. What it cannot do
-     any more is be a shape of its own. */
+     A little radial is kept on top, because a hand does part the water in
+     front of it. It is a fifth of the tangential term; any more and the disc
+     comes back. */
+  vec2 perp = vec2(-slope.y, slope.x);
 
+  /* Gently. The displacement was three times this and it aliased the field
+     into dust: moving the sample point a long way between one pixel and its
+     neighbour means the noise underneath is read at unrelated coordinates, so
+     a smooth caustic line breaks into a scatter of unrelated bright dots. The
+     circulation reads just as clearly at a third of the strength, and the
+     water stays water. */
+  /* Bounded, not scaled.
+     Multiplying a gradient by a constant means the displacement is only ever
+     as well behaved as the steepest part of the wake, and one sharp stroke is
+     enough to push neighbouring pixels far enough apart to alias. Capping the
+     magnitude makes that impossible by construction: however steep the field
+     gets, the sample point moves at most this far, so the picture can bend but
+     it can never shatter. Direction still comes entirely from the field, so
+     the circulation is unchanged where the wake is gentle. */
+  vec2 push = perp * 2.4 + slope * 0.45;
+  float amount = length(push);
+  /* A soft limit, not a hard one.
+     if (amount > MAX) push *= MAX / amount bounds the magnitude correctly
+     and is not differentiable at the threshold: every pixel where it just
+     engages sits beside one where it just does not, so the picture creases
+     along that boundary. Under a heavy stroke those creases cover the frame
+     and the water turns into crumpled foil, which is exactly what it did.
+
+     MAX / (MAX + amount) is the same bound reached smoothly — it leaves
+     small pushes almost untouched, approaches MAX asymptotically, and has no
+     threshold anywhere to crease along. */
+  push *= 0.17 / (0.17 + amount);
+  p += push;
   vec2 q = vec2(fbm(p * 1.6 + vec2(0.0, t)), fbm(p * 1.6 + vec2(5.2, -t * 0.8)));
   vec2 r = vec2(
     fbm(p * 1.9 + 4.0 * q + vec2(1.7, 9.2) + t * 0.6),
     fbm(p * 1.9 + 4.0 * q + vec2(8.3, 2.8) - t * 0.5)
   );
-  float f = fbm(p * 2.3 + 2.6 * r);
+  /* 1.7, not 2.3. The higher frequency bought more caustic lines and put the
+     field close to one cycle per pixel, where any displacement at all turns
+     into aliasing rather than motion. Density comes from the contour count
+     below instead, which costs nothing and cannot alias. */
+  float f = fbm(p * 1.7 + 2.6 * r);
 
   /* ── The water. It is the background, all of it, all the time.
      A previous revision gated the caustics behind the cursor so the resting
@@ -287,21 +335,28 @@ void main() {
      because f is a function of time. Two sets read off the same sample at
      different offsets, so they cross the way a surface carrying more than one
      wavelength does. */
-  float veinA = pow(clamp(1.0 - abs(f - 0.44) * 2.0, 0.0, 1.0), 8.0);
-  float veinB = pow(clamp(1.0 - abs(f - 0.58) * 2.6, 0.0, 1.0), 14.0);
-  float veinC = pow(clamp(1.0 - abs(f - 0.70) * 3.0, 0.0, 1.0), 20.0);
+  /* Broad, not thin.
+     These exponents were 8, 10 and 13, and a high power on a contour is what
+     makes a *filament*: a hairline of white on near-black, branching, which
+     the eye reads as an electrical arc rather than as light in water. Real
+     caustics are wide, soft-edged and overlapping — they are the bright parts
+     of a continuous surface, not lines drawn on a dark one. Roughly halving
+     each exponent widens them into that. */
+  float veinA = pow(clamp(1.0 - abs(f - 0.44) * 2.0, 0.0, 1.0), 4.0);
+  float veinB = pow(clamp(1.0 - abs(f - 0.58) * 2.2, 0.0, 1.0), 6.0);
+  float veinC = pow(clamp(1.0 - abs(f - 0.70) * 2.4, 0.0, 1.0), 8.0);
 
-  vec3 deep = vec3(0.008, 0.024, 0.062);
-  vec3 mid  = vec3(0.043, 0.110, 0.226);
+  vec3 deep = vec3(0.015, 0.04, 0.093);
+  vec3 mid  = vec3(0.062, 0.142, 0.272);
   vec3 lit  = vec3(0.220, 0.450, 0.740);
   vec3 hot  = vec3(0.640, 0.820, 0.980);
 
   /* Depth first. Darker further down, which is what makes everything drawn on
      top of it read as being in something rather than on a flat colour. */
   vec3 col = mix(deep, mid, smoothstep(0.0, 0.95, uv.y));
-  col = mix(col, lit, silk * 0.26);
+  col = mix(col, lit, silk * 0.44);
   col += hot * pow(silk, 6.0) * 0.10;
-  col += lit * smoothstep(0.35, 0.85, f) * 0.22;
+  col += lit * smoothstep(0.22, 0.9, f) * 0.3;
 
   /* ── The hand, as light rather than geometry.
      wake is how disturbed this water is, and slope is how sharply that
@@ -315,13 +370,13 @@ void main() {
 
      The buffer behind it is advected, so the brightened region keeps
      travelling downstream after the hand has gone, then fades. */
-  float edge = length(slope) * 22.0;
-  float glow = 1.0 + clamp(wake * 1.6 + edge * 0.6, 0.0, 2.2);
+  float edge = length(slope) * 13.0;
+  float glow = 1.0 + clamp(wake * 1.15 + edge * 0.45, 0.0, 1.6);
 
-  col += lit * veinA * 0.62 * glow;
-  col += hot * veinB * 0.52 * glow;
-  col += hot * veinC * 0.42 * glow;
-  col += hot * edge * 0.04;
+  col += lit * veinA * 0.4 * glow;
+  col += lit * veinB * 0.3 * glow;
+  col += hot * veinC * 0.16 * glow;
+  col += hot * edge * 0.015;
   col += lit * wake * 0.05;
 
   /* Scaled by aspect, because "the left third" is only a place on a wide
@@ -394,6 +449,7 @@ function makeTarget(
   gl: WebGLRenderingContext,
   width: number,
   height: number,
+  type: number,
 ): Target | null {
   const texture = gl.createTexture();
   const buffer = gl.createFramebuffer();
@@ -407,7 +463,7 @@ function makeTarget(
     height,
     0,
     gl.RGBA,
-    gl.UNSIGNED_BYTE,
+    type,
     null,
   );
   /* LINEAR, because advection samples between texels every single frame and
@@ -428,7 +484,19 @@ function makeTarget(
     texture,
     0,
   );
+  /* Renderable is a different question from sampleable, and the extensions
+     only answer the second one. Plenty of devices advertise half-float
+     textures and then refuse to draw into them, which shows up not as an error
+     but as a framebuffer that is never complete and a canvas that never
+     paints. Ask, and let the caller fall back. */
+  const complete =
+    gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
   gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  if (!complete) {
+    gl.deleteTexture(texture);
+    gl.deleteFramebuffer(buffer);
+    return null;
+  }
   return { texture, buffer };
 }
 
@@ -499,7 +567,35 @@ export function FlowField({ className }: { className?: string }) {
        disturbance is a soft, low-frequency field with no detail in it, so the
        extra pixels a full-resolution sim would buy are spent representing
        nothing, and the blur it is put through would throw them away anyway. */
-    const SIM_SCALE = 4;
+    /* A quarter of the canvas on each axis, not a sixteenth.
+       The visible pass reads this buffer's *gradient* to bend the caustics,
+       and a gradient magnifies whatever quantisation is in its source: at 1/4
+       on each axis the wake had visible stair steps in it, which is what
+       "pixelated" was. Halving the step is four times the sim pixels, and the
+       sim is the cheap pass — three texture reads and some arithmetic against
+       the visible pass's seven fractal-noise evaluations per pixel. */
+    const SIM_SCALE = 2;
+
+    /* A float buffer if the device has one.
+       The disturbance is stored in a texture and the visible pass reads its
+       *gradient*, which magnifies whatever quantisation is in the source. In
+       eight bits a neighbouring pair can differ by no less than 1/255, so the
+       gradient of a smooth field comes out as a field of hard speckle —
+       visible as a scatter of bright dots through the wake, which looked like
+       dirt rather than water.
+
+       Half float has no such floor, so the gradient is as smooth as the field.
+       It is an extension rather than a guarantee, and the linear *filtering*
+       of a float texture is a second extension on top: advection samples
+       between texels every frame, so without it the wake would stair-step on
+       the sim grid instead. Both are checked, and a device with neither falls
+       back to bytes and a slightly speckled wake rather than to nothing. */
+    const halfFloat = gl.getExtension("OES_texture_half_float");
+    const canFilter = gl.getExtension("OES_texture_half_float_linear");
+    const texType =
+      halfFloat && canFilter
+        ? (halfFloat.HALF_FLOAT_OES as number)
+        : gl.UNSIGNED_BYTE;
     let targets: [Target, Target] | null = null;
     let simWidth = 0;
     let simHeight = 0;
@@ -526,7 +622,7 @@ export function FlowField({ className }: { className?: string }) {
          is indistinguishable from rendering it at full size, and it costs a
          quarter as much. This is the difference between a background and a
          hot laptop. */
-      const ratio = Math.min(window.devicePixelRatio || 1, 1) * 0.7;
+      const ratio = Math.min(window.devicePixelRatio || 1, 1) * 0.9;
       const width = Math.max(1, Math.round(canvas.clientWidth * ratio));
       const height = Math.max(1, Math.round(canvas.clientHeight * ratio));
       if (canvas.width === width && canvas.height === height && targets) return;
@@ -536,8 +632,22 @@ export function FlowField({ className }: { className?: string }) {
       disposeTargets();
       simWidth = Math.max(1, Math.round(width / SIM_SCALE));
       simHeight = Math.max(1, Math.round(height / SIM_SCALE));
-      const a = makeTarget(gl, simWidth, simHeight);
-      const b = makeTarget(gl, simWidth, simHeight);
+      /* Try the good buffer, take the plain one if the device will not draw
+         into it. A speckled wake is a much better outcome than no field. */
+      let a = makeTarget(gl, simWidth, simHeight, texType);
+      let b = makeTarget(gl, simWidth, simHeight, texType);
+      if ((!a || !b) && texType !== gl.UNSIGNED_BYTE) {
+        if (a) {
+          gl.deleteTexture(a.texture);
+          gl.deleteFramebuffer(a.buffer);
+        }
+        if (b) {
+          gl.deleteTexture(b.texture);
+          gl.deleteFramebuffer(b.buffer);
+        }
+        a = makeTarget(gl, simWidth, simHeight, gl.UNSIGNED_BYTE);
+        b = makeTarget(gl, simWidth, simHeight, gl.UNSIGNED_BYTE);
+      }
       if (a && b) targets = [a, b];
     };
     resize();
@@ -605,7 +715,11 @@ export function FlowField({ className }: { className?: string }) {
          faint trace and a fast one leaves a strong one. Without the floor, a
          pointer that stops mid-gesture stops writing entirely and the stroke
          ends abruptly instead of tapering. */
-      strength = pending ? Math.min(1, 0.35 + moved * 14) * 0.55 : 0;
+      /* Capped well below saturation. A pointer moving continuously wrote
+         faster than the field could decay, so the wake filled the whole frame
+         and every part of it had a ridge in it — the picture stopped being
+         water with a stroke through it and became one uniform disturbance. */
+      strength = pending ? Math.min(1, 0.3 + moved * 12) * 0.38 : 0;
 
       // ── Simulation, into the back buffer.
       const [front, back] = targets;
