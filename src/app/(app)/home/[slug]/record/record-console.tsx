@@ -2421,7 +2421,7 @@ export function RecordConsole({
 
   if (status === "unsupported") {
     return (
-      <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-border bg-surface px-6 py-12 text-center">
+      <div className="flex flex-col items-center gap-3 rounded-control border border-dashed border-border bg-surface px-6 py-12 text-center">
         <p className="text-sm font-medium text-strong">
           Recording isn&apos;t supported in this browser
         </p>
@@ -2625,7 +2625,7 @@ export function RecordConsole({
           type="button"
           onClick={primaryAction}
           disabled={busy || outOfQuota || drafting}
-          className="h-11 rounded-full bg-accent-solid px-6 font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-accent-solid-hover active:scale-[0.97]"
+          className="h-11 rounded-control bg-accent-solid px-6 font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-accent-solid-hover active:scale-[0.97]"
         >
           {primaryLabel}
           {status === "between" && countdown !== null && (
@@ -2658,7 +2658,7 @@ export function RecordConsole({
           <div
             role="alert"
             aria-live="assertive"
-            className="flex max-w-sm flex-col items-center gap-1 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3"
+            className="flex max-w-sm flex-col items-center gap-1 rounded-control border border-amber-500/30 bg-amber-500/10 px-4 py-3"
           >
             <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
               We can&apos;t hear you
@@ -2689,7 +2689,7 @@ export function RecordConsole({
             <Button
               type="button"
               onClick={runPendingCheck}
-              className="press h-9 rounded-full bg-accent-solid px-4 font-semibold text-[0.85rem] text-accent-contrast hover:bg-accent-solid-hover"
+              className="press h-9 rounded-control bg-accent-solid px-4 font-semibold text-[0.85rem] text-accent-contrast hover:bg-accent-solid-hover"
             >
               Check this session
             </Button>
@@ -2790,7 +2790,7 @@ export function RecordConsole({
                 key={gap.phrase}
                 id={`record-gap-${index}`}
                 tabIndex={-1}
-                className="scroll-mt-24 rounded-xl border border-red-500/30 bg-red-500/[0.06] p-4"
+                className="scroll-mt-24 rounded-control border border-red-500/30 bg-red-500/[0.06] p-4"
               >
                 <p className="font-mono text-[10px] tracking-[0.14em] text-red-500 uppercase">
                   {gap.category.replace("_", " ")}
@@ -2816,7 +2816,7 @@ export function RecordConsole({
                 each — and there was no way to reach it from here. */}
             <Button
               asChild
-              className="mt-1 h-11 w-fit gap-2 rounded-full bg-accent-solid px-6 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
+              className="mt-1 h-11 w-fit gap-2 rounded-control bg-accent-solid px-6 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
             >
               <Link href={`/home/${slug}/gaps`}>
                 See the full gap report
@@ -2842,7 +2842,7 @@ export function RecordConsole({
           {sessions.map((session) => (
             <div
               key={session.id}
-              className="flex flex-wrap items-start gap-3 rounded-lg border border-border bg-surface p-3"
+              className="flex flex-wrap items-start gap-3 rounded-control border border-border bg-surface p-3"
             >
               <div className="min-w-0 flex-1">
                 <p className="flex flex-wrap items-center gap-2 text-xs text-subtle">
@@ -2851,7 +2851,7 @@ export function RecordConsole({
                       asked of the person, and the two are not comparable. */}
                   <span
                     className={cn(
-                      "rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] uppercase",
+                      "rounded-control px-2 py-0.5 font-mono text-[10px] tracking-[0.1em] uppercase",
                       session.mode === "interview"
                         ? "bg-brand/12 text-brand-ink"
                         : "bg-foreground/10 text-subtle",
@@ -3043,7 +3043,7 @@ function ModeChooser({
             key={option.value}
             htmlFor={`mode-${option.value}`}
             className={cn(
-              "flex cursor-pointer flex-col gap-1.5 rounded-2xl border p-4 text-left transition-colors",
+              "flex cursor-pointer flex-col gap-1.5 rounded-control border p-4 text-left transition-colors",
               "focus-within:ring-2 focus-within:ring-brand/40",
               selected
                 ? "border-brand/40 bg-brand/[0.06]"
@@ -3161,7 +3161,7 @@ function QuestionCard({
   countdown?: number | null;
 }) {
   return (
-    <div className="flex w-full max-w-2xl flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/[0.06] p-5">
+    <div className="flex w-full max-w-2xl flex-col gap-3 rounded-control border border-brand/20 bg-brand/[0.06] p-5">
       <div className="flex items-center justify-between gap-4">
         <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
           Question {position + 1} of {total}

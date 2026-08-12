@@ -38,7 +38,7 @@ export function ThemeSwitcher() {
           <label
             key={value}
             className={cn(
-              "relative flex cursor-pointer items-center gap-2 rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors duration-200",
+              "relative flex cursor-pointer items-center gap-2 rounded-control px-3.5 py-1.5 text-sm font-medium transition-colors duration-200",
               "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-1 focus-within:ring-offset-background",
               selected ? "text-strong" : "text-subtle hover:text-strong",
             )}

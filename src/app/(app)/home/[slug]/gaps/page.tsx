@@ -197,7 +197,7 @@ export default async function GapReportPage({
         </p>
         <Link
           href={`/home/${slug}/record`}
-          className="w-fit rounded-full bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-solid-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="w-fit rounded-control bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-colors hover:bg-accent-solid-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           Start explaining
         </Link>
@@ -314,7 +314,7 @@ export default async function GapReportPage({
       {/* A score means nothing without the question it answers. Ahead of it,
           because it is the thing the rest of the page is about. */}
       {session.question && segments.length === 0 && (
-        <div className="flex flex-col gap-1.5 rounded-xl border border-brand/20 bg-brand/[0.06] p-5">
+        <div className="flex flex-col gap-1.5 rounded-control border border-brand/20 bg-brand/[0.06] p-5">
           <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
             You were asked
           </span>
@@ -326,7 +326,7 @@ export default async function GapReportPage({
 
       {focused ? (
         <>
-          <div className="flex flex-col gap-1.5 rounded-xl border border-brand/20 bg-brand/[0.06] p-5">
+          <div className="flex flex-col gap-1.5 rounded-control border border-brand/20 bg-brand/[0.06] p-5">
             <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
               Question {(selectedQuestion ?? 0) + 1} of {segments.length}
             </span>
@@ -347,7 +347,7 @@ export default async function GapReportPage({
             <h2 className="text-base font-semibold text-strong">
               What you said
             </h2>
-            <p className="max-w-3xl rounded-xl bg-surface p-4 text-sm leading-7 text-foreground">
+            <p className="max-w-3xl rounded-control bg-surface p-4 text-sm leading-7 text-foreground">
               {focused.transcript || "Nothing was captured for this question."}
             </p>
           </section>
@@ -438,7 +438,7 @@ export default async function GapReportPage({
                   </span>
                 </div>
               </div>
-              <p className="rounded-xl bg-surface p-4 text-sm leading-7 text-foreground">
+              <p className="rounded-control bg-surface p-4 text-sm leading-7 text-foreground">
                 {spans.map((span, index) => {
                   const substantive = span.text.trim().length > 0;
                   const status =
@@ -637,7 +637,7 @@ function WeaknessList({
               key={item.id}
               tabIndex={-1}
               className={cn(
-                "-mx-3 flex scroll-mt-24 flex-col gap-2 rounded-lg px-3 py-4",
+                "-mx-3 flex scroll-mt-24 flex-col gap-2 rounded-control px-3 py-4",
                 "outline-none transition-colors duration-300",
                 // Set by the transcript link that points here. Strong enough
                 // to find at a glance from the other side of the screen —
@@ -664,7 +664,7 @@ function WeaknessList({
                   answer arrived before the student had registered the gap. */}
               <Link
                 href={`/home/${slug}/re-teach#gap-${item.id}`}
-                className="w-fit rounded-full border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                className="w-fit rounded-control border border-border px-3 py-1.5 text-xs font-semibold text-strong transition-colors hover:border-brand/40 hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               >
                 Re-teach this
               </Link>
@@ -713,7 +713,7 @@ function QuestionTabs({
           href={base}
           aria-current={selected === null ? "page" : undefined}
           className={cn(
-            "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+            "rounded-control border px-3 py-1.5 text-xs font-medium transition-colors",
             selected === null
               ? "border-brand/40 bg-brand/[0.08] text-brand-ink"
               : "border-border text-subtle hover:border-brand/25",
@@ -728,7 +728,7 @@ function QuestionTabs({
             title={segment.question}
             aria-current={selected === index ? "page" : undefined}
             className={cn(
-              "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+              "flex items-center gap-2 rounded-control border px-3 py-1.5 text-xs font-medium transition-colors",
               selected === index
                 ? "border-brand/40 bg-brand/[0.08] text-brand-ink"
                 : "border-border text-subtle hover:border-brand/25",

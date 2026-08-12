@@ -85,7 +85,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
               aria-pressed={useType === option}
               onClick={() => setUseType(option)}
               className={cn(
-                "rounded-full border px-4 py-2 text-sm font-medium transition-[border-color,background-color,color,transform] duration-200 ease-out active:scale-[0.97]",
+                "rounded-control border px-4 py-2 text-sm font-medium transition-[border-color,background-color,color,transform] duration-200 ease-out active:scale-[0.97]",
                 useType === option
                   ? "border-brand bg-brand/10 text-strong"
                   : "border-border bg-surface text-subtle hover:border-brand/40 hover:text-strong",
@@ -116,7 +116,7 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         <Button
           type="submit"
           disabled={pending}
-          className="h-10 rounded-full bg-accent-solid px-5 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
+          className="h-10 rounded-control bg-accent-solid px-5 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
         >
           {pending ? "Saving…" : "Save changes"}
         </Button>
