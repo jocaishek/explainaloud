@@ -267,20 +267,15 @@ void main() {
   vec2 uv = gl_FragCoord.xy / u_res.xy;
   float aspect = u_res.x / u_res.y;
   vec2 p = vec2(uv.x * aspect, uv.y);
-  /* Slow, because the field is now fine.
-     Apparent speed is frequency times phase rate, so doubling the frequency to
-     get a caustic net out of what used to be fat tubes also doubled how fast
-     everything crosses the screen. Many thin bright lines sweeping quickly is
-     not motion, it is flicker — the frame appears to pulse. The phase rate
-     comes down by more than the frequency went up, so the net drifts rather
-     than races.
-
-     0.011 and not 0.028: at a glance the field should look still, and only
-     reward a second look by having changed. Ambient motion on a page somebody
-     is trying to read a headline on competes with the headline every frame it
-     is noticeable, and the one thing here that is meant to catch the eye is
-     the ripple a hand makes. */
-  float t = u_time * 0.011;
+  /* The only place time enters the picture.
+     ;
+p is in screen heights, so these are screen heights per second: the
+     field crosses the frame vertically in about forty seconds, raked slightly
+     to the right so the current runs on a diagonal rather than straight up a
+     screen full of horizontal type. See ;
+q below for why this is the only
+     admissible form. */
+  vec2 drift = vec2(u_time * 0.008, u_time * 0.025);
 
   /* The surface, read as a surface.
      The height field from the solver is turned into a normal the ordinary
@@ -316,25 +311,30 @@ void main() {
   float spec = pow(facing, 6.0) * 0.35 + pow(facing, 20.0) * 0.65;
   float wake = abs(texture2D(u_sim, uv).r * 2.0 - 1.0);
 
-  vec2 q = vec2(fbm(p * 1.6 + vec2(0.0, t)), fbm(p * 1.6 + vec2(5.2, -t * 0.8)));
-  vec2 r = vec2(
-    fbm(p * 1.9 + 4.0 * q + vec2(1.7, 9.2) + t * 0.6),
-    fbm(p * 1.9 + 4.0 * q + vec2(8.3, 2.8) - t * 0.5)
-  );
-  /* 1.7, not 2.3. The higher frequency bought more caustic lines and put the
-     field close to one cycle per pixel, where any displacement at all turns
-     into aliasing rather than motion. Density comes from the contour count
-     below instead, which costs nothing and cannot alias. */
-  /* Frequency is what sets how *wide* a caustic band is, not the exponent
-     alone: a band's width on screen is its width in the field divided by how
-     fast the field changes. At 1.7 the field crawls, so even a moderate
-     exponent produced bands several centimetres across — long smooth tubes
-     winding over the frame, which is a game about snakes rather than a pool.
+  /* Every earlier version put time *inside* the field, at a different offset
+     for each warp axis, so the shape at a given pixel changed from frame to
+     frame. That is what flashed, and no rate fixes it: fast, the contours
+     strobe; slow, the field stops moving at all. Both of those were shipped
+     and both were reported, which is the tell that they are one fault seen
+     from two sides rather than two settings of one dial.
 
-     Raising the frequency and leaving the exponents alone turns the same
-     contours into a fine net of many thin soft lines, which is what caustics
-     actually are. It also costs nothing: same fbm, different argument. */
-  float f = fbm(p * 3.6 + 2.2 * r);
+     Time now appears exactly once, as a displacement of the coordinate every
+     later sample is taken at. ;
+f is therefore F(p + drift) for a fixed F:
+     the picture is rigid and slides. That is not a tuning, it is a structural
+     guarantee — a pixel's brightness is only ever a value the pixel next to it
+     had a moment ago, so nothing in the frame can brighten or dim in place,
+     which is the entire definition of flashing. It is also what a current
+     actually is, and it is the one motion that cannot compete with the
+     headline, because the eye tracks translation without being caught by it.
+
+     Forty seconds to cross the frame, mostly upward with a slight rake. */
+  vec2 q = p + drift;
+  vec2 warp = vec2(
+    fbm(q * 1.7),
+    fbm(q * 1.7 + vec2(5.2, 1.3))
+  );
+  float f = fbm(q * 3.2 + 2.6 * warp);
 
   /* ── The water. It is the background, all of it, all the time.
      A previous revision gated the caustics behind the cursor so the resting
@@ -347,11 +347,15 @@ void main() {
   /* The slow body of light turning over under the surface, which is what
      gives the field its large shapes and its sense of a mass of water rather
      than a flat plane with lines on it. */
-  /* And this one loses its extra phase multiplier entirely. sin of the
-     whole field shifted in time makes every part of the frame brighten and
-     dim together, which is the one kind of motion that reads as a light being
-     switched rather than as water moving. */
-  float silk = pow(abs(sin(f * 3.14159 * 1.6 + t * 0.35)), 2.4);
+  /* And this one loses its phase term entirely. ;
+sin of the whole field
+     shifted in time makes every part of the frame brighten and dim together,
+     which is the one kind of motion that reads as a light being switched
+     rather than as water moving — the worst offender on the page, and the one
+     that survived two attempts to fix the flashing by lowering rates. It is
+     now a pure function of ;
+f, so it travels with everything else. */
+  float silk = pow(abs(sin(f * 3.14159 * 1.6)), 2.4);
 
   /* Caustics: the thin bright veins light makes when it is focused through a
      rippled surface. They are the single most water-specific thing a shader
@@ -378,9 +382,14 @@ void main() {
      frequency is a fine bright line in a net of them, which is a caustic.
      Both earlier failures were the same mistake — changing one of the two and
      judging the result. */
+  /* The sharpest of the three comes down from 14. A rigid field cannot flash,
+     but it can still twinkle: at that exponent the brightest vein is under a
+     pixel wide, so as it slides it crosses the sampling grid and individual
+     pixels blink on and off. That is aliasing rather than animation, and the
+     cure is a contour wide enough for the grid to resolve. */
   float veinA = pow(clamp(1.0 - abs(f - 0.44) * 2.0, 0.0, 1.0), 7.0);
   float veinB = pow(clamp(1.0 - abs(f - 0.58) * 2.2, 0.0, 1.0), 10.0);
-  float veinC = pow(clamp(1.0 - abs(f - 0.70) * 2.4, 0.0, 1.0), 14.0);
+  float veinC = pow(clamp(1.0 - abs(f - 0.70) * 2.4, 0.0, 1.0), 11.0);
 
   vec3 deep = vec3(0.015, 0.04, 0.093);
   vec3 mid  = vec3(0.062, 0.142, 0.272);
@@ -616,7 +625,7 @@ export function FlowField({ className }: { className?: string }) {
        "pixelated" was. Halving the step is four times the sim pixels, and the
        sim is the cheap pass — three texture reads and some arithmetic against
        the visible pass's seven fractal-noise evaluations per pixel. */
-    const SIM_SCALE = 2;
+    const SIM_SCALE = 3;
 
     /* A float buffer if the device has one.
        The disturbance is stored in a texture and the visible pass reads its
