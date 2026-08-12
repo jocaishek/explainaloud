@@ -541,15 +541,16 @@ html:has(main.lp-v2) {
   /* Elevation, tinted with the text hue rather than pure black — a neutral
      shadow on a slightly warm canvas reads as dirt. Three steps and no more:
      at rest, under the cursor, and floating over the page. */
-  /* Warm elevation, as on the landing. A neutral shadow under a panel on warm
-     stock reads as dirt; tinted with the sunset it reads as the card sitting
-     in the same light as everything around it. */
-  --elev-rest:
-    0 1px 2px rgba(124, 45, 18, 0.05), 0 12px 30px -18px rgba(124, 45, 18, 0.3);
-  --elev-hover:
-    0 2px 6px rgba(124, 45, 18, 0.07), 0 22px 48px -22px rgba(124, 45, 18, 0.42);
-  --elev-float:
-    0 1px 3px rgba(124, 45, 18, 0.06), 0 20px 45px -22px rgba(124, 45, 18, 0.4);
+  /* The landing's elevation: a hard offset shadow, not a soft glow.
+     Every panel on the marketing page is a hairline border with a solid shadow
+     sitting behind and below it, and that shape is most of what the page looks
+     like. A blurred drop shadow is the single detail that kept the app reading
+     as a different product even after the colours matched. The tint is the
+     ink's own hue rather than black, so it sits in the same light as
+     everything around it. */
+  --elev-rest: 5px 6px 0 rgba(21, 40, 68, 0.16);
+  --elev-hover: 7px 8px 0 rgba(21, 40, 68, 0.2);
+  --elev-float: 8px 10px 0 rgba(21, 40, 68, 0.18);
 
   --stack: 2.75rem;
   --measure: 74rem;
@@ -585,50 +586,51 @@ html:has(main.lp-v2) {
  * just as luminous at night. `--brand-ink` does move — the deep stop is too
  * dark to set words in against carbon. */
 .dark .register-app {
-  /* Navy, not carbon-and-amber.
+  /* Neutral dark, with the landing's blue as the accent.
    *
-   * This block was the one place the amber survived a full pass at the token
-   * layer, and it is the block that actually ships: the app runs in dark mode,
-   * so a signed-in user only ever saw `#221d17` warm brown with `#fbbf24`
-   * accents while the landing they arrived from was navy water. The light
-   * variant above had already been repointed, which made it worse — the two
-   * halves of the same register disagreed with each other.
+   * This was navy for one revision and navy was wrong for a tool: a saturated
+   * hue across every surface of a screen somebody sits inside for twenty
+   * minutes is a tint they cannot get away from, and it made the app read as a
+   * darker copy of the marketing page rather than as somewhere to work.
    *
-   * The card is `#142744`, which is `--panel-deep`: the exact value the
-   * landing's rehearsal panel and demo console are drawn in. A card in the app
-   * and a panel on the landing are now literally the same colour.
+   * The neutral does the opposite. Nothing on the canvas has a hue, so the
+   * only colour on screen is the accent and the three verdicts — which is the
+   * entire point of a workspace: the coloured things are the data.
    *
-   * Measured on this ground, because a dark theme is where contrast quietly
-   * fails: body 15.4:1 on the page and 12.6:1 on a card, secondary text 8.3
-   * and 6.8, the accent 10.4 and 8.5. Nothing here is close to the line.
+   * The world is still one world. What crosses the seam is the accent, the
+   * verdicts, the type and the shapes; the ground is allowed to differ,
+   * because the landing's ground is doing a job (carrying a headline for three
+   * seconds) that this one is not.
+   *
+   * Measured: body 14.6:1 on a card, secondary 7.0, accent 10.1. Card against
+   * page is 1.12:1, which is deliberately slight — on a dark theme separation
+   * comes from the hairline border, and a card light enough to separate on
+   * luminance alone glows.
    */
-  --background: #0a1526;
-  --card: #142744;
-  --popover: #142744;
-  --muted: #1c3355;
-  --secondary: #1c3355;
+  --background: #09090b;
+  --card: #18181b;
+  --popover: #18181b;
+  --muted: #212124;
+  --secondary: #212124;
 
-  --foreground: #e5ecf6;
-  --card-foreground: #e5ecf6;
-  --popover-foreground: #e5ecf6;
-  --secondary-foreground: #e5ecf6;
-  --muted-foreground: #9fb0c9;
+  --foreground: #e9e9ec;
+  --card-foreground: #e9e9ec;
+  --popover-foreground: #e9e9ec;
+  --secondary-foreground: #e9e9ec;
+  --muted-foreground: #a2a2a9;
   --strong: #ffffff;
-  --subtle: #9fb0c9;
+  --subtle: #a2a2a9;
 
-  --border: rgba(238, 242, 248, 0.13);
-  --input: rgba(238, 242, 248, 0.26);
-  --surface: rgba(238, 242, 248, 0.05);
-  --surface-border: rgba(238, 242, 248, 0.12);
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.24);
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface-border: rgba(255, 255, 255, 0.1);
 
-  /* The polarity inverts on a dark ground, and both halves have to move
-     together. In light the primary is a deep navy fill carrying light type; on
-     carbon that fill is invisible against the page, so it becomes the lit blue
-     carrying dark type. A button whose fill flipped without its label is how a
-     control ends up with 2:1 text on it. */
+  /* The one colour on the canvas, and the thread back to the landing. Dark
+     ink on it, because it is a light fill. */
   --accent-solid: #9cc8f2;
   --accent-solid-hover: #cfe6ff;
-  --accent-contrast: #0a1526;
+  --accent-contrast: #09090b;
   --accent-ring: rgba(156, 200, 242, 0.4);
   --accent-wash: rgba(156, 200, 242, 0.12);
   --ring: #9cc8f2;
@@ -637,22 +639,21 @@ html:has(main.lp-v2) {
   --brand-deep: #cfe6ff;
   --brand-high: #eaf4ff;
   --brand-ink: #9cc8f2;
-  --brand-foreground: #0a1526;
+  --brand-foreground: #09090b;
 
-  /* Shadows go to near-black on a dark card, doing the softening rather than
-     the lifting — the separation here comes from the card being lighter than
-     the page, not from elevation. */
-  --elev-rest:
-    0 1px 2px rgba(0, 0, 0, 0.4), 0 12px 30px -18px rgba(0, 0, 0, 0.7);
-  --elev-hover:
-    0 2px 6px rgba(0, 0, 0, 0.45), 0 22px 48px -22px rgba(0, 0, 0, 0.8);
-  --elev-float:
-    0 1px 3px rgba(0, 0, 0, 0.4), 0 20px 45px -22px rgba(0, 0, 0, 0.75);
+  /* The landing's elevation, not a soft glow.
+     Every panel on the marketing page is a hairline border with a hard offset
+     shadow behind it, and that shape is most of what the page looks like. A
+     blurred drop shadow is what made the app read as a different product even
+     when the colours matched. Offset in black, since the ground is neutral —
+     the landing tints its own because the ground there is navy. */
+  --elev-rest: 5px 6px 0 rgba(0, 0, 0, 0.55);
+  --elev-hover: 7px 8px 0 rgba(0, 0, 0, 0.62);
+  --elev-float: 8px 10px 0 rgba(0, 0, 0, 0.6);
 
-  /* The three verdicts, in their dark-ground cuts. Re-checked against this
-     canvas rather than carried over on trust: 10.5, 6.8 and 10.4 on the page.
-     They mean the same thing on both sides of signing in and are the one part
-     of this file that never follows the brand. */
+  /* The three verdicts, re-checked against this canvas rather than carried
+     over: 11.3, 7.3 and 11.2 on the page. They mean the same thing on both
+     sides of signing in and never follow the brand. */
   --ok: #4ade80;
   --miss: #fb7185;
   --vague: #d6c19a;
