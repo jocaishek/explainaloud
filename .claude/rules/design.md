@@ -13,8 +13,8 @@ they have crossed one.
 | Accent | Amber `#f59e0b` over `#b45309`, `#fbbf24` for the lit edge and glow. Dark ink on the fill, never white |
 | Panels | Frosted glass over a warm field, or a ruled card |
 | Elevation | Tinted with `rgba(124, 45, 18, …)`, never neutral |
-| Display | Source Serif 4, weight 400, never bold |
-| Body | Archivo |
+| Display | Geist, weight 600, tracking -0.035em |
+| Body | Geist |
 | Labels | Martian Mono, uppercase, tracked |
 
 `.register-app` still exists, and still exists for a reason: the app needs its
@@ -101,7 +101,15 @@ product:
   spend it. Three "different" sections at `#ffffff`, `#f6f3f1` and `#ffffff` is
   a two per cent step, which is no step at all — that flatness is what made the
   two dark bands read as flashes rather than as structure.
-- Cursor-following effects, 3D tilt, magnetic buttons, typewriter headlines.
+- 3D tilt, magnetic buttons, typewriter headlines.
+- Cursor-following effects **as decoration**: a halo, a trailing dot, a
+  particle spawner, anything that draws a shape where the pointer is. The
+  landing's hero field is the one sanctioned exception and it is not that: the
+  pointer lays a short, ageing wake into a fluid that is already flowing, so
+  there is no shape attached to the cursor, nothing is drawn on top of the
+  page, and standing still returns the field to its own motion within about a
+  second and a half. The test is whether the effect exists when the pointer
+  does not. A halo does not; this does.
 - Pure-black shadows. Elevation is tinted with the text hue or it reads as dirt.
 - Spring or overshoot easing.
 - A hex or a pixel radius written into a component. Tokens, always.
@@ -115,6 +123,34 @@ product:
 - **No invented proof.** No usage numbers, no testimonials, no customer names,
   no press. See PRODUCT.md. Demonstration material is authored, and is marked
   exactly as the grader would mark it.
+
+## On the type system
+
+There is one family on both sides of sign-in, and hierarchy is carried by
+size, weight and tracking rather than by a change of voice.
+
+Two display faces were tried in front of this and both were rejected, for
+reasons worth keeping because they are opposite and both correct:
+
+- **Source Serif 4** read as machine made. A serif display over a grotesque
+  body is genuinely the most reliable way to make a text-only page look
+  composed, which is exactly why it is now the house style of every generated
+  landing page. The move had stopped being a decision.
+- **Bricolage Grotesque** read as goofy. The thing that made it distinctive
+  was its irregularity, and irregularity is charm rather than authority. This
+  is a study tool: somebody opens it before an exam or the night before a
+  talk, and charm is the wrong register for that moment.
+
+What is left is Geist, set across display and body. A single family type
+system reads as serious because nothing in it is performing, and that is the
+correct answer for this product. It requires the display block in
+`globals.css` to actually do its job: if display copy is only body copy at a
+larger size, the page looks unset.
+
+**There is no italic.** Geist ships none, and a synthetic slant at display
+size shears the word and reads as a rendering fault. Emphasis in headlines is
+weight plus the accent colour, which is also the only pairing that survives
+greyscale.
 
 ## On Inter
 

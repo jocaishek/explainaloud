@@ -1,6 +1,7 @@
 "use client";
 
 import { type CSSProperties, useState } from "react";
+import { DEMOS, type Run } from "~/components/landing/demo-data";
 import { cn } from "~/lib/utils";
 
 /**
@@ -28,148 +29,9 @@ import { cn } from "~/lib/utils";
  * allowed to be.
  */
 
-type Verdict = "ok" | "vague";
-type Run = readonly [text: string, verdict: Verdict | "plain"];
-
-type Demo = {
-  id: string;
-  subject: string;
-  topic: string;
-  file: string;
-  /** A couple of lines of what was uploaded. */
-  excerpt: string;
-  /** What the course pulled out, each tied to a quote from the file. */
-  keyPoints: readonly { readonly point: string; readonly quote: string }[];
-  /** The spoken take, marked. */
-  take: readonly Run[];
-  /** The claim that was never reached, and what to do about it. */
-  missed: { readonly phrase: string; readonly why: string };
-  /** The vague claim, and what would have made it checkable. */
-  vague: { readonly phrase: string; readonly why: string };
-};
-
-const DEMOS: readonly Demo[] = [
-  {
-    id: "physics",
-    subject: "Physics",
-    topic: "Newton's third law",
-    file: "forces-notes.pdf",
-    excerpt:
-      "For every action there is an equal and opposite reaction. The two forces are equal in magnitude and opposite in direction, and — crucially — they act on different bodies, which is why they never cancel.",
-    keyPoints: [
-      {
-        point: "Forces occur in pairs",
-        quote: "For every action there is an equal and opposite reaction.",
-      },
-      {
-        point: "The pair is equal in size, opposite in direction",
-        quote: "equal in magnitude and opposite in direction",
-      },
-      {
-        point: "The two forces act on different bodies",
-        quote: "they act on different bodies, which is why they never cancel",
-      },
-    ],
-    take: [
-      ["Newton's third law: forces come in pairs, ", "plain"],
-      ["equal and opposite", "ok"],
-      [". So push a wall and the wall ", "plain"],
-      ["kind of pushes back", "vague"],
-      [". That is why ", "plain"],
-      ["you feel it in your hand", "ok"],
-      [".", "plain"],
-    ],
-    missed: {
-      phrase: "the two forces act on different objects",
-      why: "This is the step that explains why the pair does not cancel out. Without it the law sounds like a contradiction.",
-    },
-    vague: {
-      phrase: "kind of pushes back",
-      why: "Says a reaction happens, not that it is equal in size and opposite in direction. Nothing here could be marked right or wrong.",
-    },
-  },
-  {
-    id: "chemistry",
-    subject: "Chemistry",
-    topic: "Ionic bonding",
-    file: "bonding-ch4.pdf",
-    excerpt:
-      "In an ionic bond one atom transfers an electron to another. Both become ions carrying opposite charges, and it is the electrostatic attraction between those charges that holds the lattice together.",
-    keyPoints: [
-      {
-        point: "One atom transfers an electron to another",
-        quote: "one atom transfers an electron to another",
-      },
-      {
-        point: "Both become ions with opposite charges",
-        quote: "Both become ions carrying opposite charges",
-      },
-      {
-        point: "Electrostatic attraction holds the lattice together",
-        quote:
-          "it is the electrostatic attraction between those charges that holds the lattice together",
-      },
-    ],
-    take: [
-      ["An ionic bond is one atom ", "plain"],
-      ["giving an electron to another", "ok"],
-      [". They end up ", "plain"],
-      ["with opposite charges", "ok"],
-      [" and ", "plain"],
-      ["stick together somehow", "vague"],
-      [".", "plain"],
-    ],
-    missed: {
-      phrase: "the attraction between the ions is electrostatic",
-      why: "Naming the force is what turns a description of what happens into an explanation of why it happens.",
-    },
-    vague: {
-      phrase: "stick together somehow",
-      why: "“Somehow” is the word doing the work. The mechanism is the answer, and it is the part that was skipped.",
-    },
-  },
-  {
-    id: "history",
-    subject: "American history",
-    topic: "The Stamp Act",
-    file: "revolution-notes.docx",
-    excerpt:
-      "The Stamp Act of 1765 taxed printed paper in the colonies — newspapers, pamphlets, legal documents. It was the first direct tax Parliament had levied on the colonies, and the objection was constitutional rather than financial: taxation without representation.",
-    keyPoints: [
-      {
-        point: "It taxed printed paper in the colonies",
-        quote:
-          "taxed printed paper in the colonies — newspapers, pamphlets, legal documents",
-      },
-      {
-        point: "It was the first direct tax on the colonies",
-        quote: "the first direct tax Parliament had levied on the colonies",
-      },
-      {
-        point: "The objection was constitutional, not financial",
-        quote:
-          "the objection was constitutional rather than financial: taxation without representation",
-      },
-    ],
-    take: [
-      ["The Stamp Act taxed ", "plain"],
-      ["printed paper — newspapers, legal documents", "ok"],
-      [". Colonists were angry because ", "plain"],
-      ["they had no say in it", "ok"],
-      [", though I think it was ", "plain"],
-      ["mostly about the money", "vague"],
-      [".", "plain"],
-    ],
-    missed: {
-      phrase: "it was the first direct tax Parliament levied on the colonies",
-      why: "This is why this particular tax caused a crisis when earlier trade duties had not.",
-    },
-    vague: {
-      phrase: "mostly about the money",
-      why: "Your source says the opposite — the objection was constitutional. A claim that contradicts the material cannot be marked correct.",
-    },
-  },
-];
+/* The three subjects live in `demo-data.ts`, shared with the playable
+   console on the landing page. Two copies of one authored take is how a page
+   ends up marking the same sentence two different ways on one scroll. */
 
 const STEPS = [
   { slug: "Step 1", label: "Your material" },
