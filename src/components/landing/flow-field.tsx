@@ -267,7 +267,14 @@ void main() {
   vec2 uv = gl_FragCoord.xy / u_res.xy;
   float aspect = u_res.x / u_res.y;
   vec2 p = vec2(uv.x * aspect, uv.y);
-  float t = u_time * 0.085;
+  /* Slow, because the field is now fine.
+     Apparent speed is frequency times phase rate, so doubling the frequency to
+     get a caustic net out of what used to be fat tubes also doubled how fast
+     everything crosses the screen. Many thin bright lines sweeping quickly is
+     not motion, it is flicker — the frame appears to pulse. The phase rate
+     comes down by more than the frequency went up, so the net drifts rather
+     than races. */
+  float t = u_time * 0.028;
 
   /* The surface, read as a surface.
      The height field from the solver is turned into a normal the ordinary
@@ -312,7 +319,16 @@ void main() {
      field close to one cycle per pixel, where any displacement at all turns
      into aliasing rather than motion. Density comes from the contour count
      below instead, which costs nothing and cannot alias. */
-  float f = fbm(p * 1.7 + 2.6 * r);
+  /* Frequency is what sets how *wide* a caustic band is, not the exponent
+     alone: a band's width on screen is its width in the field divided by how
+     fast the field changes. At 1.7 the field crawls, so even a moderate
+     exponent produced bands several centimetres across — long smooth tubes
+     winding over the frame, which is a game about snakes rather than a pool.
+
+     Raising the frequency and leaving the exponents alone turns the same
+     contours into a fine net of many thin soft lines, which is what caustics
+     actually are. It also costs nothing: same fbm, different argument. */
+  float f = fbm(p * 3.6 + 2.2 * r);
 
   /* ── The water. It is the background, all of it, all the time.
      A previous revision gated the caustics behind the cursor so the resting
@@ -325,7 +341,11 @@ void main() {
   /* The slow body of light turning over under the surface, which is what
      gives the field its large shapes and its sense of a mass of water rather
      than a flat plane with lines on it. */
-  float silk = pow(abs(sin(f * 3.14159 * 1.6 + t * 1.2)), 2.4);
+  /* And this one loses its extra phase multiplier entirely. sin of the
+     whole field shifted in time makes every part of the frame brighten and
+     dim together, which is the one kind of motion that reads as a light being
+     switched rather than as water moving. */
+  float silk = pow(abs(sin(f * 3.14159 * 1.6 + t * 0.35)), 2.4);
 
   /* Caustics: the thin bright veins light makes when it is focused through a
      rippled surface. They are the single most water-specific thing a shader
@@ -345,9 +365,16 @@ void main() {
      caustics are wide, soft-edged and overlapping — they are the bright parts
      of a continuous surface, not lines drawn on a dark one. Roughly halving
      each exponent widens them into that. */
-  float veinA = pow(clamp(1.0 - abs(f - 0.44) * 2.0, 0.0, 1.0), 4.0);
-  float veinB = pow(clamp(1.0 - abs(f - 0.58) * 2.2, 0.0, 1.0), 6.0);
-  float veinC = pow(clamp(1.0 - abs(f - 0.70) * 2.4, 0.0, 1.0), 8.0);
+  /* Definition comes back now that the frequency is high.
+     Exponent and frequency together decide what a contour looks like, and only
+     the pair means anything. Low exponent at low frequency is a fat tube; high
+     exponent at low frequency is an electrical filament; high exponent at high
+     frequency is a fine bright line in a net of them, which is a caustic.
+     Both earlier failures were the same mistake — changing one of the two and
+     judging the result. */
+  float veinA = pow(clamp(1.0 - abs(f - 0.44) * 2.0, 0.0, 1.0), 7.0);
+  float veinB = pow(clamp(1.0 - abs(f - 0.58) * 2.2, 0.0, 1.0), 10.0);
+  float veinC = pow(clamp(1.0 - abs(f - 0.70) * 2.4, 0.0, 1.0), 14.0);
 
   vec3 deep = vec3(0.015, 0.04, 0.093);
   vec3 mid  = vec3(0.062, 0.142, 0.272);
@@ -363,15 +390,15 @@ void main() {
      bright worms. It is still here because without any of it the surface is
      dead flat, but it belongs at the threshold of noticing: it is the slow
      movement of light deep down, not a feature. */
-  col = mix(col, lit, silk * 0.12);
-  col += hot * pow(silk, 6.0) * 0.03;
+  col = mix(col, lit, silk * 0.05);
+  col += hot * pow(silk, 6.0) * 0.02;
   /* Same reasoning: a broad brightening across half the frame is a shape,
      and a shape this size reads as an object rather than as water. */
-  col += lit * smoothstep(0.3, 0.95, f) * 0.12;
+  col += lit * smoothstep(0.3, 0.95, f) * 0.07;
 
   col += lit * veinA * 0.5;
-  col += lit * veinB * 0.38;
-  col += hot * veinC * 0.2;
+  col += lit * veinB * 0.42;
+  col += hot * veinC * 0.26;
 
   /* ── The ripples themselves.
      Two terms, and they do different jobs. The caustics below the surface
