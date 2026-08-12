@@ -1485,7 +1485,7 @@ export function LandingRedesign() {
             </h2>
           </div>
           <p className="max-w-[30rem] text-muted-foreground leading-relaxed md:pb-2">
-            Press play. Drag the rail to replay any part.
+            Upload, talk, read back the gaps. Pick a subject to switch it.
           </p>
         </div>
         <div className="lp-product-window">

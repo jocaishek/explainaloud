@@ -1,10 +1,9 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { Pause, Play, RotateCcw } from "lucide-react";
+import { Mic } from "lucide-react";
 import {
   type CSSProperties,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -15,36 +14,65 @@ import { transitions } from "~/components/landing/motion-presets";
 import { cn } from "~/lib/utils";
 
 /**
- * The product, running.
+ * The product, running, on a loop.
  *
- * Everything else on this page *describes* the loop — a checklist that fills
- * in, three verdicts that cycle, a transcript already marked. A reader who has
- * not used it still has to take our word for how the pieces connect, because a
- * still frame cannot show a sequence, and a sequence is the entire product:
- * material goes in, you talk, claims resolve against it while you are still
- * talking.
+ * Everything else on this page *describes* the loop. A reader who has not used
+ * it still has to take our word for how the pieces connect, because a still
+ * frame cannot show a sequence — and a sequence is the entire product: material
+ * goes in, you talk, claims resolve against it while you are still talking.
  *
- * So this one runs. Press play and the take types itself in at speaking pace;
- * the marks land under the words as each claim finishes; the key points on the
- * right resolve one at a time; and what is left over is the gap report. It is
- * scrubbable, replayable, and it switches subject, because the range is part
- * of the argument.
+ * ## Why it has no controls
  *
- * **Nothing here calls a model.** The takes are authored — `design.md` bans
- * invented proof on the landing, and a live endpoint on a marketing page is an
- * unauthenticated bill waiting to happen. The panel says "authored example" in
- * its own corner rather than letting anyone infer otherwise.
+ * There was a play button and a scrub rail here, and they were wrong for a
+ * landing page. A control is a question, and the question it asks is "do you
+ * want to see what this does?" — asked of somebody who does not yet know what
+ * it does, and who therefore has no reason to say yes. The demo now simply
+ * runs, the way a promo film runs, and the only thing left to decide is which
+ * subject, which is a question worth asking because the answer says something
+ * (it works on chemistry and on history too).
  *
- * The clock is derived from progress rather than counted, so a scrub backwards
- * moves it backwards. A timer that only ever goes up is the tell that the
- * numbers on a demo are set dressing.
+ * ## The three beats
+ *
+ * A browser window fills in a form by itself, the take is spoken into it, and
+ * the gaps come back. Those are the three beats of using the product and they
+ * are in the order you meet them, so somebody who watches one full turn has
+ * been through the loop without reading a word of the copy beside it.
+ *
+ * The cursor is synthetic and moves on the same clock as everything else, so
+ * it cannot drift out of step with what it is supposed to be doing. It is
+ * keyframed in percentages of the panel rather than measured off the DOM,
+ * which means it is correct at every width without a layout read on any frame.
+ *
+ * ## Nothing here calls a model
+ *
+ * The takes are authored. `design.md` bans invented proof on the landing, and
+ * a live endpoint on a marketing page is an unauthenticated bill waiting to
+ * happen. The panel says "authored example" in its own corner rather than
+ * letting anyone infer otherwise.
+ *
+ * There is deliberately no score out of a hundred. The product grades claim by
+ * claim, so a number would be a shape of proof this product does not produce.
+ * What the ledger shows is the count it actually has: reached, thin, missed.
  */
 
-/** How long one take takes to speak, in milliseconds. */
-const RUN_MS = 9000;
+/** One full turn of the loop. */
+const CYCLE_MS = 17000;
 
-/** Speaking pace, shown in the header. Real, in the sense that it is the pace
- *  the reveal actually runs at — derived below rather than typed in. */
+/* The three beats, as fractions of the cycle. Written as boundaries rather
+   than durations so the arithmetic below reads as "where are we", and so
+   moving one beat cannot silently steal time from another. */
+/* The setup beat is a third of the loop. It was a quarter, which left the
+   drag itself about a second — long enough for the file to have moved and too
+   short to see it moving, which is the worst of both. */
+const SETUP_END = 0.34;
+const TAKE_END = 0.8;
+
+/** Phase offsets for the level meter, so the bars do not move as one block.
+ *  Fixed values rather than random: identical on the server and the client,
+ *  and identical between renders, which a random set would not be. */
+const LEVELS = [0.2, 1.9, 3.4, 0.8, 2.6, 4.1, 1.2, 3.0, 5.2, 2.1] as const;
+
+/** Speaking pace, derived from the reveal rather than typed in. */
 const WORDS = (text: string) => text.trim().split(/\s+/).length;
 
 const VERDICT_LABEL: Record<PointVerdict, string> = {
@@ -66,6 +94,58 @@ const VERDICT_TINT: Record<PointVerdict, string> = {
   vague: "var(--vague-light)",
   miss: "var(--miss-light)",
 };
+
+/**
+ * The pointer's itinerary through the setup beat.
+ *
+ * `at` is when the pointer should have *arrived*; `hold` is how long it stays
+ * before leaving for the next one. Everything between two stops is travel.
+ */
+const CURSOR_STOPS = [
+  { target: "upload", at: 0.3, hold: 0.14 },
+  { target: "name", at: 0.58, hold: 0.24 },
+  { target: "start", at: 0.93, hold: 0.07 },
+] as const;
+
+type Point = { x: number; y: number };
+
+/** Ease in and out of every leg: a hand accelerates away from a control and
+ *  slows into the next one. Linear travel reads as a sprite on a rail. */
+const easeLeg = (k: number) =>
+  k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2;
+
+function cursorAt(t: number, points: Record<string, Point>): Point | null {
+  const stops = CURSOR_STOPS.filter((stop) => points[stop.target]);
+  if (!stops.length) return null;
+
+  const first = points[stops[0].target];
+  /* Before the first stop the pointer flies in from off the bottom right,
+     which is where a hand comes from rather than fading in on top of the
+     control it is about to use. */
+  if (t <= stops[0].at) {
+    const k = easeLeg(Math.max(0, t) / stops[0].at);
+    return { x: 104 + (first.x - 104) * k, y: 112 + (first.y - 112) * k };
+  }
+
+  for (let i = 0; i < stops.length; i++) {
+    const stop = stops[i];
+    const here = points[stop.target];
+    const leaves = stop.at + stop.hold;
+    if (t <= leaves) return here;
+
+    const next = stops[i + 1];
+    if (!next) return here;
+    if (t < next.at) {
+      const k = easeLeg((t - leaves) / Math.max(0.001, next.at - leaves));
+      const there = points[next.target];
+      return {
+        x: here.x + (there.x - here.x) * k,
+        y: here.y + (there.y - here.y) * k,
+      };
+    }
+  }
+  return points[stops[stops.length - 1].target];
+}
 
 function Slug({
   children,
@@ -93,9 +173,9 @@ export function DemoConsole() {
   const reduceMotion = useReducedMotion();
   const [demoId, setDemoId] = useState(DEMOS[0].id);
   const [progress, setProgress] = useState(0);
-  const [playing, setPlaying] = useState(false);
-  const startedRef = useRef(false);
+  const [running, setRunning] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const demo = DEMOS.find((entry) => entry.id === demoId) ?? DEMOS[0];
 
@@ -104,71 +184,142 @@ export function DemoConsole() {
      the underline has to be able to wipe *across* a phrase, which needs a
      position inside it. */
   const { chars, total, words } = useMemo(() => {
-    let running = 0;
-    const chars = demo.take.map(([text, verdict]) => {
-      const start = running;
-      running += text.length;
-      return { text, verdict, start, end: running };
+    let charTotal = 0;
+    const parts = demo.take.map(([text, verdict]) => {
+      const start = charTotal;
+      charTotal += text.length;
+      return { text, verdict, start, end: charTotal };
     });
     return {
-      chars,
-      total: running,
+      chars: parts,
+      total: charTotal,
       words: demo.take.reduce((sum, [text]) => sum + WORDS(text), 0),
     };
   }, [demo]);
 
-  const done = progress >= 1;
-  const revealed = Math.round(progress * total);
+  /* Every beat is derived from the one clock, so nothing on screen can drift
+     out of step with anything else. */
+  const inSetup = progress < SETUP_END;
+  const setupT = Math.min(1, progress / SETUP_END);
+  const takeT = Math.min(
+    1,
+    Math.max(0, (progress - SETUP_END) / (TAKE_END - SETUP_END)),
+  );
+  const settled = progress >= TAKE_END;
+  const revealed = Math.round(takeT * total);
 
-  const restart = useCallback(() => {
-    setProgress(0);
-    setPlaying(true);
-  }, []);
+  /* The file lands when the pointer reaches the upload box, and the name
+     types while the pointer sits in the field. Both are read off the same
+     clock as the pointer itself, so the text can never appear somewhere the
+     hand is not. */
+  /* The drop happens a beat after the pointer arrives, so there is a moment
+     of holding the file over the zone rather than it teleporting in. */
+  const DROP_AT = 0.4;
+  const dropped = setupT > DROP_AT;
+  /* The zone lights while the file is over it and before it is released,
+     which is most of what makes a drag read as a drag rather than as a
+     filename appearing. */
+  const dragOver = !dropped && setupT > 0.24;
+  const nameProgress = Math.min(1, Math.max(0, (setupT - 0.6) / 0.22));
+  const nameTyped = demo.topic.slice(
+    0,
+    Math.round(nameProgress * demo.topic.length),
+  );
+  const pressing = setupT > 0.9;
 
-  /* One frame loop for the whole thing. `progress` is the only clock: the
-     transcript, the ledger, the timecode and the rail all read from it, so
-     they cannot drift apart the way four independent intervals would. */
+  /**
+   * Where each control actually is.
+   *
+   * The first version hand-placed the pointer in percentages of the panel and
+   * looked exactly like what it was: a cursor drifting to coordinates that had
+   * nothing to do with the controls, clicking on empty space beside the
+   * button. So the positions are read from the DOM.
+   *
+   * But *not* every frame, which is the trade that made percentages tempting.
+   * A rect read after a style change forces a layout flush, and doing that
+   * sixty times a second to move one sprite is indefensible. Measured on mount,
+   * on resize, and when the subject changes — the last of those matters
+   * precisely because the panel's height is pinned, so a different filename
+   * moves the controls without the `ResizeObserver` ever firing.
+   *
+   * The measurement is stored *with* the subject it was taken for, which is
+   * what makes the dependency a real one rather than a re-run trigger the
+   * linter has to be argued with. It also closes a genuine gap: between a
+   * subject changing and the effect re-running there is a render where the
+   * old positions are still in state, and without the id to compare against,
+   * the pointer would spend that frame aiming confidently at where the last
+   * subject's controls used to be.
+   */
+  const [measured, setMeasured] = useState<{
+    id: string;
+    points: Record<string, Point>;
+  }>({ id: "", points: {} });
+
   useEffect(() => {
-    if (!playing || reduceMotion) return;
+    const subject = demo.id;
+    const panel = panelRef.current;
+    if (!panel) return;
+
+    const measure = () => {
+      const box = panel.getBoundingClientRect();
+      if (!box.width) return;
+      const next: Record<string, Point> = {};
+      for (const node of panel.querySelectorAll<HTMLElement>(
+        "[data-cursor-target]",
+      )) {
+        const key = node.dataset.cursorTarget;
+        if (!key) continue;
+        const rect = node.getBoundingClientRect();
+        next[key] = {
+          x: ((rect.left + rect.width / 2 - box.left) / box.width) * 100,
+          y: ((rect.top + rect.height / 2 - box.top) / box.height) * 100,
+        };
+      }
+      setMeasured({ id: subject, points: next });
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [demo.id]);
+
+  /* Only trust positions taken for the subject on screen right now. */
+  const cursorPoints = measured.id === demo.id ? measured.points : {};
+  const cursor = cursorAt(setupT, cursorPoints);
+
+  /* One frame loop, and it never stops until the panel leaves the screen.
+     `progress` wraps rather than clamping, which is what makes this a loop
+     instead of something that finishes and waits to be asked again. */
+  useEffect(() => {
+    if (!running || reduceMotion) return;
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
       const delta = now - last;
       last = now;
-      /* The updater is pure. Calling `setPlaying` from inside it, which is
-         what this did first, is a side effect in a function React is entitled
-         to run more than once. In development it does exactly that, so the
-         stop was being issued twice on the frame the take completed. The
-         effect below watches for the end instead, which is the one place that
-         decision actually belongs. */
-      setProgress((current) => Math.min(1, current + delta / RUN_MS));
+      setProgress((current) => (current + delta / CYCLE_MS) % 1);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, reduceMotion]);
+  }, [running, reduceMotion]);
 
-  // The run ends itself, rather than the frame loop reaching in to stop it.
-  useEffect(() => {
-    if (progress >= 1) setPlaying(false);
-  }, [progress]);
+  /* It runs while it is on screen and stops when it is not. A loop nobody can
+     see is a loop nobody should be paying for, and this one is a page-long
+     scroll away from the fold for most of a visit.
 
-  /* It plays itself, once, when it is first looked at — the same reason a
-     product video autoplays. After that every start is the reader's. Anyone
-     who has asked not to be moved gets the finished frame instead. */
+     Reduced motion gets the finished frame: the marked take and the full
+     ledger, which is the information the animation exists to deliver. */
   useEffect(() => {
     if (reduceMotion) {
-      setProgress(1);
+      setProgress(TAKE_END + 0.1);
       return;
     }
     const root = rootRef.current;
     if (!root) return;
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (!entry.isIntersecting || startedRef.current) return;
-        startedRef.current = true;
-        setPlaying(true);
-      },
+      ([entry]) => setRunning(entry.isIntersecting),
       { threshold: 0.15 },
     );
     observer.observe(root);
@@ -178,15 +329,15 @@ export function DemoConsole() {
   function pick(id: string) {
     setDemoId(id);
     setProgress(0);
-    setPlaying(!reduceMotion);
   }
 
-  /* Derived, not counted. Scrub back and the clock goes back with you. */
-  const elapsed = progress * (RUN_MS / 1000);
+  const elapsed = takeT * (((TAKE_END - SETUP_END) * CYCLE_MS) / 1000);
   const clock = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(
     Math.floor(elapsed % 60),
   ).padStart(2, "0")}`;
-  const wpm = Math.round(words / (RUN_MS / 1000 / 60));
+  const wpm = Math.round(
+    words / (((TAKE_END - SETUP_END) * CYCLE_MS) / 1000 / 60),
+  );
 
   return (
     <div ref={rootRef} className="mx-auto w-full max-w-[76rem]">
@@ -238,123 +389,301 @@ export function DemoConsole() {
       </div>
 
       <div className="mt-5 overflow-hidden rounded-[20px] border border-white/12 bg-[var(--panel-deep)] text-primary-foreground shadow-[10px_12px_0_rgba(15,35,64,0.18)]">
-        {/* The header is the recorder. Everything in it is derived from the one
-            clock, so nothing in it can be running while the take is paused. */}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-white/10 border-b px-4 py-3 lg:px-7 lg:py-4">
-          <span className="flex items-center gap-2.5">
-            <span className="relative flex h-2.5 w-2.5">
-              {playing && !reduceMotion && (
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--miss)] opacity-70" />
-              )}
-              <span
-                className="relative inline-flex h-2.5 w-2.5 rounded-full transition-colors duration-300"
-                style={{
-                  backgroundColor: playing
-                    ? "var(--miss)"
-                    : "rgba(238,242,248,0.3)",
-                }}
-              />
-            </span>
-            <Slug>{playing ? "Recording" : done ? "Marked" : "Paused"}</Slug>
+        {/* The window.
+            A browser frame is a small lie that buys a large amount of clarity:
+            it says "this is the product, in a browser, being used" before a
+            single word is read, which is a claim the panel would otherwise
+            have to make in copy. Three dots and a location are enough — a full
+            toolbar is set dressing that competes with the thing inside it. */}
+        <div className="flex items-center gap-3 border-white/10 border-b bg-[rgba(0,0,0,0.22)] px-4 py-2.5">
+          <span className="flex gap-1.5" aria-hidden="true">
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
+            <span className="h-2.5 w-2.5 rounded-full bg-white/20" />
           </span>
-          <Slug className="tabular-nums opacity-70">{clock}</Slug>
-          <Slug className="tabular-nums opacity-70">{wpm} wpm</Slug>
-          <span className="ml-auto hidden min-w-0 truncate lg:block">
-            <Slug className="opacity-55">From {demo.file}</Slug>
-          </span>
+          <Slug className="truncate opacity-50">explainaloud.com/rehearse</Slug>
         </div>
 
-        <div className="grid lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]">
-          {/* The take. Untyped text is present and transparent rather than
-              absent, so the panel is its final height on the first frame —
-              otherwise the page grows under the reader for nine seconds,
-              which is the exact complaint that killed the last version of
-              this section. */}
-          <div className="flex flex-col p-4 sm:p-5 lg:min-h-[24rem] lg:p-10">
-            <p className="font-display text-[1.15rem] leading-[1.45] tracking-[-0.01em] sm:text-[1.45rem] sm:leading-[1.38] lg:text-[clamp(1.5rem,2.1vw,2.1rem)] lg:leading-[1.32] lg:tracking-[-0.02em]">
-              {chars.map(({ text, verdict, start, end }) => {
-                const cut = Math.min(
-                  text.length,
-                  Math.max(0, revealed - start),
-                );
-                const complete = revealed >= end;
-                if (verdict === "plain") {
-                  return (
-                    <span key={`${start}-plain`}>
-                      <span>{text.slice(0, cut)}</span>
-                      <span aria-hidden="true" className="opacity-0">
-                        {text.slice(cut)}
+        {/* The height is pinned on the container, not on either column.
+            Each beat makes a different column the taller one — the setup form
+            during the first, the resolving ledger during the rest — so the
+            panel oscillated by 21px once per cycle, which is a page that
+            twitches every seventeen seconds. Reserving on the grid means
+            neither column can decide the height. */}
+        <div
+          ref={panelRef}
+          className="relative grid lg:min-h-[27rem] lg:grid-cols-[minmax(0,1.45fr)_minmax(0,1fr)]"
+        >
+          {/* The pointer, during the setup beat only. Once the take starts
+              there is nothing for a hand to be doing, and a cursor parked on
+              screen while text types itself is a prop nobody put away. */}
+          {inSetup && !reduceMotion && cursor && (
+            <span
+              aria-hidden="true"
+              className="pointer-events-none absolute z-20"
+              style={{
+                left: `${cursor.x}%`,
+                top: `${cursor.y}%`,
+                transform: "translate(-3px, -2px)",
+              }}
+            >
+              {/* The file, in hand.
+                  A filename that simply appears in a box is an upload having
+                  already happened. Carrying it in and releasing it is the
+                  action itself, and dragging a file onto a target is the one
+                  gesture everybody already reads as "put this here". The card
+                  rides the pointer, tilted slightly the way a held thing is,
+                  and stops existing the moment it lands. */}
+              {!dropped && (
+                <span
+                  className="-translate-y-1/2 absolute top-1 left-4 flex items-center gap-2 whitespace-nowrap border border-white/25 bg-[var(--panel-deep)] px-2.5 py-1.5 shadow-[3px_4px_0_rgba(4,14,32,0.6)]"
+                  style={{
+                    transform: `rotate(-4deg) scale(${dragOver ? 1.04 : 1})`,
+                    transition: "transform 220ms ease-out",
+                  }}
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 shrink-0 bg-[var(--ok-light)]"
+                  />
+                  <span className="font-mono text-[0.68rem]">{demo.file}</span>
+                </span>
+              )}
+              <svg width="20" height="22" viewBox="0 0 20 22" fill="none">
+                <title>Pointer</title>
+                <path
+                  d="M1 1L1 17.5L5.4 13.6L8.2 20L11.4 18.6L8.6 12.4L14.2 12.2L1 1Z"
+                  fill="#ffffff"
+                  stroke="rgba(6,18,38,0.65)"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+          )}
+
+          <div className="relative flex flex-col p-4 sm:p-5 lg:min-h-[24rem] lg:p-10">
+            {/* Both scenes live in one grid cell, so the panel is its final
+                height on the first frame. The alternative is a box that grows
+                as the take types in, which resizes the page under the reader
+                for the whole of every cycle. */}
+            <div className="grid flex-1">
+              {/* ── Beat one: the form fills itself in. */}
+              <motion.div
+                aria-hidden={!inSetup}
+                initial={false}
+                animate={{ opacity: inSetup ? 1 : 0 }}
+                transition={{ duration: 0.28 }}
+                className="col-start-1 row-start-1 flex flex-col justify-center"
+              >
+                <Slug className="opacity-55">Subject</Slug>
+                <div className="mt-2 flex">
+                  <span className="border border-[var(--ok-light)]/40 px-3 py-1.5 font-mono text-[0.68rem] text-[var(--ok-light)] uppercase tracking-[0.12em]">
+                    {demo.subject}
+                  </span>
+                </div>
+
+                {/* The upload. A dropzone that receives a file rather than a
+                    text field containing a filename: uploading is the first
+                    thing anybody does with this product, and a box you drop
+                    something into is what that looks like. The file lands as
+                    the pointer arrives over it. */}
+                <Slug className="mt-5 block opacity-55">Your material</Slug>
+                <div
+                  data-cursor-target="upload"
+                  className="mt-2 flex h-[4.5rem] items-center justify-center border border-white/20 border-dashed px-4 transition-colors duration-300"
+                  style={{
+                    borderColor:
+                      dropped || dragOver
+                        ? "rgba(191,228,207,0.55)"
+                        : undefined,
+                    backgroundColor: dragOver
+                      ? "rgba(191,228,207,0.12)"
+                      : dropped
+                        ? "rgba(191,228,207,0.06)"
+                        : undefined,
+                  }}
+                >
+                  {dropped ? (
+                    <span className="flex items-center gap-2.5">
+                      <span
+                        aria-hidden="true"
+                        className="h-2 w-2 shrink-0 bg-[var(--ok)]"
+                      />
+                      <span className="font-mono text-[0.8rem]">
+                        {demo.file}
                       </span>
+                      <Slug className="opacity-50">uploaded</Slug>
                     </span>
-                  );
-                }
-                return (
-                  <span key={`${start}-${verdict}`}>
-                    <span
-                      className="transition-[color,background-size] duration-500 ease-out"
+                  ) : (
+                    <Slug
+                      className="transition-opacity duration-200"
                       style={{
-                        backgroundImage: `linear-gradient(var(--${verdict}), var(--${verdict}))`,
-                        backgroundRepeat: "no-repeat",
-                        backgroundPosition: "0 100%",
-                        backgroundSize: complete ? "100% 2px" : "0% 2px",
-                        color: complete
-                          ? `var(--${verdict}-light)`
-                          : "var(--primary-foreground)",
+                        opacity: dragOver ? 1 : 0.45,
+                        color: dragOver ? "var(--ok-light)" : undefined,
                       }}
                     >
-                      {text.slice(0, cut)}
-                    </span>
-                    <span aria-hidden="true" className="opacity-0">
-                      {text.slice(cut)}
-                    </span>
-                    <span className="sr-only">
-                      {complete
-                        ? verdict === "ok"
-                          ? " (correct)"
-                          : " (too vague to check)"
-                        : ""}
-                    </span>
-                  </span>
-                );
-              })}
-            </p>
+                      {dragOver
+                        ? "Release to upload"
+                        : "Drag a PDF or your notes here"}
+                    </Slug>
+                  )}
+                </div>
 
-            {/* Transport. The rail is a real range input: a demo you can only
-                watch is a video, and a video is what this is trying not to
-                be. Dragging it re-marks the take from wherever you land,
-                because every mark is computed from progress. */}
-            <div className="mt-auto flex items-center gap-4 pt-6 lg:pt-8">
-              <button
-                type="button"
-                onClick={() => (done ? restart() : setPlaying((p) => !p))}
-                aria-label={done ? "Replay" : playing ? "Pause" : "Play"}
-                className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[var(--accent-solid)] text-[var(--brand-foreground)] transition-transform duration-200 hover:scale-105"
+                {/* The name. Typed, because typing is the one thing on this
+                    panel that unambiguously reads as a person doing it. */}
+                <Slug className="mt-5 block opacity-55">
+                  Name this rehearsal
+                </Slug>
+                <div
+                  data-cursor-target="name"
+                  className="mt-2 flex h-11 items-center border border-white/20 px-3.5 text-[0.95rem]"
+                >
+                  {nameTyped || (
+                    <span className="opacity-35">e.g. {demo.topic}</span>
+                  )}
+                  {nameProgress > 0 && nameProgress < 1 && (
+                    <span
+                      aria-hidden="true"
+                      className="ml-0.5 inline-block h-[1.05em] w-[2px] bg-[var(--primary-foreground)]"
+                    />
+                  )}
+                </div>
+
+                <div className="mt-6 flex">
+                  <span
+                    data-cursor-target="start"
+                    className="bg-[var(--accent-solid)] px-5 py-2.5 font-medium text-[0.88rem] text-[var(--brand-foreground)] transition-transform duration-150"
+                    style={{ transform: pressing ? "scale(0.96)" : "none" }}
+                  >
+                    Start rehearsing
+                  </span>
+                </div>
+              </motion.div>
+
+              {/* ── Beats two and three: the take, marked as it lands. */}
+              <motion.div
+                aria-hidden={inSetup}
+                initial={false}
+                animate={{ opacity: inSetup ? 0 : 1 }}
+                transition={{ duration: 0.28, delay: inSetup ? 0 : 0.14 }}
+                className="col-start-1 row-start-1 flex flex-col"
               >
-                {done ? (
-                  <RotateCcw className="h-4 w-4" />
-                ) : playing ? (
-                  <Pause className="h-4 w-4" />
-                ) : (
-                  <Play className="ml-0.5 h-4 w-4" />
-                )}
-              </button>
-              <label className="min-w-0 flex-1">
-                <span className="sr-only">Scrub the rehearsal</span>
-                <input
-                  type="range"
-                  min={0}
-                  max={1000}
-                  value={Math.round(progress * 1000)}
-                  onChange={(event) => {
-                    setPlaying(false);
-                    setProgress(Number(event.target.value) / 1000);
-                  }}
-                  className="lp-scrub w-full"
-                  style={
-                    { "--lp-scrub": `${progress * 100}%` } as CSSProperties
-                  }
-                />
-              </label>
+                {/* The recorder, made the size of the claim it is making.
+                    This was a 2.5px dot and a timecode, which is the smallest
+                    possible way to say "the product is listening to you right
+                    now" — the single thing this whole section exists to show.
+                    A mic under a live ring, a moving level meter and a
+                    timecode that is actually legible say it at the size it
+                    deserves. */}
+                <div className="flex items-center gap-3.5 border-white/10 border-b pb-4">
+                  <span
+                    className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white transition-colors duration-500"
+                    style={{
+                      backgroundColor: settled
+                        ? "rgba(238,242,248,0.14)"
+                        : "var(--miss)",
+                    }}
+                  >
+                    {!settled && !reduceMotion && (
+                      <span className="absolute inset-0 animate-ping rounded-full border border-[var(--miss)] opacity-60" />
+                    )}
+                    <Mic className="relative h-4 w-4" />
+                  </span>
+
+                  <div className="min-w-0 flex-1">
+                    <Slug
+                      className="block"
+                      style={{
+                        color: settled ? undefined : "var(--miss-light)",
+                      }}
+                    >
+                      {settled ? "Marked against your points" : "Recording"}
+                    </Slug>
+                    <span className="mt-1 block font-mono text-[1.05rem] tabular-nums leading-none">
+                      {clock}
+                    </span>
+                  </div>
+
+                  {/* The level meter. Driven off the same clock, so it cannot
+                      still be bouncing after the take has stopped. */}
+                  <span
+                    className="hidden h-8 items-end gap-[3px] sm:flex"
+                    aria-hidden="true"
+                  >
+                    {LEVELS.map((seed, index) => {
+                      const wobble = settled
+                        ? 0.14
+                        : 0.35 +
+                          0.65 *
+                            Math.abs(Math.sin(takeT * 22 + index * 0.9 + seed));
+                      return (
+                        <span
+                          key={`level-${seed}`}
+                          className="w-[3px] origin-bottom rounded-full bg-[var(--ok-light)]"
+                          style={{
+                            height: "100%",
+                            transform: `scaleY(${wobble.toFixed(3)})`,
+                            opacity: settled ? 0.3 : 0.9,
+                          }}
+                        />
+                      );
+                    })}
+                  </span>
+
+                  <Slug className="shrink-0 tabular-nums opacity-60">
+                    {wpm} wpm
+                  </Slug>
+                </div>
+
+                <p className="mt-5 font-display text-[1.15rem] leading-[1.45] tracking-[-0.01em] sm:text-[1.45rem] sm:leading-[1.38] lg:text-[clamp(1.5rem,2.1vw,2.1rem)] lg:leading-[1.32] lg:tracking-[-0.02em]">
+                  {chars.map(({ text, verdict, start, end }) => {
+                    const cut = Math.min(
+                      text.length,
+                      Math.max(0, revealed - start),
+                    );
+                    const complete = revealed >= end;
+                    if (verdict === "plain") {
+                      return (
+                        <span key={`${start}-plain`}>
+                          <span>{text.slice(0, cut)}</span>
+                          <span aria-hidden="true" className="opacity-0">
+                            {text.slice(cut)}
+                          </span>
+                        </span>
+                      );
+                    }
+                    return (
+                      <span key={`${start}-${verdict}`}>
+                        <span
+                          className="transition-[color,background-size] duration-500 ease-out"
+                          style={{
+                            backgroundImage: `linear-gradient(var(--${verdict}), var(--${verdict}))`,
+                            backgroundRepeat: "no-repeat",
+                            backgroundPosition: "0 100%",
+                            backgroundSize: complete ? "100% 2px" : "0% 2px",
+                            color: complete
+                              ? `var(--${verdict}-light)`
+                              : "var(--primary-foreground)",
+                          }}
+                        >
+                          {text.slice(0, cut)}
+                        </span>
+                        <span aria-hidden="true" className="opacity-0">
+                          {text.slice(cut)}
+                        </span>
+                        <span className="sr-only">
+                          {complete
+                            ? verdict === "ok"
+                              ? " (correct)"
+                              : " (too vague to check)"
+                            : ""}
+                        </span>
+                      </span>
+                    );
+                  })}
+                </p>
+              </motion.div>
             </div>
           </div>
 
@@ -370,25 +699,22 @@ export function DemoConsole() {
                 /* Each point resolves at its own share of the take, so they
                    land one at a time rather than all at the buzzer. */
                 const at = ((index + 1) / demo.keyPoints.length) * 0.94;
-                const settled = progress >= at;
+                const shown = takeT >= at;
                 return (
                   <li
                     key={point.point}
                     className="border-white/10 border-t py-2.5 first:border-t-0 first:pt-0 lg:py-4"
                   >
                     <div className="flex items-start gap-3">
-                      {/* The verdict lands, it does not fade up.
-                          This was a colour transition, which is the quietest
-                          possible way to say "a judgement has just been made
-                          about your explanation" — the one moment in the whole
-                          demo that is worth noticing. Now the square snaps to
-                          size against a spring and throws a ring outward as it
-                          seats, the way a stamp does. The ring is a pure
-                          transform on a pseudo-layer, so the whole thing is
-                          one composited pop and costs nothing. */}
+                      {/* The verdict lands, it does not fade up. This is the
+                          one moment worth noticing in the whole loop: a
+                          judgement being made about your explanation. It snaps
+                          against a spring and throws a ring outward as it
+                          seats, the way a stamp does. */}
                       <span className="relative mt-[0.42rem] flex h-2.5 w-2.5 shrink-0">
-                        {settled && !reduceMotion && (
+                        {shown && !reduceMotion && (
                           <motion.span
+                            key={`${demo.id}-${point.point}-ring`}
                             aria-hidden="true"
                             initial={{ scale: 1, opacity: 0.85 }}
                             animate={{ scale: 3.4, opacity: 0 }}
@@ -402,7 +728,7 @@ export function DemoConsole() {
                         <motion.span
                           aria-hidden="true"
                           initial={false}
-                          animate={{ scale: settled ? 1 : 0.55 }}
+                          animate={{ scale: shown ? 1 : 0.55 }}
                           transition={
                             reduceMotion
                               ? { duration: 0.15 }
@@ -410,7 +736,7 @@ export function DemoConsole() {
                           }
                           className="relative h-2.5 w-2.5 transition-colors duration-300"
                           style={{
-                            backgroundColor: settled
+                            backgroundColor: shown
                               ? VERDICT_COLOR[point.verdict]
                               : "rgba(238,242,248,0.16)",
                           }}
@@ -418,26 +744,20 @@ export function DemoConsole() {
                       </span>
                       <p
                         className="min-w-0 flex-1 text-[0.93rem] leading-snug transition-opacity duration-500 lg:text-[0.97rem]"
-                        style={{ opacity: settled ? 1 : 0.45 }}
+                        style={{ opacity: shown ? 1 : 0.45 }}
                       >
                         {point.point}
                       </p>
-                      {/* The label arrives with the stamp, from slightly
-                          right, so the eye reads dot then word in the order
-                          the product decides them. */}
                       <motion.span
                         initial={false}
                         animate={{
-                          opacity: settled ? 1 : 0,
-                          x: settled || reduceMotion ? 0 : 6,
+                          opacity: shown ? 1 : 0,
+                          x: shown || reduceMotion ? 0 : 6,
                         }}
                         transition={
                           reduceMotion
                             ? { duration: 0.15 }
-                            : {
-                                ...transitions.spring,
-                                delay: settled ? 0.08 : 0,
-                              }
+                            : { ...transitions.spring, delay: shown ? 0.08 : 0 }
                         }
                         className="mt-[0.15rem] shrink-0 font-mono text-[0.6rem] uppercase leading-[1.5] tracking-[0.13em]"
                         style={{ color: VERDICT_TINT[point.verdict] }}
@@ -451,49 +771,27 @@ export function DemoConsole() {
             </ul>
 
             {/* The gap report. Held back until the take is finished, because
-                that is when the product has it — showing it early would be
-                the demo telling you the answer before the question. */}
-            {/* Reserved on desktop, not on mobile.
-                Holding the space with `opacity: 0` is what stops the panel
-                resizing as the run finishes, and on a two column layout that
-                space is beside the transcript and costs nothing. Stacked on
-                one column it is a screen of empty navy under the key points
-                for the whole run, which is worse than the resize it prevents.
-                So below `lg` it is genuinely absent until there is something
-                to say, and the panel grows once, at the end, after the reader
-                has finished watching. */}
-            {/* Animated in place rather than mounted and unmounted.
-                `AnimatePresence` was the obvious choice and it was wrong here:
-                removing the node from the tree also removes the space it was
-                holding, and on the two column layout that space is what keeps
-                the panel from changing height when the run completes. It
-                measured a 32px jump, 408 to 440, which is the exact class of
-                resize this panel was built to avoid.
-
-                So on `lg` it is always mounted and only its opacity moves.
-                Below `lg` it stays unmounted until there is something to say,
-                because there the ledger is stacked underneath and the reserved
-                space would be a screen of empty navy instead of a column
-                beside the transcript. Same component, opposite correct
-                answers, decided by which one costs the reader more. */}
+                that is when the product has it. Mounted on `lg` and only faded,
+                so the panel cannot change height; below `lg` the ledger is
+                stacked underneath and the reserved space would be a screen of
+                empty navy instead of a column beside the transcript. */}
             <motion.div
               initial={false}
-              animate={
-                done
-                  ? { opacity: 1, y: 0 }
-                  : { opacity: 0, y: reduceMotion ? 0 : 8 }
-              }
+              animate={{
+                opacity: settled ? 1 : 0,
+                y: settled ? 0 : reduceMotion ? 0 : 8,
+              }}
               transition={
                 reduceMotion
                   ? { duration: 0.15 }
-                  : done
+                  : settled
                     ? transitions.smooth
                     : transitions.exit
               }
-              aria-hidden={!done}
+              aria-hidden={!settled}
               className={cn(
                 "mt-4 border-white/10 border-l-2 pl-4 lg:mt-6 lg:block",
-                done ? "block" : "hidden",
+                settled ? "block" : "hidden",
               )}
               style={{ borderLeftColor: "var(--miss)" }}
             >
@@ -507,6 +805,16 @@ export function DemoConsole() {
             </motion.div>
           </div>
         </div>
+
+        {/* The cycle, as a hairline. Not a control — there is nothing to drag
+            and nothing to press. It is there so a reader who looks up
+            mid-sentence can see that this is a loop rather than a video that
+            has stalled. */}
+        <div
+          aria-hidden="true"
+          className="h-[2px] w-full origin-left bg-[var(--accent-solid)]/45"
+          style={{ transform: `scaleX(${progress})` }}
+        />
       </div>
     </div>
   );
