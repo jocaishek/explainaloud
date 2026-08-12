@@ -1135,36 +1135,77 @@ export function LandingRedesign() {
               );
             });
 
-          /* The page marks its own copy.
-             This is the one piece of motion here that belongs to this product
-             and could not be lifted onto another site. Everything else in
-             this file is a well made generic: things rise as they arrive, a
-             rule draws, a bar tracks scroll. None of them say what the thing
-             does. This does, because it is the exact gesture the grader makes
-             on a transcript, in the exact three colours, so by the time a
-             reader reaches the demo they can already read a mark without
-             having been shown a legend.
+          /* The page's own claims get judged, in colour, one word at a time.
+             This was a rule drawn under the phrase — the literal gesture a
+             grader makes on paper. It was the right idea and the wrong object:
+             a coloured underline appearing beneath a headline is the single
+             most common "look, emphasis" device on the internet, it fought the
+             baseline at every size, and it said nothing a reader could learn
+             from. It also had to be fixed twice for colliding with the line
+             below it, which is usually the sign that a thing does not want to
+             be there.
 
-             Not scrubbed. A grader does not underline a phrase gradually as
-             you scroll toward it; it decides, and then the rule goes down at
-             one speed. Scrubbing this would turn a verdict into a slider,
-             which is precisely the wrong idea about the product.
+             What replaces it is the judgement itself, arriving through the
+             words: each character takes the verdict colour in turn, left to
+             right, at reading speed. The phrase changes state in front of you
+             rather than acquiring a decoration, which is much closer to what
+             the product actually does — and because the colour lands *on* the
+             words, the reader learns the association without a legend. By the
+             time green, amber and red appear in the demo they already mean
+             something.
 
-             `toggleActions` for the same reason every other reveal has it:
-             coming back up the page and down again should mark them again
-             rather than present a page that is finished with you. */
-          gsap.utils.toArray<HTMLElement>(".lp-mark").forEach((mark) => {
+             Colour is never the only carrier: the weight goes up with it, so
+             the emphasis survives greyscale and colour blindness, and every
+             marked phrase is announced to assistive tech by the label below. */
+          gsap.utils.toArray<HTMLElement>("[data-verdict]").forEach((mark) => {
+            const verdict = mark.dataset.verdict;
+            if (!verdict) return;
+
+            const sentence = mark.textContent ?? "";
+            if (!sentence.trim()) return;
+
+            /* Split to characters, keeping words unbreakable so the headline
+               wraps exactly where it did before. A split that re-wraps the
+               line is a layout shift wearing an animation's clothes. */
+            mark.textContent = "";
+            const letters: HTMLElement[] = [];
+            const words = sentence.split(/(\s+)/);
+            for (const word of words) {
+              if (/^\s+$/.test(word)) {
+                const gap = document.createElement("span");
+                gap.className = "whitespace-pre";
+                gap.textContent = word;
+                mark.append(gap);
+                continue;
+              }
+              const wrap = document.createElement("span");
+              wrap.className = "inline-block whitespace-nowrap";
+              for (const character of word) {
+                const span = document.createElement("span");
+                span.className = "inline-block";
+                span.textContent = character;
+                wrap.append(span);
+                letters.push(span);
+              }
+              mark.append(wrap);
+            }
+
             reveals.push(
               gsap.fromTo(
-                mark,
-                { backgroundSize: "0% 0.085em" },
+                letters,
+                { color: "inherit", fontWeight: "inherit" },
                 {
-                  backgroundSize: "100% 0.085em",
-                  duration: 0.62,
-                  ease: "power2.inOut",
+                  color: `var(--${verdict}-mark)`,
+                  fontWeight: 700,
+                  duration: 0.5,
+                  /* Spread across a fixed span rather than per character, so
+                     a two-word phrase and a five-word one resolve at the same
+                     pace instead of the long one taking twice as long. */
+                  stagger: { amount: 0.55, from: "start" },
+                  ease: "none",
                   scrollTrigger: {
                     trigger: mark,
-                    start: "top 78%",
+                    start: "top 80%",
                     toggleActions: "play none none reverse",
                   },
                 },
@@ -1172,11 +1213,6 @@ export function LandingRedesign() {
             );
           });
 
-          /* The rule draws itself across the three steps. Scrubbed, so it is
-             a readout of where the reader is in the section rather than an
-             animation that happens at them — and `scaleX` on a hairline is a
-             composited transform, which is why this is affordable where a
-             pinned track was not. */
           /* The step numbers roll. 01, 02, 03 count up from zero as the
              section arrives — a different mechanism from everything else here,
              and the one that suits three ordered things: you watch the
@@ -1384,7 +1420,8 @@ export function LandingRedesign() {
                 <span data-hero-word className="inline-block">
                   <span
                     data-hero-mark="ok"
-                    className="lp-mark lp-mark-ok whitespace-nowrap"
+                    data-verdict="ok"
+                    className="lp-verdict whitespace-nowrap"
                   >
                     know.
                   </span>
@@ -1409,7 +1446,8 @@ export function LandingRedesign() {
                   what you{" "}
                   <span
                     data-hero-mark="miss"
-                    className="lp-mark lp-mark-miss whitespace-nowrap"
+                    data-verdict="miss"
+                    className="lp-verdict whitespace-nowrap"
                   >
                     missed.
                   </span>
@@ -1481,7 +1519,10 @@ export function LandingRedesign() {
               className="mt-5 max-w-[16ch] font-display text-[clamp(1.75rem,4.2vw,3.9rem)] text-strong leading-[1] tracking-[-0.04em]"
             >
               Watch a take get marked,{" "}
-              <span className="lp-mark lp-mark-ok">line by line</span>.
+              <span data-verdict="ok" className="lp-verdict">
+                line by line
+              </span>
+              .
             </h2>
           </div>
           <p className="max-w-[30rem] text-muted-foreground leading-relaxed md:pb-2">
@@ -1637,7 +1678,10 @@ export function LandingRedesign() {
                 className="mt-6 max-w-[13ch] font-display text-[clamp(1.85rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]"
               >
                 Not another quiz generated from{" "}
-                <span className="lp-mark lp-mark-miss">a topic name</span>.
+                <span data-verdict="miss" className="lp-verdict">
+                  a topic name
+                </span>
+                .
               </h2>
               <p className="mt-7 max-w-[38rem] text-[1.08rem] text-muted-foreground leading-relaxed">
                 Every claim stays tied to a quote from your own file.
@@ -1715,7 +1759,7 @@ export function LandingRedesign() {
               is what has to give. */}
           <h2 className="mx-auto mt-5 max-w-[17ch] font-display text-[clamp(1.9rem,4.6vw,4.4rem)] leading-[1.28] tracking-[-0.045em]">
             Turn{" "}
-            <span className="lp-mark lp-mark-vague whitespace-nowrap">
+            <span data-verdict="vague" className="lp-verdict whitespace-nowrap">
               “I think I know it”
             </span>{" "}
             into certainty.

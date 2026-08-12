@@ -2559,97 +2559,61 @@ html:has(main.lp-v2) {
   color: #a8cdf5;
 }
 
-/* ── The page marks itself ───────────────────────────────────────────────
+/* ── The page's own claims, judged ──────────────────────────────────────
  *
- * The one animation on this page that could not appear on any other page.
+ * The one piece of motion here that could not appear on any other page.
  *
- * Everything else in the motion layer is generic by construction: things rise
- * as they arrive, a rule draws, a bar tracks scroll position. Those are fine
- * and they are also what every well built site does, which means none of them
- * say anything about what this product is.
+ * This was a rule that wiped in under the phrase — the literal mark a grader
+ * makes on paper. Right idea, wrong object. A coloured underline arriving
+ * beneath a headline is the commonest emphasis device there is, it fought the
+ * baseline at every size, and it had to be fixed twice for landing on the
+ * ascenders of the line below. A thing that needs that much defending usually
+ * does not want to be there.
  *
- * This one does. The product's entire job is to underline a phrase in green,
- * amber or red the moment it can judge it, so as the reader scrolls, the
- * page's own headlines get marked exactly that way, in exactly those colours,
- * with exactly that gesture. By the time somebody reaches the demo they have
- * already been taught to read the marks, without a legend and without a
- * sentence explaining it.
+ * The verdict now arrives *through* the words: each character takes the colour
+ * in turn, left to right, at reading speed, driven by GSAP against scroll. The
+ * phrase changes state rather than acquiring a decoration, which is much
+ * closer to what the product does to a sentence — and because the colour lands
+ * on the words themselves, the association is learned without a legend. By the
+ * time green, amber and red turn up in the demo they already mean something.
  *
- * The colours are the verdicts and are used here as verdicts: `ok` under a
- * claim the page is standing behind, `vague` under the phrase a reader would
- * say to themselves before they test it, `miss` under the thing this product
- * refuses to be. Nothing decorative is ever marked.
- *
- * The rule starts at full width and zero *height* rather than zero width,
- * because `background-size` on the horizontal axis is what GSAP animates and
- * a zero-height rule takes no layout at all. That matters for the no-script
- * case: with the stylesheet applied and nothing running, these read as plain
- * text rather than as text with a stray line under it.
+ * `--*-mark` and not `--ok` / `--vague` / `--miss` directly, because the same
+ * three verdicts have to be read on two very different grounds: the fills are
+ * tuned for light stock and go muddy on the hero's water, while the tints are
+ * washed out on paper. One name, answered correctly per ground.
  */
-.lp-v2 .lp-mark {
-  background-repeat: no-repeat;
-  /* Lifted off the bottom of the inline box.
-     `0 100%` puts the rule at the bottom edge of the line box, not under the
-     letters. At body size the difference is a pixel and nobody notices; at
-     the closing headline's 44px it is most of the leading, so the rule was
-     floating in the gap between the two lines, visibly detached from the
-     words it was supposed to be marking. That is what "the underline is
-     broken" was.
-
-     Offsetting in `em` keeps it the same distance below the baseline at every
-     size on the page, which a pixel value could not do. */
-  background-position: 0 calc(100% - 0.19em);
-  background-size: 0% 0.085em;
-  /* Without this a marked phrase that wraps is treated as one box for
-     painting, so the rule is drawn across the union of both lines: it runs off
-     the right edge of the first line and starts mid-air on the second, and
-     while it is animating the growth happens in a place with no text under it.
-     `clone` gives each line fragment its own background box, which is how a
-     person underlining two lines with a pen would do it. */
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
+.lp-v2 {
+  --ok-mark: var(--ok);
+  --vague-mark: var(--vague);
+  --miss-mark: var(--miss);
 }
 
-.lp-v2 .lp-mark-ok {
-  background-image: linear-gradient(var(--ok), var(--ok));
+/* On the hero and the closing band the type sits on near-black water, so the
+ * verdicts take their lit cuts. */
+.lp-v2 .lp-atmosphere {
+  --ok-mark: var(--ok-light);
+  --vague-mark: var(--vague-light);
+  --miss-mark: var(--miss-light);
 }
 
-.lp-v2 .lp-mark-vague {
-  background-image: linear-gradient(var(--vague), var(--vague));
+/* Weight, not only colour. Colour alone fails in greyscale and for the eight
+ * per cent of men who cannot separate the green from the red — which for a
+ * product whose whole vocabulary is three colours would be a poor joke. The
+ * sweep animates weight alongside hue; this is the resting state for anyone
+ * the animation never runs for. */
+.lp-v2 .lp-verdict {
+  font-weight: 700;
 }
 
-.lp-v2 .lp-mark-miss {
-  background-image: linear-gradient(var(--miss), var(--miss));
-}
-
-/* On the hero the marks take the lit tints, not the fills.
- *
- * `--ok` and `--miss` are tuned to be read on light stock. Over the hero's
- * near black water the green in particular drops to a dull olive and stops
- * reading as a verdict at all, which is the same trap the demo console's
- * labels already avoid by using the tints. The three colours still mean
- * exactly what they mean; this is the same colour lit for a dark ground.
- */
-.lp-v2 .lp-atmosphere .lp-mark-ok {
-  background-image: linear-gradient(var(--ok-light), var(--ok-light));
-}
-
-.lp-v2 .lp-atmosphere .lp-mark-miss {
-  background-image: linear-gradient(var(--miss-light), var(--miss-light));
-}
-
-/* Thicker, too. A hairline that works at 18px body copy is invisible under
- * an 86px headline; the rule has to scale with the type it is marking. */
-.lp-v2 .lp-atmosphere .lp-mark {
-  background-size: 0% 0.055em;
-}
-
-/* Reduced motion gets the finished state, not the empty one. The mark is
- * meaning here rather than ornament, so removing the movement must not remove
- * the information. */
 @media (prefers-reduced-motion: reduce) {
-  .lp-v2 .lp-mark {
-    background-size: 100% 0.085em;
+  .lp-v2 .lp-verdict[data-verdict="ok"] {
+    color: var(--ok-mark);
+  }
+  .lp-v2 .lp-verdict[data-verdict="vague"] {
+    color: var(--vague-mark);
+  }
+  .lp-v2 .lp-verdict[data-verdict="miss"] {
+    color: var(--miss-mark);
   }
 }
 
