@@ -357,13 +357,21 @@ void main() {
   /* Depth first. Darker further down, which is what makes everything drawn on
      top of it read as being in something rather than on a flat colour. */
   vec3 col = mix(deep, mid, smoothstep(0.0, 0.95, uv.y));
-  col = mix(col, lit, silk * 0.44);
-  col += hot * pow(silk, 6.0) * 0.10;
-  col += lit * smoothstep(0.22, 0.9, f) * 0.3;
+  /* Barely. This term folds the warped field into broad smooth bands, and at
+     any real strength those bands are fat glossy tubes winding across the
+     frame — the picture stops being a body of water and becomes a nest of
+     bright worms. It is still here because without any of it the surface is
+     dead flat, but it belongs at the threshold of noticing: it is the slow
+     movement of light deep down, not a feature. */
+  col = mix(col, lit, silk * 0.12);
+  col += hot * pow(silk, 6.0) * 0.03;
+  /* Same reasoning: a broad brightening across half the frame is a shape,
+     and a shape this size reads as an object rather than as water. */
+  col += lit * smoothstep(0.3, 0.95, f) * 0.12;
 
-  col += lit * veinA * 0.4;
-  col += lit * veinB * 0.3;
-  col += hot * veinC * 0.16;
+  col += lit * veinA * 0.5;
+  col += lit * veinB * 0.38;
+  col += hot * veinC * 0.2;
 
   /* ── The ripples themselves.
      Two terms, and they do different jobs. The caustics below the surface
@@ -377,9 +385,9 @@ void main() {
      hot for the glint and lit for the transmitted light, because a
      reflection off a surface carries the colour of the sky and light coming
      through carries the colour of the water. */
-  col += lit * (veinA + veinB) * wake * 0.55;
-  col += hot * spec * 0.42;
-  col += lit * wake * 0.12;
+  col += lit * (veinA + veinB) * wake * 0.9;
+  col += hot * spec * 0.55;
+  col += lit * wake * 0.16;
 
   /* Scaled by aspect, because "the left third" is only a place on a wide
      screen. On a phone the headline is centred over the full width, so the
