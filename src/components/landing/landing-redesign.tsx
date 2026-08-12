@@ -1,28 +1,14 @@
 "use client";
 
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import {
-  ArrowRight,
-  Check,
-  Leaf,
-  LockKeyhole,
-  MessageCircle,
-  Mic,
-  Sparkles,
-  X,
-} from "lucide-react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ArrowRight, LockKeyhole, Mic } from "lucide-react";
 import Link from "next/link";
 import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
+import { DemoConsole } from "~/components/landing/demo-console";
+import { FlowField } from "~/components/landing/flow-field";
 import { GlassMark } from "~/components/landing/glass-mark";
-
-const transcript = [
-  { text: "Newton’s third law says forces come in pairs, ", tone: "plain" },
-  { text: "equal and opposite", tone: "ok" },
-  { text: ". When I push the wall, it ", tone: "plain" },
-  { text: "kind of pushes back", tone: "vague" },
-  { text: ".", tone: "plain" },
-] as const;
+import { SignupNudge } from "~/components/landing/signup-nudge";
 
 const steps = [
   {
@@ -38,7 +24,7 @@ const steps = [
   {
     number: "03",
     title: "Know exactly what to fix",
-    body: "See what landed, what was too thin to count, and the point you never reached—then run it again with those in front of you.",
+    body: "See what landed, what was too thin to count, and the point you never reached. Then run it again with those in front of you.",
   },
 ] as const;
 
@@ -53,32 +39,19 @@ const steps = [
 const whyOutLoud = [
   {
     title: "Recognising is not knowing",
-    body: "Picking the right option means you can spot the answer when it is in front of you. It says nothing about whether you could produce it with nobody prompting you.",
+    body: "You can spot an answer without being able to produce one.",
   },
   {
     title: "Gaps only show when you speak",
-    body: "Reading your notes again finds nothing wrong, because the page supplies every step. The missing one appears the moment you have to say it in order.",
+    body: "Re-reading finds nothing wrong. The page supplies every step for you.",
   },
   {
     title: "Marked against your material",
-    body: "Not a topic name and a generic question bank. The points come out of the file you uploaded, so the feedback answers to what you are actually responsible for.",
+    body: "Points come from your file, not from a topic name.",
   },
 ] as const;
 
 const ease = [0.23, 1, 0.32, 1] as const;
-
-/* The same field closes the page. One crossing into light for the product and
- * one back into dark to end, which is what `design.md` allows. */
-const closingFieldStyle: CSSProperties = {
-  backgroundImage:
-    'linear-gradient(180deg, rgba(4, 12, 26, 0.5), rgba(3, 9, 20, 0.7)), url("/landing/explainaloud-field-v1.webp")',
-  backgroundPosition: "center 60%",
-  backgroundSize: "cover",
-  /* Not `fixed`. A fixed attachment cannot be promoted to its own compositor
-   * layer, so the browser repaints the whole image on every scroll frame — the
-   * jump this band used to show, and on iOS Safari it does not work at all. */
-  backgroundAttachment: "scroll",
-};
 
 const waveform = [
   { id: "a", height: 10 },
@@ -94,6 +67,33 @@ const waveform = [
   { id: "k", height: 12 },
   { id: "l", height: 22 },
 ] as const;
+
+/**
+ * The read-through waveform.
+ *
+ * Written out rather than generated, for two reasons. It has to be byte
+ * identical between the dim layer and the lit one or the recorded bars will
+ * not line up with the unrecorded ones, and it has to be identical between
+ * the server render and the client one, which rules out anything random.
+ *
+ * The shape is speech shaped on purpose: runs of loud syllables, short dips
+ * where somebody breathes, one long quiet stretch about two thirds through.
+ * A uniformly noisy bar chart reads as a decoration; this reads as a person
+ * talking.
+ */
+const READ_WAVE = [
+  22, 38, 30, 52, 44, 66, 48, 34, 26, 40, 58, 72, 60, 46, 32, 24, 36, 54, 68,
+  80, 62, 44, 30, 22, 34, 50, 64, 76, 88, 70, 52, 38, 28, 20, 30, 46, 60, 74,
+  56, 42, 26, 18, 28, 44, 58, 70, 84, 66, 48, 34, 24, 32, 46, 62, 78, 90, 72,
+  54, 40, 28, 20, 26, 38, 52, 66, 58, 44, 30, 22, 16, 24, 36, 48, 62, 74, 56,
+  40, 26, 18, 22, 34, 50, 64, 80, 68, 50, 36, 24, 16, 20, 30, 44, 58, 72, 60,
+  46, 32, 22, 28, 42, 56, 70, 84, 66, 48, 32, 20, 26, 38, 54, 68, 60, 44, 30,
+  20, 24, 36, 50, 64, 76, 58, 42, 28, 18, 22, 32, 46, 60, 52, 38, 26, 20,
+] as const;
+
+/** The tallest bar. Every bar is laid out at this height and scaled down to
+ *  its own, so one box size serves all twelve and nothing re-lays-out. */
+const WAVEFORM_MAX = 34;
 
 /**
  * The three verdicts, as the hero states them.
@@ -190,17 +190,28 @@ function LiveRehearsalPanel() {
           className="hidden h-7 items-end gap-[3px] sm:flex"
           aria-hidden="true"
         >
+          {/* `scaleY`, not `height`.
+              These twelve bars used to animate `height`, which is a layout
+              property: every frame, for as long as the hero was on screen,
+              the browser re-ran layout for the whole row. A waveform is
+              decoration and it was the most expensive thing on the page.
+              `scaleY` on a solid rectangle is visually identical and is
+              composited, so it costs nothing. `origin-bottom` is what keeps
+              the bars growing upward out of the baseline rather than from
+              their centres. */}
           {waveform.map(({ id, height }, index) => (
             <motion.span
               key={id}
+              style={{ height: WAVEFORM_MAX }}
+              initial={false}
               animate={
                 reduceMotion
-                  ? { height: Math.max(5, height * 0.62) }
+                  ? { scaleY: (height / WAVEFORM_MAX) * 0.62 }
                   : {
-                      height: [
-                        Math.max(5, height * 0.42),
-                        Math.max(8, height * 0.82),
-                        Math.max(5, height * 0.5),
+                      scaleY: [
+                        (height / WAVEFORM_MAX) * 0.42,
+                        (height / WAVEFORM_MAX) * 0.82,
+                        (height / WAVEFORM_MAX) * 0.5,
                       ],
                     }
               }
@@ -210,7 +221,7 @@ function LiveRehearsalPanel() {
                 delay: index * 0.055,
                 ease: "easeInOut",
               }}
-              className="w-1 rounded-full bg-[var(--ok-light)]"
+              className="w-1 origin-bottom rounded-full bg-[var(--ok-light)]"
             />
           ))}
         </div>
@@ -263,115 +274,11 @@ function LiveRehearsalPanel() {
   );
 }
 
-const feedback = [
-  {
-    id: "correct",
-    label: "Correct",
-    eyebrow: "Strong claim",
-    quote: "Forces come in pairs, equal and opposite.",
-    note: "Accurate and stated clearly.",
-    color: "var(--ok)",
-    light: "var(--ok-light)",
-  },
-  {
-    id: "vague",
-    label: "Vague",
-    eyebrow: "Needs precision",
-    quote: "The wall kind of pushes back.",
-    note: "Name the force and which object it acts on.",
-    color: "var(--vague)",
-    light: "var(--vague-light)",
-  },
-  {
-    id: "missing",
-    label: "Missing",
-    eyebrow: "The key mechanism",
-    quote: "The two forces act on different objects.",
-    note: "That is why the force pair does not cancel itself out.",
-    color: "var(--miss)",
-    light: "var(--miss-light)",
-  },
-] as const;
-
-function IntroPanel() {
-  const [open, setOpen] = useState(false);
-  const reduceMotion = useReducedMotion();
-
-  return (
-    <div className="fixed right-5 bottom-5 z-[80] flex flex-col items-end gap-3">
-      <AnimatePresence>
-        {open && (
-          <motion.aside
-            initial={reduceMotion ? false : { opacity: 0, y: 18, scale: 0.94 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 12, scale: 0.96 }}
-            transition={{ type: "spring", stiffness: 340, damping: 25 }}
-            className="w-[min(21rem,calc(100vw-2.5rem))] border border-white/15 bg-[var(--panel-deep)] p-5 text-left text-primary-foreground shadow-[6px_6px_0_rgba(6,18,38,0.72)]"
-          >
-            <div className="flex items-start gap-3">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--ok)] text-white">
-                <Leaf className="h-4 w-4" />
-              </span>
-              <div>
-                <p className="font-mono text-[0.62rem] uppercase tracking-[0.14em] text-[var(--ok-light)]">
-                  Start here
-                </p>
-                <p className="mt-2 font-semibold leading-snug">
-                  What do you need to say clearly today?
-                </p>
-              </div>
-            </div>
-            <p className="mt-4 text-primary-foreground/68 text-sm leading-relaxed">
-              Bring your notes and talk through them once. We’ll show what
-              landed, what felt thin, and what never made it out.
-            </p>
-            <Link
-              href="/signup"
-              data-gsap-hover
-              className="mt-5 inline-flex h-10 items-center gap-3 bg-card px-4 font-medium text-card-foreground text-sm"
-            >
-              Start a rehearsal <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
-          </motion.aside>
-        )}
-      </AnimatePresence>
-
-      <motion.button
-        type="button"
-        data-gsap-hover
-        aria-label={open ? "Close the intro panel" : "What is Explainaloud?"}
-        aria-expanded={open}
-        onClick={() => setOpen((value) => !value)}
-        whileTap={reduceMotion ? undefined : { scale: 0.9 }}
-        className="relative flex h-14 w-14 items-center justify-center rounded-full border border-white/25 bg-[var(--panel-deep)] text-primary-foreground shadow-[4px_4px_0_rgba(6,18,38,0.78)]"
-      >
-        {!reduceMotion && (
-          <motion.span
-            aria-hidden="true"
-            animate={{ scale: [1, 1.42, 1], opacity: [0.42, 0, 0.42] }}
-            transition={{ duration: 2.8, repeat: Number.POSITIVE_INFINITY }}
-            className="absolute inset-0 rounded-full border border-[var(--ok-light)]"
-          />
-        )}
-        <AnimatePresence mode="wait" initial={false}>
-          <motion.span
-            key={open ? "close" : "chat"}
-            initial={{ rotate: -20, scale: 0.7, opacity: 0 }}
-            animate={{ rotate: 0, scale: 1, opacity: 1 }}
-            exit={{ rotate: 20, scale: 0.7, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {open ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <MessageCircle className="h-5 w-5" />
-            )}
-          </motion.span>
-        </AnimatePresence>
-      </motion.button>
-    </div>
-  );
-}
+/* The floating chat bubble lived here. It was a fixed circle in the corner
+ * that opened a card asking "what do you need to say clearly today?" — which
+ * is the single most generic thing on the internet, answers nothing, and was
+ * the first item a reviewer pointed at. The page has a working demo now; a
+ * pretend one in the corner only competes with it. */
 
 const STAGE_MS = 2200;
 
@@ -535,7 +442,7 @@ function ResultsCarousel() {
                     />
                     {item.eyebrow}
                   </div>
-                  <p className="mt-7 font-display text-[clamp(1.9rem,3vw,2.9rem)] text-white leading-[1.08] tracking-[-0.03em]">
+                  <p className="mt-7 font-display text-[clamp(1.35rem,3vw,2.9rem)] text-white leading-[1.08] tracking-[-0.03em]">
                     {item.quote}
                   </p>
                   <p className="mt-auto max-w-[30rem] pt-7 text-primary-foreground/70 leading-relaxed">
@@ -554,7 +461,10 @@ function ResultsCarousel() {
           >
             Rehearsal, made visible
           </p>
-          <h2 className="mt-5 font-display text-[clamp(2.2rem,3.4vw,3.4rem)] text-strong leading-[1.02] tracking-[-0.04em]">
+          <h2
+            data-resolve
+            className="mt-5 font-display text-[clamp(1.7rem,3.4vw,3.4rem)] text-strong leading-[1.02] tracking-[-0.04em]"
+          >
             Your points update as you speak.
           </h2>
           {/* Stacked for the same reason as the panel: these three run to
@@ -584,125 +494,12 @@ function ResultsCarousel() {
   );
 }
 
-function FeedbackDemo() {
-  const [active, setActive] = useState(0);
-  const reduceMotion = useReducedMotion();
-  const item = feedback[active];
-
-  return (
-    <motion.section
-      id="feedback"
-      className="relative z-20 border-white/10 border-t bg-background px-5 pt-16 pb-24 md:px-8 md:pt-20 md:pb-32"
-    >
-      <div data-scroll-reveal className="mx-auto max-w-[76rem]">
-        <div className="mb-10 flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="font-mono text-[0.67rem] text-muted-foreground uppercase tracking-[0.14em]">
-              See the feedback
-            </p>
-            <h2 className="mt-5 max-w-[16ch] font-display text-[clamp(2.5rem,4.6vw,4.4rem)] text-strong leading-[1] tracking-[-0.04em]">
-              One explanation. Three useful answers.
-            </h2>
-          </div>
-          <p className="max-w-[30rem] text-muted-foreground leading-relaxed md:pb-1">
-            Explainaloud does not hand you a mysterious score. It shows the
-            exact sentence that worked, the one that needs precision, and the
-            idea you skipped.
-          </p>
-        </div>
-
-        <div className="grid overflow-hidden border border-border bg-card lg:grid-cols-[0.82fr_1.18fr]">
-          <div className="border-border border-b p-6 md:p-10 lg:border-r lg:border-b-0 lg:p-12">
-            <p className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
-              Your explanation · 00:17
-            </p>
-            <p className="mt-10 font-display text-[clamp(2rem,3.8vw,3.7rem)] text-strong leading-[1.1] tracking-[-0.035em]">
-              “Newton’s third law says forces come in pairs, equal and opposite.
-              When I push the wall, it kind of pushes back.”
-            </p>
-            <div className="mt-12 flex items-center gap-3 text-muted-foreground text-sm">
-              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                <Check className="h-4 w-4" />
-              </span>
-              Transcribed and checked in real time
-            </div>
-          </div>
-
-          <div className="bg-primary p-6 text-primary-foreground md:p-10 lg:p-12">
-            <div
-              className="flex flex-wrap gap-2"
-              role="tablist"
-              aria-label="Feedback examples"
-            >
-              {feedback.map((option, index) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active === index}
-                  onClick={() => setActive(index)}
-                  className="relative overflow-hidden border border-white/20 px-4 py-2.5 font-mono text-[0.64rem] uppercase tracking-[0.1em] transition-colors hover:border-white/45"
-                >
-                  {active === index && (
-                    <motion.span
-                      layoutId="feedback-tab"
-                      className="absolute inset-0 bg-white"
-                      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
-                    />
-                  )}
-                  <span
-                    className={`relative ${active === index ? "text-primary" : "text-primary-foreground/85"}`}
-                  >
-                    {option.label}
-                  </span>
-                </button>
-              ))}
-            </div>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={item.id}
-                initial={reduceMotion ? false : { opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={reduceMotion ? undefined : { opacity: 0, y: -12 }}
-                transition={{ duration: 0.38, ease }}
-                className="mt-14"
-              >
-                <div className="flex items-center gap-3">
-                  <motion.span
-                    initial={reduceMotion ? false : { scale: 0.5 }}
-                    animate={{ scale: 1 }}
-                    className="h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: item.light }}
-                  />
-                  <span
-                    className="font-mono text-[0.65rem] uppercase tracking-[0.13em]"
-                    style={{ color: item.light }}
-                  >
-                    {item.eyebrow}
-                  </span>
-                </div>
-                <p className="mt-7 max-w-[15ch] font-display text-[clamp(2.5rem,4.7vw,4.8rem)] leading-[0.98] tracking-[-0.04em]">
-                  {item.quote}
-                </p>
-                <motion.div
-                  initial={reduceMotion ? false : { scaleX: 0 }}
-                  animate={{ scaleX: 1 }}
-                  transition={{ delay: 0.12, duration: 0.55, ease }}
-                  className="mt-9 h-px origin-left"
-                  style={{ backgroundColor: item.color }}
-                />
-                <p className="mt-5 max-w-[32rem] text-white/60 leading-relaxed">
-                  {item.note}
-                </p>
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
-      </div>
-    </motion.section>
-  );
-}
+/* `FeedbackDemo` lived here, and it was the same section twice. It showed one
+ * quoted sentence and three tabbed verdicts; `ResultsCarousel` above it shows
+ * one quoted sentence and three cycling verdicts. Two components, one idea,
+ * one after the other — which is most of why the page read as padded. The
+ * playable console now carries the marked take, so the argument is made once,
+ * by the thing the reader can operate. */
 
 export function LandingRedesign() {
   const reduceMotion = useReducedMotion();
@@ -757,7 +554,21 @@ export function LandingRedesign() {
 
     let frame = 0;
     let running = true;
-    const sync = () => {
+    /* Last scroll position this actually did work for.
+       `sync` reads three `getBoundingClientRect`s, and a rect read after any
+       style change forces the browser to flush layout. Running that
+       unconditionally every frame means the page pays for a forced synchronous
+       layout sixty times a second forever, including while the reader is
+       sitting perfectly still reading a paragraph.
+
+       Nothing this function computes can change unless the page has scrolled
+       or been resized, so when the scroll position is unchanged there is
+       nothing to recompute. `-1` because 0 is a real scroll position and would
+       otherwise skip the very first frame. */
+    let lastY = -1;
+    const sync = (force = false) => {
+      if (!force && window.scrollY === lastY) return;
+      lastY = window.scrollY;
       nav.classList.toggle(
         "is-light",
         sentinel.getBoundingClientRect().top <= 64,
@@ -786,8 +597,20 @@ export function LandingRedesign() {
       // ease-in-out, so it leaves and arrives calmly rather than linearly
       const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 
-      const startX = heroRect.left + heroRect.width * 0.62;
-      const startY = heroRect.top + heroRect.height / 2 - size / 2;
+      /* Centred in the right half, on the hero's own centre line.
+         Every previous position was a number picked to avoid something: away
+         from the headline, out of the bright part of the water, lower so it
+         stopped colliding. Avoiding things is why it kept reading as awkward,
+         because a mark placed by exclusion is not placed at all, and the eye
+         can tell.
+
+         This is placed by the layout instead. The hero is a headline column
+         on the left and open water on the right; the centre of that right
+         half is a real position in the composition, and sitting on the hero's
+         vertical centre line puts it in the same optical row as the headline
+         it belongs to. It reads as deliberate because it is. */
+      const startX = heroRect.left + heroRect.width * 0.75 - size / 2;
+      const startY = heroRect.top + heroRect.height * 0.46 - size / 2;
       const endScale = slotRect.width / size;
 
       const x = startX + (slotRect.left - startX) * e;
@@ -795,7 +618,7 @@ export function LandingRedesign() {
       const scale = 1 + (endScale - 1) * e;
 
       flyer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-      flyer.style.opacity = String(0.45 + 0.55 * e);
+      flyer.style.opacity = String(0.82 + 0.18 * e);
       spin.style.transform = reduceMotion
         ? "none"
         : `rotateY(${(e * 360).toFixed(2)}deg)`;
@@ -835,16 +658,19 @@ export function LandingRedesign() {
        together, something has to have gone wrong twice. `sync` recomputes from
        scratch, so running it more often than necessary costs two rect reads
        and changes nothing. */
-    window.addEventListener("scroll", sync, { passive: true });
-    window.addEventListener("resize", sync);
-    document.addEventListener("visibilitychange", sync);
+    /* These three can change the answer without the scroll position moving,
+       so they bypass the guard above. */
+    const forceSync = () => sync(true);
+    window.addEventListener("scroll", forceSync, { passive: true });
+    window.addEventListener("resize", forceSync);
+    document.addEventListener("visibilitychange", forceSync);
 
     return () => {
       running = false;
       if (frame) cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", sync);
-      window.removeEventListener("resize", sync);
-      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("scroll", forceSync);
+      window.removeEventListener("resize", forceSync);
+      document.removeEventListener("visibilitychange", forceSync);
     };
   }, [reduceMotion]);
 
@@ -931,6 +757,22 @@ export function LandingRedesign() {
                 ease: "power4.out",
               },
               "-=0.34",
+            )
+            /* The verdicts, last. They have to arrive after the words have
+               settled, because a rule drawn under a word that is still moving
+               reads as part of the word's animation rather than as a judgement
+               made about it. The gap between the two marks is deliberate: the
+               green lands, you read it, and then the red one contradicts it. */
+            .fromTo(
+              "[data-hero-mark]",
+              { backgroundSize: "0% 0.055em" },
+              {
+                backgroundSize: "100% 0.055em",
+                duration: 0.72,
+                stagger: 0.34,
+                ease: "power2.inOut",
+              },
+              "-=0.1",
             );
 
           // After the chain, never before it: the guard has to have tweens to
@@ -992,14 +834,28 @@ export function LandingRedesign() {
              the trigger fires and the tween never advances. There is no "next
              time" until somebody is already looking at a half-drawn page.
              Measured that way, the product window sat at 0.19. */
+          /* Sections deal themselves out, rather than sliding in as a slab.
+             Moving a whole block by 22px is the most common reveal there is
+             and it is invisible as craft: the reader sees a rectangle shift.
+             Animating the block's own children in sequence is a different
+             thing entirely — the eyebrow lands, then the headline, then the
+             paragraph, which is the order somebody reads them in anyway. The
+             motion follows the reading rather than decorating the container.
+
+             `childNodes` filtered to elements, one level deep only: going
+             deeper animates text inside cards that have their own reveal and
+             the two fight over the same transform. */
           gsap.utils
             .toArray<HTMLElement>("[data-scroll-reveal]")
             .forEach((element) => {
+              const parts = Array.from(element.children) as HTMLElement[];
+              const targets = parts.length > 1 ? parts : [element];
               reveals.push(
-                gsap.from(element, {
-                  y: 56,
+                gsap.from(targets, {
+                  y: 26,
                   opacity: 0,
-                  duration: 0.9,
+                  duration: 0.72,
+                  stagger: 0.09,
                   ease: "power3.out",
                   scrollTrigger: {
                     trigger: element,
@@ -1010,13 +866,58 @@ export function LandingRedesign() {
               );
             });
 
+          /* Headings resolve, rather than arrive.
+             They come in soft and slightly spread and settle into focus, which
+             is a specific thing to borrow and not a general prettiness: it is
+             the product's own vocabulary. A vague claim and a checkable one
+             differ exactly by whether they are sharp enough to judge, and the
+             page's three verdicts are built on that distinction. So the
+             headings do what a rehearsal does — start indistinct, come good.
+
+             `filter` is a repaint, which is why this is scoped to headings and
+             given a short duration rather than scrubbed. `willChange` is set
+             for the tween and cleared after, so the promoted layer does not
+             outlive the animation that needed it. */
+          gsap.utils.toArray<HTMLElement>("[data-resolve]").forEach((el) => {
+            reveals.push(
+              gsap.fromTo(
+                el,
+                {
+                  filter: "blur(11px)",
+                  opacity: 0.25,
+                  letterSpacing: "0.06em",
+                  willChange: "filter, opacity",
+                },
+                {
+                  filter: "blur(0px)",
+                  opacity: 1,
+                  letterSpacing: "-0.04em",
+                  duration: 0.85,
+                  ease: "power2.out",
+                  onComplete: () => gsap.set(el, { clearProps: "willChange" }),
+                  scrollTrigger: {
+                    trigger: el,
+                    start: "top 84%",
+                    toggleActions: "play none none reverse",
+                  },
+                },
+              ),
+            );
+          });
+
+          /* The console opens rather than appears: it comes in from slightly
+             below and slightly small, and the ease overshoots a hair so it
+             seats itself. This is the one thing on the page a reader is meant
+             to reach for, and it should feel like a piece of equipment being
+             set down in front of them. */
           reveals.push(
             gsap.from(".lp-product-window", {
-              y: 120,
-              scale: 0.92,
+              y: 70,
+              scale: 0.955,
               opacity: 0,
-              duration: 1.15,
-              ease: "power3.out",
+              duration: 1.05,
+              transformOrigin: "50% 100%",
+              ease: "back.out(1.15)",
               scrollTrigger: {
                 trigger: ".lp-product-window",
                 start: "top 88%",
@@ -1028,18 +929,35 @@ export function LandingRedesign() {
           gsap.utils
             .toArray<HTMLElement>("[data-feature-card]")
             .forEach((element, index) => {
+              /* Settling, not sliding. The card comes up a little and
+                 finishes arriving *slightly large*, then relaxes to size —
+                 which is what an object landing on a surface does, and is the
+                 whole difference between a card that appears and a card that
+                 arrives. `transformOrigin` at the top so it grows down from
+                 its own rule rather than pushing the rule around.
+
+                 No horizontal component anywhere: the marks, the waveform and
+                 the transcript already own left-to-right, and a fourth sweep
+                 made the page read as one effect applied everywhere. */
               reveals.push(
-                gsap.from(element, {
-                  x: index % 2 === 0 ? -60 : 60,
-                  opacity: 0,
-                  duration: 1,
-                  ease: "power3.out",
-                  scrollTrigger: {
-                    trigger: element,
-                    start: "top 86%",
-                    toggleActions: "play none none reverse",
+                gsap.fromTo(
+                  element,
+                  { y: 30, opacity: 0, scale: 0.985 },
+                  {
+                    y: 0,
+                    opacity: 1,
+                    scale: 1,
+                    transformOrigin: "50% 0%",
+                    duration: 0.85,
+                    delay: (index % 3) * 0.1,
+                    ease: "back.out(1.1)",
+                    scrollTrigger: {
+                      trigger: element,
+                      start: "top 86%",
+                      toggleActions: "play none none reverse",
+                    },
                   },
-                }),
+                ),
               );
             });
 
@@ -1085,6 +1003,210 @@ export function LandingRedesign() {
              `design.md` bans it, and a panel that rotates under the mouse
              makes a marked transcript harder to read, which is the one
              thing on this page that has to stay readable. */
+          /* Read-through. A scrub, not a tween with a duration: the bar is a
+             readout of scroll position, so it has to be *derived* from it
+             rather than chasing it. `scrub: true` with no number means it is
+             on the frame, with no lag to accumulate. */
+          /* The take being laid down. A clip rather than a scale, because
+             scaling the lit layer would stretch its bars and they would stop
+             sitting on top of the dim ones underneath. `scrub: true` with no
+             number keeps it on the frame, so it is a readout of scroll
+             position rather than something chasing it. */
+          gsap.fromTo(
+            "[data-read-through]",
+            { clipPath: "inset(0% 100% 0% 0%)" },
+            {
+              clipPath: "inset(0% 0% 0% 0%)",
+              ease: "none",
+              scrollTrigger: {
+                trigger: pageRef.current,
+                start: "top top",
+                end: "bottom bottom",
+                scrub: true,
+              },
+            },
+          );
+
+          /* The head rides the same boundary. Driven by its own tween off the
+             same trigger rather than by parenting it to the clipped layer,
+             because a child of a clipped element is clipped too and the head
+             would be sliced in half by the very edge it is marking.
+
+             `xPercent` so it is a transform on a composited layer, and `left`
+             in percent so the travel is the full width at any viewport. */
+          gsap.fromTo(
+            "[data-read-head]",
+            { left: "0%" },
+            {
+              left: "100%",
+              ease: "none",
+              scrollTrigger: {
+                trigger: pageRef.current,
+                start: "top top",
+                end: "bottom bottom",
+                scrub: true,
+              },
+            },
+          );
+
+          /* The argument headlines resolve character by character, scrubbed
+             against scroll.
+             Word-level opacity lived here and it was the polite version of
+             this effect: legible, tidy, and not worth looking at. Characters
+             are what make it read as craft, because the eye cannot track them
+             individually — it sees a wave of focus travelling through a
+             sentence, which is a texture rather than a list of steps.
+
+             Each character carries blur, a small lift and a slight horizontal
+             compression, and they overlap heavily, so at any moment there are
+             a dozen mid-resolve rather than one. That overlap is the whole
+             effect: a hard stagger with no overlap is a ticker, and a ticker
+             is what "basic" looks like.
+
+             Scrubbed, so the reader is doing it. The sentence comes into focus
+             at exactly the rate they scroll, which ties the effect to their
+             hand instead of playing at them.
+
+             Split in JS so the DOM keeps one sentence until a script runs: a
+             screen reader gets prose rather than a pile of single letters, and
+             a failed import leaves plain type. */
+          gsap.utils
+            .toArray<HTMLElement>("[data-scrub-words]")
+            .forEach((heading) => {
+              const sentence = heading.textContent ?? "";
+              if (!sentence.trim()) return;
+              heading.textContent = "";
+
+              /* Words wrap, characters do not. Each word is an inline-block so
+                 the line breaks stay exactly where they were, and the
+                 characters inside it are spans that can be animated without
+                 ever becoming a break opportunity. Splitting straight to
+                 characters re-wraps the headline mid-word, which is a layout
+                 shift wearing an animation's clothes. */
+              const letters: HTMLElement[] = [];
+              const words = sentence.trim().split(/\s+/);
+              words.forEach((word, wordIndex) => {
+                const wordEl = document.createElement("span");
+                wordEl.className = "inline-block whitespace-nowrap";
+                for (const character of word) {
+                  const span = document.createElement("span");
+                  span.className = "inline-block";
+                  span.textContent = character;
+                  wordEl.append(span);
+                  letters.push(span);
+                }
+                heading.append(wordEl);
+                if (wordIndex < words.length - 1) {
+                  const gap = document.createElement("span");
+                  gap.className = "inline-block whitespace-pre";
+                  gap.textContent = " ";
+                  heading.append(gap);
+                }
+              });
+
+              reveals.push(
+                gsap.fromTo(
+                  letters,
+                  {
+                    opacity: 0.08,
+                    filter: "blur(7px)",
+                    yPercent: 22,
+                    scaleX: 0.94,
+                  },
+                  {
+                    opacity: 1,
+                    filter: "blur(0px)",
+                    yPercent: 0,
+                    scaleX: 1,
+                    ease: "none",
+                    /* `amount` rather than a per-item delay: the whole run is
+                       spread across this many seconds however many characters
+                       there are, so a long headline and a short one resolve at
+                       the same pace instead of the long one taking twice the
+                       scroll. */
+                    stagger: { amount: 0.9, from: "start" },
+                    scrollTrigger: {
+                      trigger: heading,
+                      start: "top 88%",
+                      end: "bottom 52%",
+                      scrub: 0.5,
+                    },
+                  },
+                ),
+              );
+            });
+
+          /* The page marks its own copy.
+             This is the one piece of motion here that belongs to this product
+             and could not be lifted onto another site. Everything else in
+             this file is a well made generic: things rise as they arrive, a
+             rule draws, a bar tracks scroll. None of them say what the thing
+             does. This does, because it is the exact gesture the grader makes
+             on a transcript, in the exact three colours, so by the time a
+             reader reaches the demo they can already read a mark without
+             having been shown a legend.
+
+             Not scrubbed. A grader does not underline a phrase gradually as
+             you scroll toward it; it decides, and then the rule goes down at
+             one speed. Scrubbing this would turn a verdict into a slider,
+             which is precisely the wrong idea about the product.
+
+             `toggleActions` for the same reason every other reveal has it:
+             coming back up the page and down again should mark them again
+             rather than present a page that is finished with you. */
+          gsap.utils.toArray<HTMLElement>(".lp-mark").forEach((mark) => {
+            reveals.push(
+              gsap.fromTo(
+                mark,
+                { backgroundSize: "0% 0.085em" },
+                {
+                  backgroundSize: "100% 0.085em",
+                  duration: 0.62,
+                  ease: "power2.inOut",
+                  scrollTrigger: {
+                    trigger: mark,
+                    start: "top 78%",
+                    toggleActions: "play none none reverse",
+                  },
+                },
+              ),
+            );
+          });
+
+          /* The rule draws itself across the three steps. Scrubbed, so it is
+             a readout of where the reader is in the section rather than an
+             animation that happens at them — and `scaleX` on a hairline is a
+             composited transform, which is why this is affordable where a
+             pinned track was not. */
+          /* The step numbers roll. 01, 02, 03 count up from zero as the
+             section arrives — a different mechanism from everything else here,
+             and the one that suits three ordered things: you watch the
+             sequence being numbered rather than watching another line grow.
+             The horizontal rule that used to draw across them is gone; it was
+             the fifth left-to-right sweep on one page. */
+          gsap.utils.toArray<HTMLElement>("[data-step-count]").forEach((el) => {
+            const target = Number(el.dataset.stepCount ?? "0");
+            const counter = { value: 0 };
+            reveals.push(
+              gsap.to(counter, {
+                value: target,
+                duration: 0.9,
+                ease: "power2.out",
+                onUpdate: () => {
+                  el.textContent = String(Math.round(counter.value)).padStart(
+                    2,
+                    "0",
+                  );
+                },
+                scrollTrigger: {
+                  trigger: el,
+                  start: "top 88%",
+                  toggleActions: "play none none reverse",
+                },
+              }),
+            );
+          });
+
           // Last, once every reveal is registered. Called earlier it could
           // only ever see the ones created so far, which is how the product
           // window stayed at opacity 0.2 while the headline was fine.
@@ -1118,6 +1240,43 @@ export function LandingRedesign() {
         ref={navRef}
         className="lp-sky-nav fixed inset-x-0 top-0 z-50 border-white/20 border-b text-primary-foreground"
       >
+        {/* Scrolling this page is recording.
+            This was a two pixel hairline that filled left to right, which is
+            the progress bar every site has and says nothing. It is now a
+            waveform that lays itself down as you scroll, because the one
+            thing this product does is listen to you and mark what you said.
+            Reading the page and speaking into it become the same gesture, and
+            by the time anybody reaches the demo they have already watched a
+            recording being made of their own attention.
+
+            Two layers of identical bars: a dim one showing the whole take, and
+            a lit one revealed by a clip that tracks scroll. That is a recorded
+            waveform exactly — what has been captured, against what is still
+            to come. */}
+        <div aria-hidden="true" className="lp-read-through">
+          <div className="lp-read-wave lp-read-wave-dim">
+            {READ_WAVE.map((height, index) => (
+              <span
+                key={`dim-${index === 0 ? "a" : index}`}
+                style={{ height: `${height}%` }}
+              />
+            ))}
+          </div>
+          {/* The recording head.
+              A bright mark riding the boundary between what has been captured
+              and what has not, which is the one element on the page that is
+              unambiguously a machine listening. It is what turns the waveform
+              from a picture of a recording into a recording happening. */}
+          <span data-read-head aria-hidden="true" className="lp-read-head" />
+          <div data-read-through className="lp-read-wave lp-read-wave-lit">
+            {READ_WAVE.map((height, index) => (
+              <span
+                key={`lit-${index === 0 ? "a" : index}`}
+                style={{ height: `${height}%` }}
+              />
+            ))}
+          </div>
+        </div>
         <div className="mx-auto grid h-16 max-w-[76rem] grid-cols-[1fr_auto_1fr] items-center px-5 md:px-8">
           <div className="hidden items-center gap-5 text-[0.78rem] lg:flex">
             <a href="#live-demo" className="lp-nav-link">
@@ -1126,28 +1285,25 @@ export function LandingRedesign() {
             <a href="#results" className="lp-nav-link">
               Results
             </a>
-            <a href="#feedback" className="lp-nav-link">
-              Feedback
-            </a>
             <a href="#how-it-works" className="lp-nav-link">
               How it works
             </a>
           </div>
           <Link
             href="/"
-            className="lp-nav-brand flex h-8 items-center justify-center gap-2.5 whitespace-nowrap text-primary-foreground sm:min-w-44"
+            className="lp-nav-brand flex h-10 items-center justify-center gap-3 whitespace-nowrap text-primary-foreground sm:min-w-52"
             aria-label="Explainaloud home"
           >
-            <span className="lp-nav-brand-copy font-sans font-semibold text-sm tracking-[-0.02em]">
+            <span className="lp-nav-brand-copy font-sans font-semibold text-[1.05rem] tracking-[-0.025em]">
               Explainaloud
             </span>
             {/* The flyer lands here. Hidden until it arrives, so the mark is
                 never doubled and never missing. */}
             <span
               ref={navSlotRef}
-              className="block h-6 w-6 shrink-0 opacity-0 transition-opacity duration-150"
+              className="block h-9 w-9 shrink-0 opacity-0 transition-opacity duration-150"
             >
-              <ExplainaloudMark className="h-6 w-6" />
+              <ExplainaloudMark className="h-9 w-9" />
             </span>
           </Link>
           <div className="flex items-center justify-self-end gap-2">
@@ -1173,6 +1329,11 @@ export function LandingRedesign() {
         ref={heroRef}
         className="lp-atmosphere relative overflow-hidden bg-primary px-5 text-primary-foreground md:px-8"
       >
+        {/* The field itself, generated per frame. It sits under the scrim and
+            over the CSS ground, so if WebGL is unavailable or the reader has
+            asked for reduced motion the canvas stays empty and the ground
+            below is what shows. */}
+        <FlowField className="absolute inset-0 z-0 h-full w-full" />
         <div
           aria-hidden="true"
           className="lp-hero-scrim absolute inset-0 z-[1]"
@@ -1186,7 +1347,7 @@ export function LandingRedesign() {
           id="bg-logo"
           ref={flyerRef}
           aria-hidden="true"
-          className="pointer-events-none fixed top-0 left-0 z-[60] hidden h-[clamp(8rem,13vw,12rem)] w-[clamp(8rem,13vw,12rem)] origin-top-left text-[length:clamp(8rem,13vw,12rem)] [perspective:900px] will-change-transform lg:block"
+          className="pointer-events-none fixed top-0 left-0 z-[60] hidden h-[clamp(10rem,15vw,15rem)] w-[clamp(10rem,15vw,15rem)] origin-top-left text-[length:clamp(10rem,15vw,15rem)] [perspective:1100px] will-change-transform lg:block"
         >
           {/* The turn is on its own element so nothing competes for the
               transform that is carrying the travel. */}
@@ -1201,7 +1362,7 @@ export function LandingRedesign() {
         </div>
         <div className="relative z-[2] flex min-h-screen flex-col pt-20 md:pt-24">
           <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center lg:items-start lg:text-left">
-            <h1 className="relative mx-auto max-w-[12ch] font-display lg:mx-0 lg:max-w-[11ch] text-[clamp(2.9rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
+            <h1 className="relative mx-auto max-w-[12ch] font-display lg:mx-0 lg:max-w-[11ch] text-[clamp(2.2rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
               <span className="block overflow-hidden pb-[0.08em]">
                 <span data-hero-word className="inline-block">
                   Say
@@ -1214,22 +1375,45 @@ export function LandingRedesign() {
                 </span>
               </span>
               <span className="block overflow-hidden pb-[0.08em]">
+                {/* The headline marks itself.
+                    Green under what you know, red under what you missed: the
+                    product's own two verdicts, drawn with the product's own
+                    gesture, on the first sentence anybody reads. It explains
+                    the entire idea before a word of copy has been read, and
+                    it is the reason the marks further down the page are
+                    already legible when they arrive. */}
                 <span data-hero-word className="inline-block">
-                  know.
+                  <span
+                    data-hero-mark="ok"
+                    className="lp-mark lp-mark-ok whitespace-nowrap"
+                  >
+                    know.
+                  </span>
                 </span>{" "}
-                <span
-                  data-hero-word
-                  className="inline-block text-[var(--accent-solid)] italic"
-                >
+                <span data-hero-word className="lp-hero-em inline-block">
                   See
                 </span>
               </span>
               <span className="block overflow-hidden pb-[0.08em]">
-                <span
-                  data-hero-word
-                  className="inline-block text-[var(--accent-solid)] italic"
-                >
-                  what you missed.
+                {/* The mark goes on "missed." alone, never on the phrase.
+                    It was on the whole of "what you missed.", which is an
+                    inline-block whose text wraps onto two lines. An
+                    inline-block does not fragment: it is one box as wide as
+                    its widest line, so the rule was drawn once, along the
+                    bottom of that box, running the full width of the column
+                    and far past the last word. `box-decoration-break` cannot
+                    help, because there is only ever one box to decorate.
+
+                    A mark is a verdict on a phrase, so the phrase has to be
+                    something that cannot break. One word always is. */}
+                <span data-hero-word className="lp-hero-em inline-block">
+                  what you{" "}
+                  <span
+                    data-hero-mark="miss"
+                    className="lp-mark lp-mark-miss whitespace-nowrap"
+                  >
+                    missed.
+                  </span>
                 </span>
               </span>
             </h1>
@@ -1239,11 +1423,11 @@ export function LandingRedesign() {
               className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
             >
               Upload your slides or your notes. Explain them out loud for three
-              minutes. Explainaloud marks what you said against the material —
-              sentence by sentence — and shows you the point you never reached.
+              minutes. Get back every point you nailed, rushed, or never
+              reached.
             </p>
 
-            <motion.div
+            <div
               data-hero-secondary
               data-gsap-lock
               className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
@@ -1263,7 +1447,7 @@ export function LandingRedesign() {
               >
                 See how it works
               </a>
-            </motion.div>
+            </div>
           </div>
 
           <div className="relative z-10 pb-24 md:pb-28">
@@ -1273,129 +1457,45 @@ export function LandingRedesign() {
         <div ref={navSentinelRef} aria-hidden="true" className="h-px w-full" />
       </section>
 
+      {/* The demo, and it is the page.
+       *
+       * What used to sit here was a picture of the product: a fixed transcript,
+       * a mic button that did nothing, a waveform on a loop and a card saying
+       * what the reader was supposed to imagine happening. It is the single
+       * most common shape a landing page takes and it asks to be believed,
+       * which is exactly what somebody who has never heard of this will not do.
+       *
+       * The console below runs. That is the whole difference. */}
       <section
         id="live-demo"
-        className="bg-background px-5 pt-16 pb-20 md:px-8 md:pt-20 md:pb-28"
+        className="border-border border-b bg-background px-5 pt-16 pb-20 md:px-8 md:pt-24 md:pb-28"
       >
-        <motion.div
-          data-story-section
-          data-gsap-lock
-          data-gsap-hover
-          className="lp-product-window mx-auto max-w-[68rem] overflow-hidden rounded-[20px] border border-border bg-card"
+        <div
+          data-scroll-reveal
+          className="mx-auto mb-10 flex max-w-[76rem] flex-col gap-5 md:flex-row md:items-end md:justify-between"
         >
-          <div
-            data-story-step
-            className="border-border border-b px-6 py-4 md:px-10 lg:px-12"
-          >
-            <span className="font-mono text-[0.65rem] text-muted-foreground uppercase tracking-[0.12em]">
-              You are explaining · Physics
-            </span>
+          <div>
+            <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
+              Try it here
+            </p>
+            <h2
+              data-resolve
+              className="mt-5 max-w-[16ch] font-display text-[clamp(1.75rem,4.2vw,3.9rem)] text-strong leading-[1] tracking-[-0.04em]"
+            >
+              Watch a take get marked,{" "}
+              <span className="lp-mark lp-mark-ok">line by line</span>.
+            </h2>
           </div>
-
-          <div
-            data-story-step
-            className="grid min-h-[31rem] md:grid-cols-[1fr_18rem]"
-          >
-            <div className="flex flex-col p-6 text-left md:p-10 lg:p-12">
-              <div className="flex items-center justify-between gap-4">
-                <span className="inline-flex items-center gap-2 font-mono text-[0.68rem] text-muted-foreground uppercase tracking-[0.11em]">
-                  <span className="relative flex h-2 w-2">
-                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-miss opacity-60" />
-                    <span className="relative inline-flex h-2 w-2 rounded-full bg-miss" />
-                  </span>
-                  Recording · 00:17
-                </span>
-                <span className="text-muted-foreground text-sm">128 wpm</span>
-              </div>
-
-              <p className="mt-12 max-w-[32ch] font-display text-[clamp(1.8rem,3.7vw,3.2rem)] text-strong leading-[1.18] tracking-[-0.025em]">
-                {transcript.map((run) => (
-                  <span
-                    key={run.text}
-                    className={
-                      run.tone === "plain"
-                        ? undefined
-                        : `lp-verdict-${run.tone}`
-                    }
-                  >
-                    {run.text}
-                  </span>
-                ))}
-                <span className="ml-1 inline-block h-[0.9em] w-[2px] translate-y-[0.08em] animate-pulse bg-brand-deep" />
-              </p>
-
-              <div className="mt-auto flex items-center gap-3 pt-12">
-                <motion.button
-                  data-gsap-hover
-                  type="button"
-                  aria-label="Recording example"
-                  whileTap={{ scale: 0.94 }}
-                  className="flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground"
-                >
-                  <Mic className="h-5 w-5" />
-                </motion.button>
-                <div
-                  className="flex h-10 items-center gap-1"
-                  aria-hidden="true"
-                >
-                  {waveform.map(({ id, height }, index) => (
-                    <motion.span
-                      key={id}
-                      animate={
-                        reduceMotion
-                          ? { height }
-                          : {
-                              height: [
-                                height,
-                                Math.max(8, height * 0.55),
-                                height,
-                              ],
-                            }
-                      }
-                      transition={{
-                        duration: 2.6,
-                        repeat: Number.POSITIVE_INFINITY,
-                        delay: index * 0.11,
-                        ease: "easeInOut",
-                      }}
-                      className="w-1 rounded-full bg-brand-deep/65"
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            <aside className="border-border border-t bg-muted p-6 text-left md:border-t-0 md:border-l md:p-7">
-              <p className="font-mono text-[0.65rem] text-brand-ink uppercase tracking-[0.12em]">
-                Do this next
-              </p>
-              <p className="mt-2 text-muted-foreground text-sm leading-relaxed">
-                While you talk, this column fills with the one thing worth
-                fixing before your next run.
-              </p>
-              <div
-                data-gsap-hover
-                className="mt-6 rounded-sm border border-white/10 border-l-2 border-l-miss bg-[var(--panel-deep)] p-5 shadow-[4px_4px_0_rgba(6,18,38,0.7)]"
-              >
-                {/* The lit tint, not the fill. `--miss` is tuned to be read on
-                    stock; on the deep panel it lands near 3:1 and the label
-                    reads as a smudge. */}
-                <span className="font-mono text-[0.62rem] text-[var(--miss-light)] uppercase tracking-[0.12em]">
-                  Missing step
-                </span>
-                <p className="mt-3 font-display text-[1.45rem] text-primary-foreground leading-snug">
-                  You named the rule, but skipped why the forces do not cancel.
-                </p>
-                <p className="mt-3 text-primary-foreground/65 text-sm leading-relaxed">
-                  Reveal the idea that completes your explanation.
-                </p>
-              </div>
-              <div className="mt-4 flex items-center gap-2 text-muted-foreground text-xs">
-                <LockKeyhole className="h-3.5 w-3.5" /> Audio is never stored
-              </div>
-            </aside>
-          </div>
-        </motion.div>
+          <p className="max-w-[30rem] text-muted-foreground leading-relaxed md:pb-2">
+            Press play. Drag the rail to replay any part.
+          </p>
+        </div>
+        <div className="lp-product-window">
+          <DemoConsole />
+        </div>
+        <p className="mx-auto mt-6 flex max-w-[76rem] items-center gap-2 text-muted-foreground text-xs">
+          <LockKeyhole className="h-3.5 w-3.5" /> Audio is never stored.
+        </p>
       </section>
 
       {/* The "why". The page demonstrated the product at length and never made
@@ -1410,7 +1510,16 @@ export function LandingRedesign() {
           <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
             Why out loud
           </p>
-          <h2 className="mt-5 max-w-[20ch] font-display text-[clamp(2.1rem,4vw,3.6rem)] text-strong leading-[1.02] tracking-[-0.04em]">
+          {/* The one headline on the page that carries the argument, so it is
+              the one that gets read to you: the words come up out of the stock
+              as the section arrives, scrubbed against scroll rather than
+              played on a timer, which is what makes it read as pacing instead
+              of as an effect. Split in JS, so the markup stays one sentence
+              and a reader with no script still gets the sentence. */}
+          <h2
+            data-scrub-words
+            className="mt-5 max-w-[20ch] font-display text-[clamp(1.7rem,4vw,3.6rem)] text-strong leading-[1.02] tracking-[-0.04em]"
+          >
             A quiz can be passed by recognising. Saying it cannot.
           </h2>
           <div className="mt-12 grid gap-10 border-border border-t pt-10 md:grid-cols-3 md:gap-12">
@@ -1430,54 +1539,88 @@ export function LandingRedesign() {
 
       <ResultsCarousel />
 
-      <FeedbackDemo />
-
       <section
         id="how-it-works"
         data-story-section
         data-scroll-reveal
-        className="border-border border-t bg-card px-5 py-24 md:px-8 md:py-32"
+        className="overflow-hidden border-border border-t bg-card py-24 md:py-32"
       >
-        <div className="mx-auto max-w-[76rem]">
-          <motion.p
+        {/* The horizontal padding is on the blocks rather than the section,
+            because the track below has to be able to run off the right edge
+            and a padded parent would clip it short of the screen. */}
+        <div className="mx-auto max-w-[76rem] px-5 md:px-8">
+          <p
             data-story-step
             className="font-mono text-[0.68rem] text-brand-ink uppercase tracking-[0.13em]"
           >
             Rehearse it, or learn it
-          </motion.p>
-          <div className="mt-5 grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
-            <div data-story-step>
-              <h2 className="max-w-[12ch] font-display text-[clamp(2.6rem,4.6vw,4.6rem)] text-strong leading-[1] tracking-[-0.04em]">
-                Understanding shows up when you speak.
-              </h2>
-              <p className="mt-7 max-w-[34rem] text-muted-foreground leading-relaxed">
-                Richard Feynman&rsquo;s method for learning anything was to
-                explain it plainly, out loud, and watch for the place you get
-                stuck—because that is the part you did not really have. It is
-                the same test a talk fails on stage. Explainaloud runs it for
-                you before either one costs you anything.
-              </p>
-            </div>
-            <div className="border-border border-t">
-              {steps.map((step) => (
-                <motion.article
-                  key={step.number}
-                  data-story-step
-                  data-feature-card
-                  className="grid gap-4 border-border border-b py-7 sm:grid-cols-[4rem_0.7fr_1fr] sm:items-start"
+          </p>
+          <div className="mt-5 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end lg:gap-20">
+            <h2
+              data-scrub-words
+              className="max-w-[12ch] font-display text-[clamp(1.85rem,4.6vw,4.6rem)] text-strong leading-[1] tracking-[-0.04em]"
+            >
+              Understanding shows up when you speak.
+            </h2>
+            <p
+              data-story-step
+              className="max-w-[36rem] text-muted-foreground leading-relaxed"
+            >
+              Feynman&rsquo;s method: explain it plainly, out loud, and watch
+              for the place you get stuck. That is the part you did not really
+              have.
+            </p>
+          </div>
+        </div>
+
+        {/* Three steps, on one rule.
+         *
+         * This was briefly a pinned horizontal track — the signature GSAP
+         * move, and the wrong one here. It only travels if the content is
+         * wider than the window, and three cards are not: measured at 1424px
+         * against a 1440px viewport, so the pin engaged and moved the track
+         * zero pixels. On a 27-inch monitor it would be further from working,
+         * not closer. An effect whose whole existence depends on the reader's
+         * screen being narrow enough is a bug with good timing.
+         *
+         * What is left is the thing the pin was for — that these are an order
+         * of operations rather than three features — done with a rule that
+         * draws itself across the row as the section arrives, and the three
+         * verdict colours marking the steps in the order a rehearsal produces
+         * them. It works identically at 390px and at 2560px. */}
+        <div className="relative mt-16 md:mt-20">
+          <div className="mx-auto grid max-w-[76rem] gap-10 px-5 md:px-8 lg:grid-cols-3 lg:gap-8">
+            {steps.map((step, index) => (
+              <article
+                key={step.number}
+                data-feature-card
+                className="relative border-border border-t pt-7 lg:border-t-0"
+              >
+                <span
+                  aria-hidden="true"
+                  className="-top-px absolute left-0 h-[2px] w-16"
+                  style={{
+                    backgroundColor: [
+                      "var(--ok)",
+                      "var(--vague)",
+                      "var(--miss)",
+                    ][index],
+                  }}
+                />
+                <span
+                  data-step-count={step.number}
+                  className="font-mono text-[0.67rem] text-muted-foreground tabular-nums tracking-[0.13em]"
                 >
-                  <span className="font-mono text-[0.67rem] text-muted-foreground">
-                    {step.number}
-                  </span>
-                  <h3 className="font-semibold text-strong text-xl tracking-[-0.025em]">
-                    {step.title}
-                  </h3>
-                  <p className="text-muted-foreground leading-relaxed">
-                    {step.body}
-                  </p>
-                </motion.article>
-              ))}
-            </div>
+                  {step.number}
+                </span>
+                <h3 className="mt-4 max-w-[18ch] font-display text-[clamp(1.3rem,2.4vw,2.2rem)] text-strong leading-[1.1] tracking-[-0.03em]">
+                  {step.title}
+                </h3>
+                <p className="mt-4 max-w-[34ch] text-muted-foreground leading-relaxed">
+                  {step.body}
+                </p>
+              </article>
+            ))}
           </div>
         </div>
       </section>
@@ -1492,13 +1635,15 @@ export function LandingRedesign() {
               <p className="font-mono text-[0.67rem] text-muted-foreground uppercase tracking-[0.13em]">
                 Grounded in your material
               </p>
-              <h2 className="mt-6 max-w-[13ch] font-display text-[clamp(2.7rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]">
-                Not another quiz generated from a topic name.
+              <h2
+                data-resolve
+                className="mt-6 max-w-[13ch] font-display text-[clamp(1.85rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]"
+              >
+                Not another quiz generated from{" "}
+                <span className="lp-mark lp-mark-miss">a topic name</span>.
               </h2>
               <p className="mt-7 max-w-[38rem] text-[1.08rem] text-muted-foreground leading-relaxed">
-                Every course begins with what you upload. Its claims stay tied
-                to exact quotes from your files, so the feedback answers to the
-                material you are actually responsible for learning.
+                Every claim stays tied to a quote from your own file.
               </p>
             </article>
 
@@ -1514,8 +1659,7 @@ export function LandingRedesign() {
                   Feedback arrives while you are still explaining.
                 </h3>
                 <p className="mt-4 max-w-[31rem] text-muted-foreground leading-relaxed">
-                  Your words become correct, vague, or incomplete in real
-                  time—not as a score waiting on another screen.
+                  Correct, vague or incomplete in real time.
                 </p>
               </article>
               <article data-feature-card className="py-10 lg:py-12 lg:pl-14">
@@ -1526,8 +1670,7 @@ export function LandingRedesign() {
                   Measured against your own speaking baseline.
                 </h3>
                 <p className="mt-4 max-w-[31rem] text-muted-foreground leading-relaxed">
-                  Thinking pauses come out of the calculation. The number
-                  reflects how you speak, not how everyone else does.
+                  Thinking pauses come out of the count.
                 </p>
               </article>
             </div>
@@ -1535,34 +1678,50 @@ export function LandingRedesign() {
         </div>
       </section>
 
-      <section
-        className="lp-closing-forest px-5 py-20 md:px-8 md:py-28"
-        style={closingFieldStyle}
-      >
-        <motion.div
+      {/* The close is the open, again.
+          It was still carrying the retired WebP as a background image, which
+          is how the page ended up with two different answers to the same
+          question one scroll apart. The first screen and the last one are the
+          same world, so the last one runs the same water: same ground, same
+          field, same scrim. It is also the page's one sanctioned inversion
+          back into dark, and arriving somewhere the reader has already been
+          is what makes that read as a close rather than as a sixth section. */}
+      <section className="lp-atmosphere relative overflow-hidden px-5 py-20 md:px-8 md:py-28">
+        <FlowField className="absolute inset-0 z-0 h-full w-full" />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(4,12,26,0.62),rgba(3,9,20,0.78))]"
+        />
+        <div
           data-scroll-reveal
-          className="mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-20 text-left text-primary-foreground shadow-[6px_6px_0_rgba(4,14,32,0.55)] md:px-12 md:py-28"
+          className="relative z-[2] mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-16 text-left text-primary-foreground shadow-[6px_6px_0_rgba(4,14,32,0.55)] md:px-12 md:py-24"
         >
-          <motion.span
-            animate={
-              reduceMotion
-                ? undefined
-                : { rotate: [0, 8, -8, 0], scale: [1, 1.08, 1] }
-            }
-            transition={{
-              duration: 4,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-            className="mx-auto mb-6 flex h-11 w-11 items-center justify-center rounded-full border border-white/25"
-          >
-            <Sparkles className="h-4 w-4" />
-          </motion.span>
+          {/* A sparkle icon rocking back and forth on a four-second loop
+              lived here. Sparkles are the universal badge for "an AI did
+              this", and a decoration that never stops moving above the one
+              button on the page is competing with the button. */}
           <p className="font-mono text-[0.67rem] uppercase tracking-[0.13em] opacity-60">
             Know before it matters
           </p>
-          <h2 className="mx-auto mt-5 max-w-[11ch] font-display text-[clamp(3rem,6vw,5.8rem)] leading-[0.95] tracking-[-0.05em]">
-            Turn “I think I know it” into certainty.
+          {/* Wider and a step smaller than the other headlines, on purpose. At
+              `11ch` the marked quotation broke across two lines, and a rule
+              under half a phrase on one line and the rest of it on the next
+              reads as a layout fault rather than as a mark, however correctly
+              it is painted. `whitespace-nowrap` guarantees it: the mark is a
+              verdict on one phrase, so the phrase has to be one phrase. */}
+          {/* `leading-[1.28]`, looser than every other headline here, and the
+              marked phrase is why. A rule drawn under line one lands in the
+              space above line two, and at `1.02` there is no such space: the
+              rule was sitting on the ascenders of "certainty", touching the
+              `i` and the `t`. Display type wants tight leading right up until
+              something has to be drawn between the lines, and then the leading
+              is what has to give. */}
+          <h2 className="mx-auto mt-5 max-w-[17ch] font-display text-[clamp(1.9rem,4.6vw,4.4rem)] leading-[1.28] tracking-[-0.045em]">
+            Turn{" "}
+            <span className="lp-mark lp-mark-vague whitespace-nowrap">
+              “I think I know it”
+            </span>{" "}
+            into certainty.
           </h2>
           <Link
             href="/signup"
@@ -1575,14 +1734,14 @@ export function LandingRedesign() {
           <p className="mt-5 text-sm opacity-60">
             No audio stored. Free to start.
           </p>
-        </motion.div>
+        </div>
       </section>
 
-      <IntroPanel />
+      <SignupNudge />
 
       <footer className="mx-auto flex max-w-[76rem] flex-wrap items-center gap-5 px-5 py-8 text-muted-foreground text-sm md:px-8">
         <span className="flex items-center gap-2 text-foreground">
-          <ExplainaloudMark className="h-5 w-5" /> Explainaloud
+          <ExplainaloudMark className="h-7 w-7" /> Explainaloud
         </span>
         <Link href="/privacy" className="ml-auto hover:text-foreground">
           Privacy

@@ -56,8 +56,26 @@ main.lp-v2 {
  */
 .lp-v2 .lp-atmosphere {
   isolation: isolate;
+  /* The ground under the generated field, and the whole picture when the
+     field cannot run. Not the WebP any more: a still image behind this
+     headline has now been rejected three times, once as a photograph of a
+     place nobody could connect to the product and twice as an abstract that
+     read as stock. What is here instead is the same palette the shader
+     resolves to, laid out in the same composition, so the fallback is a
+     deliberate frame rather than a blank rectangle waiting for a script. */
   background:
-    url("/landing/explainaloud-field-v1.webp") right center / cover no-repeat;
+    radial-gradient(
+      120% 90% at 78% 28%,
+      rgba(48, 106, 176, 0.55) 0%,
+      rgba(20, 55, 108, 0.4) 34%,
+      rgba(4, 14, 34, 0) 72%
+    ),
+    radial-gradient(
+      90% 70% at 92% 78%,
+      rgba(24, 74, 138, 0.4) 0%,
+      rgba(4, 12, 28, 0) 66%
+    ),
+    linear-gradient(112deg, #030a18 0%, #071633 46%, #0d2a52 100%);
 }
 
 /* Heaviest where the display type sits, lifting through the middle so the
@@ -77,22 +95,42 @@ main.lp-v2 {
  * empty field with the type in it and the picture to the right of it. It is
  * gone by 64%, so the swirl itself is never touched. The vertical one is only
  * for the bottom band, under the product panel. */
+/* One axis on a phone, two on a desktop.
+ *
+ * The horizontal scrim exists to hold a left-hand column dark so the headline
+ * has a bed while the artwork sits to the right of it. That composition only
+ * exists above `lg`. On a narrow screen the headline is centred over the full
+ * width, so a gradient that is 88% opaque at the left edge and clear by 64%
+ * is simply a wash over the whole frame, and it was most of why the field was
+ * invisible on a phone. Below the breakpoint only the vertical one runs. */
 .lp-v2 .lp-hero-scrim {
-  background:
-    linear-gradient(
-      90deg,
-      rgba(3, 10, 24, 0.88) 0%,
-      rgba(3, 10, 24, 0.74) 30%,
-      rgba(3, 10, 24, 0.32) 50%,
-      rgba(3, 10, 24, 0) 64%
-    ),
-    linear-gradient(
-      180deg,
-      rgba(4, 12, 26, 0.34) 0%,
-      rgba(4, 12, 26, 0.06) 42%,
-      rgba(4, 12, 26, 0.3) 74%,
-      rgba(3, 9, 20, 0.55) 100%
-    );
+  background: linear-gradient(
+    180deg,
+    rgba(4, 12, 26, 0.34) 0%,
+    rgba(4, 12, 26, 0.06) 42%,
+    rgba(4, 12, 26, 0.3) 74%,
+    rgba(3, 9, 20, 0.55) 100%
+  );
+}
+
+@media (min-width: 1024px) {
+  .lp-v2 .lp-hero-scrim {
+    background:
+      linear-gradient(
+        90deg,
+        rgba(3, 10, 24, 0.88) 0%,
+        rgba(3, 10, 24, 0.74) 30%,
+        rgba(3, 10, 24, 0.32) 50%,
+        rgba(3, 10, 24, 0) 64%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(4, 12, 26, 0.34) 0%,
+        rgba(4, 12, 26, 0.06) 42%,
+        rgba(4, 12, 26, 0.3) 74%,
+        rgba(3, 9, 20, 0.55) 100%
+      );
+  }
 }
 
 .lp-v2 .lp-sky-nav {
@@ -420,30 +458,37 @@ html:has(main.lp-v2) {
 .register-app {
   /* Surfaces. The page is not white; the cards are. That single step of
      separation is what lets a card read as raised without a heavy shadow
-     doing the work — and it is why the canvas is #fafafb rather than #fff. */
-  --background: #f2f2f0;
-  --card: #ffffff;
-  --popover: #ffffff;
-  --muted: #eceae7;
-  --secondary: #eceae7;
+     doing the work.
+
+     Cool, not warm. This was `#f2f2f0` over white — the landing's old warm
+     stock — and it is now the landing's `#eceff5`, because the landing is
+     navy and a warm grey next to it reads as a different product. Signing in
+     should not change the temperature of the room. */
+  --background: #eceff5;
+  --card: #fcfdff;
+  --popover: #fcfdff;
+  --muted: #e0e5ee;
+  --secondary: #e0e5ee;
 
   /* Two weights of voice and no more: what you read, and what you read only
-     if you want to. A third grey is where hierarchy turns into mud. */
-  --foreground: #0c0c0d;
-  --card-foreground: #0c0c0d;
-  --popover-foreground: #0c0c0d;
-  --secondary-foreground: #0c0c0d;
-  --muted-foreground: #5b5a58;
-  --strong: #0c0c0d;
-  --subtle: #5b5a58;
+     if you want to. A third grey is where hierarchy turns into mud. Both are
+     the landing's, so body copy is literally the same ink on both sides of
+     signing in. */
+  --foreground: #16253d;
+  --card-foreground: #16253d;
+  --popover-foreground: #16253d;
+  --secondary-foreground: #16253d;
+  --muted-foreground: #5b6a82;
+  --strong: #16253d;
+  --subtle: #5b6a82;
 
   /* Borders carry the separating, not shadows. At 8% of the text colour they
      read as an edge rather than as a drawn box, and tinting them with the ink
      rather than using a grey keeps them from going cold against the canvas. */
-  --border: #cecac8;
-  --input: #b9b4b1;
-  --surface: rgba(17, 24, 39, 0.03);
-  --surface-border: rgba(17, 24, 39, 0.08);
+  --border: rgba(21, 40, 68, 0.18);
+  --input: rgba(21, 40, 68, 0.3);
+  --surface: rgba(21, 40, 68, 0.03);
+  --surface-border: rgba(21, 40, 68, 0.1);
 
   /* One accent, and it means "you can act on this": primary buttons, links,
      focus, the active nav item, progress. Never decoration, and never a
@@ -462,23 +507,30 @@ html:has(main.lp-v2) {
      which means "said, but not checkably" and is the same hue family. It
      clears it on value and saturation — but see `pace-panel.tsx`, where the
      two used to be plotted against each other and are no longer. */
-  --accent-solid: #f59e0b;
-  --accent-solid-hover: #b45309;
-  /* Dark ink on the sunset. The fill is luminous — a white label on it sits
-     at 2.2:1, the same reason the landing's CTA is inked. */
-  --accent-contrast: #1a1206;
-  --accent-ring: rgba(245, 158, 11, 0.38);
-  --accent-wash: rgba(245, 158, 11, 0.1);
-  --ring: #f59e0b;
+  /* Navy, not amber. The whole of the paragraph that used to be here argued
+     for reading the landing's warm ramp from its gold end, and it was a good
+     argument for a landing page that no longer exists: that page is navy now,
+     and an amber primary button one screen after a navy one is the seam this
+     register was invented to prevent. Same reasoning, new accent.
+
+     The polarity flips with it, and both tokens have to move together. Amber
+     is luminous, so it took dark ink; navy is dark, so it takes light. A fill
+     changed without its label is how a button ends up with 2:1 text on it. */
+  --accent-solid: #1d3a63;
+  --accent-solid-hover: #16253d;
+  --accent-contrast: #eef2f8;
+  --accent-ring: rgba(43, 92, 143, 0.38);
+  --accent-wash: rgba(29, 58, 99, 0.09);
+  --ring: #2b5c8f;
 
   /* The brand stops, answered in the app's accent. `brand-deep` is the
-     pressed and hovered one and the fill under a white label, `brand-ink` is
+     pressed and hovered one and the fill under a light label, `brand-ink` is
      what words are set in, `brand-high` is the lit edge and the glow. */
-  --brand: #f59e0b;
-  --brand-deep: #b45309;
-  --brand-high: #fbbf24;
-  --brand-ink: #b45309;
-  --brand-foreground: #1a1206;
+  --brand: #1d3a63;
+  --brand-deep: #16253d;
+  --brand-high: #9cc8f2;
+  --brand-ink: #2b5c8f;
+  --brand-foreground: #eef2f8;
 
   /* Three radii. Panels at 20, controls at 12, pills round. A fourth value is
      how a system starts drifting, so there is deliberately nowhere to put
@@ -652,7 +704,25 @@ html:has(main.lp-v2) {
 
   --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-mono), ui-monospace, monospace;
-  --font-display: var(--font-display), ui-serif, Georgia, serif;
+  /* A sans fallback, not a serif one. The stack used to end `Georgia, serif`
+     because the display face was Source Serif; leaving that behind after the
+     swap means the two seconds before the webfont lands set every headline in
+     Georgia, and the reflow to a grotesque is a full change of voice rather
+     than a metric nudge. */
+  --font-display: var(--font-display), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Display type, set from the one family.
+ *
+ * A single family type system lives or dies on this block. If display copy is
+ * only body copy at a larger size, the page looks unset. What separates them
+ * here is the three things that actually change at scale: the weight goes up,
+ * the tracking goes sharply negative because letter spacing that is right at
+ * 16px is loose at 64px, and the line height comes down to just over one.
+ */
+.font-display {
+  font-weight: 600;
+  letter-spacing: -0.035em;
 }
 
 @layer base {
@@ -2268,4 +2338,348 @@ html:has(main.lp-v2) {
   [data-slot="dropdown-menu-content"][data-state="closed"] {
     animation: none;
   }
+}
+
+/* ── The demo console ─────────────────────────────────────────────────────
+ *
+ * The scrub rail. A range input rather than a div with a click handler,
+ * because keyboard and screen-reader users get the whole demo for free — the
+ * arrow keys move through the take exactly as dragging does.
+ *
+ * `--lp-scrub` is written by the component each frame; the track paints the
+ * filled portion from it, so there is no second element to keep in step.
+ */
+.lp-v2 .lp-scrub {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1.5rem;
+  background: transparent;
+  cursor: pointer;
+}
+
+.lp-v2 .lp-scrub::-webkit-slider-runnable-track {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--primary-foreground) var(--lp-scrub, 0%),
+    rgba(238, 242, 248, 0.18) var(--lp-scrub, 0%)
+  );
+}
+
+.lp-v2 .lp-scrub::-moz-range-track {
+  height: 2px;
+  background: linear-gradient(
+    90deg,
+    var(--primary-foreground) var(--lp-scrub, 0%),
+    rgba(238, 242, 248, 0.18) var(--lp-scrub, 0%)
+  );
+}
+
+.lp-v2 .lp-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-top: -0.31rem;
+  border-radius: 999px;
+  background: var(--primary-foreground);
+}
+
+.lp-v2 .lp-scrub::-moz-range-thumb {
+  width: 0.7rem;
+  height: 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--primary-foreground);
+}
+
+.lp-v2 .lp-scrub:focus-visible {
+  outline: 2px solid var(--primary-foreground);
+  outline-offset: 4px;
+}
+
+/* ── The read-through, as a recording ────────────────────────────────────
+ *
+ * How far down the page you are, drawn as a waveform being captured rather
+ * than as a bar being filled.
+ *
+ * It was a two pixel line with `transform: scaleX()` on it, which is the
+ * progress indicator every site has. It answered the question and said
+ * nothing. This answers the same question and also says what the product is:
+ * the page listens to you the way the product listens to you, and scrolling
+ * lays down a take.
+ *
+ * Two identical layers. The dim one is the whole page; the lit one is clipped
+ * to how much of it has been read. That is exactly the shape of a recording
+ * in progress, so nobody has to be told what it means.
+ */
+.lp-v2 .lp-read-through {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 10px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.lp-v2 .lp-read-wave {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1px;
+  padding: 0 8px;
+}
+
+/* Every bar is the same element; only the height varies, and it is set
+ * inline from one shared array so the two layers cannot drift apart. */
+.lp-v2 .lp-read-wave > span {
+  flex: 1 1 0;
+  min-width: 1px;
+  border-radius: 1px;
+  background: currentColor;
+}
+
+.lp-v2 .lp-read-wave-dim {
+  color: color-mix(in oklab, var(--brand-ink) 22%, transparent);
+}
+
+/* The captured part. Clipped by GSAP from fully hidden to fully shown, which
+ * is why this sits exactly on top of the dim layer rather than replacing it. */
+.lp-v2 .lp-read-wave-lit {
+  color: var(--brand-ink);
+  clip-path: inset(0% 100% 0% 0%);
+}
+
+/* The recording head: the live edge of the take.
+ *
+ * Two parts, and both are needed. The hairline is the exact boundary, so the
+ * eye can see precisely how much has been captured. The glow around it is
+ * what makes it read as *active* rather than as a divider — a still line at a
+ * boundary is a ruler, and a line with light coming off it is a machine
+ * running.
+ *
+ * It pulses on its own clock rather than on scroll, so it is alive even when
+ * the page is still. That is the point: the recorder does not stop listening
+ * because you stopped moving.
+ */
+.lp-v2 .lp-read-head {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--brand-ink);
+  box-shadow: 0 0 6px 1px color-mix(in oklab, var(--brand-ink) 60%, transparent);
+  animation: lp-head-pulse 1.4s ease-in-out infinite;
+}
+
+.lp-v2 .lp-sky-nav:not(.is-light) .lp-read-head {
+  background: #eef2f8;
+  box-shadow: 0 0 7px 1px rgba(238, 242, 248, 0.75);
+}
+
+@keyframes lp-head-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scaleY(0.7);
+  }
+  50% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* A head that pulses forever is motion nobody asked for. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-read-head {
+    animation: none;
+    opacity: 0.9;
+  }
+}
+
+/* Over the hero the bar is dark and the ink has to invert with it, the same
+ * way the wordmark and the button already do. */
+.lp-v2 .lp-sky-nav:not(.is-light) .lp-read-wave-dim {
+  color: rgba(238, 242, 248, 0.22);
+}
+
+.lp-v2 .lp-sky-nav:not(.is-light) .lp-read-wave-lit {
+  color: rgba(238, 242, 248, 0.85);
+}
+
+/* The horizontal step rail is pinned by ScrollTrigger, which measures the
+ * track's width. A track whose children can shrink measures differently after
+ * the pin lands, so the cards are told not to. */
+.lp-v2 .lp-rail-card {
+  flex: 0 0 auto;
+}
+
+/* The headline's second voice.
+ *
+ * It was an italic, and there is no italic in this type system to use. Weight
+ * carries it instead: the emphasised phrase sets a step heavier than the roman
+ * around it and takes the accent colour. Weight is the one contrast that
+ * survives greyscale, which colour on its own would not.
+ */
+.lp-v2 .lp-hero-em {
+  font-weight: 700;
+  /* Lit blue, sampled off the brightest band the field resolves to, rather
+     than `--accent-solid`. That token is the near white the primary button
+     needs behind dark ink; as type on a dark field it is the same colour as
+     the rest of the headline, so the emphasis disappeared entirely the moment
+     the italic went. */
+  color: #a8cdf5;
+}
+
+/* ── The page marks itself ───────────────────────────────────────────────
+ *
+ * The one animation on this page that could not appear on any other page.
+ *
+ * Everything else in the motion layer is generic by construction: things rise
+ * as they arrive, a rule draws, a bar tracks scroll position. Those are fine
+ * and they are also what every well built site does, which means none of them
+ * say anything about what this product is.
+ *
+ * This one does. The product's entire job is to underline a phrase in green,
+ * amber or red the moment it can judge it, so as the reader scrolls, the
+ * page's own headlines get marked exactly that way, in exactly those colours,
+ * with exactly that gesture. By the time somebody reaches the demo they have
+ * already been taught to read the marks, without a legend and without a
+ * sentence explaining it.
+ *
+ * The colours are the verdicts and are used here as verdicts: `ok` under a
+ * claim the page is standing behind, `vague` under the phrase a reader would
+ * say to themselves before they test it, `miss` under the thing this product
+ * refuses to be. Nothing decorative is ever marked.
+ *
+ * The rule starts at full width and zero *height* rather than zero width,
+ * because `background-size` on the horizontal axis is what GSAP animates and
+ * a zero-height rule takes no layout at all. That matters for the no-script
+ * case: with the stylesheet applied and nothing running, these read as plain
+ * text rather than as text with a stray line under it.
+ */
+.lp-v2 .lp-mark {
+  background-repeat: no-repeat;
+  /* Lifted off the bottom of the inline box.
+     `0 100%` puts the rule at the bottom edge of the line box, not under the
+     letters. At body size the difference is a pixel and nobody notices; at
+     the closing headline's 44px it is most of the leading, so the rule was
+     floating in the gap between the two lines, visibly detached from the
+     words it was supposed to be marking. That is what "the underline is
+     broken" was.
+
+     Offsetting in `em` keeps it the same distance below the baseline at every
+     size on the page, which a pixel value could not do. */
+  background-position: 0 calc(100% - 0.19em);
+  background-size: 0% 0.085em;
+  /* Without this a marked phrase that wraps is treated as one box for
+     painting, so the rule is drawn across the union of both lines: it runs off
+     the right edge of the first line and starts mid-air on the second, and
+     while it is animating the growth happens in a place with no text under it.
+     `clone` gives each line fragment its own background box, which is how a
+     person underlining two lines with a pen would do it. */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.lp-v2 .lp-mark-ok {
+  background-image: linear-gradient(var(--ok), var(--ok));
+}
+
+.lp-v2 .lp-mark-vague {
+  background-image: linear-gradient(var(--vague), var(--vague));
+}
+
+.lp-v2 .lp-mark-miss {
+  background-image: linear-gradient(var(--miss), var(--miss));
+}
+
+/* On the hero the marks take the lit tints, not the fills.
+ *
+ * `--ok` and `--miss` are tuned to be read on light stock. Over the hero's
+ * near black water the green in particular drops to a dull olive and stops
+ * reading as a verdict at all, which is the same trap the demo console's
+ * labels already avoid by using the tints. The three colours still mean
+ * exactly what they mean; this is the same colour lit for a dark ground.
+ */
+.lp-v2 .lp-atmosphere .lp-mark-ok {
+  background-image: linear-gradient(var(--ok-light), var(--ok-light));
+}
+
+.lp-v2 .lp-atmosphere .lp-mark-miss {
+  background-image: linear-gradient(var(--miss-light), var(--miss-light));
+}
+
+/* Thicker, too. A hairline that works at 18px body copy is invisible under
+ * an 86px headline; the rule has to scale with the type it is marking. */
+.lp-v2 .lp-atmosphere .lp-mark {
+  background-size: 0% 0.055em;
+}
+
+/* Reduced motion gets the finished state, not the empty one. The mark is
+ * meaning here rather than ornament, so removing the movement must not remove
+ * the information. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-mark {
+    background-size: 100% 0.085em;
+  }
+}
+
+/* ── The auth card, in the landing's colours ─────────────────────────────
+ *
+ * `register-app` is scoped to the card on the sign-in screen so the inputs and
+ * buttons keep the app's radii, elevation and density, which is right: a form
+ * rendered against the landing's flat, square, shadowless card tokens looks
+ * like an unstyled fallback.
+ *
+ * What it must not also bring is the app's amber. `register-app` re-declares
+ * the accent from `:root`, so a card nested inside `.lp-v2` was getting navy
+ * everywhere around it and a gold button in the middle of it: the exact seam
+ * the whole exercise was meant to close, now a single screen before the
+ * password field.
+ *
+ * So the shape tokens stay and the colour tokens are handed back to the
+ * landing. This is the one place the two registers overlap, and it is
+ * deliberately narrow: only what a control needs to look like a control.
+ */
+.lp-v2 .register-app {
+  --background: #eceff5;
+  --card: #fcfdff;
+  --popover: #fcfdff;
+  --muted: #e0e5ee;
+  --secondary: #e0e5ee;
+
+  --foreground: #16253d;
+  --card-foreground: #16253d;
+  --popover-foreground: #16253d;
+  --secondary-foreground: #16253d;
+  --muted-foreground: #5b6a82;
+  --strong: #16253d;
+  --subtle: #5b6a82;
+
+  --border: rgba(21, 40, 68, 0.18);
+  --input: rgba(21, 40, 68, 0.28);
+  --surface: rgba(21, 40, 68, 0.03);
+  --surface-border: rgba(21, 40, 68, 0.1);
+
+  /* The landing's primary is a deep navy with light type on it, which is the
+     opposite arrangement to the app's luminous amber with dark ink. Both
+     tokens have to move together or the label disappears into the fill. */
+  --accent-solid: #1d3a63;
+  --accent-solid-hover: #16253d;
+  --accent-contrast: #eef2f8;
+  --accent-wash: rgba(29, 58, 99, 0.08);
+
+  --primary: #1d3a63;
+  --primary-foreground: #eef2f8;
+  --brand: #1d3a63;
+  --brand-deep: #16253d;
+  --brand-ink: #2b5c8f;
+  --brand-foreground: #eef2f8;
+  --ring: #2b5c8f;
 }

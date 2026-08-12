@@ -1,33 +1,24 @@
 import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
-import { Archivo, Inter, Martian_Mono, Source_Serif_4 } from "next/font/google";
+import { Geist, Inter, Martian_Mono } from "next/font/google";
 import { AuthHashRescue } from "~/components/auth-hash-rescue";
 import { siteUrl } from "~/lib/site";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 
-/* Archivo, on both its axes, is the whole sans.
+/* Geist runs the body, the labels and the interface copy.
  *
- * It replaces Poppins, which was the previous display face and half the reason
- * four people read this site as machine-made: a geometric sans off the same
- * shortlist as Inter and Roboto, drawn to have no opinion.
+ * It replaces Archivo, which was doing two jobs on one width axis and doing
+ * neither loudly. What is wanted from a body face is that it disappear: even
+ * colour, open apertures, figures that stay in column. Geist is drawn for
+ * exactly that, screen first, with no calligraphic memory in it at all.
  *
- * Archivo is a grotesque built for print at small sizes and for signage at
- * large ones, and its variable release carries a width axis as well as a
- * weight one. That is why it can be the only sans here: display type sets
- * condensed and heavy, running text sets normal and light, and the distance
- * between those two is a real typographic contrast rather than two weights of
- * the same picture. One family, one request, both jobs.
- *
- * `axes: ["wdth"]` is what keeps the width axis; without it Next ships the
- * weight axis alone and every condensed heading silently sets at normal
- * width. The italic is loaded because the headline uses it as a second voice:
- * the phrases the page marks are set italic as well as coloured, so the
- * emphasis survives being read in greyscale. */
-const archivo = Archivo({
+ * Geist ships no italic. The few places that still set one are body sized,
+ * where a synthetic slant is not visible as a shear; nothing at display size
+ * asks for italic any more, because at 64px a synthesised one reads as a
+ * rendering fault rather than as emphasis. */
+const geist = Geist({
   subsets: ["latin"],
-  style: ["normal", "italic"],
-  axes: ["wdth"],
   variable: "--font-sans",
 });
 
@@ -43,25 +34,34 @@ const martianMono = Martian_Mono({
   variable: "--font-mono",
 });
 
-/* Source Serif 4 sets every headline. Archivo keeps the body and the labels.
+/* The display face is Geist too, and that is the decision rather than a
+ * shortcut.
  *
- * A serif display over a grotesque body is the single most reliable way for a
- * page whose only content is text to look designed rather than defaulted, and
- * it is what the reference set does almost without exception. The serif carries
- * one more thing here: this product is about explaining, and an explanation is
- * a written form. A grotesque headline reads as an announcement; a serif one
- * reads as a sentence somebody wrote.
+ * Two faces have been tried in this slot and both were rejected for the same
+ * underlying reason, which took a second rejection to see. Source Serif 4 read
+ * as machine made, because a serif display over a grotesque body is now the
+ * house style of every generated landing page. Bricolage Grotesque read as
+ * goofy, because the thing that made it distinctive was exactly its
+ * irregularity, and irregularity is charm rather than authority.
  *
- * Weight 400 at every size, never bold. That restraint is the whole effect —
- * the serif states rather than shouts, and at 64px a regular weight has more
- * authority than a semibold, because nothing on the page is straining.
+ * This product is a study tool. Somebody opens it before an exam or the night
+ * before a talk, and the page has to carry the same seriousness the app does.
+ * That rules out charm in the display face entirely, and it rules out the
+ * expressive serif for the opposite reason: both are the page having a
+ * personality at a moment when the reader wants competence.
  *
- * Not Instrument Serif and not Fraunces, which are the two faces every
- * generated page reaches for first. */
-const sourceSerif = Source_Serif_4({
+ * So there is one family, set across the whole page, and the hierarchy is
+ * carried by size, weight and tracking instead of by a change of voice. This
+ * is what serious software does, and it is why serious software reads as
+ * serious: nothing is performing. Geist is drawn for screens, has an even
+ * colour at text sizes and tightens up properly at display sizes, which is the
+ * one thing a single family type system genuinely requires.
+ *
+ * The variable cut, so weight is a continuous axis rather than four downloads:
+ * display sits at 600, body at 400.
+ */
+const geistDisplay = Geist({
   subsets: ["latin"],
-  style: ["normal", "italic"],
-  weight: ["400"],
   variable: "--font-display",
 });
 
@@ -158,7 +158,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
       <body
-        className={`${archivo.variable} ${martianMono.variable} ${sourceSerif.variable} ${inter.variable} font-sans`}
+        className={`${geist.variable} ${martianMono.variable} ${geistDisplay.variable} ${inter.variable} font-sans`}
       >
         {/* The direction this design is under contract to, emitted as a real
             HTML comment so it survives the production build and can be read
