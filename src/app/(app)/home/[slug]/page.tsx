@@ -43,22 +43,18 @@ export default async function CoursePage({
     ? courseSchema.safeParse(course.generated)
     : null;
 
+  /* The notes are no longer rendered here.
+   *
+   * They used to open the page, above the sources and the build button and the
+   * course — so the first thing on a topic you had already built was a verbatim
+   * copy of what you typed to build it. They now sit at the foot of
+   * `CourseBuilder`, with the files, under the course they produced. */
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-8">
-      {course.input_notes && (
-        <div>
-          <h2 className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase">
-            Your notes
-          </h2>
-          <p className="mt-2 text-sm whitespace-pre-wrap text-foreground">
-            {course.input_notes}
-          </p>
-        </div>
-      )}
-
       <CourseBuilder
         courseId={courseId}
         slug={slug}
+        inputNotes={course.input_notes}
         initialSources={sources ?? []}
         initialCourse={parsedCourse?.success ? parsedCourse.data : null}
         initialSourcesOnly={course.sources_only === true}
