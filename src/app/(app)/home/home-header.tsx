@@ -23,11 +23,11 @@ export function HomeHeader({
   /** One factual line about where this account stands. */
   lede: string;
 }) {
+  /* No kicker over the greeting. It said "DASHBOARD", which is the name of the
+     tab already lit in the rail two inches to the left — a label whose only
+     content is where you already know you are. */
   return (
-    <header className="flex flex-col gap-3">
-      <p className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.16em]">
-        Dashboard
-      </p>
+    <header data-rise="" className="flex flex-col gap-2.5">
       <Greeting
         name={firstName}
         className="max-w-[22ch] font-semibold text-[clamp(1.6rem,3vw,2.15rem)] text-strong leading-[1.12] tracking-[-0.03em]"

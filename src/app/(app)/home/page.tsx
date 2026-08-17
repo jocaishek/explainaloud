@@ -152,14 +152,19 @@ export default async function DashboardPage() {
           been going. Side by side on a wide screen because they answer the
           same question from opposite ends — one is the loop, the other is
           your record of running it. */}
-      <div
-        data-rise=""
-        className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)]"
-      >
-        {/* Before the topic list, not after it: arriving usually means knowing
-            what you want to do rather than which topic you want to do it to. */}
-        <QuickActions />
-        <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
+      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)]">
+        {/* One `data-rise` each rather than one on the row, so the two panels
+            arrive left then right. The index comes from document order — see
+            `ScrollReveal` — so nothing here has to know its own position. */}
+        <div data-rise="" className="h-full">
+          {/* Before the topic list, not after it: arriving usually means
+              knowing what you want to do rather than which topic you want to
+              do it to. */}
+          <QuickActions />
+        </div>
+        <div data-rise="" className="h-full">
+          <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
+        </div>
       </div>
 
       <div data-rise="" data-tour="topics">

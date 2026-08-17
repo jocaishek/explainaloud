@@ -233,10 +233,13 @@ function NewTopicTile({ folderId }: { folderId?: string }) {
   return (
     <Link
       href={folderId ? `/new?folder=${folderId}` : "/new"}
-      className="press flex h-36 flex-col items-center justify-center gap-1.5 rounded-card border border-border border-dashed text-subtle transition-colors duration-200 hover:border-brand hover:text-brand-ink"
+      className="press group/new flex h-32 flex-col items-center justify-center gap-1.5 rounded-card border border-border border-dashed text-subtle transition-colors duration-200 hover:border-brand hover:bg-card hover:text-brand-ink"
     >
-      <Plus className="size-4" />
-      <span className="text-xs font-medium">New topic</span>
+      {/* The one glyph on the tile turns a quarter of the way as you reach it —
+          the plus becoming a little more like a target. It is 200ms and it is
+          the only thing on the card, so there is nothing for it to fight. */}
+      <Plus className="size-4 transition-transform duration-200 ease-out group-hover/new:rotate-90" />
+      <span className="font-medium text-xs">New topic</span>
     </Link>
   );
 }
