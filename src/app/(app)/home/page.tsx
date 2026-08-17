@@ -3,9 +3,10 @@ import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { requireProfile } from "~/lib/supabase/server";
 import { TopicGrid } from "../topic-grid";
 import { FirstRunTour } from "./first-run";
-import { Masthead } from "./masthead";
+import { HomeHeader } from "./home-header";
 import { PacePanel, type PaceSession } from "./pace-panel";
 import { QuickActions } from "./quick-actions";
+import { StatCards } from "./stat-cards";
 
 /**
  * How many bars the pace chart draws, and how many rows it reads to find them.
@@ -102,50 +103,72 @@ export default async function DashboardPage() {
 
   const baselineWpm = baseline?.median_wpm ?? baseline?.capable_wpm ?? null;
 
+  const topicCount = courses?.length ?? 0;
+  const recorded = sessionCount ?? 0;
+
   const stats = [
     {
       label: "Explanations recorded",
-      value: sessionCount ?? 0,
+      value: recorded,
+      caption: "Across every topic you have started.",
       empty: "None yet — your first one is three minutes away.",
     },
     {
       label: "Your speaking pace",
       value: baselineWpm ?? 0,
       unit: "wpm",
+      caption: "Your own baseline, with the pauses left out.",
       empty: "Measured on your first take.",
     },
     {
       label: "Topics",
-      value: courses?.length ?? 0,
+      value: topicCount,
+      caption: "Courses built from your own material.",
       empty: "Upload something to start one.",
     },
   ];
 
-  return (
-    /* One continuous surface. The masthead used to be a full-bleed dark band
-       held outside the measure so it would not read as a hero card; now that
-       it is not a band, it sits on the same gutter as everything else and the
-       page is one column from the nav to the footer. */
-    <div className="flex flex-col">
-      <Masthead firstName={profile.first_name} stats={stats} />
+  /* Where this account stands, in one line, said from the numbers rather than
+     from a copy deck. The three states are the three shapes an account can be
+     in, and each one names the next thing to do rather than congratulating
+     anybody for arriving. */
+  const lede =
+    topicCount === 0
+      ? "Nothing here yet. Start a topic and the rest of this page fills itself in."
+      : recorded === 0
+        ? `${topicCount} ${topicCount === 1 ? "topic" : "topics"} ready to go. The next step is explaining one out loud.`
+        : `${recorded} ${recorded === 1 ? "explanation" : "explanations"} across ${topicCount} ${topicCount === 1 ? "topic" : "topics"}. Carry on below, or start something new.`;
 
-      <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 pt-8 pb-10 sm:px-6 lg:px-8 lg:pb-14">
+  return (
+    /* One column, one measure, from the top of the page to the bottom of the
+       topic list. The rail down the left is the app's frame; everything in
+       here is the screen. */
+    <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-8 pb-14 sm:px-6 lg:px-10 lg:py-10 lg:pb-16">
+      <HomeHeader firstName={profile.first_name} lede={lede} />
+
+      <StatCards stats={stats} />
+
+      {/* The two panels of the second row: what to do, and how the doing has
+          been going. Side by side on a wide screen because they answer the
+          same question from opposite ends — one is the loop, the other is
+          your record of running it. */}
+      <div
+        data-rise=""
+        className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)]"
+      >
         {/* Before the topic list, not after it: arriving usually means knowing
             what you want to do rather than which topic you want to do it to. */}
         <QuickActions />
-
-        <div data-rise="">
-          <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
-        </div>
-
-        <div data-rise="" data-tour="topics">
-          <TopicGrid folders={folders ?? []} courses={courses ?? []} />
-        </div>
-
-        {/* Three steps, once, for somebody who has just arrived. Renders
-            nothing at all for everybody else. */}
-        <FirstRunTour />
+        <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
       </div>
+
+      <div data-rise="" data-tour="topics">
+        <TopicGrid folders={folders ?? []} courses={courses ?? []} />
+      </div>
+
+      {/* Three steps, once, for somebody who has just arrived. Renders
+          nothing at all for everybody else. */}
+      <FirstRunTour />
     </div>
   );
 }
