@@ -70,16 +70,27 @@ export function TopicCard({
         />
       ) : (
         <>
+          {/* The name first, the machine's word for it last.
+           *
+           * This card led with `status` in mono caps at the top and put the
+           * title down at the bottom, which meant a grid of a dozen topics
+           * read as a column of the word READY with the actual subjects
+           * underneath. Status is worth knowing and worth nothing to scan;
+           * the title is what somebody is looking for. So the title takes the
+           * top of the card at a readable size and the status sits at the
+           * foot in the mono voice reserved for metadata.
+           *
+           * The lift on hover is a card behaving like a card. It moves half a
+           * step and the shadow goes with it, so the whole tile reads as one
+           * object that can be picked up — which is also true, since these are
+           * draggable into folders. */}
           <Link
             href={courseHref(course)}
             aria-label={`${title}, topic: ${course.topic}`}
-            className="press panel-live flex h-36 flex-col justify-between rounded-card border border-border bg-card p-4 shadow-rest"
+            className="press panel-live flex h-32 flex-col justify-between rounded-card border border-border bg-card p-4 shadow-rest transition-[transform,box-shadow,border-color] duration-200 ease-out hover:-translate-y-0.5 hover:border-[color:var(--accent-solid)] hover:shadow-hover motion-reduce:hover:translate-y-0"
           >
-            <span className="font-mono text-[0.66rem] tracking-[0.08em] text-subtle uppercase">
-              {course.status}
-            </span>
             <span>
-              <span className="line-clamp-2 text-sm font-semibold text-strong">
+              <span className="line-clamp-2 font-semibold text-[0.92rem] text-strong leading-snug">
                 {title}
               </span>
               {/* Always show the source topic — it's what the course was
@@ -87,6 +98,9 @@ export function TopicCard({
               <span className="mt-1 line-clamp-1 block text-[11px] text-subtle">
                 Topic: {course.topic}
               </span>
+            </span>
+            <span className="font-mono text-[0.62rem] text-subtle uppercase tracking-[0.09em]">
+              {course.status}
             </span>
           </Link>
 
@@ -137,7 +151,7 @@ function RenameCard({
   useEffect(() => inputRef.current?.select(), []);
 
   return (
-    <div className="flex min-h-36 flex-col gap-2 rounded-card border border-border bg-card p-3 shadow-rest">
+    <div className="flex min-h-32 flex-col gap-2 rounded-card border border-border bg-card p-3 shadow-rest">
       <form action={formAction} className="flex flex-col gap-2">
         <input type="hidden" name="id" value={course.id} />
         <Input

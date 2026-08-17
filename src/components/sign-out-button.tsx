@@ -5,8 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/client";
+import { cn } from "~/lib/utils";
 
-export function SignOutButton() {
+export function SignOutButton({
+  /** Icon only, for the retracted rail. The label becomes the tooltip. */
+  compact = false,
+}: {
+  compact?: boolean;
+}) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
 
@@ -25,6 +31,8 @@ export function SignOutButton() {
    * says is zero. Signing out is the least-used control in the product and the
    * only one nobody should hit by accident on the way to something else, so it
    * gets the ghost treatment: legible, labelled, and not competing. */
+  const label = signingOut ? "Signing out…" : "Sign out";
+
   return (
     <Button
       type="button"
@@ -32,10 +40,17 @@ export function SignOutButton() {
       size="sm"
       disabled={signingOut}
       onClick={handleSignOut}
-      className="w-full justify-start gap-3 px-3 font-medium text-subtle hover:text-strong"
+      aria-label={compact ? label : undefined}
+      title={compact ? label : undefined}
+      className={cn(
+        "font-medium text-subtle hover:text-strong",
+        compact
+          ? "w-9 justify-center self-center px-0"
+          : "w-full justify-start gap-3 px-3",
+      )}
     >
       <LogOut className="size-4" />
-      {signingOut ? "Signing out…" : "Sign out"}
+      {!compact && label}
     </Button>
   );
 }

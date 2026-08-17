@@ -1,7 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { House, Menu, Mic, Plus, Settings, ShieldCheck, X } from "lucide-react";
+import {
+  House,
+  Menu,
+  Mic,
+  PanelLeft,
+  Plus,
+  Settings,
+  ShieldCheck,
+  X,
+} from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
@@ -26,7 +35,20 @@ import { cn } from "~/lib/utils";
  * is visible without hovering anything, and the primary action sits at the top
  * of the rail instead of competing with the identity for the same corner. It
  * also gives the recent topics somewhere to live, which is the thing people
- * actually navigate to — the tabs are three places, the topics are the work.
+ * actually navigate to — the tabs are places, the topics are the work.
+ *
+ * **Two tiers, and the split is deliberate.** Home and Record are what you came
+ * to do, and they sit at the top under the primary action. Settings and Admin
+ * are what you set once and then leave alone, so they sit at the foot of the
+ * rail with the account they belong to. A menu that lists the thing you do ten
+ * times a day and the thing you did once in March as peers is a menu that has
+ * not been ordered.
+ *
+ * **It retracts to icons.** A rail that cannot get out of the way is a rail
+ * somebody resents on a laptop, and 256px is a fifth of a 1280px screen. The
+ * choice is kept in a cookie rather than in state, so the server renders the
+ * width the reader last chose and the page does not jump a frame after
+ * hydration.
  *
  * Below `lg` the rail becomes a drawer behind a labelled button, because 256px
  * of permanent chrome on a 375px screen is two thirds of the page. Same
@@ -34,37 +56,115 @@ import { cn } from "~/lib/utils";
  * navigation, not a reduced one.
  */
 
-const ITEMS = [
+/** What you came to do. Top of the rail. */
+const PRIMARY = [
   { href: "/home", label: "Home", icon: House },
   { href: "/record", label: "Record", icon: Mic },
-  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-type NavItem = (typeof ITEMS)[number];
+/** What you set once. Foot of the rail, with the account it belongs to. */
+const ACCOUNT = [{ href: "/settings", label: "Settings", icon: Settings }];
+
+const ADMIN = { href: "/admin", label: "Admin", icon: ShieldCheck };
+
+type NavItem = (typeof PRIMARY)[number];
 
 /** What the rail needs of a course: where it goes, and what to call it. */
 export type SidebarTopic = Pick<Course, "id" | "slug" | "topic" | "name">;
+
+/** The cookie the retracted state is remembered in. */
+const RAIL_COOKIE = "rail-collapsed";
 
 /* The same curve as `--ease-enter`. Not a spring: an indicator that overshoots
    its own tab draws attention to the animation rather than to where you are. */
 const EASE = [0.23, 1, 0.32, 1] as const;
 
+/**
+ * Is `href` this page, or a page inside it?
+ *
+ * The boundary is not optional, and the bug it fixes was visible on screen: a
+ * bare `startsWith` lights *every* topic whose slug is a prefix of another
+ * one, so two courses called "How to read literature like a professor" — slugs
+ * `…professor` and `…professor-2` — were both marked as the page you were on.
+ * Comparing against `href + "/"` makes a longer slug a different topic rather
+ * than a deeper page.
+ */
+function isUnder(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 function isActive(pathname: string, href: string) {
-  // "/home" is a prefix of every course URL, so it needs an exact match or it
-  // stays lit on every page in the app.
-  return href === "/home" ? pathname === "/home" : pathname.startsWith(href);
+  // "/home" is a prefix of every course URL, so it is an exact match: the Home
+  // tab must not stay lit while you are inside a topic.
+  return href === "/home" ? pathname === href : isUnder(pathname, href);
 }
 
 function initials(first: string, last: string) {
   return `${first.at(0) ?? ""}${last.at(0) ?? ""}`.toUpperCase() || "?";
 }
 
-/** The mono section headings inside the rail. */
-function RailLabel({ children }: { children: React.ReactNode }) {
+/** The mono section heading inside the rail, and whatever it is ranged against. */
+function RailLabel({
+  children,
+  action,
+}: {
+  children: React.ReactNode;
+  action?: React.ReactNode;
+}) {
   return (
-    <p className="px-3 pb-2 font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]">
-      {children}
-    </p>
+    <div className="flex items-center justify-between gap-2 px-3 pb-1.5">
+      <p className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]">
+        {children}
+      </p>
+      {action}
+    </div>
+  );
+}
+
+/** One destination. Icon only when the rail is retracted. */
+function RailLink({
+  item,
+  active,
+  collapsed,
+  layoutId,
+  onNavigate,
+}: {
+  item: NavItem;
+  active: boolean;
+  collapsed: boolean;
+  layoutId: string;
+  onNavigate?: () => void;
+}) {
+  const Icon = item.icon;
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      // The label is the accessible name when it is not on screen to be read.
+      aria-label={collapsed ? item.label : undefined}
+      title={collapsed ? item.label : undefined}
+      className={cn(
+        "press relative flex items-center gap-3 rounded-control py-2.5 font-medium text-sm transition-colors duration-200",
+        collapsed ? "justify-center px-0" : "px-3",
+        /* The active item is the one place in the frame the accent appears.
+           Everything else is ink or grey, so "where am I" is answered by the
+           only colour on screen. */
+        active
+          ? "text-[color:var(--accent-solid)]"
+          : "text-subtle hover:bg-muted hover:text-strong",
+      )}
+    >
+      {active && (
+        <motion.span
+          layoutId={layoutId}
+          transition={{ duration: 0.28, ease: EASE }}
+          className="absolute inset-0 rounded-control bg-accent-wash"
+        />
+      )}
+      <Icon aria-hidden className="relative size-[1.05rem] shrink-0" />
+      {!collapsed && <span className="relative truncate">{item.label}</span>}
+    </Link>
   );
 }
 
@@ -73,93 +173,129 @@ function Rail({
   lastName,
   showAdmin,
   topics,
+  collapsed,
+  onToggle,
   onNavigate,
 }: {
   firstName: string;
   lastName: string;
   showAdmin: boolean;
   topics: SidebarTopic[];
-  /** Closes the drawer. Undefined in the permanent rail, which never closes. */
+  collapsed: boolean;
+  /** Retracts the rail. Absent inside the drawer, which closes instead. */
+  onToggle?: () => void;
+  /** Closes the drawer. Absent in the permanent rail, which never closes. */
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   /* Per instance, so the drawer's indicator and the permanent rail's are two
      separate shared-layout groups rather than one animating between them. */
   const layoutId = useId();
-  const items: NavItem[] = showAdmin
-    ? [...ITEMS, { href: "/admin", label: "Admin", icon: ShieldCheck }]
-    : ITEMS;
+  const footer: NavItem[] = showAdmin ? [ADMIN, ...ACCOUNT] : ACCOUNT;
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-y-auto px-3 py-5">
-      {/* Same mark and same wordmark as the landing masthead. The register
-          changes across the sign-in on purpose; the identity does not. */}
-      <Link
-        href="/home"
-        onClick={onNavigate}
-        className="press flex items-center gap-2.5 px-3 text-strong"
+    <div
+      className={cn(
+        "flex h-full flex-col gap-5 overflow-y-auto overflow-x-hidden py-5",
+        collapsed ? "px-2" : "px-3",
+      )}
+    >
+      {/* Identity, and the control that retracts the rail. Same mark and same
+          wordmark as the landing masthead: the register changes across the
+          sign-in on purpose, the identity does not. */}
+      <div
+        className={cn(
+          "flex items-center gap-2",
+          collapsed ? "flex-col" : "justify-between px-1",
+        )}
       >
-        <ExplainaloudMark className="size-7 shrink-0 text-[color:var(--accent-solid)]" />
-        <span className="font-semibold text-[0.92rem] uppercase tracking-[0.04em]">
-          Explainaloud
-        </span>
-      </Link>
+        <Link
+          href="/home"
+          onClick={onNavigate}
+          aria-label="Explainaloud, home"
+          className="press flex min-w-0 items-center gap-2.5 text-strong"
+        >
+          <ExplainaloudMark className="size-7 shrink-0 text-[color:var(--accent-solid)]" />
+          {!collapsed && (
+            <span className="truncate font-semibold text-[0.92rem] uppercase tracking-[0.04em]">
+              Explainaloud
+            </span>
+          )}
+        </Link>
+        {onToggle && (
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={collapsed ? "Expand the menu" : "Retract the menu"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Expand the menu" : "Retract the menu"}
+            className="press flex size-8 shrink-0 items-center justify-center rounded-control text-subtle transition-colors hover:bg-muted hover:text-strong"
+          >
+            <PanelLeft className="size-4" />
+          </button>
+        )}
+      </div>
 
-      {/* The one primary action in the frame, full width at the top of the
-          rail. In the old bar it sat beside the sign-out button, which is the
-          least and most destructive controls in the product an inch apart. */}
-      <Button asChild className="w-full justify-center gap-2 font-semibold">
-        <Link href="/new" onClick={onNavigate}>
+      {/* The one primary action in the frame. In the old bar it sat beside the
+          sign-out button, which is the most and the least consequential
+          controls in the product an inch apart. */}
+      <Button
+        asChild
+        size={collapsed ? "icon" : "default"}
+        className={cn(
+          "gap-2 font-semibold",
+          collapsed ? "self-center" : "w-full",
+        )}
+      >
+        <Link href="/new" onClick={onNavigate} aria-label="New topic">
           <Plus className="size-4" />
-          New topic
+          {!collapsed && "New topic"}
         </Link>
       </Button>
 
       <nav aria-label="Main">
-        <RailLabel>Menu</RailLabel>
         <ul className="flex flex-col gap-0.5">
-          {items.map((item) => {
-            const active = isActive(pathname, item.href);
-            const Icon = item.icon;
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "press relative flex items-center gap-3 rounded-control px-3 py-2.5 font-medium text-sm transition-colors duration-200",
-                    /* The active item is the one place in the frame the accent
-                       appears. Everything else is ink or grey, so "where am I"
-                       is answered by the only colour on screen. */
-                    active
-                      ? "text-[color:var(--accent-solid)]"
-                      : "text-subtle hover:bg-muted hover:text-strong",
-                  )}
-                >
-                  {active && (
-                    <motion.span
-                      layoutId={layoutId}
-                      transition={{ duration: 0.28, ease: EASE }}
-                      className="absolute inset-0 rounded-control bg-accent-wash"
-                    />
-                  )}
-                  <Icon aria-hidden className="relative size-[1.05rem]" />
-                  <span className="relative">{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
+          {PRIMARY.map((item) => (
+            <li key={item.href}>
+              <RailLink
+                item={item}
+                active={isActive(pathname, item.href)}
+                collapsed={collapsed}
+                layoutId={layoutId}
+                onNavigate={onNavigate}
+              />
+            </li>
+          ))}
         </ul>
       </nav>
 
-      {topics.length > 0 && (
+      {/* Retracted, this list would be a column of identical dots: the words
+          are the content, so there is nothing left to show. */}
+      {!collapsed && topics.length > 0 && (
         <nav aria-label="Recent topics">
-          <RailLabel>Recent topics</RailLabel>
+          <RailLabel
+            action={
+              /* Starting a topic from the list of topics, where the thought
+                 occurs. The button at the top of the rail is the same
+                 destination; this one is the one you reach for when you are
+                 already looking at what you have. */
+              <Link
+                href="/new"
+                onClick={onNavigate}
+                aria-label="New topic"
+                title="New topic"
+                className="press flex size-5 items-center justify-center rounded-control text-subtle transition-colors hover:bg-muted hover:text-strong"
+              >
+                <Plus className="size-3.5" />
+              </Link>
+            }
+          >
+            Recent topics
+          </RailLabel>
           <ul className="flex flex-col gap-0.5">
             {topics.map((topic) => {
               const href = courseHref(topic);
-              const active = pathname.startsWith(href);
+              const active = isUnder(pathname, href);
               return (
                 <li key={topic.id}>
                   <Link
@@ -173,7 +309,7 @@ function Rail({
                         : "text-subtle hover:bg-muted hover:text-strong",
                     )}
                   >
-                    {/* A dot rather than a document glyph: four identical icons
+                    {/* A dot rather than a document glyph: six identical icons
                         down the rail is furniture, and the words are the thing
                         being scanned. */}
                     <span
@@ -183,8 +319,8 @@ function Rail({
                         active ? "bg-[color:var(--accent-solid)]" : "bg-border",
                       )}
                     />
-                    {/* The name it was given, falling back to what it was
-                        built from — the same title the topic cards carry. */}
+                    {/* The name it was given, falling back to what it was built
+                        from — the same title the topic cards carry. */}
                     <span className="truncate">
                       {topic.name ?? topic.topic}
                     </span>
@@ -196,19 +332,43 @@ function Rail({
         </nav>
       )}
 
-      <div className="mt-auto flex flex-col gap-3 border-border border-t pt-4">
-        <div className="flex min-w-0 items-center gap-2.5 px-1">
+      <div className="mt-auto flex flex-col gap-0.5 border-border border-t pt-3">
+        <nav aria-label="Account">
+          <ul className="flex flex-col gap-0.5">
+            {footer.map((item) => (
+              <li key={item.href}>
+                <RailLink
+                  item={item}
+                  active={isActive(pathname, item.href)}
+                  collapsed={collapsed}
+                  layoutId={layoutId}
+                  onNavigate={onNavigate}
+                />
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div
+          className={cn(
+            "mt-2 flex min-w-0 items-center gap-2.5",
+            collapsed ? "justify-center" : "px-1",
+          )}
+        >
           <span
             aria-hidden
+            title={collapsed ? `${firstName} ${lastName}` : undefined}
             className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-wash font-medium text-[0.72rem] text-brand-ink"
           >
             {initials(firstName, lastName)}
           </span>
-          <span className="min-w-0 truncate text-sm text-strong">
-            {firstName} {lastName}
-          </span>
+          {!collapsed && (
+            <span className="min-w-0 truncate text-sm text-strong">
+              {firstName} {lastName}
+            </span>
+          )}
         </div>
-        <SignOutButton />
+        <SignOutButton compact={collapsed} />
       </div>
     </div>
   );
@@ -219,16 +379,20 @@ export function AppShell({
   lastName,
   showAdmin,
   topics,
+  defaultCollapsed,
   children,
 }: {
   firstName: string;
   lastName: string;
   showAdmin: boolean;
   topics: SidebarTopic[];
+  /** Read from the cookie on the server, so the first paint is the right width. */
+  defaultCollapsed: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(defaultCollapsed);
 
   /* Arriving somewhere is the end of navigating: a drawer still standing open
      over the page you asked for is a second click to see what you clicked.
@@ -246,6 +410,21 @@ export function AppShell({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  function toggleRail() {
+    setCollapsed((was) => {
+      const next = !was;
+      /* A year, because this is a preference rather than a session.
+       *
+       * `document.cookie` rather than the Cookie Store API: this is one
+       * synchronous write of one flag, and the modern API is a promise plus a
+       * feature check for a value the server has to be able to read on the
+       * very next navigation. */
+      // biome-ignore lint/suspicious/noDocumentCookie: one synchronous flag; the async API buys nothing here
+      document.cookie = `${RAIL_COOKIE}=${next ? "1" : "0"};path=/;max-age=31536000;samesite=lax`;
+      return next;
+    });
+  }
+
   const rail = { firstName, lastName, showAdmin, topics };
 
   return (
@@ -256,9 +435,18 @@ export function AppShell({
        rather than a second `:root`. */
     <div className="register-app flex min-h-screen bg-background">
       {/* Sticky and its own scroll container, so a long gap report scrolls
-          under a rail that stays put. */}
-      <aside className="sticky top-0 hidden h-screen w-64 shrink-0 border-border border-r bg-card lg:block">
-        <Rail {...rail} />
+          under a rail that stays put. The width is transitioned rather than
+          snapped: the page beside it reflows either way, and a third of a
+          second of travel is what says the rail moved rather than that the
+          screen changed. */}
+      <aside
+        className={cn(
+          "sticky top-0 hidden h-screen shrink-0 border-border border-r bg-card lg:block",
+          "transition-[width] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
+          collapsed ? "w-[4.25rem]" : "w-64",
+        )}
+      >
+        <Rail {...rail} collapsed={collapsed} onToggle={toggleRail} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -324,7 +512,13 @@ export function AppShell({
               >
                 <X className="size-4" />
               </button>
-              <Rail {...rail} onNavigate={() => setOpen(false)} />
+              {/* Never retracted: a drawer you asked to see is not one to hide
+                  behind icons. */}
+              <Rail
+                {...rail}
+                collapsed={false}
+                onNavigate={() => setOpen(false)}
+              />
             </motion.div>
           </div>
         )}

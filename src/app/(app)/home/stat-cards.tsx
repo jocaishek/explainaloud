@@ -13,10 +13,11 @@ import { cn } from "~/lib/utils";
  * number somebody has to work out, and working out your own dashboard is the
  * definition of one that is not clear.
  *
- * Carded rather than ruled. The rail this replaced was three columns divided by
- * hairlines, which reads as a table and belongs in a report; on a screen whose
- * whole job is "here is where you stand", the same surface the rest of the page
- * uses says these are three objects you can compare rather than three cells.
+ * One panel of three columns, not three panels. Three separate cards put three
+ * borders and three shadows across the top of the screen for what is a single
+ * idea — where you stand — and the eye counts the boxes before it reads the
+ * numbers. Divided columns inside one surface say the same three things with a
+ * third of the drawing, which is most of what "cleaner" means here.
  *
  * The figures count up when they arrive. That is not decoration: a number that
  * lands by counting reads as measured, and it makes the eye follow the digits
@@ -101,25 +102,22 @@ export function StatCards({ stats }: { stats: Stat[] }) {
     <div
       ref={ref}
       data-rise=""
-      className="grid grid-cols-1 gap-4 sm:grid-cols-3"
+      className="grid grid-cols-1 divide-y divide-border overflow-hidden rounded-card border border-border bg-card shadow-rest sm:grid-cols-3 sm:divide-x sm:divide-y-0"
     >
       {stats.map((stat) => {
         const measured = stat.value > 0 || !stat.empty;
         return (
-          <div
-            key={stat.label}
-            className="rounded-card border border-border bg-card p-5 shadow-rest"
-          >
+          <div key={stat.label} className="p-5">
             <p className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]">
               {stat.label}
             </p>
             {/* One row, one height, whether or not there is a figure in it —
                 three cards whose baselines disagree is half of what makes a
                 row look unconsidered. */}
-            <p className="mt-3 flex h-10 items-baseline gap-1.5">
+            <p className="mt-2.5 flex h-9 items-baseline gap-1.5">
               <span
                 className={cn(
-                  "font-medium text-[2.4rem] leading-none tracking-[-0.045em] tabular-nums",
+                  "font-medium text-[2.1rem] leading-none tracking-[-0.045em] tabular-nums",
                   measured ? "text-strong" : "text-border",
                 )}
               >
