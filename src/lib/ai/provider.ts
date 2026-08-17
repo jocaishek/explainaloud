@@ -15,11 +15,11 @@ import { stripHallucinations } from "./transcript-cleanup";
  *
  * The ordering is about context size as much as quality. Groq's free tier
  * budgets tokens per minute and rejects an oversized request outright with a
- * 413, so a long course would fail on `groq-70b` (12K/min) and then fail again
- * on `groq-8b` (6K/min) — a smaller allowance for the same prompt is not a
- * fallback, it is the same failure twice. The Gateway rung sits between them
- * on a 262K window, so the request that neither Groq tier can hold still lands
- * somewhere.
+ * 413, so a long course fails on the large Groq tier and then fails again on
+ * the small one — the two now share one 8K/min allowance, so the second Groq
+ * attempt cannot hold a prompt the first could not. The Gateway rung sits
+ * between them on a 262K window, so the request neither Groq tier can hold
+ * still lands somewhere.
  *
  * **Gemini is not routed through the Gateway, deliberately.** It is called on
  * Google's own endpoint, which serves `gemini-3.5-flash-lite` to this key
@@ -35,8 +35,58 @@ import { stripHallucinations } from "./transcript-cleanup";
  * what takes request size off the table as a failure mode entirely.
  */
 const GEMINI_MODEL = "gemini-3.5-flash-lite";
-const GROQ_PRIMARY_MODEL = "llama-3.3-70b-versatile";
-const GROQ_FALLBACK_MODEL = "llama-3.1-8b-instant";
+
+/**
+ * The two Groq rungs, after Llama was decommissioned.
+ *
+ * `llama-3.3-70b-versatile` and `llama-3.1-8b-instant` were announced for
+ * deprecation on 17 June 2026 and shut down on 16 August 2026 for free and
+ * developer tier keys, which is every key this project has. Groq's own
+ * replacements are `openai/gpt-oss-120b` for the large tier and
+ * `openai/gpt-oss-20b` for the small one, and those are what these are.
+ *
+ * **They reason, and that changes the arithmetic here.** Llama emitted answer
+ * tokens only; gpt-oss spends completion tokens thinking before it writes a
+ * word, at `reasoning_effort` *medium* unless told otherwise. Two consequences
+ * this file has to carry rather than discover in production:
+ *
+ * - Every Groq call asks for `low`. These prompts are extraction and grading
+ *   against a rubric that is already in the prompt, not problems that get
+ *   better with deliberation, and the live colouring rung is on a latency
+ *   budget that medium would blow.
+ * - Every Groq call is given `REASONING_HEADROOM` tokens above what the answer
+ *   needs. `max_tokens` counts reasoning, so the old budgets — 128 for the
+ *   health probe, 900 for live colouring — were amounts a reasoning model can
+ *   spend entirely on thinking and then return an empty completion. That is
+ *   not a truncated answer anybody can see; it is a provider that looks broken.
+ *
+ * Both tiers are 131K context and 8K tokens/minute on the free plan, where
+ * Llama was 12K and 6K. The large tier therefore lost a third of its per-minute
+ * allowance and the small one gained a third: they are the same size now, which
+ * is why the Gateway rung between them matters more than it did.
+ */
+const GROQ_PRIMARY_MODEL = "openai/gpt-oss-120b";
+const GROQ_FALLBACK_MODEL = "openai/gpt-oss-20b";
+
+/**
+ * Tokens allowed for thinking, on top of the answer the caller asked for.
+ *
+ * At `low` effort these prompts think in a few hundred tokens. 600 is above
+ * every one measured against the real course-building and grading prompts, and
+ * it is charged against the minute's budget only when it is used — Groq bills
+ * *requested* `max_tokens` against TPM, so this is not free, which is why it is
+ * one number rather than a generous multiplier.
+ */
+const REASONING_HEADROOM = 600;
+
+/**
+ * How hard the Groq rungs are allowed to think.
+ *
+ * `medium` is the default and it is wrong for every call this file makes: the
+ * work is extraction and rubric-checking, and the reasoning budget comes out of
+ * the same 8K/minute the answer does.
+ */
+const GROQ_REASONING_EFFORT = "low";
 /**
  * The wide-context failover, reached through the Vercel AI Gateway.
  *
@@ -104,6 +154,25 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * simply the old behaviour.
  */
 const QUOTA_COOLDOWN_MS = 10 * 60_000;
+
+/**
+ * The same idea for a per-minute limit, at the scale a per-minute limit lives.
+ *
+ * Live colouring calls this up to fifty times a minute, and the free tier of
+ * every provider in the chain allows fewer than that. Without a cooldown the
+ * first rung 429s, the call falls through to the second — and then the next
+ * tick, 1.2 seconds later, pays that same failed round trip again, and so does
+ * every tick after it. The rung that is *known* to be rate limited is the one
+ * being asked first, forever.
+ *
+ * With it, one tick eats the 429 and the rest go straight to whatever answered.
+ * The provider's own `retry-after` sets the length when it sends one; this is
+ * the floor for when it does not, and the ceiling is `MAX_RATE_LIMIT_WAIT_MS`
+ * so a provider is never parked longer than a minute on a burst limit.
+ */
+const RATE_LIMIT_COOLDOWN_MS = 15_000;
+
+/** Label -> when it may be tried again. Covers both kinds of limit. */
 const quotaExhaustedUntil = new Map<string, number>();
 
 function inCooldown(label: string): boolean {
@@ -286,6 +355,15 @@ async function callOpenAiCompatible(
      * better than no answer.
      */
     jsonMode?: boolean;
+    /**
+     * Sent as `reasoning_effort` when the model is one that thinks.
+     *
+     * Per-config rather than unconditional, because it is not portable: Groq
+     * accepts it for gpt-oss, and the Gateway rung points at a model that has
+     * never seen the field. Sending it everywhere would be the same mistake
+     * `jsonMode` documents above, in the other direction.
+     */
+    reasoningEffort?: "low" | "medium" | "high";
   },
 ): Promise<string> {
   if (!config.apiKey) throw new Error(`${config.keyName} not set`);
@@ -307,6 +385,17 @@ async function callOpenAiCompatible(
         ...(config.jsonMode === false
           ? {}
           : { response_format: { type: "json_object" } }),
+        /* `include_reasoning: false` as well as the effort setting. The thinking
+           is not wanted in the response — `extractJson` would have to strip it
+           back out of the same string it is looking for an object in, and the
+           two failure modes that produces (a brace inside the reasoning, a
+           truncated object after it) are indistinguishable from a bad model. */
+        ...(config.reasoningEffort
+          ? {
+              reasoning_effort: config.reasoningEffort,
+              include_reasoning: false,
+            }
+          : {}),
         messages: [{ role: "user", content: prompt }],
       }),
     }),
@@ -334,12 +423,17 @@ async function callGroq(
   maxOutputTokens: number,
   model: string,
 ): Promise<string> {
-  return callOpenAiCompatible(prompt, maxOutputTokens, {
+  /* The headroom is added here rather than at each call site on purpose: every
+     caller asks for the size of the *answer* it needs, which is the honest
+     question, and the cost of the model thinking first belongs to the fact
+     that this rung is a reasoning model. See `REASONING_HEADROOM`. */
+  return callOpenAiCompatible(prompt, maxOutputTokens + REASONING_HEADROOM, {
     label: "Groq",
     url: GROQ_URL,
     apiKey: env.GROQ_API_KEY,
     keyName: "GROQ_API_KEY",
     model,
+    reasoningEffort: GROQ_REASONING_EFFORT,
   });
 }
 
@@ -378,53 +472,91 @@ export async function completeJson<T>(
     call: (p: string, maxTokens: number) => Promise<string>;
     configured: boolean;
   }> = [
-    // Latency-sensitive callers (live transcript colouring) put the small model
-    // first: measured against real prompts it answers in ~415ms versus ~544ms
-    // for the 70B, and it never has to wait out a Gemini round trip first. The
-    // bigger models stay behind it as failover, so a refusal still degrades to
-    // the more capable model rather than to nothing.
+    /* Gemini leads every call, including the latency-sensitive ones.
+     *
+     * It did not used to. `fast` callers — live transcript colouring above all
+     * — skipped Gemini outright and opened on Groq's small tier, because that
+     * model answered in ~415ms against Gemini's round trip and colour arriving
+     * late is colour that is wrong. That was a good trade and it is now void
+     * twice over: the model it was measured on was decommissioned in August
+     * 2026, and its replacement reasons before it answers even at `low`
+     * effort, so the premise — "the small Groq tier is the quick one" — is
+     * exactly what nobody has measured since.
+     *
+     * What is left is the thing that was always true: one ordering is easier
+     * to reason about than two, and a path that skips the primary provider is
+     * a path that fails whenever the *secondary* one does. Live colouring is
+     * the most visible surface in the product and it was the only one with no
+     * Gemini in front of it.
+     *
+     * The cost of leading with Gemini on a 1.2s tick is its per-minute limit,
+     * and that is what `RATE_LIMIT_COOLDOWN_MS` is for: the first tick that
+     * 429s parks Gemini for a few seconds and the rest of the recording goes
+     * straight to Groq, so the fallback costs one wasted round trip per
+     * cooldown window rather than one per tick. */
+    {
+      provider: "gemini",
+      label: "gemini",
+      call: callGemini,
+      configured: !!env.GEMINI_API_KEY,
+    },
+    /* Which Groq tier stands behind Gemini is what `fast` decides now.
+     *
+     * A live pass that has already lost a round trip wants the quickest thing
+     * that can answer, not the most capable; a course build wants the reverse,
+     * and can afford it. Both orderings keep the other tier in the chain
+     * further down, so neither loses a rung — they disagree about which one to
+     * spend first. */
     ...(options.fast
       ? [
           {
             provider: "groq" as const,
-            label: "groq-8b-fast",
+            label: "groq-small-fast",
             call: (value: string, tokens: number) =>
               callGroq(value, Math.min(tokens, 900), GROQ_FALLBACK_MODEL),
             configured: !!env.GROQ_API_KEY,
           },
         ]
-      : []),
-    {
-      provider: "gemini",
-      label: "gemini",
-      call: callGemini,
-      configured: !!env.GEMINI_API_KEY && !options.fast,
-    },
-    {
-      provider: "groq",
-      label: "groq-70b",
-      call: (value, tokens) => callGroq(value, tokens, GROQ_PRIMARY_MODEL),
-      configured: !!env.GROQ_API_KEY,
-    },
+      : [
+          {
+            provider: "groq" as const,
+            label: "groq-large",
+            call: (value: string, tokens: number) =>
+              callGroq(value, tokens, GROQ_PRIMARY_MODEL),
+            configured: !!env.GROQ_API_KEY,
+          },
+        ]),
     {
       provider: "gateway",
       label: `gateway:${GATEWAY_MODEL}`,
-      // Ahead of groq-8b on purpose. By the time we are here groq-70b has
-      // already failed, and the most common reason is a prompt too large for
-      // its per-minute budget — which the smaller Groq tier, with half the
-      // allowance, cannot hold either. A 262K window can.
+      /* Ahead of the small Groq tier on purpose, and more so than before. By
+         the time we are here the large tier has already failed, and the most
+         common reason is a prompt too large for its per-minute budget — which
+         the small tier cannot hold either, because since the Llama models were
+         retired the two share the same 8K/minute rather than the small one
+         having half. A 262K window can. */
       call: callGateway,
       configured: !!env.AI_GATEWAY_API_KEY,
     },
-    {
-      provider: "groq",
-      label: "groq-8b",
-      // The fallback model has a 6K TPM window. Its validated course JSON
-      // comfortably fits in 2.4K output tokens, leaving room for sources.
-      call: (value, tokens) =>
-        callGroq(value, Math.min(tokens, 2400), GROQ_FALLBACK_MODEL),
-      configured: !!env.GROQ_API_KEY,
-    },
+    /* The tier the rung above did not spend. Last, in both orderings, because
+       by here two providers have already declined and the question has stopped
+       being "which is quickest" and become "is there anything left". */
+    options.fast
+      ? {
+          provider: "groq",
+          label: "groq-large",
+          call: (value, tokens) => callGroq(value, tokens, GROQ_PRIMARY_MODEL),
+          configured: !!env.GROQ_API_KEY,
+        }
+      : {
+          provider: "groq",
+          label: "groq-small",
+          // Validated course JSON comfortably fits in 2.4K output tokens,
+          // leaving room for sources — and `callGroq` adds thinking on top.
+          call: (value, tokens) =>
+            callGroq(value, Math.min(tokens, 2400), GROQ_FALLBACK_MODEL),
+          configured: !!env.GROQ_API_KEY,
+        },
   ];
 
   const failures: string[] = [];
@@ -435,7 +567,7 @@ export async function completeJson<T>(
       continue;
     }
     if (inCooldown(attempt.label)) {
-      failures.push(`${attempt.label}: skipped, quota exhausted recently`);
+      failures.push(`${attempt.label}: skipped, limited recently`);
       continue;
     }
     for (let tries = 0; tries <= RATE_LIMIT_RETRIES; tries++) {
@@ -472,6 +604,20 @@ export async function completeJson<T>(
         ) {
           await sleep(error.retryAfterMs + 250);
           continue;
+        }
+        /* Out of retries against a burst limit: park this rung briefly so the
+           next caller does not open with the round trip that just failed. See
+           `RATE_LIMIT_COOLDOWN_MS` — without this, a 1.2s tick re-tries a
+           provider it already knows is limited, on every single tick. */
+        if (error instanceof RateLimitedError) {
+          quotaExhaustedUntil.set(
+            attempt.label,
+            Date.now() +
+              Math.min(
+                Math.max(error.retryAfterMs, RATE_LIMIT_COOLDOWN_MS),
+                MAX_RATE_LIMIT_WAIT_MS,
+              ),
+          );
         }
         failures.push(
           `${attempt.label}: ${error instanceof Error ? error.message : String(error)}`,
@@ -738,6 +884,17 @@ export async function probeProviders(): Promise<ProviderProbe[]> {
     {
       provider: "groq",
       key: env.GROQ_API_KEY,
+      /* Deliberately the list endpoint, and therefore deliberately weaker than
+         the Gemini probe above it.
+
+         The same trap applies — Groq retired both Llama models on 16 August
+         2026 and this call would have gone on answering 200 the whole time —
+         but the fix that worked for Gemini does not transfer: a Groq model id
+         now contains a slash (`openai/gpt-oss-120b`), so naming it puts an
+         extra path segment into `/openai/v1/models/{model}`, and a probe that
+         404s on a healthy provider is a worse failure than one that misses a
+         retirement. `?deep=1` on the health route is what catches a dead
+         model: it runs a real completion through the real chain. */
       run: (key) =>
         fetch("https://api.groq.com/openai/v1/models", {
           headers: { authorization: `Bearer ${key}` },
