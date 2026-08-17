@@ -136,6 +136,7 @@ export default async function GapReportPage({
     { data: baseline },
     { data: pastSessions },
     { data: course },
+    { data: newest },
   ] = await Promise.all([
     (wanted
       ? supabase
@@ -184,7 +185,30 @@ export default async function GapReportPage({
       .select("purpose")
       .eq("id", courseId)
       .maybeSingle<{ purpose: string | null }>(),
+    // The newest attempt of any kind, graded or not. Every other query on this
+    // page filters ungraded sessions out, which is what let one hide.
+    supabase
+      .from("course_sessions")
+      .select("id, started_at, report, transcript")
+      .eq("course_id", courseId)
+      .eq("user_id", user.id)
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<{
+        id: string;
+        started_at: string;
+        report: unknown;
+        transcript: string | null;
+      }>(),
   ]);
+
+  /* An attempt newer than the report being shown, with no report of its own.
+     Worth saying only when it has words in it — a row with no transcript is an
+     abandoned start, not a missing grade. */
+  const ungraded =
+    newest && !newest.report && (newest.transcript ?? "").trim().length > 0
+      ? newest
+      : null;
 
   const copy = purposeCopy(course?.purpose);
 
@@ -300,6 +324,35 @@ export default async function GapReportPage({
           slug={slug}
           basePath="gaps"
         />
+      )}
+
+      {/* A newer recording exists and was never graded.
+       *
+       * Both queries above filter on `report is not null`, so an ungraded
+       * attempt is not merely unselected here — it is invisible, and the page
+       * silently answers with the one before it. Somebody recorded a second
+       * take, opened this page, and read their first take's report as the
+       * result: correct report, wrong recording, nothing on screen saying so.
+       *
+       * Only when no session was asked for by URL. `?session=` is an explicit
+       * choice and does not need to be second-guessed.
+       *
+       * No date on it: this renders on the server, in whatever zone the server
+       * happens to run in, and a notice that names the wrong day is a worse fix
+       * than the bug. The picker above is a client component and dates every
+       * session in the reader's own zone. */}
+      {!wanted && ungraded && (
+        <p className="rounded-card border border-amber-500/30 bg-amber-500/[0.06] px-4 py-3 text-sm text-strong">
+          Your most recent recording was never graded, so this is the last one
+          that was.{" "}
+          <Link
+            href={`/home/${slug}/record`}
+            className="font-medium underline underline-offset-2"
+          >
+            Open it on the record screen
+          </Link>{" "}
+          to grade it — the words are already saved.
+        </p>
       )}
 
       {segments.length > 0 && (

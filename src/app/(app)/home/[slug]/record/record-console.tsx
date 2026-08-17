@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, Mic, Radio, Square } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AgentOrchestration } from "~/components/agent-orchestration";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
@@ -421,6 +422,16 @@ export function RecordConsole({
   dailyLimit: number | null;
   maxRecordingMs: number;
 }) {
+  /**
+   * Only ever used to invalidate, never to navigate.
+   *
+   * This console writes a session row, a report, a score and a set of gaps, and
+   * then hands the reader to pages rendered on the server from exactly those
+   * rows — while the router still holds the payload it rendered before any of
+   * it existed. Everything else in the app that writes calls `refresh()`
+   * afterwards; the screen that writes the most did not.
+   */
+  const router = useRouter();
   const [status, setStatus] = useState<Status>("checking");
   /** Read from async callbacks that closed over an older render. */
   const statusRef = useRef<Status>("checking");
@@ -1453,7 +1464,7 @@ export function RecordConsole({
     };
 
     const supabase = createClient();
-    const { error: saveError } = await supabase
+    const { data: saved, error: saveError } = await supabase
       .from("course_sessions")
       .update({
         transcript,
@@ -1473,9 +1484,13 @@ export function RecordConsole({
         })),
         analyzed_at: new Date().toISOString(),
       })
-      .eq("id", sessionId);
+      .eq("id", sessionId)
+      // Asked for back, and checked: an update that matches no row is a
+      // success that changed nothing. See the same fix in the analyze route.
+      .select("id")
+      .maybeSingle<{ id: string }>();
 
-    if (saveError) {
+    if (saveError || !saved) {
       setError("The answers were graded but couldn't be saved.");
       return;
     }
@@ -1512,6 +1527,8 @@ export function RecordConsole({
         session.id === sessionId ? { ...session, score } : session,
       ),
     );
+    // As in `analyzeSession`: the server's answer for these pages just changed.
+    router.refresh();
   }
 
   async function analyzeSession(
@@ -1571,6 +1588,11 @@ export function RecordConsole({
               : session,
           ),
         );
+        /* The report now exists on the server. Drop what the router cached
+           before it did — otherwise the gap report page can be served from a
+           payload rendered for the *previous* recording, which is a report
+           that is real, correct, and about the wrong take. */
+        router.refresh();
       }
     } catch (analysisError) {
       setError(
@@ -2820,12 +2842,31 @@ export function RecordConsole({
 
             {/* The panel above is a summary. The full report is a page of its
                 own — with the transcript, every weakness and the teaching for
-                each — and there was no way to reach it from here. */}
+                each — and there was no way to reach it from here.
+                *
+                * **Named session, not "the latest".** This linked to
+                * `/gaps` bare, which asks the server for whichever recording is
+                * newest *and graded*. Two ways that answers with the wrong
+                * report, and somebody hit both: the router can serve a payload
+                * it rendered on an earlier visit, and a session whose grading
+                * did not save is skipped in favour of the one before it. Either
+                * way the reader is shown a real, correct report about a
+                * different take — which reads as the app grading their second
+                * attempt exactly like their first.
+                *
+                * A URL that names the session cannot do that. `?session=` is
+                * also what the dashboard's pace chart has always used. */}
             <Button
               asChild
               className="mt-1 h-11 w-fit gap-2 rounded-control bg-accent-solid px-6 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
             >
-              <Link href={`/home/${slug}/gaps`}>
+              <Link
+                href={
+                  displayedSessionId
+                    ? `/home/${slug}/gaps?session=${displayedSessionId}`
+                    : `/home/${slug}/gaps`
+                }
+              >
                 See the full gap report
                 <ArrowRight aria-hidden className="size-4" />
               </Link>
