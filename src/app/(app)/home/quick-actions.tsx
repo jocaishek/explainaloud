@@ -1,34 +1,29 @@
+import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { cn } from "~/lib/utils";
 
 /**
- * The three things anyone opens this app to do, side by side.
+ * The three things anyone opens this app to do, in the order you do them.
  *
- * This was a stacked column of ruled rows. The argument for it was that three
- * identical containers say the things inside them are interchangeable, and
- * these are not — they are one sequence. That is still true, and it is why the
- * order is stated rather than implied: each card is numbered 01, 02, 03, and
- * the numeral is the largest thing on it. Reading left to right is reading the
- * order you do it in, and reading the numerals alone gives you the loop.
+ * These are not three interchangeable features, they are one loop — put
+ * material in, explain it out loud, read back what you missed — so the order is
+ * stated rather than implied: each row is numbered, and reading the numerals
+ * alone gives you the product.
  *
- * What the column got wrong was the copy. Each row carried three lines of
- * prose at the same pitch, so the page opened with eighty words of explanation
- * before the first topic, and readers reported it as confusing rather than
- * thorough. A card is a smaller box and a smaller box is a budget: one line
- * per step, naming what you give it and what comes back. The rest of what
- * those paragraphs said belongs on the page that does the thing, where
- * somebody has already chosen to be.
+ * **One card of three rows, not three cards.** Three separate boxes side by
+ * side say "pick one of these", which is exactly the wrong reading of a
+ * sequence, and they force each step's sentence into a column too narrow to
+ * hold it. Stacked rows inside a single panel read top to bottom, which is the
+ * direction the sequence runs, and they leave the sentence a full line.
  *
- * **What keeps three boxes from looking generated.** The stock feature grid
- * has a tell, and it is the same every time: an icon in a circle, everything
- * centred, three interchangeable grey paragraphs, equal weight across all
- * three. So — no icons at all, because a glyph per box is the loudest part of
- * that pattern and the numeral already does the job. Everything ranged left.
- * The duration stays, because a real number is specific in a way a generated
- * one never is, and because "how long will this take" is the actual question
- * somebody is asking. The accent lands once, on step one, as a rule across the
- * top and nothing else — one primary action on screen, and two cards that are
- * plainly the same object without the paint.
+ * **What keeps this from looking generated.** The stock feature block has a
+ * tell and it is the same every time: an icon in a circle, everything centred,
+ * three interchangeable grey paragraphs. So — no icons, because the numeral
+ * already does that job. Everything ranged left, one line of copy per step
+ * naming what you give it and what comes back. The duration stays, because a
+ * real number is specific in a way a generated one never is, and because "how
+ * long will this take" is the actual question being asked. The accent lands
+ * once, on step one.
  */
 const ACTIONS = [
   {
@@ -59,53 +54,70 @@ const ACTIONS = [
 
 export function QuickActions() {
   return (
-    <nav aria-label="What would you like to do" data-tour="actions">
-      <ol className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <section
+      aria-labelledby="quick-actions-heading"
+      data-tour="actions"
+      className="flex h-full flex-col overflow-hidden rounded-card border border-border bg-card shadow-rest"
+    >
+      {/* The heading sits inside the panel rather than above it, so this card
+          and the pace panel beside it start on the same line. */}
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-5 pb-4">
+        <h2
+          id="quick-actions-heading"
+          className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.12em]"
+        >
+          Start here
+        </h2>
+        {/* 2:30 + 3:00 + 1:00. The sum of the three rows, stated once, because
+            "how long is this going to take me" is asked of the loop rather
+            than of any one step in it. */}
+        <p className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.09em]">
+          Whole loop <span className="text-strong tabular-nums">6:30</span>
+        </p>
+      </div>
+
+      {/* `flex-1` down the list, so the three rows share whatever height the
+          panel beside this one sets rather than leaving a band of empty card
+          under step three. */}
+      <ol className="flex flex-1 flex-col divide-y divide-border border-border border-t">
         {ACTIONS.map((action) => (
-          <li key={action.href} className="flex" data-rise="">
+          <li key={action.href} className="flex-1">
             <Link
               href={action.href}
               className={cn(
-                "press group flex w-full flex-col rounded-card border bg-card p-4 shadow-rest",
-                "transition-[border-color,box-shadow] duration-200 ease-out",
-                "hover:shadow-hover focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]",
-                /* The accent is a rule across the top of the first card, drawn
-                   with a thicker top border rather than an extra element, so
-                   the three boxes stay the same size to the pixel. */
-                action.primary
-                  ? "border-border border-t-2 border-t-[color:var(--accent-solid)]"
-                  : "border-border hover:border-[color:var(--accent-solid)]",
+                "press group flex h-full items-center gap-4 px-5 py-4 transition-colors duration-200",
+                "hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-inset focus-visible:ring-[color:var(--accent-ring)]",
               )}
             >
-              <span className="flex items-baseline justify-between gap-3">
-                <span
-                  className={cn(
-                    "font-mono text-[1.35rem] leading-none tabular-nums",
-                    action.primary ? "text-brand-ink" : "text-subtle",
-                  )}
-                >
-                  {action.n}
+              <span
+                className={cn(
+                  "font-mono text-[1.25rem] leading-none tabular-nums",
+                  action.primary ? "text-brand-ink" : "text-subtle",
+                )}
+              >
+                {action.n}
+              </span>
+
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold text-[1rem] text-strong leading-tight">
+                  {action.title}
                 </span>
-                <span className="font-mono text-[0.68rem] text-subtle uppercase tabular-nums tracking-[0.09em]">
-                  {action.dur}
+                <span className="mt-1 block text-[0.85rem] text-subtle leading-relaxed">
+                  {action.detail}
                 </span>
               </span>
 
-              <span className="mt-4 font-semibold text-[1.02rem] text-strong leading-tight">
-                {action.title}
+              <span className="hidden font-mono text-[0.68rem] text-subtle uppercase tabular-nums tracking-[0.09em] sm:inline">
+                {action.dur}
               </span>
-              {/* Each title is one line at every width these cards reach, so
-                  the sentences land on a common baseline without help. If a
-                  title ever wraps, this needs `mt-auto` and the titles need a
-                  min-height — three boxes whose text starts at different
-                  heights is half of what makes a row look unconsidered. */}
-              <span className="mt-1.5 text-[0.85rem] text-subtle leading-relaxed">
-                {action.detail}
-              </span>
+              <ChevronRight
+                aria-hidden
+                className="size-4 shrink-0 text-subtle transition-transform duration-200 group-hover:translate-x-0.5"
+              />
             </Link>
           </li>
         ))}
       </ol>
-    </nav>
+    </section>
   );
 }
