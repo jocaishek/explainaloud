@@ -162,11 +162,18 @@ type Mode = "topic" | "interview";
  * at sentence boundaries. Phrase finalisation still runs alongside it, but only
  * to settle the wording — it no longer gates when grading happens.
  *
- * The floor is the provider, not this number. Live passes run on Groq's 8B at
- * ~415ms, and its free tier allows 30 requests a minute — one every 2s. At
+ * The floor is the provider, not this number. Live passes run on Groq's small
+ * tier — `openai/gpt-oss-20b` since Groq decommissioned the Llama pair in
+ * August 2026 — whose free tier allows 30 requests a minute, one every 2s. At
  * 1200ms a fast talker rides just above that and leans on the rate-limit retry
- * and the 70B failover behind it. Lower this if the account's tier allows it;
+ * and the larger model behind it. Lower this if the account's tier allows it;
  * that is the only thing keeping colour from being near-instant.
+ *
+ * The ~415ms figure that used to be quoted here was measured on the retired
+ * 8B. The replacement reasons before it answers, even at `low` effort, so the
+ * per-pass latency is an open question until somebody times it against a real
+ * recording — if colour starts arriving late, this is the first place to look
+ * and `provider.ts` is the second.
  */
 const LIVE_GRADE_TICK_MS = 1200;
 /** Server caption fallback cadence; stays below the transcription RPM limit. */
