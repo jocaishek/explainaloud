@@ -180,7 +180,16 @@ export async function POST(
     }
 
     if (sessionId) {
-      const { error: sessionError } = await supabase
+      /* `.select()` on the update, and the result is checked.
+       *
+       * An UPDATE that matches no rows is not an error in PostgREST — it is a
+       * success that changed nothing. Without asking for the row back, a
+       * report that was never stored returned 200 with the report in the body,
+       * so the recording screen showed it, the database did not have it, and
+       * every later visit to the gap report quietly served the *previous*
+       * session instead. The client cannot tell that apart from being graded
+       * the same as last time. */
+      const { data: saved, error: sessionError } = await supabase
         .from("course_sessions")
         .update({
           spans: result.spans,
@@ -190,9 +199,11 @@ export async function POST(
         })
         .eq("id", sessionId)
         .eq("course_id", courseId)
-        .eq("user_id", user.id);
+        .eq("user_id", user.id)
+        .select("id")
+        .maybeSingle<{ id: string }>();
 
-      if (sessionError) {
+      if (sessionError || !saved) {
         return NextResponse.json(
           { error: "The gap report was built but couldn't be saved." },
           { status: 500 },
