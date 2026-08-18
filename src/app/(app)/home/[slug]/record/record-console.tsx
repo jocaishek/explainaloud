@@ -9,6 +9,10 @@ import { AgentOrchestration } from "~/components/agent-orchestration";
 import { ScrollToTargetLink } from "~/components/scroll-to-target-link";
 import { Button } from "~/components/ui/button";
 import type { AgentRun } from "~/lib/ai/schemas";
+import {
+  dropEchoedClauses,
+  stripHallucinations,
+} from "~/lib/ai/transcript-cleanup";
 import { audioExtension, preferredRecorderMimeType } from "~/lib/audio";
 import { localDay } from "~/lib/limits";
 import type { SpeechMetrics } from "~/lib/speech-metrics";
@@ -1000,9 +1004,20 @@ export function RecordConsole({
       // transcript instead of replacing it. Appending is also what keeps the
       // graded head valid: a pass that rewrote earlier words would throw away
       // every span already on screen and force a full re-grade.
-      const text = incremental
-        ? `${serverTranscriptRef.current} ${heard}`.trim()
+      //
+      // What it must not extend it with is something already said. Each window
+      // is cleaned by the transcription route on its own, so a decoder looping
+      // once per window arrives as a sequence of individually spotless
+      // additions that assemble into a page of the same sentence. See
+      // `dropEchoedClauses` — it drops the addition rather than rewriting the
+      // transcript, which is what keeps that graded cursor valid.
+      const fresh = incremental
+        ? dropEchoedClauses(serverTranscriptRef.current, heard)
         : heard;
+      if (incremental && !fresh) return;
+      const text = incremental
+        ? `${serverTranscriptRef.current} ${fresh}`.trim()
+        : fresh;
       serverTranscriptRef.current = text;
       transcriptRef.current = text;
       setTranscript(text);
@@ -1235,6 +1250,35 @@ export function RecordConsole({
             );
           }
         }
+      }
+
+      /* One last pass over the assembled transcript, now that nothing else
+       * will be appended to it.
+       *
+       * The guard at each window join stops a loop being built; this catches
+       * what a join cannot see — a loop already inside a single window, and
+       * anything the live path assembled before the transcription route's own
+       * cleaning ran. Rewriting is safe here in a way it never is mid-
+       * recording: the recording has stopped, and the final grading pass reads
+       * the whole transcript from scratch rather than extending spans.
+       *
+       * Timings ride along. They are Whisper's, one per token, so dropping a
+       * clause without dropping its words would leave the pace figure computed
+       * over speech nobody produced. */
+      const cleaned = stripHallucinations(text, []);
+      if (cleaned.removed > 0) {
+        text = cleaned.transcript;
+        transcriptRef.current = text;
+        setTranscript(text);
+        /* Said plainly, because the alternative is somebody reading a report
+         * about sentences they never spoke and concluding the grader is
+         * broken. It is not — the transcriber filled unintelligible audio with
+         * its own most likely guess, which is what every speech model does. */
+        setNotice(
+          text
+            ? "Part of this recording was hard to hear, and the transcriber repeated itself there. Those repeats were removed before grading."
+            : "None of this recording could be made out, so there is nothing to grade. Somewhere quieter, or closer to the microphone, usually fixes it.",
+        );
       }
 
       const supabase = createClient();
@@ -2347,8 +2391,15 @@ export function RecordConsole({
       // current, and it can run as often as the engine likes without costing
       // a request.
       if (finalChunk) {
+        // Same seam, other engine. The browser's recogniser re-emits a settled
+        // phrase often enough that a long recording accumulates duplicates of
+        // its own, and they reach the grader as things the student said twice.
+        const fresh = dropEchoedClauses(
+          browserTranscriptRef.current,
+          finalChunk,
+        );
         browserTranscriptRef.current =
-          `${browserTranscriptRef.current} ${finalChunk}`.trim();
+          `${browserTranscriptRef.current} ${fresh}`.trim();
         if (!serverTranscriptRef.current) {
           transcriptRef.current = browserTranscriptRef.current;
           setTranscript(transcriptRef.current);
