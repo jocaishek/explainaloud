@@ -16,8 +16,15 @@
  *
  * Everything typed is still saved and still shown on the topic page — this
  * bounds the prompt, not the record.
+ *
+ * **Was 8,000, which was sized for a provider that is no longer first.** That
+ * number came from Groq's free tier billing 12,000 tokens a minute: a longer
+ * prompt could not succeed there on any retry. Gemini leads every call now, on
+ * a million-token window, and the chain already handles a prompt Groq cannot
+ * hold by falling past it. Ten thousand words of revision notes is a normal
+ * thing to paste and was being cut to about two thousand.
  */
-export const MAX_NOTES_CHARS = 8_000;
+export const MAX_NOTES_CHARS = 40_000;
 
 export const ACCEPTED_EXTENSIONS = [
   ".pdf",
