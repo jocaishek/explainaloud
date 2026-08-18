@@ -238,3 +238,31 @@ export async function deleteCourse(
   revalidatePath("/home");
   return OK;
 }
+
+/**
+ * Sticks a topic to the top of the rail, or unsticks it.
+ *
+ * The state is sent rather than toggled server-side: two rapid clicks on a
+ * toggle that reads-then-writes race each other and land on whichever finished
+ * last, which is how a pin ends up in the state you did not choose. The client
+ * knows what it is asking for; it says so.
+ */
+export async function pinCourse(
+  _prev: MutationState,
+  formData: FormData,
+): Promise<MutationState> {
+  const { supabase, user } = await requireUser();
+  const id = String(formData.get("id") ?? "");
+  const pinned = String(formData.get("pinned") ?? "") === "true";
+
+  const { error } = await supabase
+    .from("courses")
+    .update({ pinned, updated_at: new Date().toISOString() })
+    .eq("id", id)
+    .eq("user_id", user.id);
+
+  if (error) return { error: "We couldn't pin that topic. Try again." };
+
+  revalidatePath("/home");
+  return OK;
+}

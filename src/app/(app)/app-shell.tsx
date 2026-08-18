@@ -17,8 +17,9 @@ import { useEffect, useId, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { SignOutButton } from "~/components/sign-out-button";
 import { Button } from "~/components/ui/button";
-import { type Course, courseHref } from "~/lib/folders";
+import type { Folder } from "~/lib/folders";
 import { cn } from "~/lib/utils";
+import { type RailCourse, RailTopics } from "./rail-topics";
 
 /**
  * The app's frame: a rail of tabs down the left, the screen to the right of it.
@@ -69,8 +70,7 @@ const ADMIN = { href: "/admin", label: "Admin", icon: ShieldCheck };
 
 type NavItem = (typeof PRIMARY)[number];
 
-/** What the rail needs of a course: where it goes, and what to call it. */
-export type SidebarTopic = Pick<Course, "id" | "slug" | "topic" | "name">;
+export type { RailCourse } from "./rail-topics";
 
 /** The cookie the retracted state is remembered in. */
 const RAIL_COOKIE = "rail-collapsed";
@@ -101,24 +101,6 @@ function isActive(pathname: string, href: string) {
 
 function initials(first: string, last: string) {
   return `${first.at(0) ?? ""}${last.at(0) ?? ""}`.toUpperCase() || "?";
-}
-
-/** The mono section heading inside the rail, and whatever it is ranged against. */
-function RailLabel({
-  children,
-  action,
-}: {
-  children: React.ReactNode;
-  action?: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-2 px-3 pb-1.5">
-      <p className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]">
-        {children}
-      </p>
-      {action}
-    </div>
-  );
 }
 
 /** One destination. Icon only when the rail is retracted. */
@@ -172,7 +154,8 @@ function Rail({
   firstName,
   lastName,
   showAdmin,
-  topics,
+  folders,
+  courses,
   collapsed,
   onToggle,
   onNavigate,
@@ -180,7 +163,8 @@ function Rail({
   firstName: string;
   lastName: string;
   showAdmin: boolean;
-  topics: SidebarTopic[];
+  folders: Folder[];
+  courses: RailCourse[];
   collapsed: boolean;
   /** Retracts the rail. Absent inside the drawer, which closes instead. */
   onToggle?: () => void;
@@ -271,65 +255,13 @@ function Rail({
 
       {/* Retracted, this list would be a column of identical dots: the words
           are the content, so there is nothing left to show. */}
-      {!collapsed && topics.length > 0 && (
-        <nav aria-label="Recent topics">
-          <RailLabel
-            action={
-              /* Starting a topic from the list of topics, where the thought
-                 occurs. The button at the top of the rail is the same
-                 destination; this one is the one you reach for when you are
-                 already looking at what you have. */
-              <Link
-                href="/new"
-                onClick={onNavigate}
-                aria-label="New topic"
-                title="New topic"
-                className="press flex size-5 items-center justify-center rounded-control text-subtle transition-colors hover:bg-muted hover:text-strong"
-              >
-                <Plus className="size-3.5" />
-              </Link>
-            }
-          >
-            Recent topics
-          </RailLabel>
-          <ul className="flex flex-col gap-0.5">
-            {topics.map((topic) => {
-              const href = courseHref(topic);
-              const active = isUnder(pathname, href);
-              return (
-                <li key={topic.id}>
-                  <Link
-                    href={href}
-                    onClick={onNavigate}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "press flex items-center gap-2.5 rounded-control px-3 py-2 text-sm transition-colors duration-200",
-                      active
-                        ? "bg-accent-wash font-medium text-strong"
-                        : "text-subtle hover:bg-muted hover:text-strong",
-                    )}
-                  >
-                    {/* A dot rather than a document glyph: six identical icons
-                        down the rail is furniture, and the words are the thing
-                        being scanned. */}
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "size-1.5 shrink-0 rounded-full transition-colors duration-200",
-                        active ? "bg-[color:var(--accent-solid)]" : "bg-border",
-                      )}
-                    />
-                    {/* The name it was given, falling back to what it was built
-                        from — the same title the topic cards carry. */}
-                    <span className="truncate">
-                      {topic.name ?? topic.topic}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+      {!collapsed && (folders.length > 0 || courses.length > 0) && (
+        <RailTopics
+          folders={folders}
+          courses={courses}
+          isCurrent={(href) => isUnder(pathname, href)}
+          onNavigate={onNavigate}
+        />
       )}
 
       <div className="mt-auto flex flex-col gap-0.5 border-border border-t pt-3">
@@ -378,14 +310,16 @@ export function AppShell({
   firstName,
   lastName,
   showAdmin,
-  topics,
+  folders,
+  courses,
   defaultCollapsed,
   children,
 }: {
   firstName: string;
   lastName: string;
   showAdmin: boolean;
-  topics: SidebarTopic[];
+  folders: Folder[];
+  courses: RailCourse[];
   /** Read from the cookie on the server, so the first paint is the right width. */
   defaultCollapsed: boolean;
   children: React.ReactNode;
@@ -425,7 +359,7 @@ export function AppShell({
     });
   }
 
-  const rail = { firstName, lastName, showAdmin, topics };
+  const rail = { firstName, lastName, showAdmin, folders, courses };
 
   return (
     /* `register-app` is the switch. Everything below this div reads the app's
