@@ -165,8 +165,19 @@ const SPOKEN: Array<{ text: string; verdict: Verdict }> = [
   { text: "and this time you say them.", verdict: null },
 ];
 
-/** Between words. Fast enough to read as speech rather than as a typewriter. */
-const WORD_MS = 190;
+/**
+ * Between words, and this is a speaking pace rather than an animation duration.
+ *
+ * It was 190ms, which is 315 words a minute. Nobody talks at 315 words a
+ * minute — an unhurried explanation runs about 150 and a brisk one about 180,
+ * which is the range the product measures people in and shows back to them.
+ * At 190 the line was not somebody explaining something, it was a ticker, and
+ * a reader could not finish a clause before it had gone.
+ *
+ * 340ms is 176 words a minute: the top of the ordinary range, because this
+ * still has to hold a landing page rather than lull it.
+ */
+const WORD_MS = 340;
 
 /**
  * How long the line takes to travel one word, and deliberately longer than the
@@ -179,11 +190,16 @@ const WORD_MS = 190;
  *
  * Overlapping them fixes it, and CSS is what makes it free: a transition
  * retargeted mid-flight continues from where it actually is rather than
- * restarting, so three of these overlapping average out into one steady drift
- * at about the speed of speech. The line sits a word or so behind its mark,
- * which nobody can see, and moves evenly, which everybody can.
+ * restarting, so these average out into one steady drift at about the speed of
+ * speech. The line sits a word or so behind its mark, which nobody can see, and
+ * moves evenly, which everybody can.
+ *
+ * The multiple came down from 2.1 with the slower word rate. The distance per
+ * hop is unchanged — one word — so a longer gap between words already means a
+ * lower velocity, and keeping the old overlap on top of that would leave the
+ * line trailing two full words behind the one being said.
  */
-const GLIDE_MS = Math.round(WORD_MS * 2.1);
+const GLIDE_MS = Math.round(WORD_MS * 1.7);
 
 /**
  * How far behind the newest word a verdict lands, counted in words.
