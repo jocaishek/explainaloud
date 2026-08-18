@@ -1,14 +1,17 @@
+import { ChevronRight } from "lucide-react";
+import Link from "next/link";
 import { ThemeSwitcher } from "~/components/theme-switcher";
 import { PLAN_FEATURES } from "~/lib/plans";
-import { USE_TYPE_LABELS } from "~/lib/profile";
 import { requireProfile } from "~/lib/supabase/server";
-import { ProfileForm } from "./profile-form";
 import { VoiceBaselinePanel } from "./voice-baseline-panel";
 
 export const metadata = { title: "Settings · Explainaloud" };
 
 export default async function SettingsPage() {
   const { supabase, user, profile } = await requireProfile();
+  const initials =
+    `${profile.first_name.at(0) ?? ""}${profile.last_name.at(0) ?? ""}`.toUpperCase() ||
+    "?";
 
   const { data: baseline } = await supabase
     .from("speech_baselines")
@@ -59,29 +62,45 @@ export default async function SettingsPage() {
         <ThemeSwitcher />
       </Section>
 
+      {/* Your name, age, use case, picture and login all moved to /profile.
+          Settings is now only how the app behaves; who you are is a different
+          question and it lives behind your own name in the sidebar. */}
       <Section
-        title="Your details"
-        description="Change these any time. The dashboard greets you by your first name."
+        title="You"
+        description="Your picture, your details and the account they belong to."
       >
-        <ProfileForm profile={profile} />
-      </Section>
-
-      <Section title="Account" description="Details tied to your login.">
-        <dl className="divide-y divide-border overflow-hidden rounded-card border border-border bg-card shadow-rest">
-          <Row label="Email" value={user.email ?? "—"} />
-          <Row
-            label="Using it for"
-            value={USE_TYPE_LABELS[profile.use_type].title}
-          />
-          <Row
-            label="Member since"
-            value={new Date(profile.created_at).toLocaleDateString(undefined, {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          />
-        </dl>
+        <Link
+          href="/profile"
+          className="press flex items-center justify-between gap-4 rounded-card border border-border bg-card px-4 py-3.5 text-sm shadow-rest transition-colors hover:bg-muted"
+        >
+          <span className="flex min-w-0 items-center gap-3">
+            <span
+              aria-hidden
+              className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-wash font-medium text-[0.8rem] text-brand-ink"
+            >
+              {profile.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt=""
+                  width={36}
+                  height={36}
+                  className="size-full object-cover"
+                />
+              ) : (
+                initials
+              )}
+            </span>
+            <span className="min-w-0">
+              <span className="block truncate font-medium text-strong">
+                {profile.first_name} {profile.last_name}
+              </span>
+              <span className="block truncate text-[0.8rem] text-subtle">
+                {user.email ?? "—"}
+              </span>
+            </span>
+          </span>
+          <ChevronRight aria-hidden className="size-4 shrink-0 text-subtle" />
+        </Link>
       </Section>
     </div>
   );
@@ -106,14 +125,5 @@ function Section({
       </div>
       {children}
     </section>
-  );
-}
-
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4 bg-surface px-4 py-3">
-      <dt className="text-sm text-subtle">{label}</dt>
-      <dd className="truncate text-sm font-medium text-strong">{value}</dd>
-    </div>
   );
 }

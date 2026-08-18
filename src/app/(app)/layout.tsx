@@ -49,6 +49,7 @@ export default async function DashboardLayout({
     <AppShell
       firstName={profile.first_name}
       lastName={profile.last_name}
+      avatarUrl={profile.avatar_url}
       showAdmin={isAdminEmail(user.email)}
       folders={folders ?? []}
       courses={courses ?? []}

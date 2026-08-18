@@ -225,13 +225,22 @@ export function RailTopics({
     };
   }
 
-  /* Pinned to the top, order otherwise untouched. Sorting here rather than in
-     the query because `folderOf` is optimistic — a topic dragged a moment ago
-     is in its new folder on screen before the server has heard about it. */
-  const byPin = (list: RailCourse[]) =>
-    [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned));
+  /* Pinned topics are lifted clean out of the list and shown above the folders.
+     Sorting them to the top *within* their own folder — which is what this used
+     to do — is not what a pin is for: the point of pinning is that you stop
+     having to remember where you filed it. A pin that only reorders the inside
+     of a closed folder is invisible, which is exactly the report.
 
-  const loose = byPin(courses.filter((course) => !folderOf(course)));
+     Lifted rather than duplicated. The same topic in two places in one rail
+     reads as a bug, and the folder count below counts what is actually in the
+     folder on screen.
+
+     Computed here rather than in the query because `folderOf` is optimistic — a
+     topic dragged a moment ago is in its new folder on screen before the server
+     has heard about it. */
+  const pinned = courses.filter((course) => course.pinned);
+  const unpinned = courses.filter((course) => !course.pinned);
+  const loose = unpinned.filter((course) => !folderOf(course));
 
   return (
     <nav aria-label="Topics" className="flex min-h-0 flex-col">
@@ -307,9 +316,35 @@ export function RailTopics({
       {/* Its own scroll region. Forty topics must not push the account block
           off the bottom of the rail. */}
       <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+        {/* Above the folders, because that is the whole of what a pin does. */}
+        {pinned.length > 0 && (
+          <ul className="mb-1 border-border border-b pb-1">
+            <li className="flex items-center gap-1.5 px-2 py-1.5 font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]">
+              <Pin aria-hidden className="size-3 shrink-0" />
+              Pinned
+            </li>
+            {pinned.map((course) => (
+              <TopicRow
+                key={course.id}
+                course={course}
+                folders={folders}
+                current={isCurrent(courseHref(course))}
+                confirming={confirmDelete === course.id}
+                onConfirmDelete={() => setConfirmDelete(course.id)}
+                onCancelDelete={() => setConfirmDelete(null)}
+                onDelete={() => remove(course.id)}
+                onMove={(folderId) => move(course.id, folderId)}
+                onPin={() => pin(course.id, !course.pinned)}
+                onRename={(name) => rename(course.id, name)}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
+        )}
+
         {folders.map((folder) => {
-          const inFolder = byPin(
-            courses.filter((course) => folderOf(course) === folder.id),
+          const inFolder = unpinned.filter(
+            (course) => folderOf(course) === folder.id,
           );
           const shut = collapsed[folder.id] ?? false;
           const drop = zone(folder.id);
