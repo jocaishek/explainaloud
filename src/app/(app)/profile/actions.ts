@@ -1,9 +1,30 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { isAdminEmail } from "~/lib/admin";
 import { requireUser } from "~/lib/supabase/server";
 
 export type AvatarState = { error: string | null; saved: boolean };
+
+/**
+ * Why the write failed, said twice: once to the log, and once on screen if the
+ * person looking is an admin.
+ *
+ * "We couldn't save that. Try again." is the right thing to show a student and
+ * the wrong thing to show the only person who can fix it. This failed in
+ * production against a working upload and a rendering profile page, and the
+ * message gave nobody anything to act on — not which statement failed, not
+ * whether it was a missing column, a policy, or a constraint. The most likely
+ * cause is a migration that has not been pushed, and that is precisely the
+ * class of thing the Postgres message names outright.
+ */
+function saveFailed(error: { message?: string }, email: string | undefined) {
+  console.error("Avatar save failed:", error);
+  const generic = "We couldn't save that. Try again.";
+  return isAdminEmail(email) && error.message
+    ? `${generic} (${error.message})`
+    : generic;
+}
 
 /**
  * Records a picture that the browser has already uploaded.
@@ -41,8 +62,7 @@ export async function saveAvatar(url: string): Promise<AvatarState> {
     })
     .eq("user_id", user.id);
 
-  if (error)
-    return { error: "We couldn't save that. Try again.", saved: false };
+  if (error) return { error: saveFailed(error, user.email), saved: false };
 
   // The rail renders the avatar on every screen in the app.
   revalidatePath("/home", "layout");
@@ -58,8 +78,7 @@ export async function removeAvatar(): Promise<AvatarState> {
     .update({ avatar_url: null, updated_at: new Date().toISOString() })
     .eq("user_id", user.id);
 
-  if (error)
-    return { error: "We couldn't save that. Try again.", saved: false };
+  if (error) return { error: saveFailed(error, user.email), saved: false };
 
   revalidatePath("/home", "layout");
   return { error: null, saved: true };
