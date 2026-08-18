@@ -63,9 +63,8 @@ const PRIMARY = [
   { href: "/record", label: "Record", icon: Mic },
 ];
 
-/** What you set once. Foot of the rail, with the account it belongs to. */
-const ACCOUNT = [{ href: "/settings", label: "Settings", icon: Settings }];
-
+/* Settings is no longer in this list. It is a gear beside the account block at
+   the foot of the rail — see the identity row below. */
 const ADMIN = { href: "/admin", label: "Admin", icon: ShieldCheck };
 
 type NavItem = (typeof PRIMARY)[number];
@@ -153,6 +152,7 @@ function RailLink({
 function Rail({
   firstName,
   lastName,
+  avatarUrl,
   showAdmin,
   folders,
   courses,
@@ -162,6 +162,7 @@ function Rail({
 }: {
   firstName: string;
   lastName: string;
+  avatarUrl: string | null;
   showAdmin: boolean;
   folders: Folder[];
   courses: RailCourse[];
@@ -175,7 +176,7 @@ function Rail({
   /* Per instance, so the drawer's indicator and the permanent rail's are two
      separate shared-layout groups rather than one animating between them. */
   const layoutId = useId();
-  const footer: NavItem[] = showAdmin ? [ADMIN, ...ACCOUNT] : ACCOUNT;
+  const footer: NavItem[] = showAdmin ? [ADMIN] : [];
 
   return (
     <div
@@ -265,40 +266,88 @@ function Rail({
       )}
 
       <div className="mt-auto flex flex-col gap-0.5 border-border border-t pt-3">
-        <nav aria-label="Account">
-          <ul className="flex flex-col gap-0.5">
-            {footer.map((item) => (
-              <li key={item.href}>
-                <RailLink
-                  item={item}
-                  active={isActive(pathname, item.href)}
-                  collapsed={collapsed}
-                  layoutId={layoutId}
-                  onNavigate={onNavigate}
-                />
-              </li>
-            ))}
-          </ul>
-        </nav>
+        {footer.length > 0 && (
+          <nav aria-label="Account">
+            <ul className="flex flex-col gap-0.5">
+              {footer.map((item) => (
+                <li key={item.href}>
+                  <RailLink
+                    item={item}
+                    active={isActive(pathname, item.href)}
+                    collapsed={collapsed}
+                    layoutId={layoutId}
+                    onNavigate={onNavigate}
+                  />
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
 
+        {/* Identity on the left, preferences on the right.
+         *
+         * Settings used to be a full-width row *above* this, which read as
+         * "Settings, and separately, you" — and made your own name the one
+         * thing in the rail that was not a link. They are the same block
+         * now: your face and your name open your profile, the gear beside
+         * them opens the app's settings, and the word "Settings" is gone
+         * because a gear at the foot of a sidebar has needed no label since
+         * about 2008. */}
         <div
           className={cn(
-            "mt-2 flex min-w-0 items-center gap-2.5",
-            collapsed ? "justify-center" : "px-1",
+            "mt-2 flex min-w-0 items-center gap-1",
+            collapsed ? "flex-col justify-center gap-1.5" : "",
           )}
         >
-          <span
-            aria-hidden
+          <Link
+            href="/profile"
+            onClick={onNavigate}
+            aria-current={isActive(pathname, "/profile") ? "page" : undefined}
+            aria-label={collapsed ? "Your profile" : undefined}
             title={collapsed ? `${firstName} ${lastName}` : undefined}
-            className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent-wash font-medium text-[0.72rem] text-brand-ink"
+            className={cn(
+              "press flex min-w-0 items-center gap-2.5 rounded-control py-1.5 transition-colors hover:bg-muted",
+              collapsed ? "justify-center px-0" : "flex-1 px-1",
+            )}
           >
-            {initials(firstName, lastName)}
-          </span>
-          {!collapsed && (
-            <span className="min-w-0 truncate text-sm text-strong">
-              {firstName} {lastName}
+            <span
+              aria-hidden
+              className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-wash font-medium text-[0.72rem] text-brand-ink"
+            >
+              {avatarUrl ? (
+                <img
+                  src={avatarUrl}
+                  alt=""
+                  width={32}
+                  height={32}
+                  className="size-full object-cover"
+                />
+              ) : (
+                initials(firstName, lastName)
+              )}
             </span>
-          )}
+            {!collapsed && (
+              <span className="min-w-0 truncate text-sm text-strong">
+                {firstName} {lastName}
+              </span>
+            )}
+          </Link>
+
+          <Link
+            href="/settings"
+            onClick={onNavigate}
+            aria-current={isActive(pathname, "/settings") ? "page" : undefined}
+            aria-label="Settings"
+            title="Settings"
+            className={cn(
+              "press flex size-8 shrink-0 items-center justify-center rounded-control transition-colors hover:bg-muted",
+              isActive(pathname, "/settings")
+                ? "bg-accent-wash text-[color:var(--accent-solid)]"
+                : "text-subtle hover:text-strong",
+            )}
+          >
+            <Settings className="size-[1.05rem]" />
+          </Link>
         </div>
         <SignOutButton compact={collapsed} />
       </div>
@@ -309,6 +358,7 @@ function Rail({
 export function AppShell({
   firstName,
   lastName,
+  avatarUrl,
   showAdmin,
   folders,
   courses,
@@ -317,6 +367,7 @@ export function AppShell({
 }: {
   firstName: string;
   lastName: string;
+  avatarUrl: string | null;
   showAdmin: boolean;
   folders: Folder[];
   courses: RailCourse[];
@@ -359,7 +410,7 @@ export function AppShell({
     });
   }
 
-  const rail = { firstName, lastName, showAdmin, folders, courses };
+  const rail = { firstName, lastName, avatarUrl, showAdmin, folders, courses };
 
   return (
     /* `register-app` is the switch. Everything below this div reads the app's

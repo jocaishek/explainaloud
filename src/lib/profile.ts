@@ -22,6 +22,33 @@ export const USE_TYPE_LABELS: Record<
 /** Youngest age we'll accept, matching the minimum for a self-managed account. */
 export const MIN_AGE_YEARS = 13;
 
+/**
+ * Whole years since `dateOfBirth`, from a `yyyy-mm-dd` string.
+ *
+ * Parsed field by field rather than by `new Date(value)`, which reads a bare
+ * date as UTC midnight and then prints it in the reader's timezone — so a
+ * birthday west of Greenwich comes back a day early and, one day a year, a
+ * year early.
+ */
+export function ageFrom(
+  dateOfBirth: string,
+  today = new Date(),
+): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirth);
+  if (!match) return null;
+  const [, y, m, d] = match;
+  const year = Number(y);
+  const month = Number(m);
+  const day = Number(d);
+
+  let age = today.getFullYear() - year;
+  const hasHadBirthday =
+    today.getMonth() > month - 1 ||
+    (today.getMonth() === month - 1 && today.getDate() >= day);
+  if (!hasHadBirthday) age -= 1;
+  return age >= 0 ? age : null;
+}
+
 export function isUseType(value: unknown): value is UseType {
   return (
     typeof value === "string" &&
