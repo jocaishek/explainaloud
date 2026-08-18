@@ -290,7 +290,7 @@ export function CourseBuilder({
                   variants={ITEM}
                   className={cn(PANEL, "overflow-hidden")}
                 >
-                  <h2 className="border-border border-b px-5 py-4 font-mono text-[11px] text-brand-ink uppercase tracking-[0.18em]">
+                  <h2 className="border-border border-b px-5 py-4 font-medium text-[0.95rem] text-strong">
                     Notes
                   </h2>
                   {/* Divided rows inside one panel rather than a stack of
@@ -357,7 +357,7 @@ export function CourseBuilder({
                   variants={ITEM}
                   className={cn(PANEL, "overflow-hidden")}
                 >
-                  <h2 className="border-border border-b px-5 py-4 font-mono text-[11px] text-brand-ink uppercase tracking-[0.18em]">
+                  <h2 className="border-border border-b px-5 py-4 font-medium text-[0.95rem] text-strong">
                     Watch
                   </h2>
                   <div className="divide-y divide-border">
@@ -399,7 +399,7 @@ export function CourseBuilder({
                   variants={ITEM}
                   className={cn(PANEL, "flex flex-col items-start gap-2 p-5")}
                 >
-                  <h2 className="font-mono text-[11px] text-brand-ink uppercase tracking-[0.18em]">
+                  <h2 className="font-medium text-[0.95rem] text-strong">
                     Watch
                   </h2>
                   {/* Two different situations, and they used to read the same.
@@ -432,7 +432,7 @@ export function CourseBuilder({
                   variants={ITEM}
                   className={cn(PANEL, "overflow-hidden")}
                 >
-                  <h2 className="border-border border-b px-5 py-4 font-mono text-[11px] text-brand-ink uppercase tracking-[0.18em]">
+                  <h2 className="border-border border-b px-5 py-4 font-medium text-[0.95rem] text-strong">
                     Go deeper
                   </h2>
                   <div className="divide-y divide-border">
@@ -469,7 +469,7 @@ export function CourseBuilder({
                   variants={ITEM}
                   className={cn(PANEL, "flex flex-col items-start gap-2 p-5")}
                 >
-                  <h2 className="font-mono text-[11px] text-brand-ink uppercase tracking-[0.18em]">
+                  <h2 className="font-medium text-[0.95rem] text-strong">
                     Go deeper
                   </h2>
                   <p className="text-sm text-subtle">
@@ -495,7 +495,7 @@ export function CourseBuilder({
 
               {course.uncovered.length > 0 && (
                 <motion.section variants={ITEM} className={cn(PANEL, "p-5")}>
-                  <h2 className="font-mono text-[10px] text-subtle uppercase tracking-[0.14em]">
+                  <h2 className="font-medium text-[0.8rem] text-subtle">
                     Not covered by your sources
                   </h2>
                   <ul className="mt-2 flex flex-col gap-1 text-subtle text-sm">
@@ -514,7 +514,7 @@ export function CourseBuilder({
 
               {sources.length > 0 && citationEntries.length === 0 && (
                 <motion.section variants={ITEM} className={cn(PANEL, "p-5")}>
-                  <h2 className="font-mono text-[11px] text-brand-ink uppercase tracking-[0.18em]">
+                  <h2 className="font-medium text-[0.95rem] text-strong">
                     Citations
                   </h2>
                   <p className="mt-2 text-sm text-subtle">
@@ -536,7 +536,7 @@ export function CourseBuilder({
           <div className="border-border border-b px-5 py-4">
             <h2
               id="course-material-heading"
-              className="font-mono text-[11px] text-brand-ink uppercase tracking-[0.18em]"
+              className="font-medium text-[0.95rem] text-strong"
             >
               {course ? "Built from" : "Your material"}
             </h2>
@@ -553,9 +553,7 @@ export function CourseBuilder({
             {inputNotes?.trim() && <InputNotes notes={inputNotes} />}
 
             <div className="flex flex-col gap-3">
-              <h3 className="font-mono text-[10px] text-subtle uppercase tracking-[0.14em]">
-                Files
-              </h3>
+              <h3 className="font-medium text-[0.8rem] text-subtle">Files</h3>
               <SourceUploader
                 courseId={courseId}
                 initialSources={sources}
@@ -660,7 +658,7 @@ function InputNotes({ notes }: { notes: string }) {
 
   return (
     <div className="flex flex-col gap-2">
-      <h3 className="font-mono text-[10px] text-subtle uppercase tracking-[0.14em]">
+      <h3 className="font-medium text-[0.8rem] text-subtle">
         Notes you pasted
       </h3>
 
@@ -705,7 +703,7 @@ function InputNotes({ notes }: { notes: string }) {
             setOpen((was) => !was);
           }}
           aria-expanded={open}
-          className="press flex w-fit items-center gap-1.5 rounded-control py-1 font-mono text-[10px] text-subtle uppercase tracking-[0.14em] transition-colors hover:text-strong"
+          className="press flex w-fit items-center gap-1.5 rounded-control py-1 font-medium text-[0.8rem] text-subtle transition-colors hover:text-strong"
         >
           {open ? "Show less" : "Show all"}
           <ChevronDown
@@ -758,9 +756,7 @@ function CitationMarks({
       aria-label={label}
       className="mt-2 flex flex-wrap items-center gap-1.5"
     >
-      <span className="mr-1 font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-        Cited
-      </span>
+      <span className="mr-1 text-[0.78rem] text-subtle">Cited</span>
       {citations.map((citation) => {
         const number = numbers.get(citationKey(citation));
         if (!number) return null;
