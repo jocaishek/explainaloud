@@ -163,7 +163,11 @@ export default async function DashboardPage() {
           <QuickActions />
         </div>
         <div data-rise="" className="h-full">
-          <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
+          <PacePanel
+            sessions={paceSessions}
+            baselineWpm={baselineWpm}
+            recorded={recorded}
+          />
         </div>
       </div>
 
