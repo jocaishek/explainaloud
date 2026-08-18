@@ -440,7 +440,11 @@ function StepIndicator({
   reduceMotion: boolean;
 }) {
   return (
-    <ol className="grid grid-cols-4 gap-1 rounded-xl bg-surface p-1">
+    /* Five columns, because there are five steps. It said four, from before
+       the username step existed, and a five-item grid in a four-column track
+       wraps the last one onto a second row of its own — a progress indicator
+       that is visibly one step wider than the track it sits in. */
+    <ol className="grid grid-cols-5 gap-1 rounded-xl bg-surface p-1">
       {STEPS.map((label, index) => {
         const Icon = STEP_ICONS[index];
         const complete = index < step;
@@ -454,7 +458,7 @@ function StepIndicator({
               aria-current={active ? "step" : undefined}
               onClick={() => onStepSelect(index)}
               className={cn(
-                "relative flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-left text-xs font-medium transition-colors duration-200 sm:justify-start sm:px-3 motion-reduce:transition-none",
+                "relative flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-left font-medium text-xs transition-colors duration-200 lg:justify-start lg:px-3 motion-reduce:transition-none",
                 active
                   ? "text-strong"
                   : complete
@@ -476,10 +480,13 @@ function StepIndicator({
                   <Icon className="size-4" />
                 ) : null}
               </span>
-              <span className="relative hidden truncate sm:inline">
+              {/* Five labels do not fit beside five icons until the panel is
+                  wide. Below that the icon is the whole control and the label
+                  is read out rather than drawn. */}
+              <span className="relative hidden truncate lg:inline">
                 {label}
               </span>
-              <span className="sr-only sm:hidden">{label}</span>
+              <span className="sr-only lg:hidden">{label}</span>
             </button>
           </li>
         );

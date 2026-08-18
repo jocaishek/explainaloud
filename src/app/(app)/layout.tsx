@@ -29,21 +29,27 @@ export default async function DashboardLayout({
      closed. */
   const railCollapsed = (await cookies()).get("rail-collapsed")?.value === "1";
 
-  const [{ data: folders }, { data: courses }] = await Promise.all([
-    supabase
-      .from("folders")
-      .select("id, name, color, created_at")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: true })
-      .returns<Folder[]>(),
-    supabase
-      .from("courses")
-      .select("id, slug, topic, name, folder_id, pinned")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(RAIL_COURSES)
-      .returns<RailCourse[]>(),
-  ]);
+  const [{ data: folders }, { data: courses }, { data: pendingRequests }] =
+    await Promise.all([
+      supabase
+        .from("folders")
+        .select("id, name, color, created_at")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: true })
+        .returns<Folder[]>(),
+      supabase
+        .from("courses")
+        .select("id, slug, topic, name, folder_id, pinned")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(RAIL_COURSES)
+        .returns<RailCourse[]>(),
+      /* A number, not the rows. The badge needs a count and this query runs on
+         every screen in the app, so asking for the list of people waiting and
+         then calling `.length` on it would be a table read per navigation for
+         a digit. */
+      supabase.rpc("incoming_request_count"),
+    ]);
 
   return (
     <AppShell
@@ -53,6 +59,9 @@ export default async function DashboardLayout({
       showAdmin={isAdminEmail(user.email)}
       folders={folders ?? []}
       courses={courses ?? []}
+      pendingRequests={
+        typeof pendingRequests === "number" ? pendingRequests : 0
+      }
       defaultCollapsed={railCollapsed}
     >
       {children}

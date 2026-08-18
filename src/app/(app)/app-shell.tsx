@@ -9,6 +9,7 @@ import {
   Plus,
   Settings,
   ShieldCheck,
+  Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -16,6 +17,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { SignOutButton } from "~/components/sign-out-button";
+import { StreakToast } from "~/components/streak-toast";
 import { Button } from "~/components/ui/button";
 import type { Folder } from "~/lib/folders";
 import { cn } from "~/lib/utils";
@@ -61,6 +63,7 @@ import { type RailCourse, RailTopics } from "./rail-topics";
 const PRIMARY = [
   { href: "/home", label: "Home", icon: House },
   { href: "/record", label: "Record", icon: Mic },
+  { href: "/friends", label: "Friends", icon: Users },
 ];
 
 /* Settings is no longer in this list. It is a gear beside the account block at
@@ -108,12 +111,15 @@ function RailLink({
   active,
   collapsed,
   layoutId,
+  badge = 0,
   onNavigate,
 }: {
   item: NavItem;
   active: boolean;
   collapsed: boolean;
   layoutId: string;
+  /** A count worth interrupting for. Zero draws nothing at all. */
+  badge?: number;
   onNavigate?: () => void;
 }) {
   const Icon = item.icon;
@@ -143,8 +149,37 @@ function RailLink({
           className="absolute inset-0 rounded-control bg-accent-wash"
         />
       )}
-      <Icon aria-hidden className="relative size-[1.05rem] shrink-0" />
-      {!collapsed && <span className="relative truncate">{item.label}</span>}
+      <span className="relative flex shrink-0 items-center">
+        <Icon aria-hidden className="size-[1.05rem]" />
+        {/* Retracted, the count has nowhere to sit beside a label, so it
+            becomes a dot on the glyph. Expanded it is the number, ranged
+            right, because "three people are waiting" and "somebody is
+            waiting" are different amounts of urgency. */}
+        {badge > 0 && collapsed && (
+          <span
+            aria-hidden
+            className="-right-1 -top-0.5 absolute size-2 rounded-full bg-[color:var(--accent-solid)] ring-2 ring-card"
+          />
+        )}
+      </span>
+      {!collapsed && (
+        <>
+          <span className="relative truncate">{item.label}</span>
+          {badge > 0 && (
+            <span
+              aria-hidden
+              className="relative ml-auto flex min-w-5 items-center justify-center rounded-pill bg-accent-wash px-1.5 py-0.5 font-medium text-[0.68rem] text-brand-ink tabular-nums"
+            >
+              {badge > 9 ? "9+" : badge}
+            </span>
+          )}
+        </>
+      )}
+      {badge > 0 && (
+        <span className="sr-only">
+          {badge} {badge === 1 ? "request" : "requests"} waiting
+        </span>
+      )}
     </Link>
   );
 }
@@ -156,6 +191,7 @@ function Rail({
   showAdmin,
   folders,
   courses,
+  pendingRequests,
   collapsed,
   onToggle,
   onNavigate,
@@ -166,6 +202,8 @@ function Rail({
   showAdmin: boolean;
   folders: Folder[];
   courses: RailCourse[];
+  /** People waiting on a friend request. Badges the Friends tab. */
+  pendingRequests: number;
   collapsed: boolean;
   /** Retracts the rail. Absent inside the drawer, which closes instead. */
   onToggle?: () => void;
@@ -247,6 +285,7 @@ function Rail({
                 active={isActive(pathname, item.href)}
                 collapsed={collapsed}
                 layoutId={layoutId}
+                badge={item.href === "/friends" ? pendingRequests : 0}
                 onNavigate={onNavigate}
               />
             </li>
@@ -363,6 +402,7 @@ export function AppShell({
   showAdmin,
   folders,
   courses,
+  pendingRequests,
   defaultCollapsed,
   children,
 }: {
@@ -372,6 +412,8 @@ export function AppShell({
   showAdmin: boolean;
   folders: Folder[];
   courses: RailCourse[];
+  /** People waiting on a friend request. Badges the Friends tab. */
+  pendingRequests: number;
   /** Read from the cookie on the server, so the first paint is the right width. */
   defaultCollapsed: boolean;
   children: React.ReactNode;
@@ -411,7 +453,15 @@ export function AppShell({
     });
   }
 
-  const rail = { firstName, lastName, avatarUrl, showAdmin, folders, courses };
+  const rail = {
+    firstName,
+    lastName,
+    avatarUrl,
+    showAdmin,
+    folders,
+    courses,
+    pendingRequests,
+  };
 
   return (
     /* `register-app` is the switch. Everything below this div reads the app's
@@ -469,6 +519,11 @@ export function AppShell({
 
         <main className="flex-1">{children}</main>
       </div>
+
+      {/* Mounted once, at the top of the app, and driven by a window event —
+          so the recording screen four routes down announces a streak without
+          either file importing the other. See `markRecordingDay`. */}
+      <StreakToast />
 
       <AnimatePresence>
         {open && (

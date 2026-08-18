@@ -32,11 +32,16 @@ export function UsernameField({
   value,
   onChange,
   onAvailability,
+  autoFocus = true,
 }: {
   value: string;
   onChange: (next: string) => void;
   /** Lets the step disable Continue while a name is known to be unusable. */
   onAvailability?: (usable: boolean) => void;
+  /* On by default, because in onboarding this field is the whole step. Off
+     where it is one panel among several: a page that grabs the caret on load
+     scrolls itself to wherever the field happens to be. */
+  autoFocus?: boolean;
 }) {
   const id = useId();
   const [status, setStatus] = useState<Status>({ kind: "empty" });
@@ -119,7 +124,7 @@ export function UsernameField({
         </span>
         <Input
           id={id}
-          autoFocus
+          autoFocus={autoFocus}
           autoCapitalize="none"
           autoCorrect="off"
           spellCheck={false}

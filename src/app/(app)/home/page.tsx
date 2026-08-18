@@ -7,6 +7,7 @@ import { HomeHeader } from "./home-header";
 import { PacePanel, type PaceSession } from "./pace-panel";
 import { QuickActions } from "./quick-actions";
 import { StatCards } from "./stat-cards";
+import { StreakStrip, type WeekDay } from "./streak-strip";
 
 /**
  * How many bars the pace chart draws, and how many rows it reads to find them.
@@ -21,12 +22,23 @@ const PACE_WINDOW = 20;
 export default async function DashboardPage() {
   const { supabase, user, profile } = await requireProfile();
 
+  /* The zone the streak is counted in.
+   *
+   * The profile's, not the server's, and not this request's headers either: a
+   * run of days is a run of *their* days, and midnight in Auckland is 11am in
+   * London. Recordings are filed against the browser's live zone (see
+   * `markRecordingDay`), which is the same answer for everybody who has not
+   * moved since signing up, and the better one for anybody who has. */
+  const zone = profile.timezone ?? "UTC";
+
   const [
     { data: folders },
     { data: courses },
     { data: baseline },
     { data: recent },
     { count: sessionCount },
+    { data: streak },
+    { data: week },
   ] = await Promise.all([
     supabase
       .from("folders")
@@ -69,6 +81,8 @@ export default async function DashboardPage() {
       .from("course_sessions")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id),
+    supabase.rpc("own_streak", { zone }),
+    supabase.rpc("streak_week", { zone }),
   ]);
 
   /* Unreliable recordings are dropped rather than drawn faintly.
@@ -102,6 +116,13 @@ export default async function DashboardPage() {
     .reverse();
 
   const baselineWpm = baseline?.median_wpm ?? baseline?.capable_wpm ?? null;
+
+  /* The two RPCs come back untyped, so they are narrowed here rather than
+     asserted at the call. A streak that failed to load is not a streak of
+     zero, but on a dashboard the difference is invisible and the alternative
+     is an error state for a decoration. */
+  const currentStreak = typeof streak === "number" ? streak : 0;
+  const weekDays = (week ?? []) as WeekDay[];
 
   const topicCount = courses?.length ?? 0;
   const recorded = sessionCount ?? 0;
@@ -145,6 +166,12 @@ export default async function DashboardPage() {
        here is the screen. */
     <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-8 pb-14 sm:px-6 lg:px-10 lg:py-10 lg:pb-16">
       <HomeHeader firstName={profile.first_name} lede={lede} />
+
+      {/* Above the totals, because it is the only figure on this page that
+          moves today. */}
+      {weekDays.length > 0 && (
+        <StreakStrip streak={currentStreak} week={weekDays} />
+      )}
 
       <StatCards stats={stats} />
 

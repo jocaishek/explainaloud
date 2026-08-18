@@ -15,6 +15,7 @@ import {
 } from "~/lib/ai/transcript-cleanup";
 import { audioExtension, preferredRecorderMimeType } from "~/lib/audio";
 import { localDay } from "~/lib/limits";
+import { markRecordingDay } from "~/lib/record-day";
 import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
@@ -1356,6 +1357,20 @@ export function RecordConsole({
         );
         return;
       }
+
+      /* Today counts, and the shell says so if it is the first one.
+       *
+       * Here rather than a few lines up, because a take with no words in it is
+       * not a day of practice — this screen has just told the reader there is
+       * nothing to grade, and marking the calendar anyway would be the app
+       * disagreeing with itself. And here rather than after the grading,
+       * because a streak is about having explained something out loud, not
+       * about what the grader made of it: a model timing out must not cost
+       * somebody their run.
+       *
+       * Deliberately not awaited. Nothing below depends on it and nothing
+       * about it may delay the report. */
+      void markRecordingDay();
 
       // Only now — after the student has stopped — do we ask for teaching.
       if (!courseReady || text.length < 24) {

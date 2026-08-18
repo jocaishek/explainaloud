@@ -1,7 +1,9 @@
 import { Settings } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "~/app/(app)/settings/profile-form";
+import { StreakFlame } from "~/components/streak-flame";
 import { ageFrom, USE_TYPE_LABELS } from "~/lib/profile";
+import { streakLabel } from "~/lib/streak";
 import { requireProfile } from "~/lib/supabase/server";
 import { AvatarPicker } from "./avatar-picker";
 
@@ -17,7 +19,12 @@ export const metadata = { title: "Your profile · Explainaloud" };
  * face landed on a page about theme preferences.
  */
 export default async function ProfilePage() {
-  const { user, profile } = await requireProfile();
+  const { supabase, user, profile } = await requireProfile();
+
+  const { data: streak } = await supabase.rpc("own_streak", {
+    zone: profile.timezone ?? "UTC",
+  });
+  const currentStreak = typeof streak === "number" ? streak : 0;
 
   const age = ageFrom(profile.date_of_birth);
   const initials =
@@ -31,6 +38,14 @@ export default async function ProfilePage() {
           <h1 className="font-semibold text-3xl text-strong tracking-tight">
             {profile.first_name} {profile.last_name}
           </h1>
+          {/* The handle, directly under the name, because on this page they
+              are the same fact said two ways: one is what people call you and
+              the other is what they type to find you. */}
+          {profile.username && (
+            <p className="mt-1.5 font-mono text-[0.8rem] text-subtle">
+              @{profile.username}
+            </p>
+          )}
           <p className="mt-2 text-subtle">
             Your picture, your details, and the account they belong to.
           </p>
@@ -61,6 +76,24 @@ export default async function ProfilePage() {
       <Section title="You" description="What the app knows about you.">
         <dl className="divide-y divide-border overflow-hidden rounded-card border border-border bg-card shadow-rest">
           <Row label="Age" value={age === null ? "—" : `${age}`} />
+          <Row
+            label="Username"
+            value={profile.username ? `@${profile.username}` : "Not set"}
+            note={
+              profile.username
+                ? "Permanent. Friends find you by this."
+                : "Pick one on the Friends screen so people can find you."
+            }
+          />
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
+            <dt className="text-subtle">Streak</dt>
+            <dd className="flex items-center gap-2 text-right">
+              {currentStreak > 0 && <StreakFlame size="sm" />}
+              <span className="font-medium text-strong">
+                {streakLabel(currentStreak)}
+              </span>
+            </dd>
+          </div>
           <Row
             label="Using it for"
             value={USE_TYPE_LABELS[profile.use_type].title}
@@ -106,7 +139,7 @@ function Section({
   return (
     <section className="flex flex-col gap-3">
       <div>
-        <h2 className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.12em]">
+        <h2 className="font-semibold text-[0.95rem] text-strong tracking-[-0.01em]">
           {title}
         </h2>
         <p className="mt-1 text-[0.85rem] text-subtle">{description}</p>
