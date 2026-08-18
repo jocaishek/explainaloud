@@ -61,8 +61,19 @@ export async function POST(
     });
   }
 
+  /* The course's own points stand in when the model wrote no video queries,
+     which is every course built from uploaded material: sources-only mode is
+     told to return an empty `video_searches`, because at build time the files
+     are the world and the course must not point away from them. This route is
+     the opposite situation — somebody has asked for videos — so the search
+     runs on what the course is actually about instead of not running. */
+  const videoQueries =
+    generated.video_searches.length > 0
+      ? generated.video_searches
+      : resourceConcepts;
+
   const [videoDiscovery, resourceDiscovery] = await Promise.all([
-    discoverCourseVideos(course.topic, generated.video_searches),
+    discoverCourseVideos(course.topic, videoQueries),
     discoverCourseResources(course.topic, resourceConcepts),
   ]);
   if (!videoDiscovery.searched && !resourceDiscovery.searched) {
