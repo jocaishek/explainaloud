@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { dateOfBirthError, isUseType, nameError } from "~/lib/profile";
 import { createClient } from "~/lib/supabase/server";
+import { normaliseUsername, usernameError } from "~/lib/username";
 
 export type OnboardingState = { error: string | null };
 
@@ -30,10 +31,15 @@ export async function saveProfile(
   const lastName = String(formData.get("lastName") ?? "").trim();
   const dateOfBirth = String(formData.get("dateOfBirth") ?? "").trim();
   const useType = String(formData.get("useType") ?? "");
+  const username = normaliseUsername(String(formData.get("username") ?? ""));
+  const timezone = String(formData.get("timezone") ?? "")
+    .trim()
+    .slice(0, 64);
 
   const problem =
     nameError(firstName, "first name") ??
     nameError(lastName, "last name") ??
+    usernameError(username) ??
     dateOfBirthError(dateOfBirth);
 
   if (problem) return { error: problem };
@@ -50,10 +56,26 @@ export async function saveProfile(
       last_name: lastName,
       date_of_birth: dateOfBirth,
       use_type: useType,
+      username,
+      /* The zone the browser reported, which is what a streak is counted in.
+         Whether a recording landed on Tuesday or Wednesday cannot be answered
+         without knowing where the person was standing. */
+      timezone: timezone || null,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "user_id" },
   );
+
+  /* The name was taken between the form checking and this write.
+   *
+   * 23505 is the unique index doing its job, and it is the only thing in this
+   * feature that actually guarantees uniqueness — the live check in the field
+   * is a courtesy that two people can both pass in the same second. Named here
+   * so the person is asked for another name rather than shown "we couldn't
+   * save that", which is what a bare constraint violation would produce. */
+  if (error?.code === "23505") {
+    return { error: "That username was just taken. Pick another." };
+  }
 
   if (error) {
     console.error("Failed to save onboarding profile", {
