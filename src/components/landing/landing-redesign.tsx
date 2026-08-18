@@ -14,6 +14,7 @@ import {
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { DemoConsole } from "~/components/landing/demo-console";
 import { FlowField } from "~/components/landing/flow-field";
+import { FriendsAndStreaks } from "~/components/landing/friends-streaks";
 import { GlassMark } from "~/components/landing/glass-mark";
 import { SignupNudge } from "~/components/landing/signup-nudge";
 
@@ -1072,22 +1073,37 @@ export function LandingRedesign() {
              `childNodes` filtered to elements, one level deep only: going
              deeper animates text inside cards that have their own reveal and
              the two fight over the same transform. */
+          /* Turned down, deliberately, and the three changes are each a
+             different kind of noise removed.
+             *
+             * **It no longer reverses.** `play none none reverse` re-hid every
+             * section on the way back up, so scrolling a page twice meant
+             * watching it assemble twice, and a reader who scrolls up to
+             * re-read a sentence had it taken away as they arrived. Content
+             * that has been read stays put.
+             *
+             * **It no longer staggers the children.** A heading, a rule and a
+             * paragraph arriving 90ms apart is three events where the reader
+             * perceives one, and across six sections it is the difference
+             * between a page that settles and a page that is always still
+             * arriving.
+             *
+             * **It travels a third as far, in two thirds the time.** 26px over
+             * 720ms is a movement you watch; 10px over 420ms is one you only
+             * notice if it is missing, which is what a reveal is for. */
           gsap.utils
             .toArray<HTMLElement>("[data-scroll-reveal]")
             .forEach((element) => {
-              const parts = Array.from(element.children) as HTMLElement[];
-              const targets = parts.length > 1 ? parts : [element];
               reveals.push(
-                gsap.from(targets, {
-                  y: 26,
+                gsap.from(element, {
+                  y: 10,
                   opacity: 0,
-                  duration: 0.72,
-                  stagger: 0.09,
-                  ease: "power3.out",
+                  duration: 0.42,
+                  ease: "power2.out",
                   scrollTrigger: {
                     trigger: element,
-                    start: "top 85%",
-                    toggleActions: "play none none reverse",
+                    start: "top 88%",
+                    toggleActions: "play none none none",
                   },
                 }),
               );
@@ -1103,11 +1119,16 @@ export function LandingRedesign() {
              actually means something, and one of those is a signature while
              two is a mannerism. */
 
-          /* The console opens rather than appears: it comes in from slightly
-             below and slightly small, and the ease overshoots a hair so it
+          /* The console opens rather than appears: it comes in from below and
              seats itself. This is the one thing on the page a reader is meant
              to reach for, and it should feel like a piece of equipment being
-             set down in front of them. */
+             set down in front of them.
+             *
+             * **This one is kept at full strength on purpose.** Everything
+             * else on the page was turned down; this was not. A reveal earns
+             * its distance when it is pointing at the thing the page is
+             * about, and one deliberate arrival among quiet ones reads as
+             * emphasis — where six of them read as a template. */
           reveals.push(
             gsap.from(".lp-product-window", {
               y: 40,
@@ -1128,7 +1149,7 @@ export function LandingRedesign() {
 
           gsap.utils
             .toArray<HTMLElement>("[data-feature-card]")
-            .forEach((element, index) => {
+            .forEach((element) => {
               /* A rise and a fade, and nothing else.
                *
                * This used to overshoot: the card arrived *slightly large*
@@ -1145,17 +1166,20 @@ export function LandingRedesign() {
               reveals.push(
                 gsap.fromTo(
                   element,
-                  { y: 24, opacity: 0 },
+                  { y: 10, opacity: 0 },
                   {
                     y: 0,
                     opacity: 1,
-                    duration: 0.6,
-                    delay: (index % 3) * 0.08,
+                    duration: 0.42,
+                    /* The per-card delay is gone with the stagger above. Three
+                       cards in a row arriving 80ms apart is a wave, and a wave
+                       is the reader watching the layout instead of reading
+                       it. */
                     ease: "power2.out",
                     scrollTrigger: {
                       trigger: element,
-                      start: "top 86%",
-                      toggleActions: "play none none reverse",
+                      start: "top 88%",
+                      toggleActions: "play none none none",
                     },
                   },
                 ),
@@ -1827,6 +1851,8 @@ export function LandingRedesign() {
           </div>
         </div>
       </section>
+
+      <FriendsAndStreaks />
 
       {/* The close is the open, again.
           It was still carrying the retired WebP as a background image, which

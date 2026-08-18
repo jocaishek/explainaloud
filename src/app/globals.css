@@ -49,6 +49,13 @@ main.lp-v2 {
   --ok-spoken: #6fce9d;
   --vague-spoken: #e2b463;
   --miss-spoken: #e58a7e;
+
+  /* Restated, because this block forces light surfaces regardless of the
+     reader's theme. Without it, somebody browsing in dark mode gets the lifted
+     night flame on a near-white card, which is the one place it washes out. */
+  --flame: #ea580c;
+  --flame-core: #fdba74;
+  --flame-glow: rgba(234, 88, 12, 0.3);
 }
 
 /* One word of the hero's spoken line, arriving.
@@ -425,6 +432,25 @@ html:has(main.lp-v2) {
   --ok: #0f7a3d;
   --miss: #c4271c;
   --vague: #96600a;
+
+  /* The streak flame. One more reserved colour, declared here for the same
+     reason the verdicts are: it means the same thing on both sides of the
+     sign-in, so the flame somebody sees on the landing page is the flame they
+     earn afterwards.
+
+     **It is orange, and it is deliberately not the amber verdict.** Amber
+     already carries a judgement — said, but not in a checkable form — and the
+     two must never be confusable, because one of them appears in a marked
+     transcript. So this is a saturated red-orange rather than the muted gold
+     `--vague` is: at a glance, in the same view, they read as different
+     things rather than as two weights of one thing. The core is a lighter
+     orange, not a yellow, for the same reason.
+
+     Nothing but the streak may use it. That is the condition on which a
+     product with a reserved palette gets to add a colour at all. */
+  --flame: #ea580c;
+  --flame-core: #fdba74;
+  --flame-glow: rgba(234, 88, 12, 0.3);
 }
 
 /* Dark theme — the original #121212 canvas.
@@ -473,6 +499,12 @@ html:has(main.lp-v2) {
   --subtle: #8b8b93;
   --surface: rgba(255, 255, 255, 0.06);
   --surface-border: rgba(255, 255, 255, 0.12);
+
+  /* One stop up, for the same reason `--brand-ink` moves: a mid-weight orange
+     that is vivid on paper is a brown smudge on carbon. */
+  --flame: #fb7a33;
+  --flame-core: #fed7aa;
+  --flame-glow: rgba(251, 122, 51, 0.26);
 }
 
 /* ---------------------------------------------------------------------------
@@ -801,6 +833,12 @@ html:has(main.lp-v2) {
      is correct in both registers without knowing which one it is in. */
   --radius-card: var(--r-card);
   --radius-control: var(--r-control);
+  /* `--r-pill` has existed at `:root` since the register split and was never
+     registered here, so `rounded-pill` generated no rule at all and every
+     element asking for one rendered at the control radius — which in the app
+     is zero. A token that silently does nothing is worse than a missing one:
+     the class name reads as correct in every file that uses it. */
+  --radius-pill: var(--r-pill);
   --shadow-rest: var(--elev-rest);
   --shadow-hover: var(--elev-hover);
   --shadow-float: var(--elev-float);
@@ -2771,4 +2809,111 @@ html:has(main.lp-v2) {
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
   box-shadow: 6px 7px 0 rgba(4, 14, 32, 0.62);
+}
+
+/* ---------------------------------------------------------------------------
+ * The streak flame
+ *
+ * Three animations on one shape, and the split is the whole reason this is CSS
+ * rather than an icon: the glow travels outward and dies, the body arrives on
+ * a settle curve, and only the core flickers. Run together on a single element
+ * they would read as one wobble.
+ *
+ * All of it is `transform` and `opacity`, so none of it touches layout, and
+ * all of it is `both`-filled and finite — the flame is still after about a
+ * second. A shape that keeps moving in the corner of a page is the thing this
+ * product bans everywhere else, and a celebration does not get an exemption
+ * for lasting longer than the celebration.
+ * ------------------------------------------------------------------------ */
+
+.streak-flame .streak-flame-outer {
+  fill: var(--flame);
+}
+
+/* The hot inside. Full strength rather than a wash of the surface behind it:
+   the two stops are both orange now, so the shape reads as one object lit from
+   within rather than as a glyph with a hole punched in it. */
+.streak-flame .streak-flame-core {
+  fill: var(--flame-core);
+  opacity: 0.9;
+  transform-origin: 50% 78%;
+}
+
+/* The glow. A ring behind the flame that expands once and goes out; it is not
+   a blurred orb sitting over the layout, it lasts 700ms and belongs to the
+   glyph it is drawn around. */
+.streak-flame[data-lit]::before {
+  content: "";
+  position: absolute;
+  inset: -22%;
+  border-radius: 9999px;
+  background: radial-gradient(circle, var(--flame-glow) 0%, transparent 68%);
+  animation: streak-glow 720ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.streak-flame[data-lit] .streak-flame-body {
+  animation: streak-rise 620ms cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+.streak-flame[data-lit] .streak-flame-core {
+  animation: streak-flicker 300ms ease-in-out 3 both;
+}
+
+@keyframes streak-glow {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  35% {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.55);
+  }
+}
+
+@keyframes streak-rise {
+  from {
+    /* Not from zero. Nothing arrives out of nothing, and a flame that grows
+       from a point reads as a loading spinner finishing. */
+    opacity: 0;
+    transform: translateY(14%) scale(0.72);
+  }
+  60% {
+    transform: translateY(-3%) scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes streak-flicker {
+  0%,
+  100% {
+    transform: scaleY(1) scaleX(1);
+    opacity: 0.85;
+  }
+  50% {
+    transform: scaleY(1.16) scaleX(0.94);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streak-flame[data-lit]::before,
+  .streak-flame[data-lit] .streak-flame-body,
+  .streak-flame[data-lit] .streak-flame-core {
+    animation: none;
+  }
+}
+
+/* A day the streak did not reach. Ruled rather than filled, so the week reads
+   as seven slots with some of them taken rather than as a row of buttons. */
+.streak-day {
+  transition:
+    background-color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
+    color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
+    border-color var(--dur-ui, 180ms) var(--ease-exit, ease-out);
 }

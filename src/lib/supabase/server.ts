@@ -101,6 +101,10 @@ export type Profile = {
   last_name: string;
   date_of_birth: string;
   use_type: "school" | "teacher" | "personal";
+  /** Set once at onboarding, then immutable. Null on accounts that predate it. */
+  username: string | null;
+  /** IANA zone, for counting streak days where the person actually is. */
+  timezone: string | null;
   /** Public URL of the uploaded picture. Null means fall back to initials. */
   avatar_url: string | null;
   created_at: string;
@@ -116,7 +120,7 @@ const getCachedProfile = cache(async (userId: string) => {
   const { data } = await supabase
     .from("profiles")
     .select(
-      "user_id, first_name, last_name, date_of_birth, use_type, avatar_url, created_at, plan, plan_renews_at, stripe_customer_id",
+      "user_id, first_name, last_name, date_of_birth, use_type, username, timezone, avatar_url, created_at, plan, plan_renews_at, stripe_customer_id",
     )
     .eq("user_id", userId)
     .maybeSingle<Profile>();

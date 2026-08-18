@@ -36,8 +36,8 @@ export const GOVERNING_JURISDICTION = "the State of California, United States";
  * Material changes require a new date *and* notice to existing users — see the
  * "Changes to these Terms" section. Bumping these silently defeats the point.
  */
-export const TERMS_EFFECTIVE_DATE = "July 29, 2026";
-export const PRIVACY_EFFECTIVE_DATE = "July 29, 2026";
+export const TERMS_EFFECTIVE_DATE = "August 18, 2026";
+export const PRIVACY_EFFECTIVE_DATE = "August 18, 2026";
 
 /**
  * How long we keep an account's content after a deletion request. Named in the

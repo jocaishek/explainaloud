@@ -61,6 +61,33 @@ export default function TermsPage() {
         Accounts are personal to you. Do not share, sell, or transfer an account
         to anyone else.
       </p>
+      <p>
+        <strong>
+          You can sign in with your email address or your username.
+        </strong>{" "}
+        Either one, with your password. A username is not a secret and is not a
+        second credential; your password is what protects the account, so use
+        one you do not use anywhere else.
+      </p>
+      <p>
+        <strong>
+          Your username and your date of birth are set once and cannot be
+          changed afterwards.
+        </strong>{" "}
+        Your username is how other people find and recognise you, and your date
+        of birth is what your eligibility for an account rests on. Choose both
+        carefully at signup. If you need one corrected because of a genuine
+        mistake, write to us at{" "}
+        <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a>; we
+        are not obliged to change either, and we will not do so to facilitate a
+        transfer of the account.
+      </p>
+      <p>
+        We may refuse, reclaim, or remove a username that impersonates somebody,
+        that suggests an official or staff account, that infringes a trademark,
+        or that is abusive. If we reclaim one, we will tell you and you will be
+        asked to choose another.
+      </p>
 
       <h2>3. What the Service does, and what it does not</h2>
       <p>
@@ -138,7 +165,61 @@ export default function TermsPage() {
         make that a criminal matter, not merely a breach of these Terms.
       </p>
 
-      <h2>6. Acceptable use</h2>
+      <h2>6. Usernames, friends, and what other people can see</h2>
+      <p>
+        Explainaloud has a friends feature. It works like this, and these are
+        the only things it does.
+      </p>
+      <ul>
+        <li>
+          <strong>
+            Your username, your first and last name, and your profile picture
+            can be found by other signed-in users.
+          </strong>{" "}
+          That is what makes it possible for somebody to add you. Treat all of
+          it as public within the Service, and do not use a name or picture you
+          would not want another user to see.
+        </li>
+        <li>
+          <strong>
+            You have a profile page at <code>/profiles/your-username</code>,
+            which any signed-in user can open.
+          </strong>{" "}
+          It carries your name, username, picture, the month you joined, and a
+          button to send you a friend request. It is not public outside the
+          Service: it requires an account, and it is not indexed by search
+          engines. The two numbers below stay behind an accepted friendship.
+        </li>
+        <li>
+          <strong>A friendship needs both people to agree.</strong> One person
+          sends a request and the other accepts it. Either of you can cancel,
+          decline, or remove the friendship at any time, and either of you doing
+          so ends the sharing below immediately.
+        </li>
+        <li>
+          <strong>
+            An accepted friend can see exactly two things about you: how many
+            topics you have created, and how many consecutive days you have
+            recorded on.
+          </strong>{" "}
+          They cannot see your topics, your recordings, your transcripts, your
+          scores, your gaps, your email address, or your date of birth. Nothing
+          you have said is visible to anyone else.
+        </li>
+        <li>
+          <strong>Your streak is counted in your own timezone</strong>, which we
+          store for that purpose. See our{" "}
+          <Link href="/privacy">Privacy Policy</Link>.
+        </li>
+      </ul>
+      <p>
+        Streaks are a study prompt, not an entitlement. We may correct or reset
+        a streak that was produced by empty or automated recordings, and gaps
+        caused by downtime, by a device with the wrong date, or by your own
+        deletion of content are not something we restore.
+      </p>
+
+      <h2>7. Acceptable use</h2>
       <p>You agree not to:</p>
       <ul>
         <li>
@@ -158,6 +239,18 @@ export default function TermsPage() {
           or generate activity;
         </li>
         <li>
+          choose a username that impersonates another person, a brand, or an
+          Explainaloud staff or official account, or that is obscene, hateful,
+          or targeted at somebody;
+        </li>
+        <li>
+          send friend requests at scale, or use the search and friends features
+          to collect information about other users;
+        </li>
+        <li>
+          record silence, noise, or automated audio in order to build a streak;
+        </li>
+        <li>
           circumvent usage limits, rate limits, paywalls, or plan restrictions,
           including by creating multiple accounts to do so;
         </li>
@@ -172,7 +265,7 @@ export default function TermsPage() {
         </li>
       </ul>
 
-      <h2>7. Availability and changes</h2>
+      <h2>8. Availability and changes</h2>
       <p>
         The Service is provided on an evolving basis. We may add, change, or
         remove features, and we may impose or adjust usage limits. We may need
@@ -185,7 +278,7 @@ export default function TermsPage() {
         working.
       </p>
 
-      <h2>8. Suspension and termination</h2>
+      <h2>9. Suspension and termination</h2>
       <p>
         You may stop using the Service and delete your account at any time. We
         may suspend or terminate your account if you materially breach these
@@ -193,9 +286,9 @@ export default function TermsPage() {
         Service or to other users. Where it is reasonable and lawful to do so,
         we will give you notice first.
       </p>
-      <p>Sections 5, 9, 10, 11, and 12 survive termination.</p>
+      <p>Sections 5, 10, 11, 12, and 13 survive termination.</p>
 
-      <h2>9. Disclaimer of warranties</h2>
+      <h2>10. Disclaimer of warranties</h2>
       <p>
         <strong>
           The Service is provided &ldquo;as is&rdquo; and &ldquo;as
@@ -214,7 +307,7 @@ export default function TermsPage() {
         and you may have rights that these Terms cannot take away.
       </p>
 
-      <h2>10. Limitation of liability</h2>
+      <h2>11. Limitation of liability</h2>
       <p>
         <strong>
           To the fullest extent permitted by law, Explainaloud will not be
@@ -239,7 +332,7 @@ export default function TermsPage() {
         negligence.
       </p>
 
-      <h2>11. Indemnity</h2>
+      <h2>12. Indemnity</h2>
       <p>
         You agree to indemnify and hold harmless Explainaloud from any claim,
         demand, loss, or expense (including reasonable legal fees) brought by a
@@ -247,7 +340,7 @@ export default function TermsPage() {
         your breach of these Terms or of any law or third-party right.
       </p>
 
-      <h2>12. Governing law and disputes</h2>
+      <h2>13. Governing law and disputes</h2>
       <p>
         These Terms are governed by the laws of {GOVERNING_JURISDICTION},
         without regard to its conflict-of-laws rules. You and we submit to the
@@ -265,7 +358,7 @@ export default function TermsPage() {
         Most disputes can be resolved that way.
       </p>
 
-      <h2>13. Changes to these Terms</h2>
+      <h2>14. Changes to these Terms</h2>
       <p>
         We may update these Terms. When we do, we will change the effective date
         at the top. If a change is material (for example, one that reduces your
@@ -275,7 +368,7 @@ export default function TermsPage() {
         not accept them, stop using the Service and delete your account.
       </p>
 
-      <h2>14. General</h2>
+      <h2>15. General</h2>
       <p>
         These Terms, together with the Privacy Policy, are the entire agreement
         between you and us about the Service. If any provision is found
@@ -286,7 +379,7 @@ export default function TermsPage() {
         acquisition, or sale of assets.
       </p>
 
-      <h2>15. Contact</h2>
+      <h2>16. Contact</h2>
       <p>
         Questions about these Terms:{" "}
         <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a>.
