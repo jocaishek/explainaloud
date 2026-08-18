@@ -1,9 +1,15 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, LockKeyhole, Mic } from "lucide-react";
+import { ArrowRight, LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { DemoConsole } from "~/components/landing/demo-console";
 import { FlowField } from "~/components/landing/flow-field";
@@ -52,22 +58,6 @@ const whyOutLoud = [
 ] as const;
 
 const ease = [0.23, 1, 0.32, 1] as const;
-
-const waveform = [
-  { id: "a", height: 10 },
-  { id: "b", height: 22 },
-  { id: "c", height: 15 },
-  { id: "d", height: 30 },
-  { id: "e", height: 18 },
-  { id: "f", height: 26 },
-  { id: "g", height: 13 },
-  { id: "h", height: 34 },
-  { id: "i", height: 20 },
-  { id: "j", height: 28 },
-  { id: "k", height: 12 },
-  { id: "l", height: 22 },
-] as const;
-
 /**
  * The read-through waveform.
  *
@@ -91,185 +81,185 @@ const READ_WAVE = [
   20, 24, 36, 50, 64, 76, 58, 42, 28, 18, 22, 32, 46, 60, 52, 38, 26, 20,
 ] as const;
 
-/** The tallest bar. Every bar is laid out at this height and scaled down to
- *  its own, so one box size serves all twelve and nothing re-lays-out. */
-const WAVEFORM_MAX = 34;
+/**
+ * The hero's product panel: a person talking, being marked as they talk.
+ *
+ * What was here was an app window — a mic button with a pulsing ring, a
+ * twelve-bar waveform, a running clock and three checklist rows. Every one of
+ * those is a picture of *a recorder*, and a recorder is the least interesting
+ * true thing about this product. It also carried the tells: chrome around
+ * content, a fake timestamp, an icon in a circle, and decoration that moves
+ * forever while explaining nothing.
+ *
+ * The product's one idea is that a claim resolves while the sentence is still
+ * going. So that is what this is. The words arrive at the speed somebody says
+ * them, riding a shallow curve, and a beat after each claim lands it takes its
+ * verdict colour — the same green and the same amber the grader uses inside the
+ * app, because the colour somebody is shown before signing up has to be the
+ * colour they are graded in afterwards. Then the sentence trails off, and the
+ * point that was never reached arrives underneath in red, which is the only
+ * honest way to draw a thing that was not said.
+ *
+ * The motion has a job, which is the test for whether it belongs here: it *is*
+ * the explanation. Nothing in it loops for atmosphere.
+ */
+
+/** A claim's verdict, or `null` for the connective tissue between claims. */
+type Verdict = "ok" | "vague" | null;
 
 /**
- * The three verdicts, as the hero states them.
+ * The line, in the order it is spoken.
  *
- * Ordered the way a rehearsal produces them rather than by severity, because
- * the panel below reveals them one at a time and the sequence is the argument:
- * you said this, you rushed this, you never reached this.
+ * Split by claim rather than by word, so a verdict can resolve per claim; the
+ * words inside are what get staggered.
  */
-const liveResults = [
-  {
-    id: "reached",
-    verdict: "Reached",
-    point: "The problem your audience actually has",
-    color: "var(--ok)",
-    tint: "var(--ok-light)",
-  },
-  {
-    id: "thin",
-    verdict: "Too thin",
-    point: "The evidence behind your main claim",
-    color: "var(--vague)",
-    tint: "var(--vague-light)",
-  },
-  {
-    id: "missed",
-    verdict: "Missed",
-    point: "How the handoff works at the end",
-    color: "var(--miss)",
-    tint: "var(--miss-light)",
-  },
-] as const;
+const SPOKEN: Array<{ text: string; verdict: Verdict }> = [
+  { text: "So the problem is", verdict: null },
+  { text: "teams ship things nobody asked for", verdict: "ok" },
+  { text: "and the evidence for that is", verdict: null },
+  { text: "you know, pretty clear", verdict: "vague" },
+  { text: "and then —", verdict: null },
+];
 
-/**
- * The hero's product panel.
- *
- * The previous version was a recorder and nothing else — a mic, a waveform and
- * a stop button, which is a screenshot of Voice Memos and says nothing about
- * what this page is selling. What makes the product legible is not that it
- * records you but that key points resolve into verdicts while you talk, so the
- * panel now shows that happening: the checklist fills in, one line at a time,
- * and starts over.
- */
-function LiveRehearsalPanel() {
+/** Between words. Fast enough to read as speech rather than as a typewriter. */
+const WORD_MS = 105;
+/** The beat between a claim finishing and its colour landing. */
+const RESOLVE_MS = 420;
+/** How long the finished line holds before the run starts again. */
+const HOLD_MS = 2600;
+
+/** The verdict tokens sized for running text. See `globals.css` for why. */
+const VERDICT_INK: Record<Exclude<Verdict, null>, string> = {
+  ok: "var(--ok-spoken)",
+  vague: "var(--vague-spoken)",
+};
+
+function SpokenLine() {
   const reduceMotion = useReducedMotion();
-  const [revealed, setRevealed] = useState(reduceMotion ? 3 : 0);
-  const [seconds, setSeconds] = useState(17);
-
-  useEffect(() => {
-    if (reduceMotion) {
-      setRevealed(liveResults.length);
-      return;
-    }
-    const interval = window.setInterval(() => {
-      // One past the last line, so the completed list holds for a beat before
-      // the run restarts — otherwise the third verdict is never actually read.
-      setRevealed((current) => (current + 1) % (liveResults.length + 1));
-    }, 1600);
-    return () => window.clearInterval(interval);
-  }, [reduceMotion]);
+  const words = useMemo(
+    () =>
+      SPOKEN.flatMap((part, partIndex) =>
+        part.text.split(" ").map((word) => ({ word, partIndex })),
+      ),
+    [],
+  );
+  /* One index rather than one state per word. Everything on screen is a
+     function of how many words have been said, which is also what makes the
+     reduced-motion version a single assignment instead of a second component. */
+  const [said, setSaid] = useState(reduceMotion ? words.length : 0);
+  const [resolved, setResolved] = useState(reduceMotion);
+  const [missedShown, setMissedShown] = useState(reduceMotion);
 
   useEffect(() => {
     if (reduceMotion) return;
-    const interval = window.setInterval(() => {
-      setSeconds((current) => (current + 1) % 600);
-    }, 1000);
-    return () => window.clearInterval(interval);
-  }, [reduceMotion]);
+    let cancelled = false;
+    const timers: number[] = [];
 
-  const clock = `${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(
-    seconds % 60,
-  ).padStart(2, "0")}`;
+    const run = () => {
+      if (cancelled) return;
+      setSaid(0);
+      setResolved(false);
+      setMissedShown(false);
+
+      words.forEach((_, index) => {
+        timers.push(
+          window.setTimeout(() => setSaid(index + 1), (index + 1) * WORD_MS),
+        );
+      });
+
+      const spoken = words.length * WORD_MS;
+      timers.push(
+        window.setTimeout(() => setResolved(true), spoken + RESOLVE_MS),
+      );
+      timers.push(
+        window.setTimeout(
+          () => setMissedShown(true),
+          spoken + RESOLVE_MS + 700,
+        ),
+      );
+      timers.push(window.setTimeout(run, spoken + RESOLVE_MS + HOLD_MS));
+    };
+
+    run();
+    return () => {
+      cancelled = true;
+      for (const timer of timers) window.clearTimeout(timer);
+    };
+  }, [reduceMotion, words]);
 
   return (
     <section
-      aria-label="What Explainaloud shows while you rehearse"
-      className="mx-auto w-full max-w-[46rem] border border-white/20 bg-[var(--panel-deep)] text-primary-foreground shadow-[6px_7px_0_rgba(4,14,32,0.72)]"
+      aria-label="A rehearsal being marked while it is spoken"
+      className="mx-auto w-full max-w-[46rem]"
     >
-      <div className="flex items-center gap-4 border-white/12 border-b px-4 py-3.5 sm:px-5">
-        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--miss)] text-white">
-          {!reduceMotion && (
-            <span className="absolute inset-0 animate-ping rounded-full border border-white/35 opacity-40" />
-          )}
-          <Mic className="relative h-4 w-4" />
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="font-mono text-[0.62rem] uppercase tracking-[0.15em]">
-            Rehearsing out loud
-          </p>
-          <p className="mt-1 truncate text-primary-foreground/60 text-sm">
-            Checking your talk against its key points
-          </p>
-        </div>
-        <div
-          className="hidden h-7 items-end gap-[3px] sm:flex"
-          aria-hidden="true"
-        >
-          {/* `scaleY`, not `height`.
-              These twelve bars used to animate `height`, which is a layout
-              property: every frame, for as long as the hero was on screen,
-              the browser re-ran layout for the whole row. A waveform is
-              decoration and it was the most expensive thing on the page.
-              `scaleY` on a solid rectangle is visually identical and is
-              composited, so it costs nothing. `origin-bottom` is what keeps
-              the bars growing upward out of the baseline rather than from
-              their centres. */}
-          {waveform.map(({ id, height }, index) => (
-            <motion.span
-              key={id}
-              style={{ height: WAVEFORM_MAX }}
-              initial={false}
-              animate={
-                reduceMotion
-                  ? { scaleY: (height / WAVEFORM_MAX) * 0.62 }
-                  : {
-                      scaleY: [
-                        (height / WAVEFORM_MAX) * 0.42,
-                        (height / WAVEFORM_MAX) * 0.82,
-                        (height / WAVEFORM_MAX) * 0.5,
-                      ],
-                    }
-              }
-              transition={{
-                duration: 1.35 + index * 0.04,
-                repeat: Number.POSITIVE_INFINITY,
-                delay: index * 0.055,
-                ease: "easeInOut",
-              }}
-              className="w-1 origin-bottom rounded-full bg-[var(--ok-light)]"
-            />
-          ))}
-        </div>
-        <span className="shrink-0 font-mono text-[0.62rem] text-primary-foreground/60 tracking-[0.12em] tabular-nums">
-          {clock}
-        </span>
-      </div>
+      {/* Real text in normal flow — it wraps, it is selectable, a screen reader
+          reads it once and in order — with the curve carried by a per-word
+          vertical offset rather than by an SVG path. `textPath` would have
+          looked the same and broken all three. */}
+      <p className="text-balance font-display text-[clamp(1.15rem,2.5vw,1.75rem)] text-primary-foreground leading-[1.7] tracking-[-0.02em]">
+        {words.map(({ word, partIndex }, index) => {
+          const verdict = SPOKEN[partIndex]?.verdict ?? null;
+          const isSaid = index < said;
+          /* `undefined` rather than the string "currentColor" while a claim is
+             unresolved. React serialises that keyword lowercase on the server
+             and framer-motion writes it capitalised on the client, which is a
+             hydration mismatch over a value that means "inherit" — so the
+             property is simply not emitted until there is a verdict. */
+          const ink = resolved && verdict ? VERDICT_INK[verdict] : undefined;
+          /* One shallow sine across the whole line, so the words rise and fall
+             once rather than wobbling word by word. Amplitude in ems, so the
+             curve scales with the type and not with the viewport.
+             Rounded, because the server prints a float at one precision and the
+             client at another, and that too is a mismatch. */
+          const lift = Number(
+            (
+              Math.sin(
+                (index / Math.max(1, words.length - 1)) * Math.PI * 1.15,
+              ) * 0.24
+            ).toFixed(3),
+          );
 
-      <ul className="divide-y divide-white/10">
-        {liveResults.map((result, index) => {
-          const isRevealed = index < revealed;
           return (
-            <li
-              key={result.id}
-              className="flex items-start gap-3 px-4 py-2 sm:items-center sm:px-5"
+            <motion.span
+              // biome-ignore lint/suspicious/noArrayIndexKey: the line is fixed and positional
+              key={`${word}-${index}`}
+              initial={false}
+              animate={{
+                opacity: isSaid ? 1 : 0.14,
+                /* The full transform string rather than the `y` shorthand:
+                   that one is not hardware accelerated, and this runs over a
+                   WebGL canvas that is already using the GPU. */
+                transform: `translateY(${isSaid ? -lift : -lift + 0.35}em)`,
+              }}
+              transition={{ duration: 0.34, ease }}
+              style={ink ? { color: ink } : undefined}
+              // The colour fade is a class, not an inline transition: framer
+              // owns the `style` attribute here, and the two disagreed about
+              // how to serialise a shorthand.
+              className="inline-block whitespace-pre transition-colors duration-500"
             >
-              <span
-                aria-hidden="true"
-                className="mt-[0.45rem] h-2.5 w-2.5 shrink-0 transition-colors duration-500 sm:mt-0"
-                style={{
-                  backgroundColor: isRevealed
-                    ? result.color
-                    : "rgba(238, 242, 248, 0.16)",
-                }}
-              />
-              <span
-                className="min-w-0 flex-1 text-sm leading-snug transition-opacity duration-500 sm:truncate"
-                style={{ opacity: isRevealed ? 0.9 : 0.4 }}
-              >
-                {result.point}
-              </span>
-              <motion.span
-                initial={false}
-                animate={
-                  isRevealed
-                    ? { opacity: 1, y: 0 }
-                    : { opacity: 0, y: reduceMotion ? 0 : 4 }
-                }
-                transition={{ duration: 0.32, ease }}
-                className="mt-[0.3rem] shrink-0 font-mono text-[0.58rem] uppercase tracking-[0.12em] sm:mt-0"
-                style={{ color: result.tint }}
-              >
-                {result.verdict}
-              </motion.span>
-            </li>
+              {word}{" "}
+            </motion.span>
           );
         })}
-      </ul>
+      </p>
+
+      {/* What was never said. It cannot be in the line — that is what "missed"
+          means — so it arrives underneath, once the sentence has trailed off. */}
+      <motion.p
+        initial={false}
+        animate={{
+          opacity: missedShown ? 1 : 0,
+          transform: `translateY(${missedShown ? 0 : 6}px)`,
+        }}
+        transition={{ duration: 0.4, ease }}
+        className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 border-white/12 border-t pt-5 font-mono text-[0.68rem] uppercase tracking-[0.14em]"
+      >
+        <span style={{ color: "var(--miss-spoken)" }}>Never reached</span>
+        <span className="text-primary-foreground/70 normal-case tracking-normal">
+          How the handoff works at the end
+        </span>
+      </motion.p>
     </section>
   );
 }
@@ -1487,7 +1477,7 @@ export function LandingRedesign() {
           </div>
 
           <div className="relative z-10 pb-24 md:pb-28">
-            <LiveRehearsalPanel />
+            <SpokenLine />
           </div>
         </div>
         <div ref={navSentinelRef} aria-hidden="true" className="h-px w-full" />
