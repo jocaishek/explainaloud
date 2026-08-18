@@ -137,31 +137,53 @@ type Verdict = "ok" | "vague" | "miss" | null;
  * to; the words inside are what arrive one at a time.
  */
 const SPOKEN: Array<{ text: string; verdict: Verdict }> = [
-  { text: "Explainaloud turns your own notes into a course", verdict: "ok" },
-  { text: "— a chapter, a deck, a paper —", verdict: "ok" },
-  { text: "then you explain it back out loud,", verdict: null },
-  { text: "three minutes, no script,", verdict: "ok" },
-  {
-    text: "and every claim is marked while you are still talking.",
-    verdict: "ok",
-  },
-  { text: "The parts you hedged", verdict: "vague" },
-  { text: "come back amber.", verdict: null },
-  { text: "The step you skipped over", verdict: "miss" },
-  { text: "comes back red.", verdict: null },
-  { text: "At the end you get a gap report", verdict: "ok" },
-  { text: "naming the points you never reached,", verdict: "ok" },
-  { text: "not a score out of ten,", verdict: null },
-  {
-    text: "so the next take is aimed at what you actually missed.",
-    verdict: "ok",
-  },
-  { text: "It finds you a video for whatever stayed shaky.", verdict: "ok" },
-  { text: "And then you say it again, better.", verdict: null },
+  { text: "So the idea is you give it whatever you are", verdict: null },
+  { text: "meant to know by Thursday,", verdict: "ok" },
+  { text: "a chapter, a deck, a paper you have", verdict: null },
+  { text: "not read closely enough,", verdict: "ok" },
+  { text: "and it reads the whole thing and works out", verdict: null },
+  { text: "the points you would be expected to hit.", verdict: "ok" },
+  { text: "Then you talk.", verdict: null },
+  { text: "Three minutes,", verdict: "ok" },
+  { text: "nothing in front of you,", verdict: "ok" },
+  { text: "no script to fall back on.", verdict: null },
+  { text: "And while you are still talking, it marks you.", verdict: null },
+  { text: "The claims solid enough to check", verdict: null },
+  { text: "turn green.", verdict: "ok" },
+  { text: "The ones you", verdict: null },
+  { text: "sort of, kind of", verdict: "vague" },
+  { text: "got to", verdict: null },
+  { text: "turn amber.", verdict: "vague" },
+  { text: "And the step you skipped straight past", verdict: null },
+  { text: "never turns up at all,", verdict: "miss" },
+  { text: "because you never said it.", verdict: null },
+  { text: "What you get at the end is not a score out of ten.", verdict: null },
+  { text: "It is a list of the things", verdict: null },
+  { text: "you did not say.", verdict: "miss" },
+  { text: "Which is the only part worth knowing.", verdict: "ok" },
+  { text: "So you read it, and you go again,", verdict: null },
+  { text: "and this time you say them.", verdict: null },
 ];
 
 /** Between words. Fast enough to read as speech rather than as a typewriter. */
 const WORD_MS = 190;
+
+/**
+ * How long the line takes to travel one word, and deliberately longer than the
+ * gap between words.
+ *
+ * Set equal to `WORD_MS` each transition finished exactly as the next began,
+ * so the line moved in discrete hops of one word — and because words are not
+ * the same width, each hop ran at a different speed. Fast, slow, fast, stop.
+ * That is the choppiness.
+ *
+ * Overlapping them fixes it, and CSS is what makes it free: a transition
+ * retargeted mid-flight continues from where it actually is rather than
+ * restarting, so three of these overlapping average out into one steady drift
+ * at about the speed of speech. The line sits a word or so behind its mark,
+ * which nobody can see, and moves evenly, which everybody can.
+ */
+const GLIDE_MS = Math.round(WORD_MS * 2.1);
 
 /**
  * How far behind the newest word a verdict lands, counted in words.
@@ -422,15 +444,14 @@ function SpokenLine() {
         >
           <p
             ref={track}
-            /* The animated half. Linear, and exactly one word long: each shift
-               starts as the last one finishes, so a chain of them is constant
-               motion rather than a row of little eases — the difference between
-               a line that is running and a line that is being nudged. */
+            /* The animated half. Linear, and longer than one word, so the
+               transitions overlap into one steady drift rather than a row of
+               discrete hops at varying speeds. See `GLIDE_MS`. */
             style={{
               transform: `translate3d(${-glide}px, 0, 0)`,
               transition: reduceMotion
                 ? undefined
-                : `transform ${WORD_MS}ms linear`,
+                : `transform ${GLIDE_MS}ms linear`,
             }}
             className="whitespace-nowrap py-1 font-display text-[clamp(1.05rem,2.3vw,1.6rem)] text-primary-foreground leading-[1.6] tracking-[-0.02em] will-change-transform"
           >
@@ -655,10 +676,7 @@ function ResultsCarousel() {
           >
             Rehearsal, made visible
           </p>
-          <h2
-            data-resolve
-            className="mt-5 font-display text-[clamp(1.7rem,3.4vw,3.4rem)] text-strong leading-[1.02] tracking-[-0.04em]"
-          >
+          <h2 className="mt-5 font-display text-[clamp(1.7rem,3.4vw,3.4rem)] text-strong leading-[1.02] tracking-[-0.04em]">
             Your points update as you speak.
           </h2>
           {/* Stacked for the same reason as the panel: these three run to
@@ -994,11 +1012,10 @@ export function LandingRedesign() {
                doing deliberately or not at all. */
           }
 
-          gsap.fromTo(
-            "[data-gsap-lock]",
-            { x: -42 },
-            { x: 0, duration: 0.62, stagger: 0.06, ease: "expo.out" },
-          );
+          /* The nav items used to slide in from 42px left on load. Removed:
+             it is a fifth entrance on a page that already has one, and the
+             navigation arriving late is the navigation being unavailable
+             late. */
 
           /* The tween that flew the mark into the nav lived here and is gone.
              It positioned a `fixed` element by computing offsets from the
@@ -1060,44 +1077,15 @@ export function LandingRedesign() {
               );
             });
 
-          /* Headings resolve, rather than arrive.
-             They come in soft and slightly spread and settle into focus, which
-             is a specific thing to borrow and not a general prettiness: it is
-             the product's own vocabulary. A vague claim and a checkable one
-             differ exactly by whether they are sharp enough to judge, and the
-             page's three verdicts are built on that distinction. So the
-             headings do what a rehearsal does — start indistinct, come good.
-
-             `filter` is a repaint, which is why this is scoped to headings and
-             given a short duration rather than scrubbed. `willChange` is set
-             for the tween and cleared after, so the promoted layer does not
-             outlive the animation that needed it. */
-          gsap.utils.toArray<HTMLElement>("[data-resolve]").forEach((el) => {
-            reveals.push(
-              gsap.fromTo(
-                el,
-                {
-                  filter: "blur(11px)",
-                  opacity: 0.25,
-                  letterSpacing: "0.06em",
-                  willChange: "filter, opacity",
-                },
-                {
-                  filter: "blur(0px)",
-                  opacity: 1,
-                  letterSpacing: "-0.04em",
-                  duration: 0.85,
-                  ease: "power2.out",
-                  onComplete: () => gsap.set(el, { clearProps: "willChange" }),
-                  scrollTrigger: {
-                    trigger: el,
-                    start: "top 84%",
-                    toggleActions: "play none none reverse",
-                  },
-                },
-              ),
-            );
-          });
+          /* The blur-to-focus heading reveal lived here, and it is the
+             clearest example of what this page had too much of. It set
+             `filter: blur(11px)` on every argument heading and resolved it on
+             scroll — a full repaint per frame, on the largest type on the
+             page, saying nothing that the words did not already say. It read
+             as polish applied to a page rather than as anything about this
+             product. The verdict sweep below does the same trick where it
+             actually means something, and one of those is a signature while
+             two is a mannerism. */
 
           /* The console opens rather than appears: it comes in from slightly
              below and slightly small, and the ease overshoots a hair so it
@@ -1106,12 +1094,14 @@ export function LandingRedesign() {
              set down in front of them. */
           reveals.push(
             gsap.from(".lp-product-window", {
-              y: 70,
-              scale: 0.955,
+              y: 40,
               opacity: 0,
-              duration: 1.05,
-              transformOrigin: "50% 100%",
-              ease: "back.out(1.15)",
+              duration: 0.66,
+              /* Was `back.out(1.15)` with a scale, so the console arrived
+                 slightly small and sprang to size. `design.md` bans overshoot,
+                 and a scale on this element in particular re-rasterises a
+                 window full of small type mid-flight. It rises and fades. */
+              ease: "power2.out",
               scrollTrigger: {
                 trigger: ".lp-product-window",
                 start: "top 88%",
@@ -1123,28 +1113,29 @@ export function LandingRedesign() {
           gsap.utils
             .toArray<HTMLElement>("[data-feature-card]")
             .forEach((element, index) => {
-              /* Settling, not sliding. The card comes up a little and
-                 finishes arriving *slightly large*, then relaxes to size —
-                 which is what an object landing on a surface does, and is the
-                 whole difference between a card that appears and a card that
-                 arrives. `transformOrigin` at the top so it grows down from
-                 its own rule rather than pushing the rule around.
-
-                 No horizontal component anywhere: the marks, the waveform and
-                 the transcript already own left-to-right, and a fourth sweep
-                 made the page read as one effect applied everywhere. */
+              /* A rise and a fade, and nothing else.
+               *
+               * This used to overshoot: the card arrived *slightly large*
+               * and relaxed to size, on `back.out(1.1)`. `design.md` bans
+               * spring and overshoot easing outright and it was right to —
+               * an interface element that bounces is an interface element
+               * behaving like a toy, and this is a study tool somebody opens
+               * the night before a talk. The scale is gone with it: a card
+               * that changes size while arriving is a card whose type
+               * changes size while arriving.
+               *
+               * No horizontal component anywhere: the marks and the waveform
+               * already own left-to-right. */
               reveals.push(
                 gsap.fromTo(
                   element,
-                  { y: 30, opacity: 0, scale: 0.985 },
+                  { y: 24, opacity: 0 },
                   {
                     y: 0,
                     opacity: 1,
-                    scale: 1,
-                    transformOrigin: "50% 0%",
-                    duration: 0.85,
-                    delay: (index % 3) * 0.1,
-                    ease: "back.out(1.1)",
+                    duration: 0.6,
+                    delay: (index % 3) * 0.08,
+                    ease: "power2.out",
                     scrollTrigger: {
                       trigger: element,
                       start: "top 86%",
@@ -1243,92 +1234,19 @@ export function LandingRedesign() {
             },
           );
 
-          /* The argument headlines resolve character by character, scrubbed
-             against scroll.
-             Word-level opacity lived here and it was the polite version of
-             this effect: legible, tidy, and not worth looking at. Characters
-             are what make it read as craft, because the eye cannot track them
-             individually — it sees a wave of focus travelling through a
-             sentence, which is a texture rather than a list of steps.
+          /* Character-by-character scrubbed resolve on the argument
+             headlines lived here: every letter split into its own span,
+             carrying blur, a lift and a horizontal squash, scrubbed against
+             scroll position.
 
-             Each character carries blur, a small lift and a slight horizontal
-             compression, and they overlap heavily, so at any moment there are
-             a dozen mid-resolve rather than one. That overlap is the whole
-             effect: a hard stagger with no overlap is a ticker, and a ticker
-             is what "basic" looks like.
-
-             Scrubbed, so the reader is doing it. The sentence comes into focus
-             at exactly the rate they scroll, which ties the effect to their
-             hand instead of playing at them.
-
-             Split in JS so the DOM keeps one sentence until a script runs: a
-             screen reader gets prose rather than a pile of single letters, and
-             a failed import leaves plain type. */
-          gsap.utils
-            .toArray<HTMLElement>("[data-scrub-words]")
-            .forEach((heading) => {
-              const sentence = heading.textContent ?? "";
-              if (!sentence.trim()) return;
-              heading.textContent = "";
-
-              /* Words wrap, characters do not. Each word is an inline-block so
-                 the line breaks stay exactly where they were, and the
-                 characters inside it are spans that can be animated without
-                 ever becoming a break opportunity. Splitting straight to
-                 characters re-wraps the headline mid-word, which is a layout
-                 shift wearing an animation's clothes. */
-              const letters: HTMLElement[] = [];
-              const words = sentence.trim().split(/\s+/);
-              words.forEach((word, wordIndex) => {
-                const wordEl = document.createElement("span");
-                wordEl.className = "inline-block whitespace-nowrap";
-                for (const character of word) {
-                  const span = document.createElement("span");
-                  span.className = "inline-block";
-                  span.textContent = character;
-                  wordEl.append(span);
-                  letters.push(span);
-                }
-                heading.append(wordEl);
-                if (wordIndex < words.length - 1) {
-                  const gap = document.createElement("span");
-                  gap.className = "inline-block whitespace-pre";
-                  gap.textContent = " ";
-                  heading.append(gap);
-                }
-              });
-
-              reveals.push(
-                gsap.fromTo(
-                  letters,
-                  {
-                    opacity: 0.08,
-                    filter: "blur(7px)",
-                    yPercent: 22,
-                    scaleX: 0.94,
-                  },
-                  {
-                    opacity: 1,
-                    filter: "blur(0px)",
-                    yPercent: 0,
-                    scaleX: 1,
-                    ease: "none",
-                    /* `amount` rather than a per-item delay: the whole run is
-                       spread across this many seconds however many characters
-                       there are, so a long headline and a short one resolve at
-                       the same pace instead of the long one taking twice the
-                       scroll. */
-                    stagger: { amount: 0.9, from: "start" },
-                    scrollTrigger: {
-                      trigger: heading,
-                      start: "top 88%",
-                      end: "bottom 52%",
-                      scrub: 0.5,
-                    },
-                  },
-                ),
-              );
-            });
+             It was the most expensive thing on the page and the second
+             character-level effect in the same scroll — the verdict sweep is
+             the first, and that one is the product's own gesture rather than a
+             texture. Removing it is most of the reduction: dozens of spans per
+             heading, a repaint per frame while any of them was on screen, and
+             a headline that could not be read until the reader had scrolled
+             far enough to finish assembling it. A headline should be legible
+             the moment it is on screen.
 
           /* The page's own claims get judged, in colour, one word at a time.
              This was a rule drawn under the phrase — the literal gesture a
@@ -1367,10 +1285,18 @@ export function LandingRedesign() {
             const words = sentence.split(/(\s+)/);
             for (const word of words) {
               if (/^\s+$/.test(word)) {
-                const gap = document.createElement("span");
-                gap.className = "whitespace-pre";
-                gap.textContent = word;
-                mark.append(gap);
+                /* A bare text node, not a `white-space: pre` span.
+                 *
+                 * That span was a visible bug at display size: `pre` stops
+                 * the browser collapsing the space, including the one that
+                 * lands at the start of a wrapped line — which normally
+                 * disappears. So every line after the first began one space
+                 * in, and at `clamp(1.85rem, 5vw, 5rem)` a space is about
+                 * thirty pixels. "Not another quiz / generated from a /
+                 * topic name." had its third line indented against the two
+                 * above it, and it read as a broken heading because it was
+                 * one. A text node collapses the way type is supposed to. */
+                mark.append(document.createTextNode(word));
                 continue;
               }
               const wrap = document.createElement("span");
@@ -1408,34 +1334,14 @@ export function LandingRedesign() {
             );
           });
 
-          /* The step numbers roll. 01, 02, 03 count up from zero as the
-             section arrives — a different mechanism from everything else here,
-             and the one that suits three ordered things: you watch the
-             sequence being numbered rather than watching another line grow.
-             The horizontal rule that used to draw across them is gone; it was
-             the fifth left-to-right sweep on one page. */
-          gsap.utils.toArray<HTMLElement>("[data-step-count]").forEach((el) => {
-            const target = Number(el.dataset.stepCount ?? "0");
-            const counter = { value: 0 };
-            reveals.push(
-              gsap.to(counter, {
-                value: target,
-                duration: 0.9,
-                ease: "power2.out",
-                onUpdate: () => {
-                  el.textContent = String(Math.round(counter.value)).padStart(
-                    2,
-                    "0",
-                  );
-                },
-                scrollTrigger: {
-                  trigger: el,
-                  start: "top 88%",
-                  toggleActions: "play none none reverse",
-                },
-              }),
-            );
-          });
+          /* The step numbers used to count up from zero, 00 to 01, on
+             scroll. Removed. A number animating to its own value is the most
+             recognisable tell on a generated landing page — it is the same
+             gesture as a fake user counter, and it does not stop being that
+             gesture just because the number it lands on is honest. "01" is
+             already the smallest, most certain thing on the page; making the
+             reader wait for it to finish arriving is asking them to watch a
+             label. */
 
           // Last, once every reveal is registered. Called earlier it could
           // only ever see the ones created so far, which is how the product
@@ -1468,7 +1374,11 @@ export function LandingRedesign() {
     >
       <nav
         ref={navRef}
-        className="lp-sky-nav fixed inset-x-0 top-0 z-50 border-white/20 border-b text-primary-foreground"
+        /* No bottom border. The waveform sits along this edge and *is* the
+           edge — a hairline drawn under it turns the take into a decoration
+           sitting on top of a divider, which is two things doing one job and
+           was the first thing anybody noticed about it. */
+        className="lp-sky-nav fixed inset-x-0 top-0 z-50 text-primary-foreground"
       >
         {/* Scrolling this page is recording.
             This was a two pixel hairline that filled left to right, which is
@@ -1660,7 +1570,6 @@ export function LandingRedesign() {
 
             <div
               data-hero-secondary
-              data-gsap-lock
               className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
             >
               <Link
@@ -1713,10 +1622,7 @@ export function LandingRedesign() {
             <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
               Try it here
             </p>
-            <h2
-              data-resolve
-              className="mt-5 max-w-[16ch] font-display text-[clamp(1.75rem,4.2vw,3.9rem)] text-strong leading-[1] tracking-[-0.04em]"
-            >
+            <h2 className="mt-5 max-w-[16ch] font-display text-[clamp(1.75rem,4.2vw,3.9rem)] text-strong leading-[1] tracking-[-0.04em]">
               Watch a take get marked,{" "}
               <span data-verdict="ok" className="lp-verdict">
                 line by line
@@ -1754,10 +1660,7 @@ export function LandingRedesign() {
               played on a timer, which is what makes it read as pacing instead
               of as an effect. Split in JS, so the markup stays one sentence
               and a reader with no script still gets the sentence. */}
-          <h2
-            data-scrub-words
-            className="mt-5 max-w-[20ch] font-display text-[clamp(1.7rem,4vw,3.6rem)] text-strong leading-[1.02] tracking-[-0.04em]"
-          >
+          <h2 className="mt-5 max-w-[20ch] font-display text-[clamp(1.7rem,4vw,3.6rem)] text-strong leading-[1.02] tracking-[-0.04em]">
             A quiz can be passed by recognising. Saying it cannot.
           </h2>
           <div className="mt-12 grid gap-10 border-border border-t pt-10 md:grid-cols-3 md:gap-12">
@@ -1794,10 +1697,7 @@ export function LandingRedesign() {
             Rehearse it, or learn it
           </p>
           <div className="mt-5 grid gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end lg:gap-20">
-            <h2
-              data-scrub-words
-              className="max-w-[12ch] font-display text-[clamp(1.85rem,4.6vw,4.6rem)] text-strong leading-[1] tracking-[-0.04em]"
-            >
+            <h2 className="max-w-[12ch] font-display text-[clamp(1.85rem,4.6vw,4.6rem)] text-strong leading-[1] tracking-[-0.04em]">
               Understanding shows up when you speak.
             </h2>
             <p
@@ -1844,10 +1744,7 @@ export function LandingRedesign() {
                     ][index],
                   }}
                 />
-                <span
-                  data-step-count={step.number}
-                  className="font-mono text-[0.67rem] text-muted-foreground tabular-nums tracking-[0.13em]"
-                >
+                <span className="font-mono text-[0.67rem] text-muted-foreground tabular-nums tracking-[0.13em]">
                   {step.number}
                 </span>
                 <h3 className="mt-4 max-w-[18ch] font-display text-[clamp(1.3rem,2.4vw,2.2rem)] text-strong leading-[1.1] tracking-[-0.03em]">
@@ -1872,10 +1769,7 @@ export function LandingRedesign() {
               <p className="font-mono text-[0.67rem] text-muted-foreground uppercase tracking-[0.13em]">
                 Grounded in your material
               </p>
-              <h2
-                data-resolve
-                className="mt-6 max-w-[13ch] font-display text-[clamp(1.85rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]"
-              >
+              <h2 className="mt-6 max-w-[13ch] font-display text-[clamp(1.85rem,5vw,5rem)] text-strong leading-[0.98] tracking-[-0.045em]">
                 Not another quiz generated from{" "}
                 <span data-verdict="miss" className="lp-verdict">
                   a topic name
