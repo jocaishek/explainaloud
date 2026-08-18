@@ -21,6 +21,22 @@ import Link from "next/link";
  * render nothing at all, which left a hole in the dashboard's second row for
  * everybody who had not recorded three times yet, and told them nothing about
  * why the thing they were promised was missing.
+ *
+ * **The empty state has to know why it is empty.** It used to receive only the
+ * plottable sessions, so it inferred everything from that one number — and got
+ * it wrong in both directions. With nothing recorded it said "3 more
+ * recordings", where "more" is more than a nothing nobody had done. And it
+ * finished every version of the sentence with "Two sessions is not a trend",
+ * which is a reason that only applies if you have two, so somebody with none
+ * was told about sessions they had never made.
+ *
+ * Worse, a session can be recorded and still not be plottable: a delivery with
+ * under seven seconds of actual speech is `reliable: false`, and one whose
+ * course has no slug has nowhere for its bar to link to. Both are dropped
+ * before this component sees them. Given only the survivors, a person with six
+ * recordings and no usable rate was told to go and record three, forever. So
+ * the total is passed in as well, and the panel says which of the three
+ * situations it is actually in.
  */
 
 /** Above this multiple of the baseline, a delivery counts as racing. */
@@ -72,13 +88,18 @@ function Heading({ baselineWpm }: { baselineWpm: number | null }) {
 export function PacePanel({
   sessions,
   baselineWpm,
+  recorded,
 }: {
   /** Oldest first, so the chart reads left to right in time. */
   sessions: PaceSession[];
   baselineWpm: number | null;
+  /** Every session on the account, including the ones that cannot be plotted. */
+  recorded: number;
 }) {
   if (!baselineWpm || sessions.length < MINIMUM_SESSIONS) {
     const remaining = MINIMUM_SESSIONS - sessions.length;
+    // Recorded, but nothing usable came back from them.
+    const unusable = recorded - sessions.length;
     return (
       <Panel>
         <Heading baselineWpm={baselineWpm} />
@@ -101,9 +122,24 @@ export function PacePanel({
           ))}
         </div>
         <p className="mt-auto pt-4 text-[0.88rem] text-subtle leading-relaxed">
-          {baselineWpm
-            ? `${remaining} more ${remaining === 1 ? "recording" : "recordings"} and your pace is charted here against your baseline. Two sessions is not a trend.`
-            : "Your speaking pace is measured on your first recording, then charted here against it."}
+          {!baselineWpm ? (
+            "Your speaking pace is measured on your first recording, then charted here against it."
+          ) : sessions.length === 0 && unusable > 0 ? (
+            /* Says what is true — no rate came back — rather than why, because
+               there is more than one reason a session is not plottable and this
+               component cannot tell them apart. Naming the seven-second floor
+               gives the likeliest one without asserting it. */
+            <>
+              No pace measured from your{" "}
+              {unusable === 1 ? "recording" : `${unusable} recordings`} yet. A
+              take needs about seven seconds of speech, with the pauses taken
+              out.
+            </>
+          ) : recorded === 0 ? (
+            "Three recordings and your pace is charted here against your baseline."
+          ) : (
+            `${remaining} more ${remaining === 1 ? "recording" : "recordings"} and your pace is charted here against your baseline.`
+          )}
         </p>
       </Panel>
     );
