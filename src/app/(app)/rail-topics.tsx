@@ -245,9 +245,7 @@ export function RailTopics({
   return (
     <nav aria-label="Topics" className="flex min-h-0 flex-col">
       <div className="flex items-center justify-between gap-2 px-3 pb-1.5">
-        <p className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]">
-          Topics
-        </p>
+        <p className="font-medium text-[0.75rem] text-subtle">Topics</p>
         <span className="flex items-center gap-0.5">
           <button
             type="button"
@@ -319,7 +317,7 @@ export function RailTopics({
         {/* Above the folders, because that is the whole of what a pin does. */}
         {pinned.length > 0 && (
           <ul className="mb-1 border-border border-b pb-1">
-            <li className="flex items-center gap-1.5 px-2 py-1.5 font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]">
+            <li className="flex items-center gap-1.5 px-2 py-1.5 font-medium text-[0.75rem] text-subtle">
               <Pin aria-hidden className="size-3 shrink-0" />
               Pinned
             </li>

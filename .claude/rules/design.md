@@ -15,7 +15,7 @@ they have crossed one.
 | Elevation | Tinted with `rgba(124, 45, 18, …)`, never neutral |
 | Display | Geist, weight 600, tracking -0.035em |
 | Body | Geist |
-| Labels | Martian Mono, uppercase, tracked |
+| Labels | Body face, sentence case. Martian Mono only for metadata and timecodes |
 
 `.register-app` still exists, and still exists for a reason: the app needs its
 own radii, its own spacing rhythm and its own denser type scale, because a
@@ -57,8 +57,22 @@ product:
   anywhere — so the green somebody is shown before signing up is the green they
   are graded in afterwards. They are declared once, at `:root`, and deliberately
   do not appear in `.register-app`.
-- **The mono voice.** Martian Mono, uppercase, small, tracked, for metadata,
-  timecodes and labels only.
+- **The mono voice.** Martian Mono, uppercase, small, tracked — for **metadata
+  and timecodes**, and nothing else.
+
+  It used to say "and labels", and that word did the damage. A section heading
+  is a label by any reasonable reading, so `NOTES`, `CITED`, `TOPICS` and
+  `AGENT ORCHESTRATION` were all set in tracked capitals, and a study page ended
+  up shouting five machine-voiced words at somebody before they reached a
+  sentence. Compared side by side with the tools people actually use for this —
+  a notebook app, a classroom app — the difference was not colour or layout. It
+  was that those name their regions in plain sentence case, in the body face, at
+  a readable size, and this one announced them.
+
+  So: a timecode, a word count, a date, a provider name — mono. A word that
+  names a region of the page a person is reading — body face, sentence case.
+  When in doubt it is not mono; the voice is reserved precisely because it is
+  used rarely.
 - **The mark and the wordmark.** Same size, same tracking, both mastheads.
 
 ## Banned, both registers
@@ -101,6 +115,13 @@ product:
   spend it. Three "different" sections at `#ffffff`, `#f6f3f1` and `#ffffff` is
   a two per cent step, which is no step at all — that flatness is what made the
   two dark bands read as flashes rather than as structure.
+- **The machine describing itself to the person using it.** Pipeline diagrams,
+  role names, model names, agent counts. It is all true and none of it is
+  something a person revising for a test can act on, and a page that leads with
+  how it was assembled reads as a demonstration of the assembly. Keep the trace
+  — somebody who wants to know how a claim was checked should be able to find
+  out — behind one click, named in words rather than in the vocabulary of the
+  system that produced it.
 - 3D tilt, magnetic buttons, typewriter headlines.
 - Cursor-following effects **as decoration**: a halo, a trailing dot, a
   particle spawner, anything that draws a shape where the pointer is. The

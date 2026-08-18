@@ -427,17 +427,30 @@ html:has(main.lp-v2) {
   --vague: #96600a;
 }
 
-/* Dark theme — the original #121212 canvas. */
+/* Dark theme — the original #121212 canvas.
+ *
+ * **Cards have to be visibly cards.** #171717 on #121212 is five points of
+ * luminance, which is not a step: on screen every panel dissolved into the
+ * page and the whole app read as one undifferentiated dark field with text
+ * floating on it. That flatness is most of what makes a dark interface look
+ * unfinished, and it is the difference between this and the dark tools it
+ * gets compared to — theirs separate ground from surface clearly enough that
+ * you can see where one panel stops and the next begins.
+ *
+ * So the card moves up and the ground stays put, which keeps every existing
+ * contrast ratio against `--background` intact while giving the panels an
+ * edge you can actually see. The border lifts with it for the same reason: a
+ * 0.1 white hairline on a surface this dark is a rumour. */
 .dark {
   --background: #121212;
   --foreground: #a1a1aa;
-  --muted: #1e1e1e;
+  --muted: #232323;
   --muted-foreground: #71717a;
-  --card: #171717;
+  --card: #1d1d1d;
   --card-foreground: #a1a1aa;
-  --popover: #171717;
+  --popover: #1d1d1d;
   --popover-foreground: #a1a1aa;
-  --border: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.14);
   --input: rgba(255, 255, 255, 0.1);
   --primary: #ffffff;
   --primary-foreground: #121212;
@@ -457,9 +470,9 @@ html:has(main.lp-v2) {
   --brand-ink: #9cc8f2;
 
   --strong: #ffffff;
-  --subtle: #71717a;
-  --surface: rgba(255, 255, 255, 0.04);
-  --surface-border: rgba(255, 255, 255, 0.08);
+  --subtle: #8b8b93;
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-border: rgba(255, 255, 255, 0.12);
 }
 
 /* ---------------------------------------------------------------------------

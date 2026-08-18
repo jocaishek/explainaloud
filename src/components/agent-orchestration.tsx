@@ -132,20 +132,36 @@ export function AgentOrchestration({
     : (run?.agents ?? []);
   const open = running || expanded;
 
+  /* Said in words, to somebody studying.
+   *
+   * This was "AGENT ORCHESTRATION" in tracked mono capitals, followed by the
+   * strategy as a chain of internal role names — "source research → architect
+   * → independent review → conditional revision" — and a "6 AGENTS" chip. All
+   * of it true, and all of it the machine describing itself to its authors.
+   * Nobody revising for a test needs to know how many models were involved,
+   * and a page that leads with its own pipeline reads as a demo of the
+   * pipeline rather than as a tool.
+   *
+   * The information is not gone: everything is still one click away, where
+   * somebody who wants to know how a claim was checked can go and read it.
+   * What changed is that it no longer announces itself first, in the one
+   * typeface reserved for metadata, above the actual course. */
   const heading = (
     <>
-      <h2 className="font-mono text-[10px] tracking-[0.16em] text-brand-ink uppercase">
-        Agent orchestration
+      <h2 className="font-medium text-[0.9rem] text-strong">
+        {running ? "Building this course" : "How this was built"}
       </h2>
-      <span className="min-w-0 truncate text-xs text-subtle">
-        {running ? `${PIPELINE_LABELS[pipeline]} · live` : run?.strategy}
-      </span>
+      {running && (
+        <span className="min-w-0 truncate text-xs text-subtle">
+          {PIPELINE_LABELS[pipeline]}
+        </span>
+      )}
     </>
   );
 
   return (
     <section
-      aria-label="Agent orchestration"
+      aria-label="How this course was built"
       aria-live={running ? "polite" : undefined}
       className={cn(
         "overflow-hidden rounded-card border border-border bg-surface",
@@ -168,8 +184,10 @@ export function AgentOrchestration({
         >
           {heading}
           <span className="ml-auto flex shrink-0 items-center gap-2">
-            <span className="font-mono text-[9px] tracking-[0.08em] text-subtle uppercase">
-              {agents.length} agents
+            {/* "6 AGENTS" said nothing a reader could use and everything about
+                what built the page. The steps are named inside, in sentences. */}
+            <span className="text-[0.78rem] text-subtle">
+              {agents.length} {agents.length === 1 ? "step" : "steps"}
             </span>
             <ChevronDown
               aria-hidden
