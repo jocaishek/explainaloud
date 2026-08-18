@@ -79,6 +79,7 @@ export default async function SettingsPage() {
               className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-wash font-medium text-[0.8rem] text-brand-ink"
             >
               {profile.avatar_url ? (
+                // biome-ignore lint/performance/noImgElement: a 36px avatar; see profile/avatar-picker.tsx
                 <img
                   src={profile.avatar_url}
                   alt=""

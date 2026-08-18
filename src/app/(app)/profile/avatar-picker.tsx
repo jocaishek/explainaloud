@@ -103,7 +103,21 @@ export function AvatarPicker({
           className="press group relative block size-20 overflow-hidden rounded-full bg-accent-wash outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
         >
           {shown ? (
-            // eslint-disable-next-line @next/next/no-img-element
+            /* A plain `img`, and the rule is suppressed rather than followed.
+             *
+             * `next/image` exists to pick a size and a format for an image
+             * whose dimensions are decided by the layout. This one is 80
+             * CSS pixels, square, always, and the file behind it is already
+             * capped at 2 MB by the bucket. Routing it through the optimiser
+             * would add a host to `remotePatterns`, a build-time dependency
+             * on the Supabase URL, and a per-image transform that Vercel
+             * bills for — to serve a thumbnail that is smaller than the
+             * request headers asking for it.
+             *
+             * It is also the wrong shape for this component: the preview
+             * below is a `blob:` URL from the file the reader just picked,
+             * which the optimiser cannot fetch at all. */
+            // biome-ignore lint/performance/noImgElement: fixed-size avatar, and the preview is a local blob: URL
             <img
               src={shown}
               alt=""
