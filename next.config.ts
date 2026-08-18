@@ -16,10 +16,30 @@ const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "X-Frame-Options", value: "DENY" },
-  // frame-ancestors only. A full script/style policy is a separate piece of
-  // work — Next inlines its own bootstrap, and a half-written CSP that has to
-  // be loosened with 'unsafe-inline' buys nothing.
-  { key: "Content-Security-Policy", value: "frame-ancestors 'none'" },
+  /* Four directives, and deliberately not a script policy.
+   *
+   * A real `script-src` needs per-request nonces threaded through Next's own
+   * inline bootstrap, and the half-written version — `'unsafe-inline'` to make
+   * the app work again — is a policy that blocks nothing while looking like it
+   * does. That remains a separate piece of work.
+   *
+   * These four are free. None of them can break a page that was not already
+   * doing something it should not, and each closes a real technique:
+   *
+   *   frame-ancestors  clickjacking. The app takes microphone permission on a
+   *                    click, which is exactly what a transparent overlay is
+   *                    for.
+   *   base-uri         a single injected `<base>` tag silently re-points every
+   *                    relative script and form on the page.
+   *   form-action      where a form may POST. Without it, an injected form
+   *                    posts a session anywhere.
+   *   object-src       Flash-era plugin embedding, still a script vector.
+   */
+  {
+    key: "Content-Security-Policy",
+    value:
+      "frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+  },
   {
     key: "Permissions-Policy",
     value: "microphone=(self), camera=(), geolocation=(), payment=()",

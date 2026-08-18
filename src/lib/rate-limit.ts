@@ -14,7 +14,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * anything a person does by hand — the two answer different questions and
  * deliberately do not share a mechanism.
  */
-export const RATE_BUCKETS = ["analyze", "transcribe", "generate"] as const;
+export const RATE_BUCKETS = [
+  "analyze",
+  "transcribe",
+  "generate",
+  /** `/videos` — every call is a paid Tavily credit. */
+  "search",
+  /** `/sources` — a 5 MB PDF parse is the most CPU one request can ask for. */
+  "upload",
+  /** `/speech/baseline` — transcription on the shared key. */
+  "baseline",
+  /** Stripe session creation. */
+  "billing",
+] as const;
 
 export type RateBucket = (typeof RATE_BUCKETS)[number];
 

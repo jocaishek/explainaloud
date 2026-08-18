@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { billingConfigured, stripeClient } from "~/lib/billing";
+import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { siteUrl } from "~/lib/site";
 import { createClient } from "~/lib/supabase/server";
 
@@ -27,6 +28,11 @@ export async function POST() {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  // Mints Stripe sessions against the account.
+  if (!(await claimApiCall(supabase, "billing"))) {
+    return NextResponse.json({ error: RATE_LIMITED_MESSAGE }, { status: 429 });
   }
 
   const { data: profile } = await supabase
