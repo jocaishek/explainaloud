@@ -60,20 +60,23 @@ export function QuickActions() {
       className="flex h-full flex-col overflow-hidden rounded-card border border-border bg-card shadow-rest"
     >
       {/* The heading sits inside the panel rather than above it, so this card
-          and the pace panel beside it start on the same line. */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 p-5 pb-4">
+          and the pace panel beside it start on the same line.
+          *
+          * No total time any more. It read "WHOLE LOOP 6:30", which is a number
+          * that answers a question nobody asked at the moment they are deciding
+          * whether to begin — and answers it with the largest figure available.
+          * Six and a half minutes is the honest sum and it is also the most
+          * off-putting way to describe three short steps. The per-step times
+          * stay: those are commitments a person can make one at a time, and
+          * "3:00" next to "Explain it out loud" is the product's promise
+          * rather than a cost. */}
+      <div className="p-5 pb-4">
         <h2
           id="quick-actions-heading"
           className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.12em]"
         >
           Start here
         </h2>
-        {/* 2:30 + 3:00 + 1:00. The sum of the three rows, stated once, because
-            "how long is this going to take me" is asked of the loop rather
-            than of any one step in it. */}
-        <p className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.09em]">
-          Whole loop <span className="text-strong tabular-nums">6:30</span>
-        </p>
       </div>
 
       {/* `flex-1` down the list, so the three rows share whatever height the
