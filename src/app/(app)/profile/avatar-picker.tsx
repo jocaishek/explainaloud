@@ -6,9 +6,25 @@ import { useRef, useState, useTransition } from "react";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 import { removeAvatar, saveAvatar } from "./actions";
+import { AvatarCropper } from "./avatar-cropper";
 
-/** Matches the bucket's own ceiling, so the failure is caught before the upload. */
-const MAX_BYTES = 2 * 1024 * 1024;
+/**
+ * Matches the bucket's own ceiling, so the failure is a sentence rather than a
+ * rejected request.
+ *
+ * It was 2 MB, argued from what the rail renders — which is 32 pixels, so by
+ * that reasoning 2 MB was already enormous. Wrong thing to measure. What people
+ * upload is whatever their phone took, and that is routinely three or four
+ * megabytes untouched, so the limit was not protecting anything. It was
+ * rejecting the ordinary case and asking somebody to go and resize a file by
+ * hand.
+ *
+ * It costs nothing now regardless: the cropper re-encodes to a 512px WebP
+ * before anything is uploaded, so what lands in the bucket is tens of
+ * kilobytes whatever was chosen. This only bounds what the browser is asked to
+ * decode.
+ */
+const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPT = "image/png,image/jpeg,image/webp,image/gif";
 
 /**
@@ -40,32 +56,43 @@ export function AvatarPicker({
   /* Shown immediately from the chosen file, so the new picture is on screen
      while the bytes are still going up rather than after a round trip. */
   const [preview, setPreview] = useState<string | null>(null);
+  /* The file being cropped. Non-null is the whole of "the cropper is open" —
+     one piece of state rather than a file and a boolean that can disagree. */
+  const [chosen, setChosen] = useState<File | null>(null);
   const shown = preview ?? url;
 
-  async function upload(file: File) {
+  function choose(file: File) {
     setError(null);
     if (!ACCEPT.split(",").includes(file.type)) {
       setError("Pick a PNG, JPEG, WebP or GIF.");
       return;
     }
     if (file.size > MAX_BYTES) {
-      setError("That picture is over 2 MB. Pick a smaller one.");
+      setError("That picture is over 5 MB. Pick a smaller one.");
       return;
     }
+    // Straight to the cropper. Nothing is uploaded until a square comes back.
+    setChosen(file);
+  }
 
+  async function upload(blob: Blob) {
+    setError(null);
     setBusy(true);
-    setPreview(URL.createObjectURL(file));
+    setPreview(URL.createObjectURL(blob));
 
     const supabase = createClient();
-    const extension = file.type.split("/")[1]?.replace("jpeg", "jpg") ?? "png";
     /* One path per account rather than one per upload, with `upsert`. A new
        filename every time leaves every previous picture in the bucket forever,
-       and nothing ever goes back to delete them. */
-    const path = `${userId}/avatar.${extension}`;
+       and nothing ever goes back to delete them.
+
+       Always `.webp` now, because the cropper decides the format rather than
+       the upload: a stable extension means the old file is genuinely replaced
+       instead of a JPEG being orphaned beside its PNG replacement. */
+    const path = `${userId}/avatar.webp`;
 
     const { error: uploadError } = await supabase.storage
       .from("avatars")
-      .upload(path, file, { upsert: true, contentType: file.type });
+      .upload(path, blob, { upsert: true, contentType: "image/webp" });
 
     if (uploadError) {
       setBusy(false);
@@ -90,7 +117,32 @@ export function AvatarPicker({
       return;
     }
     setPreview(null);
+    setChosen(null);
     router.refresh();
+  }
+
+  if (chosen) {
+    return (
+      <div className="flex flex-col gap-4">
+        <AvatarCropper
+          file={chosen}
+          busy={busy}
+          onCancel={() => {
+            setChosen(null);
+            setError(null);
+          }}
+          onCrop={(blob) => void upload(blob)}
+        />
+        {error && (
+          <p
+            role="alert"
+            className="text-center text-[0.8rem] text-destructive"
+          >
+            {error}
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (
@@ -107,8 +159,8 @@ export function AvatarPicker({
              *
              * `next/image` exists to pick a size and a format for an image
              * whose dimensions are decided by the layout. This one is 80
-             * CSS pixels, square, always, and the file behind it is already
-             * capped at 2 MB by the bucket. Routing it through the optimiser
+             * CSS pixels, square, always, and the file behind it is a 512px
+             * WebP the cropper made. Routing it through the optimiser
              * would add a host to `remotePatterns`, a build-time dependency
              * on the Supabase URL, and a per-image transform that Vercel
              * bills for — to serve a thumbnail that is smaller than the
@@ -154,14 +206,14 @@ export function AvatarPicker({
             const file = event.target.files?.[0];
             // Cleared so choosing the same file twice still fires a change.
             event.target.value = "";
-            if (file) void upload(file);
+            if (file) choose(file);
           }}
         />
       </div>
 
       <div className="min-w-0">
         <p className="text-[0.85rem] text-subtle leading-relaxed">
-          A square picture looks best. PNG, JPEG, WebP or GIF, up to 2 MB.
+          PNG, JPEG, WebP or GIF, up to 5 MB. You choose the crop.
         </p>
         <div className="mt-2 flex items-center gap-4">
           <button
