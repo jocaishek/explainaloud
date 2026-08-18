@@ -31,6 +31,21 @@ function tavilyQuery(value: string): string {
   return (lastSpace > 200 ? clipped.slice(0, lastSpace) : clipped).trim();
 }
 
+/** Longest a single search term may be. Roughly a headline. */
+const SEARCH_TERM_CHARS = 80;
+
+/** One search term: a clause, not a sentence, cut at a word boundary. */
+function searchTerm(value: string): string {
+  const term = value
+    .replace(/\s+/g, " ")
+    .replace(/[."']+$/g, "")
+    .trim();
+  if (term.length <= SEARCH_TERM_CHARS) return term;
+  const clipped = term.slice(0, SEARCH_TERM_CHARS);
+  const lastSpace = clipped.lastIndexOf(" ");
+  return (lastSpace > 24 ? clipped.slice(0, lastSpace) : clipped).trim();
+}
+
 export type CourseVideo = {
   title: string;
   url: string;
@@ -143,7 +158,27 @@ export async function discoverCourseVideos(
   topic: string,
   queries: string[],
 ): Promise<VideoDiscovery> {
-  if (!env.TAVILY_API_KEY || queries.length === 0) {
+  /* The key, and nothing else.
+   *
+   * This used to bail when `queries` was empty as well, and that one clause is
+   * the whole of "the YouTube finder doesn't work". A course built from
+   * uploaded material runs in sources-only mode, and that prompt instructs the
+   * model in as many words to "Return an EMPTY video_searches array" — the
+   * files are the world, so the course must not point away from them. Which is
+   * right at build time and wrong here, because here somebody has pressed a
+   * button labelled *Find videos*. Their own material cannot answer that
+   * question, so refusing to search on the grounds that the material did not
+   * suggest a search is refusing the request that was actually made.
+   *
+   * The failure was silent in the worst way, too: it returned `searched:
+   * false`, which the panel renders identically to a search that has not been
+   * run yet. The button stayed there offering to do the thing it had just
+   * declined to do.
+   *
+   * With no queries the search is the topic — which is what somebody would
+   * type into YouTube themselves, and is why this is safe rather than a
+   * fallback that returns rubbish. */
+  if (!env.TAVILY_API_KEY) {
     return { videos: [], searched: false };
   }
 
@@ -163,8 +198,15 @@ export async function discoverCourseVideos(
         // Tavily's 400-character ceiling and 400'd outright. Searching the
         // topic plus the two strongest generated queries returns actual
         // results; `include_domains` already restricts this to YouTube.
+        /* Each term clipped, not just the whole. The two strongest queries used
+           to be phrases the model wrote for exactly this purpose; when there
+           are none, the caller passes the course's key points instead, and a
+           key point is a full sentence. Two of those bury the topic in the
+           middle of a paragraph of prose and the results drift off it. */
         query: tavilyQuery(
-          [topic, "explained", ...queries.slice(0, 2)].join(" "),
+          [topic, "explained", ...queries.slice(0, 2).map(searchTerm)].join(
+            " ",
+          ),
         ),
         topic: "general",
         country: "united states",
@@ -178,7 +220,19 @@ export async function discoverCourseVideos(
     });
 
     if (!response.ok) {
-      console.error(`Video search failed: Tavily ${response.status}`);
+      /* The status spelled out, because two of them mean something a reader of
+         this log can act on and the bare number does not say which. A 401 is
+         the key — most often the literal string `[SENSITIVE]` that
+         `vercel env pull` writes in place of a value it will not hand over,
+         which is long enough to satisfy the schema and is not a key. A 432 is
+         the plan's monthly credits. Neither is a bug in this file. */
+      const meaning =
+        response.status === 401 || response.status === 403
+          ? " — the key is missing, wrong, or a `[SENSITIVE]` placeholder"
+          : response.status === 429 || response.status === 432
+            ? " — out of Tavily credits"
+            : "";
+      console.error(`Video search failed: Tavily ${response.status}${meaning}`);
       return { videos: [], searched: true };
     }
 
