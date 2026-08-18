@@ -4,6 +4,7 @@ import {
   NoSpeechDetectedError,
   transcribeAudio,
 } from "~/lib/ai/provider";
+import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { MIN_SPEAKING_SECONDS, speechMetrics } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/server";
 
@@ -51,6 +52,11 @@ export async function POST(request: Request) {
 
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  // Transcription on the key the whole project shares.
+  if (!(await claimApiCall(supabase, "baseline"))) {
+    return NextResponse.json({ error: RATE_LIMITED_MESSAGE }, { status: 429 });
   }
 
   let formData: FormData;

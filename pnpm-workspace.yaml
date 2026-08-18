@@ -3,5 +3,20 @@ allowBuilds:
   supabase: true
   unrs-resolver: false
 overrides:
-  postcss: 8.5.19
+  # Both of these are advisories against Next's own build toolchain, and both
+  # are pinned here rather than left to float:
+  #
+  #   postcss  GHSA-fxqj-rqcc-2cmp — an attacker-controlled `sourceMappingURL`
+  #            reads arbitrary `.map` files. Reachable only through CSS this
+  #            project authors, so it was never on the path a request from the
+  #            internet takes. Was pinned at 8.5.19, which is the vulnerable
+  #            version; 8.5.26 is the current one past the fix.
+  #   nanoid   GHSA-2v37-7h3g-55p8. 3.3.18 is the fix in the line Next
+  #            depends on — the 5.x and 6.x lines are ESM-only and would break
+  #            the tools that use it.
+  #
+  # "Not exploitable here" is a judgement that has to be re-made every time a
+  # dependency moves. A version number does not.
+  postcss: 8.5.26
+  nanoid: ">=3.3.18 <4"
   sharp: 0.35.0

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { courseSchema } from "~/lib/ai/schemas";
+import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 import {
   discoverCourseResources,
@@ -20,6 +21,12 @@ export async function POST(
 
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  // Every call is a paid search credit, and this route takes
+  // `?refresh=1` to skip its own cache — a loop that bills, by design.
+  if (!(await claimApiCall(supabase, "search"))) {
+    return NextResponse.json({ error: RATE_LIMITED_MESSAGE }, { status: 429 });
   }
 
   const { data: course } = await supabase

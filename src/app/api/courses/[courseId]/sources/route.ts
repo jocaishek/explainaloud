@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { extractText } from "~/lib/ai/sources";
+import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { createClient } from "~/lib/supabase/server";
 import {
   FREE_SOURCES_PER_COURSE,
@@ -19,6 +20,12 @@ export async function POST(
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  // A 5 MB PDF parse is the most CPU a single request here can
+  // ask for, and this function is billed by active CPU.
+  if (!(await claimApiCall(supabase, "upload"))) {
+    return NextResponse.json({ error: RATE_LIMITED_MESSAGE }, { status: 429 });
   }
 
   const { data: course } = await supabase
