@@ -154,14 +154,46 @@ const GATEWAY_URL = "https://ai-gateway.vercel.sh/v1/chat/completions";
 const TIMEOUT_MS = 45_000;
 
 /**
- * Output ceiling per call.
+ * Output ceiling per call, on the rungs that are billed for asking.
  *
- * Groq's free tier bills *requested* max_tokens against a 12k tokens-per-minute
- * budget, not tokens actually produced — so asking for 8192 "just in case" made
- * a single grading call blow the minute's allowance and 429. These responses
- * are small JSON objects; 3000 is comfortably above the largest real one.
+ * Groq's free tier bills *requested* max_tokens against its tokens-per-minute
+ * budget, not tokens actually produced — so asking for 8192 "just in case"
+ * made a single grading call blow the minute's allowance and 429.
+ *
+ * The mistake was applying that to every provider. Gemini bills what it
+ * generates, and this ceiling was clamping it too: a course built from a long
+ * chapter needs more than 3000 tokens of JSON, so Gemini stopped mid-array and
+ * the parser reported `Expected ',' or ']' after array element in JSON at
+ * position 15153`. Which reads as a broken model and was a budget written for
+ * a different vendor, applied to the one rung that could have answered.
  */
 const MAX_OUTPUT_TOKENS = 3000;
+
+/**
+ * The same ceiling for Gemini, which is not billed for asking.
+ *
+ * Large enough for the biggest real course — a forty page chapter comes back
+ * around 5k tokens of JSON — with room above it, because the failure mode of
+ * being too low is not a truncated answer the caller can salvage. It is
+ * invalid JSON and a dead rung.
+ */
+const GEMINI_MAX_OUTPUT_TOKENS = 8192;
+
+/**
+ * What a Groq free-tier key can hold in one minute, in tokens.
+ *
+ * Requests larger than this cannot ever succeed: the whole prompt counts, so a
+ * 32k-token course build is refused with a 413 no matter how small the answer
+ * is allowed to be. Both Groq rungs then burn a round trip each to be told so,
+ * and the resulting error names Groq twice for something Groq was never able
+ * to do. Checked before the call instead.
+ */
+const GROQ_TPM_BUDGET = 8000;
+
+/** Rough tokens for a prompt. Four characters each is close enough to gate on. */
+function estimateTokens(prompt: string): number {
+  return Math.ceil(prompt.length / 4);
+}
 
 /** One retry against a rate limit before giving up on a provider. */
 const RATE_LIMIT_RETRIES = 1;
@@ -358,9 +390,24 @@ async function callGemini(
   }
 
   const json = await response.json();
-  const text = json?.candidates?.[0]?.content?.parts?.[0]?.text;
+  const candidate = json?.candidates?.[0];
+  const text = candidate?.content?.parts?.[0]?.text;
   if (typeof text !== "string" || !text.trim()) {
     throw new Error("Gemini returned an empty completion");
+  }
+  /* Truncation, named rather than discovered downstream.
+   *
+   * When the answer hits the ceiling, Gemini returns everything it managed
+   * plus `finishReason: "MAX_TOKENS"` — and that text is a JSON document
+   * missing its closing brackets. Handed to the parser it surfaces as
+   * `Expected ',' or ']' after array element in JSON at position 15153`, which
+   * looks like a model producing malformed output and is really a budget being
+   * hit. The distinction matters because the fixes are opposite: one is a
+   * failover, the other is a number in this file. */
+  if (candidate?.finishReason === "MAX_TOKENS") {
+    throw new Error(
+      `Gemini hit its ${maxOutputTokens}-token output ceiling and returned partial JSON`,
+    );
   }
   return text;
 }
@@ -462,6 +509,17 @@ async function callOpenAiCompatible(
       /model.?not.?found|no such model/i.test(body)
     )
       throw new ModelMissingError(config.label, config.model);
+    /* "Your plan cannot use this model" is the same kind of answer as "this
+       model does not exist": permanent until somebody changes something, and
+       not a thing to retry around. The Gateway returns it as a 403
+       `RestrictedModelsError` for a paid model on a free-tier key — which is
+       exactly what `alibaba/qwen3.8-27b` became. Parked with the same cooldown
+       so the rung stops costing a round trip per call. */
+    if (
+      response.status === 403 &&
+      /RestrictedModelsError|do not have access to this model/i.test(body)
+    )
+      throw new ModelMissingError(config.label, config.model);
     throw new Error(`${config.label} ${response.status}: ${body}`);
   }
 
@@ -517,15 +575,37 @@ export async function completeJson<T>(
   validate: (value: unknown) => T,
   options: { maxOutputTokens?: number; fast?: boolean } = {},
 ): Promise<AiResult<T>> {
-  const maxOutputTokens = Math.max(
+  /* Two ceilings, because the two vendors bill differently. See
+     `MAX_OUTPUT_TOKENS` and `GEMINI_MAX_OUTPUT_TOKENS`: one is charged for
+     asking, the other for answering, and collapsing them into a single number
+     meant the vendor that could afford to answer was held to the budget of the
+     one that could not. */
+  const requested = options.maxOutputTokens ?? MAX_OUTPUT_TOKENS;
+  const maxOutputTokens = Math.max(128, Math.min(requested, MAX_OUTPUT_TOKENS));
+  const geminiMaxOutputTokens = Math.max(
     128,
-    Math.min(options.maxOutputTokens ?? MAX_OUTPUT_TOKENS, MAX_OUTPUT_TOKENS),
+    Math.min(
+      options.maxOutputTokens ?? GEMINI_MAX_OUTPUT_TOKENS,
+      GEMINI_MAX_OUTPUT_TOKENS,
+    ),
   );
+
+  /* A prompt bigger than Groq's per-minute budget cannot be served by Groq, at
+     any output size, ever. Leaving those rungs in the chain buys two round
+     trips and two 413s in the error — which is most of what a reader of that
+     error has to wade through before reaching the reason that mattered. */
+  const promptTokens = estimateTokens(prompt);
+  const groqSkip =
+    promptTokens < GROQ_TPM_BUDGET
+      ? undefined
+      : `prompt is ~${promptTokens} tokens, over the ${GROQ_TPM_BUDGET}/min budget`;
   const attempts: Array<{
     provider: AiProvider;
     label: string;
     call: (p: string, maxTokens: number) => Promise<string>;
     configured: boolean;
+    /** Present when the rung has a key but still cannot serve this prompt. */
+    unusable?: string;
   }> = [
     /* Gemini leads every call, including the latency-sensitive ones.
      *
@@ -552,7 +632,8 @@ export async function completeJson<T>(
     {
       provider: "gemini",
       label: "gemini",
-      call: callGemini,
+      // Its own ceiling, not the shared one it was being clamped to.
+      call: (value: string) => callGemini(value, geminiMaxOutputTokens),
       configured: !!env.GEMINI_API_KEY,
     },
     /* Which Groq tier stands behind Gemini is what `fast` decides now.
@@ -570,6 +651,7 @@ export async function completeJson<T>(
             call: (value: string, tokens: number) =>
               callGroq(value, Math.min(tokens, 900), GROQ_FALLBACK_MODEL),
             configured: !!env.GROQ_API_KEY,
+            unusable: groqSkip,
           },
         ]
       : [
@@ -579,6 +661,7 @@ export async function completeJson<T>(
             call: (value: string, tokens: number) =>
               callGroq(value, tokens, GROQ_PRIMARY_MODEL),
             configured: !!env.GROQ_API_KEY,
+            unusable: groqSkip,
           },
         ]),
     {
@@ -602,6 +685,7 @@ export async function completeJson<T>(
           label: "groq-large",
           call: (value, tokens) => callGroq(value, tokens, GROQ_PRIMARY_MODEL),
           configured: !!env.GROQ_API_KEY,
+          unusable: groqSkip,
         }
       : {
           provider: "groq",
@@ -611,6 +695,7 @@ export async function completeJson<T>(
           call: (value, tokens) =>
             callGroq(value, Math.min(tokens, 2400), GROQ_FALLBACK_MODEL),
           configured: !!env.GROQ_API_KEY,
+          unusable: groqSkip,
         },
   ];
 
@@ -619,6 +704,13 @@ export async function completeJson<T>(
   for (const attempt of attempts) {
     if (!attempt.configured) {
       failures.push(`${attempt.label}: no API key configured`);
+      continue;
+    }
+    // Has a key, cannot serve this one. Said plainly, because "no API key
+    // configured" would send the next person to read this straight to Vercel
+    // to check a variable that was set correctly all along.
+    if (attempt.unusable) {
+      failures.push(`${attempt.label}: skipped, ${attempt.unusable}`);
       continue;
     }
     if (inCooldown(attempt.label)) {
