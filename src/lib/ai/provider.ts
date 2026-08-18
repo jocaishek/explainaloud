@@ -94,14 +94,24 @@ const GROQ_REASONING_EFFORT = "low";
  * deployment and one vendor account is one fewer thing to keep alive for a
  * rung that only fires when two others have already failed.
  *
- * The model it named is **gone**: `inclusionai/ling-3.0-flash-free` answers
- * `404 model_not_found`. That is what a free model on a gateway does
- * eventually — no SLA, no support channel, no guarantee it stays either free
- * or present — and it is the reason this is an environment variable now.
- * Repointing it is a dashboard edit rather than a code change and a deploy;
- * `AI_GATEWAY_MODEL` in `env.ts` is the knob. Whatever it points at earns its
- * place on window size alone, enough to hold a request neither Groq tier can,
- * and is deliberately not first for anything.
+ * The model it named first — `inclusionai/ling-3.0-flash-free` — is **gone**,
+ * and answers `404 model_not_found`. That is what a free model on a gateway
+ * does eventually: no SLA, no support channel, no guarantee it stays either
+ * free or present. It is the reason this is an environment variable now, and
+ * the reason the default is chosen rather than assumed. `AI_GATEWAY_MODEL` in
+ * `env.ts` repoints it from the dashboard, without a deploy.
+ *
+ * The default is Qwen 3.8 27B, asked for by name. Whatever this points at
+ * earns its place on window size alone — enough to hold a request neither Groq
+ * tier can — and is deliberately not first for anything.
+ *
+ * Note it is a reasoning model, and this rung deliberately sends no
+ * `reasoning_effort`: the Gateway is not Groq and does not take Groq's
+ * parameters for every model behind it. `jsonMode` is off here for the same
+ * reason — see the flag's own note — so the JSON constraint comes from the
+ * prompt and `extractJson` unwraps whatever arrives around it. That is weaker
+ * than a schema, and acceptable for a rung reached only after two providers
+ * have already declined.
  *
  * **Why this is not `google/gemini-3.5-flash-lite`.** The Gateway restricts
  * that model to accounts with paid credits and answers a free-tier key with
@@ -115,7 +125,7 @@ const GROQ_REASONING_EFFORT = "low";
  * the next request either, and paying a round trip per call to rediscover that
  * is worse than skipping the rung.
  */
-const GATEWAY_MODEL = env.AI_GATEWAY_MODEL ?? "inclusionai/ling-3.0-flash-free";
+const GATEWAY_MODEL = env.AI_GATEWAY_MODEL ?? "alibaba/qwen3.8-27b";
 
 /**
  * How long a rung is parked after the provider says its model does not exist.

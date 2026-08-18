@@ -191,7 +191,21 @@ export async function discoverCourseVideos(
       }>;
     };
     const seen = new Set<string>();
-    const videos: CourseVideo[] = [];
+    /* Two piles, not one filter.
+     *
+     * `titleMatchesTopic` wants two topic words in the title, and a title is a
+     * headline rather than a description: a good video on "How to read
+     * literature like a professor" is called "Analytical Reading, Explained",
+     * which shares one word with the topic and was thrown away for it. The
+     * relevance work has already been done by the search itself — Tavily was
+     * asked for this topic and restricted to YouTube — so a title that also
+     * echoes the topic is worth ranking first, and nothing more than that.
+     *
+     * The old behaviour returned an empty list rather than a slightly weaker
+     * one, and an empty list is indistinguishable on screen from a search that
+     * never ran. That is most of "I don't know whether it works". */
+    const onTopic: CourseVideo[] = [];
+    const rest: CourseVideo[] = [];
 
     for (const result of payload.results ?? []) {
       if (typeof result.url !== "string") continue;
@@ -201,19 +215,24 @@ export async function discoverCourseVideos(
         typeof result.title === "string" && result.title.trim()
           ? result.title.trim()
           : `${topic} explained`;
-      const searchEvidence = `${title} ${
-        typeof result.content === "string" ? result.content : ""
-      }`;
-      if (
-        !looksLikeEnglishText(searchEvidence) ||
-        !titleMatchesTopic(title, topic)
-      ) {
-        continue;
-      }
+      /* The title, and not the description with it.
+       *
+       * This used to test `title + content`, where `content` is whatever
+       * snippet the search engine returns — for YouTube that is the video
+       * description, which is routinely multilingual boilerplate: translated
+       * blurbs, hashtags, a channel's other languages, "et al." in a citation.
+       * The English test rejects text with two words from a list that includes
+       * `de`, `la`, `le`, `en`, `et` and `est`, so a long enough description
+       * disqualified a perfectly English video most of the time. The function
+       * is documented as reading a title. Now it gets one. */
+      if (!looksLikeEnglishText(title)) continue;
       seen.add(url);
-      videos.push({ title, url });
-      if (videos.length === 5) break;
+      (titleMatchesTopic(title, topic) ? onTopic : rest).push({ title, url });
     }
+
+    // Topped up rather than truncated: five results that include two loosely
+    // matched ones beat two results, and beat none at all.
+    const videos = [...onTopic, ...rest].slice(0, 5);
 
     return { videos, searched: true };
   } catch (error) {
@@ -430,7 +449,11 @@ export async function discoverCourseResources(
       }>;
     };
     const seen = new Set<string>();
-    const resources: CourseResource[] = [];
+    // Ranked rather than gated, as with the videos above: a page the search
+    // returned for this topic and whose title reads as English is worth
+    // offering even when its wording does not echo the topic back.
+    const onTopic: CourseResource[] = [];
+    const rest: CourseResource[] = [];
 
     for (const result of payload.results ?? []) {
       if (
@@ -442,30 +465,26 @@ export async function discoverCourseResources(
       }
       const url = directLearningWebsite(result.url);
       const label = result.title.trim();
-      const evidence = `${label} ${
-        typeof result.content === "string" ? result.content : ""
-      }`;
-      if (
-        !url ||
-        !label ||
-        seen.has(url) ||
-        !looksLikeEnglishText(label) ||
-        !titleMatchesTopic(evidence, topic)
-      ) {
+      if (!url || !label || seen.has(url) || !looksLikeEnglishText(label)) {
         continue;
       }
 
       seen.add(url);
-      resources.push({
+      const evidence = `${label} ${
+        typeof result.content === "string" ? result.content : ""
+      }`;
+      const resource = {
         label,
         why: conciseReason(
           result.content,
           `A direct resource for studying ${topic}.`,
         ),
         url,
-      });
-      if (resources.length === 4) break;
+      };
+      (titleMatchesTopic(evidence, topic) ? onTopic : rest).push(resource);
     }
+
+    const resources = [...onTopic, ...rest].slice(0, 4);
 
     return { resources, searched: true };
   } catch (error) {

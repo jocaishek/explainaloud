@@ -75,14 +75,21 @@ export async function POST(
             label,
             why: `A direct resource for studying ${course.topic}.`,
           }));
-  if (videos.length === 0 && resources.length === 0) {
-    return NextResponse.json(
-      { error: "No reliable direct learning links were found." },
-      { status: 404 },
-    );
-  }
+  /* Recorded whether or not anything was found, and saved either way.
+   *
+   * A search that ran and came back empty used to return 404 and write
+   * nothing, so the course still said "no videos yet" and the screen still
+   * offered the same button — the credit was spent and the only trace of it
+   * was a toast that disappeared. Stamping the attempt is what lets the panel
+   * say "searched, nothing usable" instead of pretending it never happened. */
+  const now = new Date().toISOString();
+  const searched_at = {
+    ...generated.searched_at,
+    ...(videoDiscovery.searched ? { videos: now } : {}),
+    ...(resourceDiscovery.searched ? { resources: now } : {}),
+  };
 
-  const enriched = { ...generated, videos, resources };
+  const enriched = { ...generated, videos, resources, searched_at };
   const { error: saveError } = await supabase
     .from("courses")
     .update({ generated: enriched, updated_at: new Date().toISOString() })
@@ -96,5 +103,5 @@ export async function POST(
     );
   }
 
-  return NextResponse.json({ videos, resources, cached: false });
+  return NextResponse.json({ videos, resources, searched_at, cached: false });
 }

@@ -167,6 +167,9 @@ export function CourseBuilder({
                 resources: Array.isArray(json.resources)
                   ? json.resources
                   : current.resources,
+                // Carried through so the panels can say "searched, nothing
+                // usable" without waiting for a reload to learn it.
+                searched_at: json.searched_at ?? current.searched_at,
               }
             : current,
         );
@@ -399,18 +402,27 @@ export function CourseBuilder({
                   <h2 className="font-mono text-[11px] text-brand-ink uppercase tracking-[0.18em]">
                     Watch
                   </h2>
+                  {/* Two different situations, and they used to read the same.
+                      A search that ran and found nothing showed this identical
+                      panel, so the credit was spent and the only evidence was
+                      a button that had not changed. */}
                   <p className="text-sm text-subtle">
-                    Find direct videos matched to this course. This uses one
-                    basic search credit and saves the results.
+                    {course.searched_at?.videos
+                      ? "Searched, and nothing came back that was clearly on this topic and in English. Searching again can return different results."
+                      : "Find direct videos matched to this course. This uses one basic search credit and saves the results."}
                   </p>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     disabled={findingLinks}
-                    onClick={() => findLearningLinks()}
+                    onClick={() => findLearningLinks(true)}
                   >
-                    {findingLinks ? "Finding links…" : "Find videos & websites"}
+                    {findingLinks
+                      ? "Finding links…"
+                      : course.searched_at?.videos
+                        ? "Search again"
+                        : "Find videos & websites"}
                   </Button>
                 </motion.section>
               ) : null}
@@ -461,18 +473,22 @@ export function CourseBuilder({
                     Go deeper
                   </h2>
                   <p className="text-sm text-subtle">
-                    Find direct English websites matched to this course. This
-                    uses one basic search credit and never sends you to a search
-                    results page.
+                    {course.searched_at?.resources
+                      ? "Searched, and nothing came back that was a direct page rather than a search result. Searching again can return different results."
+                      : "Find direct English websites matched to this course. This uses one basic search credit and never sends you to a search results page."}
                   </p>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
                     disabled={findingLinks}
-                    onClick={() => findLearningLinks()}
+                    onClick={() => findLearningLinks(true)}
                   >
-                    {findingLinks ? "Finding links…" : "Find direct websites"}
+                    {findingLinks
+                      ? "Finding links…"
+                      : course.searched_at?.resources
+                        ? "Search again"
+                        : "Find direct websites"}
                   </Button>
                 </motion.section>
               ) : null}

@@ -122,6 +122,24 @@ const courseResponseSchema = z.object({
     .default([]),
   uncovered: z.array(z.string()).default([]),
   /**
+   * When the web searches behind "Watch" and "Go deeper" last ran.
+   *
+   * Recorded because an empty `videos` array had two meanings and no way to
+   * tell them apart: nobody has looked yet, and we looked and nothing survived
+   * the filters. The screen showed the same "Find videos & websites" button
+   * for both, so a search that ran, cost a credit and found nothing looked
+   * exactly like one that had never happened — which is why the feature was
+   * reported as "rarely works, actually I don't know if it works".
+   *
+   * ISO timestamps, absent on every course built before this existed.
+   */
+  searched_at: z
+    .object({
+      videos: z.string().optional(),
+      resources: z.string().optional(),
+    })
+    .optional(),
+  /**
    * Set when the topic is too broad to grade an explanation against well.
    *
    * A vague topic still produces a course, because refusing to build one is a
