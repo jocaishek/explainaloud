@@ -94,10 +94,14 @@ const GROQ_REASONING_EFFORT = "low";
  * deployment and one vendor account is one fewer thing to keep alive for a
  * rung that only fires when two others have already failed.
  *
- * Ling is free tier and treated accordingly: no SLA, no support channel, no
- * guarantee it stays either free or available. It earns its place on the 262K
- * window alone — enough to hold a request neither Groq tier can — and it is
- * deliberately not first for anything.
+ * The model it named is **gone**: `inclusionai/ling-3.0-flash-free` answers
+ * `404 model_not_found`. That is what a free model on a gateway does
+ * eventually — no SLA, no support channel, no guarantee it stays either free
+ * or present — and it is the reason this is an environment variable now.
+ * Repointing it is a dashboard edit rather than a code change and a deploy;
+ * `AI_GATEWAY_MODEL` in `env.ts` is the knob. Whatever it points at earns its
+ * place on window size alone, enough to hold a request neither Groq tier can,
+ * and is deliberately not first for anything.
  *
  * **Why this is not `google/gemini-3.5-flash-lite`.** The Gateway restricts
  * that model to accounts with paid credits and answers a free-tier key with
@@ -105,8 +109,22 @@ const GROQ_REASONING_EFFORT = "low";
  * it happily. Pointing this rung at Gemini would therefore trade a working
  * provider for a 403. Once the Vercel team has credits it becomes a real
  * second Gemini path and is worth switching; until then it must not be.
+ *
+ * A 404 here is treated as configuration rather than failure — see
+ * `MODEL_MISSING_COOLDOWN_MS`. A model that does not exist will not exist on
+ * the next request either, and paying a round trip per call to rediscover that
+ * is worse than skipping the rung.
  */
-const GATEWAY_MODEL = "inclusionai/ling-3.0-flash-free";
+const GATEWAY_MODEL = env.AI_GATEWAY_MODEL ?? "inclusionai/ling-3.0-flash-free";
+
+/**
+ * How long a rung is parked after the provider says its model does not exist.
+ *
+ * Long, because this is a configuration fact rather than a transient one. It
+ * is not indefinite: the fix is an environment change, and this is what stops
+ * an instance that started before the change from ignoring the rung forever.
+ */
+const MODEL_MISSING_COOLDOWN_MS = 30 * 60_000;
 
 const GEMINI_URL = (model: string) =>
   `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
@@ -131,6 +149,14 @@ const MAX_OUTPUT_TOKENS = 3000;
 const RATE_LIMIT_RETRIES = 1;
 /** Longer limits (for example a daily quota) should fall through immediately. */
 const MAX_RATE_LIMIT_WAIT_MS = 60_000;
+
+/** The provider is reachable and the model it was asked for is not there. */
+class ModelMissingError extends Error {
+  constructor(label: string, model: string) {
+    super(`${label} has no model "${model}"`);
+    this.name = "ModelMissingError";
+  }
+}
 
 class RateLimitedError extends Error {
   constructor(
@@ -407,6 +433,17 @@ async function callOpenAiCompatible(
       throw new RateLimitedError(
         parseRetryAfter(body, response.headers.get("retry-after")),
       );
+    /* "This model does not exist" is not a failure to retry around.
+     *
+     * It is what a provider says after retiring something, and it will say it
+     * again on the next request and the one after that. Left as an ordinary
+     * error, the rung stays in the chain and every call pays a round trip to
+     * be told the same thing. Named here so the chain can park it. */
+    if (
+      response.status === 404 &&
+      /model.?not.?found|no such model/i.test(body)
+    )
+      throw new ModelMissingError(config.label, config.model);
     throw new Error(`${config.label} ${response.status}: ${body}`);
   }
 
@@ -585,6 +622,20 @@ export async function completeJson<T>(
         }
         return { data, provider: attempt.provider };
       } catch (error) {
+        /* A model that has been withdrawn. Parked for half an hour and logged
+           loudly: nothing about this recovers on its own, and the fix —
+           repointing `AI_GATEWAY_MODEL` — needs somebody to know. */
+        if (error instanceof ModelMissingError) {
+          quotaExhaustedUntil.set(
+            attempt.label,
+            Date.now() + MODEL_MISSING_COOLDOWN_MS,
+          );
+          console.error(
+            `ai: ${error.message}. Repoint it, or unset its key to drop the rung.`,
+          );
+          failures.push(`${attempt.label}: ${error.message}`);
+          break;
+        }
         if (isQuotaExhausted(error)) {
           quotaExhaustedUntil.set(
             attempt.label,

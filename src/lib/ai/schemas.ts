@@ -78,7 +78,22 @@ const courseResponseSchema = z.object({
         citations: z.array(courseCitationSchema).default([]),
       }),
     )
-    .min(1),
+    /* No minimum, and that is a correction rather than a loosening.
+     *
+     * `.min(1)` contradicted our own prompt. Sources-only mode tells the model
+     * in as many words: "A SHORT COURSE IS A CORRECT ANSWER… If the files
+     * barely address the topic at all, say exactly that in summary and put the
+     * rest in uncovered. Do not build a course out of the topic name." A model
+     * that obeys returns no sections — and then the schema rejected it, the
+     * chain read that as the provider being broken, failed over to the next
+     * one, which obeyed the same instruction, and so on down all four rungs
+     * until the student was told "This service can't be used at the moment".
+     *
+     * Nothing was unavailable. Every provider gave the same, correct answer:
+     * these files do not support a course on this topic. That answer now
+     * survives parsing, and `orchestrateCourse` turns it into a message that
+     * says so. */
+    .default([]),
   /** Condensed revision notes — the thing a student actually re-reads. */
   notes: z.array(z.string().min(1)).default([]),
   /**
