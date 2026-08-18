@@ -101,9 +101,17 @@ const GROQ_REASONING_EFFORT = "low";
  * the reason the default is chosen rather than assumed. `AI_GATEWAY_MODEL` in
  * `env.ts` repoints it from the dashboard, without a deploy.
  *
- * The default is Qwen 3.8 27B, asked for by name. Whatever this points at
- * earns its place on window size alone — enough to hold a request neither Groq
- * tier can — and is deliberately not first for anything.
+ * The default is `alibaba/qwen3.8-27b`: 262K of context, free on input and
+ * output, 1.1s to first token. That is the same window the Ling model was
+ * chosen for and the same price, which is the whole specification for this
+ * rung — it earns its place on window size alone, and is deliberately not
+ * first for anything.
+ *
+ * Free matters as much as wide. The Gateway answers a key with no credits with
+ * 403 `RestrictedModelsError` for models that need them, so a paid model here
+ * would be a rung that 403s on every call. `alibaba/qwen3.8-max` is the same
+ * family at 1M tokens and $2/$6 per million, and is the upgrade if this
+ * project ever has Gateway credits — not before.
  *
  * Note it is a reasoning model, and this rung deliberately sends no
  * `reasoning_effort`: the Gateway is not Groq and does not take Groq's
