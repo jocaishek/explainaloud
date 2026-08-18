@@ -1,10 +1,18 @@
 import { cookies } from "next/headers";
 import { isAdminEmail } from "~/lib/admin";
+import type { Folder } from "~/lib/folders";
 import { requireProfile } from "~/lib/supabase/server";
-import { AppShell, type SidebarTopic } from "./app-shell";
+import { AppShell, type RailCourse } from "./app-shell";
 
-/** How many topics the rail lists before it stops being a rail. */
-const RAIL_TOPICS = 6;
+/**
+ * How many topics the rail lists before it stops being a rail.
+ *
+ * Higher than the six it used to show, because the rail is now a place to file
+ * things rather than a list of the last few: a folder you cannot see is a
+ * folder you cannot drag into. Still bounded — a rail is not the topic grid,
+ * and this query runs on every screen in the app.
+ */
+const RAIL_COURSES = 40;
 
 export default async function DashboardLayout({
   children,
@@ -21,23 +29,29 @@ export default async function DashboardLayout({
      closed. */
   const railCollapsed = (await cookies()).get("rail-collapsed")?.value === "1";
 
-  /* The rail's topic list. Six columns of one indexed table, ordered by a
-     column that is already indexed — cheap enough to run on every screen in
-     the app, which is what a persistent rail means. */
-  const { data: topics } = await supabase
-    .from("courses")
-    .select("id, slug, topic, name")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false })
-    .limit(RAIL_TOPICS)
-    .returns<SidebarTopic[]>();
+  const [{ data: folders }, { data: courses }] = await Promise.all([
+    supabase
+      .from("folders")
+      .select("id, name, color, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true })
+      .returns<Folder[]>(),
+    supabase
+      .from("courses")
+      .select("id, slug, topic, name, folder_id, pinned")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(RAIL_COURSES)
+      .returns<RailCourse[]>(),
+  ]);
 
   return (
     <AppShell
       firstName={profile.first_name}
       lastName={profile.last_name}
       showAdmin={isAdminEmail(user.email)}
-      topics={topics ?? []}
+      folders={folders ?? []}
+      courses={courses ?? []}
       defaultCollapsed={railCollapsed}
     >
       {children}
