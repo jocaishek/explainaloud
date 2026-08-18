@@ -57,6 +57,22 @@ product:
   anywhere — so the green somebody is shown before signing up is the green they
   are graded in afterwards. They are declared once, at `:root`, and deliberately
   do not appear in `.register-app`.
+- **The streak flame.** `--flame` orange, with `--flame-core` for the hot
+  inside and `--flame-glow` for the arrival. It is the fourth reserved colour
+  and the only one that is not a verdict, and it is reserved on exactly the
+  same terms: it means one thing, it means it on both sides of the sign-in, and
+  **nothing but the streak may use it.**
+
+  It is a red-orange rather than a gold on purpose. `--vague` is the amber a
+  grader paints on a claim that was said but not checkably, and a flame close
+  enough to be confused with it would put a celebration and a judgement in the
+  same colour in the same view. Different hue family, legible at a glance.
+
+  Declared at `:root`, restated inside `main.lp-v2` because that block forces
+  light surfaces whatever the reader's theme, and lifted one stop in `.dark`
+  because a mid-weight orange that is vivid on paper is a brown smudge on
+  carbon. A component asks for the token and is right in all three.
+
 - **The mono voice.** Martian Mono, uppercase, small, tracked — for **metadata
   and timecodes**, and nothing else.
 
@@ -85,7 +101,11 @@ product:
   the section's identity or just removes a smudge.
 - Glassmorphism and `backdrop-filter` as decoration. Blur is for a bar floating
   over scrolling content, and nothing else.
-- A colour that is neither a verdict nor the register's single accent. The
+- A colour that is neither a verdict, the streak flame, nor the register's
+  single accent. The flame is the one addition this list has taken, it was
+  taken deliberately, and it did not open a door: adding a fifth means making
+  the same case, which is that the thing being coloured means exactly one
+  thing, means it everywhere, and is confusable with none of the four. The
   landing's grounds are the one warm ramp at four values — a deep field, two
   tints, and a band on white — and adding a second hue as scenery is how a
   reserved palette stops being reserved. (This line named `#3b37e6`
