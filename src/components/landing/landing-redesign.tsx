@@ -14,6 +14,7 @@ import {
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { DemoConsole } from "~/components/landing/demo-console";
 import { FlowField } from "~/components/landing/flow-field";
+import { FriendsAndStreaks } from "~/components/landing/friends-streaks";
 import { GlassMark } from "~/components/landing/glass-mark";
 import { SignupNudge } from "~/components/landing/signup-nudge";
 
@@ -1827,6 +1828,8 @@ export function LandingRedesign() {
           </div>
         </div>
       </section>
+
+      <FriendsAndStreaks />
 
       {/* The close is the open, again.
           It was still carrying the retired WebP as a background image, which

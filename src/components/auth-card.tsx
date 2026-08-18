@@ -1,6 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useState } from "react";
+import { signInWithIdentifier } from "~/app/(auth)/sign-in-actions";
 import { GoogleSignIn } from "~/components/google-sign-in";
 import { PasswordField } from "~/components/password-field";
 import { Button } from "~/components/ui/button";
@@ -219,21 +220,25 @@ export function AuthCard({
       return;
     }
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: trimmedEmail,
-      password,
-    });
+    /* Signing in goes through a server action rather than the browser client,
+       because the field now takes a username as well as an email.
+       *
+       * Turning `@obiwankanobi` into the address the account was created with
+       * needs a privileged lookup, and the answer must never come back to the
+       * page — a browser that can ask "which email owns this username" is an
+       * email harvester with a public list of usernames to feed it. So the
+       * lookup and the sign-in both happen on the server, and what returns is
+       * a session cookie or a refusal. */
+    const result = await signInWithIdentifier(trimmedEmail, password);
 
-    if (signInError) {
+    if (!result.ok) {
       setSubmitting(false);
-      setError(authErrorMessage(mode, signInError.message));
+      setError(result.error);
       // The one failure with an action attached. Everything else is "try
       // again"; this one needs a new email, and there was no way to ask for
       // one without going back through signup — which does not resend for an
       // address that already exists, so it looks like the mail is broken.
-      setNeedsVerification(
-        signInError.message.toLowerCase().includes("email not confirmed"),
-      );
+      setNeedsVerification(result.needsVerification);
       return;
     }
 
@@ -435,10 +440,31 @@ export function AuthCard({
           </div>
 
           <div className="flex flex-col gap-3">
+            {/* `text` when signing in, `email` when signing up.
+             *
+             * Signing in takes a username as well as an address, and
+             * `type="email"` is not a hint — the browser refuses to submit
+             * the form at all if what is in it has no `@`. Left as it was,
+             * username sign-in would have failed before a single line of
+             * this ran, with a native bubble reading "please include an @",
+             * which is a lie about what the field accepts.
+             *
+             * Signing up still takes an address and only an address, so it
+             * keeps the stricter type and the keyboard that comes with it. */}
             <Input
-              type="email"
+              type={mode === "signup" ? "email" : "text"}
               required
-              placeholder="you@email.com"
+              autoComplete={mode === "signup" ? "email" : "username"}
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder={
+                mode === "signup" ? "you@email.com" : "Email or username"
+              }
+              aria-label={
+                mode === "signup"
+                  ? "Email address"
+                  : "Email address or username"
+              }
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="text-base text-strong placeholder:text-subtle"

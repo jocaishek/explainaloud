@@ -4,6 +4,7 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  AtSign,
   AudioLines,
   CalendarDays,
   Check,
@@ -14,7 +15,7 @@ import {
   Presentation,
   SlidersHorizontal,
 } from "lucide-react";
-import { useActionState, useId, useState } from "react";
+import { useActionState, useEffect, useId, useState } from "react";
 import { DateOfBirthField } from "~/components/date-of-birth-field";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
@@ -26,19 +27,23 @@ import {
   USE_TYPES,
   type UseType,
 } from "~/lib/profile";
+import { usernameError } from "~/lib/username";
 import { cn } from "~/lib/utils";
 import { type OnboardingState, saveProfile } from "./actions";
+import { UsernameField } from "./username-field";
 import { VoiceWarmup, type WarmupResult } from "./voice-warmup";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 const STEPS = [
   "Your name",
+  "Username",
   "Date of birth",
   "How you'll use it",
   "Voice warm-up",
 ] as const;
 const STEP_ICONS = [
   CircleUserRound,
+  AtSign,
   CalendarDays,
   SlidersHorizontal,
   AudioLines,
@@ -62,6 +67,21 @@ export function OnboardingForm({ email }: { email: string }) {
   const [direction, setDirection] = useState<1 | -1>(1);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  const [username, setUsername] = useState("");
+  /* What the availability check last said. `false` while a request is in
+     flight, so Continue is not a race against the answer. */
+  const [usernameFree, setUsernameFree] = useState(false);
+  /* Resolved once on mount. Reading it during render would differ between the
+     server pass and the browser one, which is a hydration mismatch over a
+     string neither of them shows. */
+  const [timezone, setTimezone] = useState("");
+  useEffect(() => {
+    try {
+      setTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone ?? "");
+    } catch {
+      setTimezone("");
+    }
+  }, []);
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [useType, setUseType] = useState<UseType | null>(null);
   // The warm-up writes its own row server-side, so these only drive what the
@@ -86,8 +106,16 @@ export function OnboardingForm({ email }: { email: string }) {
         nameError(firstName, "first name") ?? nameError(lastName, "last name")
       );
     }
-    if (index === 1) return dateOfBirthError(dateOfBirth);
-    if (index === 2) {
+    if (index === 1) {
+      /* Shape first, then availability. Saying "that one is taken" about a
+         name with a space in it is answering a question nobody asked. */
+      return (
+        usernameError(username) ??
+        (usernameFree ? null : "Pick a username that's free.")
+      );
+    }
+    if (index === 2) return dateOfBirthError(dateOfBirth);
+    if (index === 3) {
       return useType ? null : "Pick how you'll be using Explainaloud.";
     }
     // The warm-up is optional by design — nothing downstream needs a baseline,
@@ -168,6 +196,10 @@ export function OnboardingForm({ email }: { email: string }) {
       <input type="hidden" name="lastName" value={lastName} />
       <input type="hidden" name="dateOfBirth" value={dateOfBirth} />
       <input type="hidden" name="useType" value={useType ?? ""} />
+      <input type="hidden" name="username" value={username} />
+      {/* Read from the browser rather than guessed from an IP, because a VPN
+          moves the IP and not the person. Streaks are counted in it. */}
+      <input type="hidden" name="timezone" value={timezone} />
 
       <StepIndicator
         step={step}
@@ -194,17 +226,20 @@ export function OnboardingForm({ email }: { email: string }) {
               </p>
               <h2 className="text-3xl font-semibold tracking-tight text-strong text-balance">
                 {step === 0 && "What should we call you?"}
-                {step === 1 && "When were you born?"}
-                {step === 2 && "How will you use Explainaloud?"}
-                {step === 3 && "Let's hear your voice"}
+                {step === 1 && "Pick your username"}
+                {step === 2 && "When were you born?"}
+                {step === 3 && "How will you use Explainaloud?"}
+                {step === 4 && "Let's hear your voice"}
               </h2>
               <p className="mt-2 max-w-md text-sm leading-6 text-subtle">
                 {step === 0 &&
                   "This is how your dashboard and progress reports will greet you."}
-                {step === 1 &&
+                {step === 2 &&
                   "We use this to confirm you're old enough for your own account."}
-                {step === 2 && "This shapes what we put in front of you first."}
-                {step === 3 &&
+                {step === 1 &&
+                  "This is how friends find you. You can't change it later, so pick one you like."}
+                {step === 3 && "This shapes what we put in front of you first."}
+                {step === 4 &&
                   "Thirty seconds explaining something you already know. It teaches us your normal speaking pace, which is what makes the gap-finding work."}
               </p>
             </div>
@@ -260,6 +295,19 @@ export function OnboardingForm({ email }: { email: string }) {
 
             {step === 1 && (
               <div className="flex max-w-md flex-col gap-4">
+                <UsernameField
+                  value={username}
+                  onChange={(next) => {
+                    setUsername(next);
+                    clearCurrentError();
+                  }}
+                  onAvailability={setUsernameFree}
+                />
+              </div>
+            )}
+
+            {step === 2 && (
+              <div className="flex max-w-md flex-col gap-4">
                 <div className="flex flex-col gap-2">
                   <span id={dobId} className="font-medium text-sm text-strong">
                     Date of birth
@@ -282,7 +330,7 @@ export function OnboardingForm({ email }: { email: string }) {
               </div>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <div className="flex flex-col gap-3">
                 {USE_TYPES.map((option) => (
                   <UseTypeOption
@@ -299,7 +347,7 @@ export function OnboardingForm({ email }: { email: string }) {
               </div>
             )}
 
-            {step === 3 && (
+            {step === 4 && (
               <VoiceWarmup
                 result={warmupResult}
                 skipped={warmupSkipped}
@@ -392,7 +440,11 @@ function StepIndicator({
   reduceMotion: boolean;
 }) {
   return (
-    <ol className="grid grid-cols-4 gap-1 rounded-xl bg-surface p-1">
+    /* Five columns, because there are five steps. It said four, from before
+       the username step existed, and a five-item grid in a four-column track
+       wraps the last one onto a second row of its own — a progress indicator
+       that is visibly one step wider than the track it sits in. */
+    <ol className="grid grid-cols-5 gap-1 rounded-xl bg-surface p-1">
       {STEPS.map((label, index) => {
         const Icon = STEP_ICONS[index];
         const complete = index < step;
@@ -406,7 +458,7 @@ function StepIndicator({
               aria-current={active ? "step" : undefined}
               onClick={() => onStepSelect(index)}
               className={cn(
-                "relative flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-left text-xs font-medium transition-colors duration-200 sm:justify-start sm:px-3 motion-reduce:transition-none",
+                "relative flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-left font-medium text-xs transition-colors duration-200 lg:justify-start lg:px-3 motion-reduce:transition-none",
                 active
                   ? "text-strong"
                   : complete
@@ -428,10 +480,13 @@ function StepIndicator({
                   <Icon className="size-4" />
                 ) : null}
               </span>
-              <span className="relative hidden truncate sm:inline">
+              {/* Five labels do not fit beside five icons until the panel is
+                  wide. Below that the icon is the whole control and the label
+                  is read out rather than drawn. */}
+              <span className="relative hidden truncate lg:inline">
                 {label}
               </span>
-              <span className="sr-only sm:hidden">{label}</span>
+              <span className="sr-only lg:hidden">{label}</span>
             </button>
           </li>
         );
