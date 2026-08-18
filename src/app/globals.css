@@ -51,6 +51,36 @@ main.lp-v2 {
   --miss-spoken: #e58a7e;
 }
 
+/* One word of the hero's spoken line, arriving.
+ *
+ * A keyframe rather than a transition, which is the opposite of the rule and
+ * correct for exactly this case: each span mounts once, plays once and is never
+ * retargeted, so there is nothing for an interruptible transition to interrupt.
+ * `both` holds the end state after it finishes.
+ *
+ * It is here rather than in the component because the component is a client
+ * module rendering thirty of these at a time, and thirty `motion` elements each
+ * running their own rAF loop over a WebGL canvas is how the hero dropped frames
+ * the first time. */
+@keyframes lp-said-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.lp-said {
+  animation: lp-said-in 180ms linear both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-said {
+    animation: none;
+  }
+}
+
 /* The abstract field, not a photograph of anything.
  *
  * A reviewer asked why there was an ocean behind the headline, and the answer

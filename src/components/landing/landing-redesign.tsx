@@ -6,6 +6,7 @@ import Link from "next/link";
 import {
   type CSSProperties,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -82,184 +83,388 @@ const READ_WAVE = [
 ] as const;
 
 /**
- * The hero's product panel: a person talking, being marked as they talk.
+ * The hero's product panel: what the app does, marked the way the app marks.
  *
- * What was here was an app window — a mic button with a pulsing ring, a
- * twelve-bar waveform, a running clock and three checklist rows. Every one of
- * those is a picture of *a recorder*, and a recorder is the least interesting
- * true thing about this product. It also carried the tells: chrome around
- * content, a fake timestamp, an icon in a circle, and decoration that moves
- * forever while explaining nothing.
+ * Three versions of this have now been thrown away, and the reasons are worth
+ * keeping because each one was a different mistake.
  *
- * The product's one idea is that a claim resolves while the sentence is still
- * going. So that is what this is. The words arrive at the speed somebody says
- * them, riding a shallow curve, and a beat after each claim lands it takes its
- * verdict colour — the same green and the same amber the grader uses inside the
- * app, because the colour somebody is shown before signing up has to be the
- * colour they are graded in afterwards. Then the sentence trails off, and the
- * point that was never reached arrives underneath in red, which is the only
- * honest way to draw a thing that was not said.
+ * It began as an app window — a mic button with a pulsing ring, a twelve-bar
+ * waveform, a running clock and three checklist rows. That is a picture of *a
+ * recorder*, which is the least interesting true thing about this product, and
+ * it carried every tell: chrome around content, a fake timestamp, an icon in a
+ * circle, decoration that moves forever while explaining nothing.
  *
- * The motion has a job, which is the test for whether it belongs here: it *is*
- * the explanation. Nothing in it loops for atmosphere.
+ * What replaced it was a sentence that typed itself into a paragraph, with the
+ * words not yet said sitting there greyed out and the whole line riding a sine
+ * curve. That was worse in a way that only shows up on screen. Ghosted text
+ * means two weights and two colours on the same line with a ragged edge down
+ * the middle of it; the curve means no two words share a baseline; and a
+ * paragraph that fills up, stops, holds and empties is not continuous — it is
+ * a thing that keeps starting over in the corner of your eye.
+ *
+ * So: one line, running. Words arrive at the speed somebody says them and the
+ * line slides left to keep up, the way live captions do. Nothing is ever shown
+ * before it is said, so there is no grey tail and no ragged edge. Nothing
+ * resets, because the stream never ends — it is a loop with no seam in it.
+ *
+ * And a beat behind the newest word, each claim takes its verdict: green when
+ * it is specific enough to check, amber when it was hedged, red where a step
+ * was skipped. The same three colours the grader uses inside the app, because
+ * the green somebody is shown before signing up has to be the green they are
+ * graded in afterwards.
+ *
+ * The sentences are facts about the product. That is deliberate too — the page
+ * marks its own claims, which is the only demonstration available to a landing
+ * page that is forbidden from inventing proof.
  */
+
+/* `useLayoutEffect` is the right hook — the offset must be written before the
+   browser paints or the line is briefly in last word's position — but React
+   logs a warning for it on the server, where it does nothing at all. This is
+   the standard shim, and it is correct here because the first server render
+   has no words in it to measure. */
+const useIsomorphicLayoutEffect =
+  typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 /** A claim's verdict, or `null` for the connective tissue between claims. */
-type Verdict = "ok" | "vague" | null;
+type Verdict = "ok" | "vague" | "miss" | null;
 
 /**
- * The line, in the order it is spoken.
+ * The stream, in the order it is spoken. It loops, so the last line has to run
+ * into the first without a join you can hear.
  *
- * Split by claim rather than by word, so a verdict can resolve per claim; the
- * words inside are what get staggered.
+ * Split by claim rather than by word, so a verdict covers the span it belongs
+ * to; the words inside are what arrive one at a time.
  */
 const SPOKEN: Array<{ text: string; verdict: Verdict }> = [
-  { text: "So the problem is", verdict: null },
-  { text: "teams ship things nobody asked for", verdict: "ok" },
-  { text: "and the evidence for that is", verdict: null },
-  { text: "you know, pretty clear", verdict: "vague" },
-  { text: "and then —", verdict: null },
+  { text: "Explainaloud turns your own notes into a course", verdict: "ok" },
+  { text: "— a chapter, a deck, a paper —", verdict: "ok" },
+  { text: "then you explain it back out loud,", verdict: null },
+  { text: "three minutes, no script,", verdict: "ok" },
+  {
+    text: "and every claim is marked while you are still talking.",
+    verdict: "ok",
+  },
+  { text: "The parts you hedged", verdict: "vague" },
+  { text: "come back amber.", verdict: null },
+  { text: "The step you skipped over", verdict: "miss" },
+  { text: "comes back red.", verdict: null },
+  { text: "At the end you get a gap report", verdict: "ok" },
+  { text: "naming the points you never reached,", verdict: "ok" },
+  { text: "not a score out of ten,", verdict: null },
+  {
+    text: "so the next take is aimed at what you actually missed.",
+    verdict: "ok",
+  },
+  { text: "It finds you a video for whatever stayed shaky.", verdict: "ok" },
+  { text: "And then you say it again, better.", verdict: null },
 ];
 
 /** Between words. Fast enough to read as speech rather than as a typewriter. */
-const WORD_MS = 105;
-/** The beat between a claim finishing and its colour landing. */
-const RESOLVE_MS = 420;
-/** How long the finished line holds before the run starts again. */
-const HOLD_MS = 2600;
+const WORD_MS = 190;
+
+/**
+ * How far behind the newest word a verdict lands, counted in words.
+ *
+ * A timer per word would do the same job and would drift: fifteen timers all
+ * started at once, each firing into React state, is fifteen chances for the
+ * colours to arrive out of order after a tab has been backgrounded. Counting
+ * words instead makes the delay a property of the stream — it cannot desync
+ * from the thing it is trailing, because it *is* the thing it is trailing,
+ * minus two.
+ */
+const RESOLVE_LAG = 2;
+
+/**
+ * How many words stay in the DOM behind the read edge.
+ *
+ * Anything further left has been clipped for several seconds. The window
+ * slides rather than growing, so an hour on this page costs the same as a
+ * minute — and dropping from the front is free precisely because the offset
+ * below is measured from `scrollWidth` on every commit: the track gets
+ * narrower by exactly the width that came off it, the offset shrinks to match,
+ * and nothing on screen moves.
+ */
+const WINDOW = 26;
 
 /** The verdict tokens sized for running text. See `globals.css` for why. */
 const VERDICT_INK: Record<Exclude<Verdict, null>, string> = {
   ok: "var(--ok-spoken)",
   vague: "var(--vague-spoken)",
+  miss: "var(--miss-spoken)",
 };
+
+const LEGEND: Array<{ verdict: Exclude<Verdict, null>; label: string }> = [
+  { verdict: "ok", label: "Checkable" },
+  { verdict: "vague", label: "Hedged" },
+  { verdict: "miss", label: "Skipped" },
+];
+
+/** Every word of the loop, flattened once, each remembering its claim. */
+const WORDS = SPOKEN.flatMap((part, partIndex) =>
+  part.text
+    .split(" ")
+    .map((word) => ({ word, verdict: part.verdict, partIndex })),
+);
 
 function SpokenLine() {
   const reduceMotion = useReducedMotion();
-  const words = useMemo(
-    () =>
-      SPOKEN.flatMap((part, partIndex) =>
-        part.text.split(" ").map((word) => ({ word, partIndex })),
-      ),
-    [],
-  );
-  /* One index rather than one state per word. Everything on screen is a
-     function of how many words have been said, which is also what makes the
-     reduced-motion version a single assignment instead of a second component. */
-  const [said, setSaid] = useState(reduceMotion ? words.length : 0);
-  const [resolved, setResolved] = useState(reduceMotion);
-  const [missedShown, setMissedShown] = useState(reduceMotion);
+  const track = useRef<HTMLParagraphElement>(null);
+  const viewport = useRef<HTMLDivElement>(null);
 
+  /* One counter, and everything on screen is a function of it. It only ever
+     goes up — the modulo happens where the words are read, so the stream has
+     no wrap-around to render and therefore no seam.
+     *
+     * It starts at a full line rather than at zero, for two reasons. The first
+     * is that the hero's first painted frame should not contain a hole where a
+     * sentence is going to be; watching it type itself in from nothing is a
+     * worse arrival than finding it already talking. The second is a failure
+     * mode: the interval below refuses to run while the document reports
+     * itself hidden, and any context that reports hidden while still painting
+     * — an embedded webview, a preview pane — would otherwise get a blank
+     * strip forever. Starting full means the worst case is a line that does
+     * not move, rather than a line that is not there. */
+  const [spoken, setSpoken] = useState(WINDOW);
+  /* Two numbers rather than one, and the split is the whole trick — see the
+     layout effect below for what went wrong with a single offset. */
+  const [glide, setGlide] = useState(0);
+  const [shift, setShift] = useState(0);
+  /* Widths of the words currently on screen, plus running totals for every word
+     that has ever been said and every word that has since been dropped. Refs,
+     not state: they are the arithmetic behind the two numbers above, and
+     re-rendering when they change would be re-rendering twice for one word. */
+  const widths = useRef(new Map<number, number>());
+  const saidWidth = useRef(0);
+  const goneWidth = useRef(0);
+  /** Set by the resize observer, cleared by the layout effect that acts on it. */
+  const rebase = useRef(false);
+  const [resized, setResized] = useState(0);
+
+  /* Stopped while the tab is in the background, and this is not a nicety.
+   *
+   * A hidden tab suspends rendering but keeps firing timers, so the words
+   * would go on being added — hundreds of them over a lunch break — while the
+   * transition that carries the line to meet them never advances a frame. The
+   * two come back in sync the moment the tab is looked at again, which is a
+   * page opening on a sentence sprinting backwards out of shot. Measured at
+   * two thousand pixels adrift after a couple of minutes behind another
+   * window. */
   useEffect(() => {
     if (reduceMotion) return;
-    let cancelled = false;
-    const timers: number[] = [];
+    let id = 0;
 
-    const run = () => {
-      if (cancelled) return;
-      setSaid(0);
-      setResolved(false);
-      setMissedShown(false);
-
-      words.forEach((_, index) => {
-        timers.push(
-          window.setTimeout(() => setSaid(index + 1), (index + 1) * WORD_MS),
-        );
-      });
-
-      const spoken = words.length * WORD_MS;
-      timers.push(
-        window.setTimeout(() => setResolved(true), spoken + RESOLVE_MS),
-      );
-      timers.push(
-        window.setTimeout(
-          () => setMissedShown(true),
-          spoken + RESOLVE_MS + 700,
-        ),
-      );
-      timers.push(window.setTimeout(run, spoken + RESOLVE_MS + HOLD_MS));
+    const start = () => {
+      if (id) return;
+      id = window.setInterval(() => setSpoken((n) => n + 1), WORD_MS);
     };
+    const stop = () => {
+      window.clearInterval(id);
+      id = 0;
+    };
+    const sync = () => (document.hidden ? stop() : start());
 
-    run();
+    sync();
+    document.addEventListener("visibilitychange", sync);
     return () => {
-      cancelled = true;
-      for (const timer of timers) window.clearTimeout(timer);
+      stop();
+      document.removeEventListener("visibilitychange", sync);
     };
-  }, [reduceMotion, words]);
+  }, [reduceMotion]);
+
+  /* The sliding window, oldest first. `spoken` counts words said since the page
+     opened and keeps counting past the end of the loop; the modulo here is what
+     makes it a loop, and doing it per word rather than per pass is why there is
+     no moment where the line is empty. */
+  const visible = useMemo(() => {
+    const from = Math.max(0, spoken - WINDOW);
+    const out: Array<{ key: number; word: string; verdict: Verdict }> = [];
+    for (let i = from; i < spoken; i++) {
+      const source = WORDS[i % WORDS.length];
+      out.push({
+        key: i,
+        word: source.word,
+        // A verdict lands a couple of words after the claim has moved on.
+        verdict: i <= spoken - 1 - RESOLVE_LAG ? source.verdict : null,
+      });
+    }
+    return out;
+  }, [spoken]);
+
+  /* Reduced motion gets the same sentence, standing still and fully marked.
+     Not a second component: the same words, the same colours, no interval. */
+  const still = useMemo(
+    () =>
+      WORDS.slice(0, 14).map((source, index) => ({
+        key: index,
+        word: source.word,
+        verdict: source.verdict,
+      })),
+    [],
+  );
+  const shown = reduceMotion ? still : visible;
+
+  /* A rotation, a window drag, a devtools panel opening: all of them change the
+     box and the type size together. Nothing is recomputed here — the flag is
+     read by the layout effect below, which is the only place that owns the
+     numbers. */
+  useEffect(() => {
+    const box = viewport.current;
+    if (!box || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      rebase.current = true;
+      setResized((n) => n + 1);
+    });
+    observer.observe(box);
+    return () => observer.disconnect();
+  }, []);
+
+  /* Measured after layout and before paint, so the line has never been seen in
+     the wrong place. The read edge is the right-hand side of the viewport less
+     a gutter: words fill leftwards from there, which is where the eye already
+     is, and older ones slide out under the fade on the left.
+     *
+     * **Why two transforms.** The obvious version measures `scrollWidth` and
+     * transitions one transform to `readEdge - scrollWidth`, and it works right
+     * up until the window fills. After that, every tick both appends a word on
+     * the right and removes one on the left — and removing it shifts the whole
+     * line left *instantly*, by that word's width, because the track is
+     * anchored on its left edge. A single transform has to undo that jump and
+     * perform the glide at the same time, over the same 190ms, and the two
+     * mostly cancel: the line stops moving and the words start stepping.
+     *
+     * So the jump and the glide are separated. The outer element carries the
+     * total width of everything dropped and is never transitioned, which
+     * cancels the removal in the same frame it happens. The inner one carries
+     * the total width of everything ever said, only ever grows, and is the only
+     * thing that animates. What is left is one number sliding in one direction
+     * for as long as the page is open. */
+  useIsomorphicLayoutEffect(() => {
+    const row = track.current;
+    const box = viewport.current;
+    if (!row || !box) return;
+
+    const spans = row.children;
+    const oldest = shown.length > 0 ? shown[0].key : 0;
+
+    /* Everything measured so far is void once the box changes size, because the
+       type is set in `vw` and every cached width is from the old size. Summed
+       against the new layout they put the line hundreds of pixels out — on a
+       phone the whole strip left the screen and never came back, which is how
+       this was found. Rebasing throws the running totals away and starts again
+       from what is on screen right now. */
+    if (rebase.current) {
+      rebase.current = false;
+      widths.current.clear();
+      saidWidth.current = 0;
+      goneWidth.current = 0;
+    }
+
+    for (let i = 0; i < shown.length; i++) {
+      const key = shown[i].key;
+      if (widths.current.has(key)) continue;
+      // The fractional width, not `offsetWidth`: these are summed over
+      // thousands of words, and half a pixel of rounding per word is a line
+      // that has drifted a word and a half off its mark inside two minutes.
+      const width = (spans[i] as HTMLElement).getBoundingClientRect().width;
+      widths.current.set(key, width);
+      saidWidth.current += width;
+    }
+    for (const [key, width] of widths.current) {
+      if (key >= oldest) continue;
+      goneWidth.current += width;
+      widths.current.delete(key);
+    }
+
+    const readEdge = box.clientWidth - 24;
+    setGlide(Math.max(0, saidWidth.current - readEdge));
+    setShift(goneWidth.current);
+    // `resized` is a dependency for its side effect on `rebase`, not its value.
+  }, [shown, resized]);
 
   return (
     <section
-      aria-label="A rehearsal being marked while it is spoken"
-      className="mx-auto w-full max-w-[46rem]"
+      aria-label="What Explainaloud does, marked the way it marks you"
+      className="w-full"
     >
-      {/* Real text in normal flow — it wraps, it is selectable, a screen reader
-          reads it once and in order — with the curve carried by a per-word
-          vertical offset rather than by an SVG path. `textPath` would have
-          looked the same and broken all three. */}
-      <p className="text-balance font-display text-[clamp(1.15rem,2.5vw,1.75rem)] text-primary-foreground leading-[1.7] tracking-[-0.02em]">
-        {words.map(({ word, partIndex }, index) => {
-          const verdict = SPOKEN[partIndex]?.verdict ?? null;
-          const isSaid = index < said;
-          /* `undefined` rather than the string "currentColor" while a claim is
-             unresolved. React serialises that keyword lowercase on the server
-             and framer-motion writes it capitalised on the client, which is a
-             hydration mismatch over a value that means "inherit" — so the
-             property is simply not emitted until there is a verdict. */
-          const ink = resolved && verdict ? VERDICT_INK[verdict] : undefined;
-          /* One shallow sine across the whole line, so the words rise and fall
-             once rather than wobbling word by word. Amplitude in ems, so the
-             curve scales with the type and not with the viewport.
-             Rounded, because the server prints a float at one precision and the
-             client at another, and that too is a mismatch. */
-          const lift = Number(
-            (
-              Math.sin(
-                (index / Math.max(1, words.length - 1)) * Math.PI * 1.15,
-              ) * 0.24
-            ).toFixed(3),
-          );
-
-          return (
-            <motion.span
-              // biome-ignore lint/suspicious/noArrayIndexKey: the line is fixed and positional
-              key={`${word}-${index}`}
-              initial={false}
-              animate={{
-                opacity: isSaid ? 1 : 0.14,
-                /* The full transform string rather than the `y` shorthand:
-                   that one is not hardware accelerated, and this runs over a
-                   WebGL canvas that is already using the GPU. */
-                transform: `translateY(${isSaid ? -lift : -lift + 0.35}em)`,
-              }}
-              transition={{ duration: 0.34, ease }}
-              style={ink ? { color: ink } : undefined}
-              // The colour fade is a class, not an inline transition: framer
-              // owns the `style` attribute here, and the two disagreed about
-              // how to serialise a shorthand.
-              className="inline-block whitespace-pre transition-colors duration-500"
-            >
-              {word}{" "}
-            </motion.span>
-          );
-        })}
-      </p>
-
-      {/* What was never said. It cannot be in the line — that is what "missed"
-          means — so it arrives underneath, once the sentence has trailed off. */}
-      <motion.p
-        initial={false}
-        animate={{
-          opacity: missedShown ? 1 : 0,
-          transform: `translateY(${missedShown ? 0 : 6}px)`,
+      {/* Fixed to one line and one height. A strip that grows and shrinks with
+          its content is a strip that shoves the buttons under it around, and
+          the reason the last version looked broken was that its right edge was
+          a different length every second. */}
+      <div
+        ref={viewport}
+        className="relative overflow-hidden"
+        style={{
+          /* Faded at both ends rather than cut. Words are mid-sentence when
+             they leave, and a hard edge chops a letter in half. */
+          maskImage:
+            "linear-gradient(to right, transparent, black 8%, black 94%, transparent)",
+          WebkitMaskImage:
+            "linear-gradient(to right, transparent, black 8%, black 94%, transparent)",
         }}
-        transition={{ duration: 0.4, ease }}
-        className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-1 border-white/12 border-t pt-5 font-mono text-[0.68rem] uppercase tracking-[0.14em]"
       >
-        <span style={{ color: "var(--miss-spoken)" }}>Never reached</span>
-        <span className="text-primary-foreground/70 normal-case tracking-normal">
-          How the handoff works at the end
-        </span>
-      </motion.p>
+        {/* A plain `p` with a CSS transition, deliberately, and this is the
+            second time this component has been rewritten for the same reason.
+            framer owns the `style` attribute of a `motion` element, and an
+            `animate` target recomputed from a ref measurement taken in a layout
+            effect never reached the DOM — the line sat at `translateX(0)` while
+            every word after the eighth ran off the right-hand edge.
+
+            A transition is also the better tool here. The value changes once
+            per word, always in the same direction, always by an amount decided
+            before the frame is drawn: that is a predetermined animation, so it
+            belongs on the compositor rather than in a `requestAnimationFrame`
+            loop competing with the WebGL field behind it. */}
+        {/* The instant half. Never transitioned, on purpose. */}
+        <div
+          style={{ transform: `translate3d(${shift}px, 0, 0)` }}
+          className="will-change-transform"
+        >
+          <p
+            ref={track}
+            /* The animated half. Linear, and exactly one word long: each shift
+               starts as the last one finishes, so a chain of them is constant
+               motion rather than a row of little eases — the difference between
+               a line that is running and a line that is being nudged. */
+            style={{
+              transform: `translate3d(${-glide}px, 0, 0)`,
+              transition: reduceMotion
+                ? undefined
+                : `transform ${WORD_MS}ms linear`,
+            }}
+            className="whitespace-nowrap py-1 font-display text-[clamp(1.05rem,2.3vw,1.6rem)] text-primary-foreground leading-[1.6] tracking-[-0.02em] will-change-transform"
+          >
+            {shown.map(({ key, word, verdict }) => (
+              <span
+                key={key}
+                /* The arrival is a keyframe in `globals.css` and the colour is a
+                   transition on this class, and both are CSS rather than JS for
+                   the same reason: there are thirty of these on screen at once,
+                   over a canvas that is already using the GPU. */
+                style={verdict ? { color: VERDICT_INK[verdict] } : undefined}
+                className="lp-said inline-block whitespace-pre transition-colors duration-500"
+              >
+                {word}{" "}
+              </span>
+            ))}
+          </p>
+        </div>
+      </div>
+
+      {/* What the three colours mean, said once. The stream demonstrates them;
+          this names them, which is the part a moving line cannot do. */}
+      <ul className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 border-white/12 border-t pt-5 font-mono text-[0.66rem] uppercase tracking-[0.14em]">
+        {LEGEND.map((entry) => (
+          <li key={entry.verdict} className="flex items-center gap-2">
+            <span
+              aria-hidden
+              className="size-1.5 rounded-full"
+              style={{ background: VERDICT_INK[entry.verdict] }}
+            />
+            <span className="text-primary-foreground/70">{entry.label}</span>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 }
@@ -1476,7 +1681,11 @@ export function LandingRedesign() {
             </div>
           </div>
 
-          <div className="relative z-10 pb-24 md:pb-28">
+          {/* Same measure and same left edge as the headline above it. The
+              strip ran centred inside a 46rem box for one build and it read as
+              a caption belonging to nothing — a line that starts a hundred and
+              fifty pixels to the right of every other line on the screen. */}
+          <div className="relative z-10 mx-auto w-full max-w-[76rem] pb-24 md:pb-28">
             <SpokenLine />
           </div>
         </div>
