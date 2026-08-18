@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import {
   CourseCitationError,
+  EmptyCourseError,
   orchestrateCourse,
   TalkMaterialError,
 } from "~/lib/ai/orchestrator";
@@ -166,6 +167,16 @@ export async function POST(
       return NextResponse.json(
         { error: error.message, detail },
         { status: 400 },
+      );
+    }
+    /* Same shape, same reason: the model answered, and its answer was "there
+       is no course in this material". 422 rather than 503 because the service
+       worked perfectly and a retry will return the same thing. The message
+       names the two things that actually change the outcome. */
+    if (error instanceof EmptyCourseError) {
+      return NextResponse.json(
+        { error: error.message, detail },
+        { status: 422 },
       );
     }
     if (error instanceof CourseCitationError) {

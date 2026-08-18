@@ -53,6 +53,31 @@ export class TalkMaterialError extends Error {
   }
 }
 
+/**
+ * The model built no sections, which is an answer rather than a failure.
+ *
+ * It means the material does not support a course on this topic — the thing
+ * sources-only mode is explicitly told to say. Before this existed, the empty
+ * array failed schema validation, every provider in the chain was tried and
+ * gave the same correct answer, and the student was told the service was
+ * unavailable. Nothing was unavailable, retrying could not help, and the one
+ * fact worth knowing — your files do not cover this — was the one thing not
+ * said.
+ */
+export class EmptyCourseError extends Error {
+  constructor(
+    /** Whether the build was restricted to the student's own uploads. */
+    readonly strict: boolean,
+  ) {
+    super(
+      strict
+        ? "Your sources don't cover this topic in enough depth to build a course from. Add material that covers it, or switch off “Only use my sources” and rebuild."
+        : "There wasn't enough here to build a course on this topic. A narrower topic usually fixes it — or add notes or a file to build from.",
+    );
+    this.name = "EmptyCourseError";
+  }
+}
+
 export class CourseCitationError extends Error {
   constructor() {
     super(
@@ -570,6 +595,13 @@ ${renderSources(evidenceSources)}`,
     ),
     judgeTopicBreadth(params.topic),
   ]);
+  /* Said plainly and early, before three more stages are spent on nothing.
+     The reviewer and the reviser have no work to do on a course with no
+     sections, and the citation check would pass it as trivially verified. */
+  if (architect.data.sections.length === 0) {
+    throw new EmptyCourseError(strict);
+  }
+
   const architectCourse = {
     ...verifyCourseCitations(architect.data, evidenceSources),
     scope_note: breadth,

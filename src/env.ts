@@ -15,6 +15,19 @@ export const env = createEnv({
     // reached. Optional like the rest: unset, that rung is skipped and the
     // chain is what it was.
     AI_GATEWAY_API_KEY: z.string().min(1).optional(),
+    /**
+     * Which model that rung asks for.
+     *
+     * A variable rather than a constant because the model it pointed at was
+     * withdrawn — `inclusionai/ling-3.0-flash-free` now answers 404
+     * `model_not_found` — and a free model on a gateway is exactly the kind of
+     * thing that disappears without notice. Repointing it should be an
+     * environment change, not a code change and a deploy.
+     *
+     * Unset, `provider.ts` uses its own default. See `GATEWAY_MODEL` there for
+     * what that rung is for and why it is not simply Gemini again.
+     */
+    AI_GATEWAY_MODEL: z.string().min(1).optional(),
     TAVILY_API_KEY: z.string().min(1).optional(),
     // Set by Vercel to the project's stable production hostname, without a
     // protocol. Absent locally, which is why it's optional.
@@ -64,6 +77,7 @@ export const env = createEnv({
     GEMINI_API_KEY: process.env.GEMINI_API_KEY,
     GROQ_API_KEY: process.env.GROQ_API_KEY,
     AI_GATEWAY_API_KEY: process.env.AI_GATEWAY_API_KEY,
+    AI_GATEWAY_MODEL: process.env.AI_GATEWAY_MODEL,
     TAVILY_API_KEY: process.env.TAVILY_API_KEY,
     VERCEL_PROJECT_PRODUCTION_URL: process.env.VERCEL_PROJECT_PRODUCTION_URL,
     VERCEL_ENV: process.env.VERCEL_ENV,
