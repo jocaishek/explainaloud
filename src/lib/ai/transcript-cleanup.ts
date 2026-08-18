@@ -103,6 +103,17 @@ const LOOP_THRESHOLD = 3;
  */
 const ECHO_WORDS = 6;
 
+/**
+ * Window, in words, for the phrase rule below.
+ *
+ * Eight rather than the clause rule's six, because this one works without
+ * clause boundaries and so has more chances to fire. Eight words reproduced in
+ * the same order, having already been said once, is not a person restating an
+ * idea — a person paraphrases when they restate. It is a decoder conditioning
+ * on its own output.
+ */
+const PHRASE_WINDOW = 8;
+
 /** Lowercased, stripped of punctuation and collapsed whitespace. */
 function normalize(sentence: string) {
   return sentence
@@ -137,12 +148,134 @@ function wordCount(normalised: string) {
   return normalised ? normalised.split(" ").length : 0;
 }
 
+/**
+ * Collapse repeated phrases, ignoring where the clauses fall.
+ *
+ * The clause rules above compare whole clauses, so they catch a loop that
+ * repeats in tidy units and miss the one that does not. This is the shape they
+ * miss, and it is the common one:
+ *
+ *   "…and to understand Analytical reading is a form of reading that helps
+ *    readers understand the meaning of the Analytical reading is a way to
+ *    understand the context of a particular text, and to understand Analytical
+ *    reading is a way to understand the context of a particular text…"
+ *
+ * Every clause there is a unique string — each one starts at a different point
+ * in the loop — so nothing matches anything and all of it survives. What is
+ * plainly repeating is the *phrase*, across the clause boundaries, and the
+ * splices are where one transcription window was glued to the next.
+ *
+ * So: walk the words, and whenever the last `PHRASE_WINDOW` of them have been
+ * seen in that order before, drop words until they have not. The first
+ * occurrence stays, and so does whatever new material follows the loop, which
+ * is the property that matters — a recording that goes round three times and
+ * then says something new keeps the something new.
+ *
+ * Timings are deliberately not handled here. Rewriting text without rewriting
+ * Whisper's word array in step would put the pace figure over words nobody
+ * said, so `stripHallucinations` only reaches for this when it has no timings
+ * to keep aligned.
+ */
+function phrasesIn(normalised: string): string[] {
+  const words = normalised ? normalised.split(" ") : [];
+  if (words.length < PHRASE_WINDOW) return [];
+  const phrases: string[] = [];
+  for (let i = 0; i + PHRASE_WINDOW <= words.length; i++) {
+    phrases.push(words.slice(i, i + PHRASE_WINDOW).join(" "));
+  }
+  return phrases;
+}
+
+/**
+ * Whole clauses only, and that is the entire design.
+ *
+ * The first version of this walked word by word and dropped any word that
+ * completed an already-seen phrase. It removed more of the loop and it was
+ * wrong twice over: it left ungrammatical debris — "the context of a particular
+ * and to understand" — which the report then quotes back as something the
+ * student said, and it deleted a word out of the middle of an honest sentence
+ * that happened to restate itself. Both are worse than leaving a loop in.
+ *
+ * So the unit stays the clause. A clause goes only if it repeats a phrase of
+ * `PHRASE_WINDOW` words already said, in order, which no amount of ordinary
+ * restatement produces — and when it goes, it goes whole, so what remains is
+ * always something somebody actually uttered.
+ */
+
 export type CleanedTranscript = {
   transcript: string;
   words: TranscribedWord[];
   /** How many sentences were dropped. Zero on almost every recording. */
   removed: number;
 };
+
+/**
+ * The same rules, applied at the seam between two transcription windows.
+ *
+ * `stripHallucinations` cleans one transcript. Live captioning does not produce
+ * one transcript — it transcribes four seconds at a time and appends, so every
+ * window is cleaned on its own and the assembled result is never checked at
+ * all. A decoder that loops does not repeat itself inside a four-second window;
+ * it says the same clause once per window, for a minute, and each of those
+ * windows is individually spotless:
+ *
+ *   "Analytical reading is a way to understand the context of a particular
+ *    text, and to understand the context of a particular text. Analytical
+ *    reading is a way to understand the context of a particular text, and to
+ *    understand Analytical reading is a form of reading that helps readers
+ *    understand the meaning of the Analytical reading is a way to…"
+ *
+ * That is a real recording. The mid-sentence splices are the window joins.
+ *
+ * **Why this drops the addition rather than rewriting the transcript.** Live
+ * grading holds a cursor into the text it has already coloured; anything that
+ * rewrites earlier words invalidates every span on screen and forces a full
+ * re-grade. Refusing to append a clause that has already been said costs
+ * nothing and keeps that cursor valid.
+ *
+ * Returns what survives of `addition` — the empty string when all of it was an
+ * echo, which is the correct result and means "this window added nothing".
+ */
+export function dropEchoedClauses(existing: string, addition: string): string {
+  const clauses = splitClauses(addition);
+  if (clauses.length === 0) return addition.trim();
+
+  const previousClauses = splitClauses(existing).map(normalize);
+  const seen = new Set(
+    previousClauses.filter((clause) => wordCount(clause) >= ECHO_WORDS),
+  );
+  // The same phrase index the whole-transcript pass keeps, seeded from what has
+  // already been said. This is what catches the spliced clause — unique as a
+  // string, built entirely out of a phrase from the window before it.
+  const seenPhrases = new Set(previousClauses.flatMap(phrasesIn));
+
+  const kept: string[] = [];
+  let run = 0;
+  let previous = "";
+
+  for (const clause of clauses) {
+    const normalised = normalize(clause);
+    if (!normalised) continue;
+
+    // A clause long enough to be a fingerprint, already said: skip it.
+    if (wordCount(normalised) >= ECHO_WORDS && seen.has(normalised)) continue;
+
+    const phrases = phrasesIn(normalised);
+    if (phrases.some((candidate) => seenPhrases.has(candidate))) continue;
+    for (const candidate of phrases) seenPhrases.add(candidate);
+
+    // Short clauses have no fingerprint, so they fall back to the run rule —
+    // "no, no, no" needs three in a row before it counts as a loop.
+    run = normalised === previous ? run + 1 : 0;
+    previous = normalised;
+    if (run >= LOOP_THRESHOLD - 1) continue;
+
+    if (wordCount(normalised) >= ECHO_WORDS) seen.add(normalised);
+    if (!CAPTION_ARTEFACTS.has(normalised)) kept.push(clause);
+  }
+
+  return kept.join(" ").trim();
+}
 
 /**
  * Strip caption artefacts and decoding loops from a transcript and its timings.
@@ -181,10 +314,30 @@ export function stripHallucinations(
      matches will ever see. The first occurrence is kept; only later copies of
      something already said go. */
   const seen = new Set<string>();
+  /* And clauses that are not repeats themselves but are built out of one.
+     A loop spliced at a transcription-window boundary produces clauses that
+     are each unique as strings — every one starts at a different point in the
+     cycle — while plainly saying the same thing. Matching on a phrase inside
+     them is what sees that; see `phrasesIn`. */
+  const seenPhrases = new Set<string>();
   for (const [i, phrase] of normalized.entries()) {
-    if (looping[i] || wordCount(phrase as string) < ECHO_WORDS) continue;
-    if (seen.has(phrase as string)) looping[i] = true;
-    else seen.add(phrase as string);
+    if (looping[i]) continue;
+    const clause = phrase as string;
+
+    if (wordCount(clause) >= ECHO_WORDS) {
+      if (seen.has(clause)) {
+        looping[i] = true;
+        continue;
+      }
+      seen.add(clause);
+    }
+
+    const phrases = phrasesIn(clause);
+    if (phrases.some((candidate) => seenPhrases.has(candidate))) {
+      looping[i] = true;
+      continue;
+    }
+    for (const candidate of phrases) seenPhrases.add(candidate);
   }
 
   const keptSentences: string[] = [];

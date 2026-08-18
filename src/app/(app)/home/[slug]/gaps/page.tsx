@@ -308,15 +308,20 @@ export default async function GapReportPage({
   const focused = selectedQuestion === null ? null : segments[selectedQuestion];
 
   return (
-    <div
-      className={cn(
-        "mx-auto flex w-full flex-col gap-8",
-        // The whole report is two panels and wants the screen. One question is
-        // one answer and one short list, which stretched across the same width
-        // would be mostly empty space.
-        focused ? "max-w-3xl" : "max-w-[96rem]",
-      )}
-    >
+    /* One width, whichever tab is open.
+     *
+     * This was `max-w-3xl` for a single question and `max-w-[96rem]` for
+     * everything — on the reasoning that one answer stretched across the full
+     * screen is mostly empty space. True, and it was solved in the wrong place:
+     * the container is also what holds the recording picker and the question
+     * tabs, so switching tabs moved the tabs themselves, and the control you
+     * just clicked jumped out from under the pointer.
+     *
+     * The measure a single question wants is still narrow. It is now set on the
+     * question's own column, inside a container that never changes size, so the
+     * tabs stay exactly where they were on "Everything" and the answer stays
+     * readable. */
+    <div className="mx-auto flex w-full max-w-[96rem] flex-col gap-8">
       {(graded?.length ?? 0) > 0 && (
         <SessionPicker
           sessions={graded ?? []}
@@ -378,7 +383,10 @@ export default async function GapReportPage({
       )}
 
       {focused ? (
-        <>
+        // The narrow measure lives here rather than on the page, so the tabs
+        // above do not move when this appears. Ranged left, where the
+        // "Everything" view's first column starts.
+        <div className="flex w-full max-w-3xl flex-col gap-8">
           <div className="flex flex-col gap-1.5 rounded-control border border-brand/20 bg-brand/[0.06] p-5">
             <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
               Question {(selectedQuestion ?? 0) + 1} of {segments.length}
@@ -400,11 +408,11 @@ export default async function GapReportPage({
             <h2 className="text-base font-semibold text-strong">
               What you said
             </h2>
-            <p className="max-w-3xl rounded-control bg-surface p-4 text-sm leading-7 text-foreground">
+            <p className="rounded-control bg-surface p-4 text-sm leading-7 text-foreground">
               {focused.transcript || "Nothing was captured for this question."}
             </p>
           </section>
-        </>
+        </div>
       ) : (
         <KnowledgeScore
           score={score}
