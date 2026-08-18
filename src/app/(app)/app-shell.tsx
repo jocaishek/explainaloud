@@ -315,6 +315,7 @@ function Rail({
               className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-wash font-medium text-[0.72rem] text-brand-ink"
             >
               {avatarUrl ? (
+                // biome-ignore lint/performance/noImgElement: a 32px avatar; see profile/avatar-picker.tsx
                 <img
                   src={avatarUrl}
                   alt=""
