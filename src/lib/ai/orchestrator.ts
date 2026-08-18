@@ -33,7 +33,7 @@ import {
   type SpanStatus,
   spansSchema,
 } from "~/lib/ai/schemas";
-import { renderSources, type SourceRow } from "~/lib/ai/sources";
+import { renderSources, SOURCE_BUDGET, type SourceRow } from "~/lib/ai/sources";
 import type { Purpose } from "~/lib/purpose";
 import {
   discoverCourseEvidence,
@@ -590,7 +590,7 @@ export async function orchestrateCourse(params: {
     completeJson(
       `${courseGenerationPrompt(params.topic, params.notes, evidenceGrounded, strict, params.purpose ?? "study")}
 
-${renderSources(evidenceSources)}`,
+${renderSources(evidenceSources, SOURCE_BUDGET.course)}`,
       (value) => courseSchema.parse(value),
     ),
     judgeTopicBreadth(params.topic),
@@ -725,7 +725,7 @@ ${renderSources(evidenceSources)}`,
           grounded: evidenceGrounded,
           draft: course,
           issues: review.issues,
-          sourceBlock: renderSources(evidenceSources),
+          sourceBlock: renderSources(evidenceSources, SOURCE_BUDGET.course),
         }),
         (value) => courseSchema.parse(value),
       );
