@@ -67,7 +67,13 @@ export function KnowledgeScore({
   const color = scoreColor(displayed);
 
   return (
-    <section aria-labelledby="score-heading" className="flex flex-col gap-3">
+    <section
+      aria-labelledby="score-heading"
+      /* The landing page's panel. This block was the loudest thing on the
+         report and the only one with no surface under it — a score, a bar and
+         a sentence floating on the page canvas. */
+      className="flex flex-col gap-3 rounded-card border border-border bg-card p-5 shadow-rest sm:p-6"
+    >
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 id="score-heading" className="text-base font-semibold text-strong">
           {heading}
@@ -109,7 +115,9 @@ export function KnowledgeScore({
           }}
         />
       </div>
-      <p className="max-w-2xl text-sm text-foreground">{verdict}</p>
+      <p className="max-w-2xl text-foreground text-sm leading-relaxed">
+        {verdict}
+      </p>
     </section>
   );
 }

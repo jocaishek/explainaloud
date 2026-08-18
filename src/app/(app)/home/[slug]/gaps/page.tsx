@@ -14,6 +14,18 @@ import { PACE_DROP_FRACTION, type SpeechMetrics } from "~/lib/speech-metrics";
 import { requireUser } from "~/lib/supabase/server";
 import { cn } from "~/lib/utils";
 
+/**
+ * The landing page's panel, in the app's register — the same constant as the
+ * course page uses, and for the same reason.
+ *
+ * This screen was built out of `rounded-control` boxes over `bg-surface`,
+ * which in this register resolves to square corners, a flat tint and no
+ * elevation at all. Correct tokens, and nothing like the product somebody was
+ * shown before they signed up. A hairline, a 20px radius and the hard offset
+ * shadow is what every panel on the marketing page is.
+ */
+const PANEL = "rounded-card border border-border bg-card shadow-rest";
+
 type GapRow = {
   id: string;
   phrase: string;
@@ -372,8 +384,8 @@ export default async function GapReportPage({
       {/* A score means nothing without the question it answers. Ahead of it,
           because it is the thing the rest of the page is about. */}
       {session.question && segments.length === 0 && (
-        <div className="flex flex-col gap-1.5 rounded-control border border-brand/20 bg-brand/[0.06] p-5">
-          <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+        <div className={cn(PANEL, "flex flex-col gap-1.5 p-5")}>
+          <span className="font-mono text-[10px] tracking-[0.14em] text-brand-ink uppercase">
             You were asked
           </span>
           <p className="text-base leading-relaxed font-medium text-strong">
@@ -383,35 +395,112 @@ export default async function GapReportPage({
       )}
 
       {focused ? (
-        // The narrow measure lives here rather than on the page, so the tabs
-        // above do not move when this appears. Ranged left, where the
-        // "Everything" view's first column starts.
-        <div className="flex w-full max-w-3xl flex-col gap-8">
-          <div className="flex flex-col gap-1.5 rounded-control border border-brand/20 bg-brand/[0.06] p-5">
-            <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
-              Question {(selectedQuestion ?? 0) + 1} of {segments.length}
-            </span>
-            <p className="text-base leading-relaxed font-medium text-strong">
-              {focused.question}
-            </p>
+        /* The same two columns as "Everything", and the same ratio.
+         *
+         * A single question used to be one narrow column with the right half of
+         * the screen empty beside it — which reads as a page that failed to
+         * load rather than as a page with less on it. What belongs there is
+         * what this answer earned and what it missed, which is per-question
+         * data the interview already stores and the report was throwing away:
+         * the strengths and gaps below used to render only for the whole
+         * recording, pooling every mistake in the session under all three
+         * questions. */
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] lg:items-start">
+          <div className="flex min-w-0 flex-col gap-8">
+            <div className={cn(PANEL, "flex flex-col gap-1.5 p-5")}>
+              <span className="font-mono text-[10px] text-brand-ink uppercase tracking-[0.14em]">
+                Question {(selectedQuestion ?? 0) + 1} of {segments.length}
+              </span>
+              <p className="font-medium text-base text-strong leading-relaxed">
+                {focused.question}
+              </p>
+            </div>
+
+            <KnowledgeScore
+              score={focused.score ?? 0}
+              verdict={
+                focused.verdict ??
+                (focused.transcript
+                  ? "This answer has no grade. The grader could not be reached for it."
+                  : "You did not answer this one.")
+              }
+            />
+
+            <section className="flex flex-col gap-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <h2 className="font-semibold text-base text-strong">
+                  What you said
+                </h2>
+                {/* Words, not a rate. A per-answer pace would need the timings
+                    for that answer, and the recording stores them for the whole
+                    session — a number computed from the session's clock and one
+                    answer's words is a made-up figure with a real-looking
+                    decimal point. */}
+                {focused.transcript && (
+                  <span className="font-mono text-[0.65rem] text-subtle uppercase tracking-[0.12em] tabular-nums">
+                    {focused.transcript.trim().split(/\s+/).length} words
+                  </span>
+                )}
+              </div>
+              <p className={cn(PANEL, "p-5 text-foreground text-sm leading-7")}>
+                {focused.transcript ||
+                  "Nothing was captured for this question."}
+              </p>
+            </section>
           </div>
-          <KnowledgeScore
-            score={focused.score ?? 0}
-            verdict={
-              focused.verdict ??
-              (focused.transcript
-                ? "This answer has no grade. The grader could not be reached for it."
-                : "You did not answer this one.")
-            }
-          />
-          <section className="flex flex-col gap-2">
-            <h2 className="text-base font-semibold text-strong">
-              What you said
-            </h2>
-            <p className="rounded-control bg-surface p-4 text-sm leading-7 text-foreground">
-              {focused.transcript || "Nothing was captured for this question."}
-            </p>
-          </section>
+
+          <div className="flex min-w-0 flex-col gap-8">
+            <section className="flex flex-col gap-3">
+              <h2 className="font-semibold text-base text-strong">
+                What you got right
+              </h2>
+              {focused.strengths && focused.strengths.length > 0 ? (
+                <ul className={cn(PANEL, "divide-y divide-border")}>
+                  {focused.strengths.map((strength) => (
+                    <li
+                      key={strength}
+                      className="px-5 py-3 text-foreground text-sm leading-relaxed"
+                    >
+                      {strength}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={cn(PANEL, "p-5 text-subtle text-sm")}>
+                  Nothing was marked as clearly correct in this answer.
+                </p>
+              )}
+            </section>
+
+            <section className="flex flex-col gap-3">
+              <h2 className="font-semibold text-base text-strong">
+                What to fix
+              </h2>
+              {focused.gaps && focused.gaps.length > 0 ? (
+                <ul className="flex flex-col gap-3">
+                  {focused.gaps.map((gap) => (
+                    <li key={gap.phrase} className={cn(PANEL, "p-4")}>
+                      <span className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.12em]">
+                        {gap.category.replace(/_/g, " ")}
+                      </span>
+                      <p className="mt-1.5 font-medium text-sm text-strong">
+                        “{gap.phrase}”
+                      </p>
+                      {gap.explanation && (
+                        <p className="mt-1.5 text-subtle text-sm leading-relaxed">
+                          {gap.explanation}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={cn(PANEL, "p-5 text-subtle text-sm")}>
+                  Nothing was flagged on this answer.
+                </p>
+              )}
+            </section>
+          </div>
         </div>
       ) : (
         <KnowledgeScore
@@ -499,7 +588,7 @@ export default async function GapReportPage({
                   </span>
                 </div>
               </div>
-              <p className="rounded-control bg-surface p-4 text-sm leading-7 text-foreground">
+              <p className={cn(PANEL, "p-5 text-sm leading-7 text-foreground")}>
                 {spans.map((span, index) => {
                   const substantive = span.text.trim().length > 0;
                   const status =
@@ -605,10 +694,7 @@ export default async function GapReportPage({
                   </h2>
                   <ul className="flex flex-col gap-2">
                     {focused.gaps?.map((gap) => (
-                      <li
-                        key={gap.phrase}
-                        className="rounded-card border border-border bg-surface p-4"
-                      >
+                      <li key={gap.phrase} className={cn(PANEL, "p-4")}>
                         <p className="text-sm font-medium text-strong">
                           {gap.phrase}
                         </p>
