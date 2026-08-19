@@ -1,6 +1,42 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+/**
+ * What `vercel env pull` writes instead of a secret it will not hand over.
+ *
+ * It is a literal, eleven characters long, and that length is the entire
+ * problem: `z.string().min(1)` accepts it, so every guard of the shape
+ * `if (!env.SOME_KEY) return "not configured"` sails past and the app sends
+ * `Authorization: Bearer [SENSITIVE]` to a real API. What comes back is a 401,
+ * which is logged on the server and looks on screen exactly like a search that
+ * ran and found nothing.
+ *
+ * That is why "the YouTube finder doesn't work" survived a fix to the YouTube
+ * finder. There was nothing left to fix in it — locally the key was never a
+ * key.
+ */
+const PULLED_PLACEHOLDER = "[SENSITIVE]";
+
+/**
+ * An optional secret, with the placeholder treated as absent.
+ *
+ * Absent is a state every one of these already supports and handles well: the
+ * AI chain skips the rung, the search route answers "not configured", the
+ * username lookup fails closed and says so in the log. Each of those is a
+ * better outcome than a request that cannot succeed, and each of them tells
+ * somebody something true.
+ *
+ * Deliberately only applied to the optional ones. Doing it to a *required*
+ * variable would turn a placeholder into a boot failure, which is arguably
+ * also correct and is a bigger decision than this.
+ */
+const optionalSecret = () =>
+  z
+    .string()
+    .min(1)
+    .optional()
+    .transform((value) => (value === PULLED_PLACEHOLDER ? undefined : value));
+
 export const env = createEnv({
   server: {
     NODE_ENV: z
@@ -9,12 +45,12 @@ export const env = createEnv({
     // AI providers. Both optional so the app still boots without them — the
     // AI routes report "not configured" instead of the whole app failing to
     // start. Server-only: these must never reach the browser bundle.
-    GEMINI_API_KEY: z.string().min(1).optional(),
-    GROQ_API_KEY: z.string().min(1).optional(),
+    GEMINI_API_KEY: optionalSecret(),
+    GROQ_API_KEY: optionalSecret(),
     // The Vercel AI Gateway, which is how the wide-context failover rung is
     // reached. Optional like the rest: unset, that rung is skipped and the
     // chain is what it was.
-    AI_GATEWAY_API_KEY: z.string().min(1).optional(),
+    AI_GATEWAY_API_KEY: optionalSecret(),
     /**
      * Which model that rung asks for.
      *
@@ -27,8 +63,8 @@ export const env = createEnv({
      * Unset, `provider.ts` uses its own default. See `GATEWAY_MODEL` there for
      * what that rung is for and why it is not simply Gemini again.
      */
-    AI_GATEWAY_MODEL: z.string().min(1).optional(),
-    TAVILY_API_KEY: z.string().min(1).optional(),
+    AI_GATEWAY_MODEL: optionalSecret(),
+    TAVILY_API_KEY: optionalSecret(),
     // Set by Vercel to the project's stable production hostname, without a
     // protocol. Absent locally, which is why it's optional.
     VERCEL_PROJECT_PRODUCTION_URL: z.string().min(1).optional(),
@@ -51,7 +87,7 @@ export const env = createEnv({
     // Bypasses row-level security. Used only by the Stripe webhook, which has
     // no user session and must write the `plan` column that authenticated
     // users are explicitly forbidden from writing.
-    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
+    SUPABASE_SERVICE_ROLE_KEY: optionalSecret(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
