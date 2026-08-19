@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { StreakFlame } from "~/components/streak-flame";
+import { SlidingNumber } from "~/components/ui/sliding-number";
 import { nextMilestone, WEEK_DAYS } from "~/lib/streak";
 import { cn } from "~/lib/utils";
 
@@ -84,14 +85,18 @@ export function StreakStrip({
             Your streak
           </h2>
           <p className="flex items-baseline gap-2">
-            <span
+            {/* An odometer rather than a number that is simply replaced. This
+                is the one figure on the dashboard that changes because
+                somebody did something, and it changes once a day — rare
+                enough that showing the change is worth a beat, which is
+                exactly the test `animate` applies. */}
+            <SlidingNumber
+              value={streak}
               className={cn(
-                "font-display text-[2.75rem] leading-none tracking-[-0.045em] tabular-nums",
+                "font-display text-[2.75rem] tracking-[-0.045em]",
                 streak > 0 ? "text-strong" : "text-border",
               )}
-            >
-              {streak > 0 ? streak : "0"}
-            </span>
+            />
             <span className="font-medium text-[1.05rem] text-strong">
               {streak === 1 ? "day in a row" : "days in a row"}
             </span>

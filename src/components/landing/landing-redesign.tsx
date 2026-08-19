@@ -59,6 +59,86 @@ const whyOutLoud = [
   },
 ] as const;
 
+/**
+ * Tick marks at the four corners of a ruled block.
+ *
+ * Lifted from Watermelon UI's stats template, where they frame a bounded
+ * region the way a crop mark frames a plate. On a page built entirely out of
+ * hairlines they cost no colour and no motion, and they do the one thing this
+ * page needed: say where a block *ends*. Every section here is separated by
+ * the same 1px rule at the same weight, so the eye reads a continuous ledger
+ * rather than a sequence of chapters, and the fix is not a heavier rule — it
+ * is a corner.
+ *
+ * Only on blocks that are genuinely bounded. A mark at the corner of
+ * something that runs off the edge of the screen is a lie about the layout.
+ */
+function CornerMarks() {
+  return (
+    <>
+      {(
+        [
+          "-top-[5.5px] -left-[5.5px]",
+          "-top-[5.5px] -right-[5.5px]",
+          "-bottom-[5.5px] -left-[5.5px]",
+          "-bottom-[5.5px] -right-[5.5px]",
+        ] as const
+      ).map((position) => (
+        <span
+          aria-hidden="true"
+          key={position}
+          className={`pointer-events-none absolute size-[11px] text-border ${position}`}
+        >
+          <span className="-translate-y-1/2 absolute top-1/2 left-0 h-px w-full bg-current" />
+          <span className="-translate-x-1/2 absolute top-0 left-1/2 h-full w-px bg-current" />
+        </span>
+      ))}
+    </>
+  );
+}
+
+/**
+ * The page's one inversion, taken as a flight of steps instead of a cut.
+ *
+ * A Haikei "layered steps" figure, authored to this page's two light stocks
+ * rather than exported from the tool with its own palette. Haikei's other
+ * fifteen generators are all some form of blob, wave or blurry gradient, and
+ * `design.md` bans every one of those by name — a soft radial shape laid over
+ * a layout as decoration is the thing this page has removed twice. Steps are
+ * the exception because they are made of the same straight rules the whole
+ * page is made of.
+ *
+ * It earns its place at exactly one boundary. The landing gets a single
+ * crossing from light to dark and it happens at the close, where going dark
+ * means *this is the end*; up to now that crossing was a 1px rule, so the
+ * lights went out between one paragraph and the next. Terracing down through
+ * both stocks makes it an arrival. Anywhere else on the page the same figure
+ * would be a smudge, which is the test: take it away here and the close stops
+ * reading as a close, take it away anywhere else and nothing is lost.
+ */
+function SteppedEdge() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 1440 96"
+      preserveAspectRatio="none"
+      className="absolute inset-x-0 top-0 z-[3] h-[clamp(2.5rem,5vw,6rem)] w-full"
+    >
+      {/* Painted back to front: the deeper stock is the lower flight, so the
+          lighter one lands on top of it and each tread shows one stop of the
+          ramp. Two treads, three tones counting the night underneath. */}
+      <path
+        d="M0,0 H1440 V36 H1200 V48 H960 V60 H720 V72 H480 V84 H240 V96 H0 Z"
+        fill="var(--background)"
+      />
+      <path
+        d="M0,0 H1440 V12 H1200 V24 H960 V36 H720 V48 H480 V60 H240 V72 H0 Z"
+        fill="var(--card)"
+      />
+    </svg>
+  );
+}
+
 const ease = [0.23, 1, 0.32, 1] as const;
 /**
  * The read-through waveform.
@@ -1703,13 +1783,52 @@ export function LandingRedesign() {
           <h2 className="mt-5 max-w-[20ch] font-display text-[clamp(1.7rem,4vw,3.6rem)] text-strong leading-[1.02] tracking-[-0.04em]">
             A quiz can be passed by recognising. Saying it cannot.
           </h2>
-          <div className="mt-12 grid gap-10 border-border border-t pt-10 md:grid-cols-3 md:gap-12">
-            {whyOutLoud.map((item) => (
-              <article key={item.title}>
-                <h3 className="font-semibold text-lg text-strong tracking-[-0.02em]">
+          {/* Three equal columns, twice.
+           *
+           * This block and the three steps under "how it works" were the same
+           * shape at the same width one scroll apart — heading, paragraph,
+           * heading, paragraph, heading, paragraph, and then again. Each was
+           * defensible on its own and together they made the middle of the
+           * page read as a template with the content swapped, which is what
+           * "it all looks the same" actually means.
+           *
+           * So this one stops being a grid of peers. The first line is the
+           * headline restated as a claim, and the other two are why it is
+           * true, which is a real hierarchy the layout was flattening. It
+           * takes five columns of twelve and a size step; the supports take
+           * four and three, divided by the same hairline the page already
+           * uses everywhere else. The steps below keep their equal widths and
+           * change their vertical position instead, so the two blocks are now
+           * different in the two different ways their content is. */}
+          <div className="relative mt-12 grid gap-10 border-border border-y py-10 md:grid-cols-12 md:gap-0">
+            <CornerMarks />
+            {whyOutLoud.map((item, index) => (
+              <article
+                key={item.title}
+                className={
+                  [
+                    "md:col-span-5 md:pr-12",
+                    "md:col-span-4 md:border-border md:border-l md:px-10",
+                    "md:col-span-3 md:border-border md:border-l md:pl-10",
+                  ][index]
+                }
+              >
+                <h3
+                  className={
+                    index === 0
+                      ? "max-w-[16ch] font-display text-[1.45rem] text-strong leading-[1.15] tracking-[-0.03em]"
+                      : "font-semibold text-[1.02rem] text-strong tracking-[-0.02em]"
+                  }
+                >
                   {item.title}
                 </h3>
-                <p className="mt-3 text-muted-foreground leading-relaxed">
+                <p
+                  className={
+                    index === 0
+                      ? "mt-4 max-w-[34ch] text-[1.05rem] text-muted-foreground leading-relaxed"
+                      : "mt-3 text-[0.96rem] text-muted-foreground leading-relaxed"
+                  }
+                >
                   {item.body}
                 </p>
               </article>
@@ -1765,13 +1884,25 @@ export function LandingRedesign() {
          * draws itself across the row as the section arrives, and the three
          * verdict colours marking the steps in the order a rehearsal produces
          * them. It works identically at 390px and at 2560px. */}
+        {/* The rule above each step stays at every width, and at desktop the
+            three of them sit at three heights. Read left to right they are a
+            flight of stairs, which is what an order of operations looks like
+            when the layout says it rather than the numbering — the 01/02/03
+            was carrying that on its own, and a number in a corner is a label,
+            not a shape. It is also the one structural idea borrowed from
+            Haikei's layered steps that survives this page's rules: as a
+            terraced field behind the type it would be a decoration under a
+            paragraph, and as the alignment of the paragraphs themselves it is
+            the paragraphs. */}
         <div className="relative mt-16 md:mt-20">
-          <div className="mx-auto grid max-w-[76rem] gap-10 px-5 md:px-8 lg:grid-cols-3 lg:gap-8">
+          <div className="mx-auto grid max-w-[76rem] gap-10 px-5 md:px-8 lg:grid-cols-3 lg:items-start lg:gap-8">
             {steps.map((step, index) => (
               <article
                 key={step.number}
                 data-feature-card
-                className="relative border-border border-t pt-7 lg:border-t-0"
+                className={`relative border-border border-t pt-7 ${
+                  ["", "lg:mt-11", "lg:mt-22"][index]
+                }`}
               >
                 <span
                   aria-hidden="true"
@@ -1862,8 +1993,9 @@ export function LandingRedesign() {
           field, same scrim. It is also the page's one sanctioned inversion
           back into dark, and arriving somewhere the reader has already been
           is what makes that read as a close rather than as a sixth section. */}
-      <section className="lp-atmosphere relative overflow-hidden px-5 py-20 md:px-8 md:py-28">
+      <section className="lp-atmosphere relative overflow-hidden px-5 pt-28 pb-20 md:px-8 md:pt-36 md:pb-28">
         <FlowField className="absolute inset-0 z-0 h-full w-full" />
+        <SteppedEdge />
         <div
           aria-hidden="true"
           className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(4,12,26,0.62),rgba(3,9,20,0.78))]"
