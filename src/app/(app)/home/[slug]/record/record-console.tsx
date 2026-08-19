@@ -2720,7 +2720,7 @@ export function RecordConsole({
           type="button"
           onClick={primaryAction}
           disabled={busy || outOfQuota || drafting}
-          className="h-11 rounded-control bg-accent-solid px-6 font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-accent-solid-hover active:scale-[0.97]"
+          className="h-11 rounded-control bg-accent-solid px-6 font-semibold text-accent-contrast transition-transform hover:bg-accent-solid-hover active:scale-[0.97]"
         >
           {primaryLabel}
           {status === "between" && countdown !== null && (

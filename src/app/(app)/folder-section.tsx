@@ -112,7 +112,7 @@ export function NewFolderButton() {
             // Anchored right: the trigger sits at the right edge of the
             // header row, so a left-anchored panel would run off-screen.
             style={{ transformOrigin: "top right" }}
-            className="absolute top-full right-0 z-20 mt-2 w-72 rounded-card border border-border bg-popover p-3 shadow-xl"
+            className="absolute top-full right-0 z-20 mt-2 w-72 rounded-card border border-border bg-popover p-3"
           >
             <form action={formAction} className="flex flex-col gap-3">
               <Input

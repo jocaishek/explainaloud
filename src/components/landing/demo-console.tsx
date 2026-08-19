@@ -388,7 +388,7 @@ export function DemoConsole() {
         </Slug>
       </div>
 
-      <div className="mt-5 overflow-hidden rounded-[20px] border border-white/12 bg-[var(--panel-deep)] text-primary-foreground shadow-[10px_12px_0_rgba(15,35,64,0.18)]">
+      <div className="mt-5 overflow-hidden rounded-[20px] border border-white/12 bg-[var(--panel-deep)] text-primary-foreground">
         {/* The window.
             A browser frame is a small lie that buys a large amount of clarity:
             it says "this is the product, in a browser, being used" before a
@@ -436,7 +436,7 @@ export function DemoConsole() {
                   and stops existing the moment it lands. */}
               {!dropped && (
                 <span
-                  className="-translate-y-1/2 absolute top-1 left-4 flex items-center gap-2 whitespace-nowrap border border-white/25 bg-[var(--panel-deep)] px-2.5 py-1.5 shadow-[3px_4px_0_rgba(4,14,32,0.6)]"
+                  className="-translate-y-1/2 absolute top-1 left-4 flex items-center gap-2 whitespace-nowrap border border-white/25 bg-[var(--panel-deep)] px-2.5 py-1.5"
                   style={{
                     transform: `rotate(-4deg) scale(${dragOver ? 1.04 : 1})`,
                     transition: "transform 220ms ease-out",

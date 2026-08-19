@@ -119,7 +119,7 @@ export function SunsetHero() {
         >
           <a
             href="/signup"
-            className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(180deg,var(--sun-high),var(--sun))] px-8 py-4 font-mono text-[0.72rem] text-[#1a1206] uppercase tracking-[0.1em] shadow-[0_10px_40px_-12px_rgba(249,115,22,0.75)] transition-transform duration-300 active:scale-[0.97]"
+            className="inline-flex items-center justify-center rounded-full bg-[linear-gradient(180deg,var(--sun-high),var(--sun))] px-8 py-4 font-mono text-[0.72rem] text-[#1a1206] uppercase tracking-[0.1em] transition-transform duration-300 active:scale-[0.97]"
           >
             Start a session
           </a>

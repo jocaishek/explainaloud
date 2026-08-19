@@ -482,7 +482,7 @@ function StepIndicator({
               {active && (
                 <motion.span
                   layoutId="onboarding-active-step"
-                  className="absolute inset-0 rounded-lg bg-card shadow-xs"
+                  className="absolute inset-0 rounded-lg bg-card"
                   transition={{ duration: reduceMotion ? 0 : 0.25, ease: EASE }}
                 />
               )}

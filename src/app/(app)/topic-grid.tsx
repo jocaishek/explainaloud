@@ -127,7 +127,7 @@ export function TopicGrid({
               border,
               tint,
               zone.active &&
-                "scale-[1.005] border-brand shadow-[0_0_0_3px_var(--color-brand)]/20",
+                "scale-[1.005] border-brand ring-[3px] ring-[color:var(--color-brand)]/20",
             )}
           >
             <FolderHeader

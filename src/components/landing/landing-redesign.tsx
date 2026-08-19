@@ -631,7 +631,7 @@ function ResultsCarousel() {
           })}
         </div>
 
-        <div className="relative overflow-hidden rounded-[1.1rem] border border-border bg-card p-4 shadow-[7px_8px_0_rgba(15,35,64,0.22)] md:p-6">
+        <div className="relative overflow-hidden rounded-[1.1rem] border border-border bg-card p-4 md:p-6">
           <div className="flex items-center justify-between font-mono text-[0.62rem] text-muted-foreground uppercase tracking-[0.12em]">
             <span>Live rehearsal · 01:42</span>
             <span>{activeStage + 1} / 3</span>
@@ -1615,7 +1615,7 @@ export function LandingRedesign() {
               <Link
                 href="/signup"
                 data-gsap-hover
-                className="group inline-flex h-12 items-center gap-5 border border-[var(--accent-solid)] bg-[var(--accent-solid)] px-6 font-medium text-[var(--brand-foreground)] shadow-[4px_4px_0_rgba(6,18,38,0.85)]"
+                className="group inline-flex h-12 items-center gap-5 border border-[var(--accent-solid)] bg-[var(--accent-solid)] px-6 font-medium text-[var(--brand-foreground)]"
               >
                 Start explaining
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -1870,7 +1870,7 @@ export function LandingRedesign() {
         />
         <div
           data-scroll-reveal
-          className="relative z-[2] mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-16 text-left text-primary-foreground shadow-[6px_6px_0_rgba(4,14,32,0.55)] md:px-12 md:py-24"
+          className="relative z-[2] mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-16 text-left text-primary-foreground md:px-12 md:py-24"
         >
           {/* A sparkle icon rocking back and forth on a four-second loop
               lived here. Sparkles are the universal badge for "an AI did

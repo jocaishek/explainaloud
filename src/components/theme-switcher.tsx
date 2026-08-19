@@ -55,7 +55,7 @@ export function ThemeSwitcher() {
               <motion.span
                 layoutId={layoutId}
                 transition={{ type: "spring", duration: 0.4, bounce: 0.15 }}
-                className="absolute inset-0 rounded-full bg-background shadow-sm"
+                className="absolute inset-0 rounded-full bg-background"
               />
             )}
             <Icon className="relative size-4" />

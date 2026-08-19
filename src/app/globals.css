@@ -665,9 +665,20 @@ html:has(main.lp-v2) {
      as a different product even after the colours matched. The tint is the
      ink's own hue rather than black, so it sits in the same light as
      everything around it. */
-  --elev-rest: 5px 6px 0 rgba(21, 40, 68, 0.16);
-  --elev-hover: 7px 8px 0 rgba(21, 40, 68, 0.2);
-  --elev-float: 8px 10px 0 rgba(21, 40, 68, 0.18);
+  /* No elevation. The app used to sit on hard offset shadows and they were
+     the loudest generic thing on every screen — a panel with a slab of colour
+     behind it is the single most recognisable "generated interface" tell, and
+     forty cards each carrying one turned the product into a sheet of stickers.
+     Separation now comes from where it already came from on the landing: the
+     card is lighter than the ground and it has a hairline.
+
+     Kept as tokens rather than deleted, because `shadow-rest` is written into
+     forty call sites and those are all still correct — they ask this file for
+     the register's elevation and this register's answer is none. That is what
+     the indirection is for. */
+  --elev-rest: none;
+  --elev-hover: none;
+  --elev-float: none;
 
   --stack: 2.75rem;
   --measure: 74rem;
@@ -764,9 +775,13 @@ html:has(main.lp-v2) {
      blurred drop shadow is what made the app read as a different product even
      when the colours matched. Offset in black, since the ground is neutral —
      the landing tints its own because the ground there is navy. */
-  --elev-rest: 5px 6px 0 rgba(0, 0, 0, 0.55);
-  --elev-hover: 7px 8px 0 rgba(0, 0, 0, 0.62);
-  --elev-float: 8px 10px 0 rgba(0, 0, 0, 0.6);
+  /* Night, same answer. A hard black slab behind a dark card was worse than
+     the light one: on carbon it reads as a rendering fault rather than as
+     depth. The hairline does the separating, which the block above already
+     says is how a dark theme is meant to do it. */
+  --elev-rest: none;
+  --elev-hover: none;
+  --elev-float: none;
 
   /* The three verdicts, re-checked against this canvas rather than carried
      over: 11.3, 7.3 and 11.2 on the page. They mean the same thing on both
@@ -1053,23 +1068,26 @@ html:has(main.lp-v2) {
 .capsule {
   background: var(--capsule-bg);
   backdrop-filter: blur(20px) saturate(180%);
+  /* The lit top edge and the hairline stay: both are edges of the element.
+     The cast layer underneath is gone. */
   box-shadow:
     inset 0 1px 0 0 var(--glass-highlight),
-    0 0 0 1px var(--glass-border),
-    0 10px 32px -8px rgba(0, 0, 0, 0.6);
+    0 0 0 1px var(--glass-border);
 }
 
-/* Accent ring plus outer bloom, for the one element on a section that should
-   look lit from within. Used sparingly — it stops meaning "important" the
-   moment two of them share a screen. */
+/* An accent ring, for the one element on a section that should read as lit.
+   It was a ring plus a 60px outer bloom; the bloom went with every other cast
+   shadow in the product. Still used sparingly — it stops meaning "important"
+   the moment two of them share a screen. */
 /* Derived from the brand token rather than a copy of it. The old rule had the
    previous blue written out three times in rgba(), which is why the sign-in
    card kept a blue halo for a while after the brand had stopped being blue. */
 .glow-ring {
   border: 1px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
+  /* The ring and the inset, without the 60px bloom. A card glowing into the
+     page behind it is the same tell as a card floating above it. */
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--color-brand) 10%, transparent),
-    0 0 60px -12px color-mix(in srgb, var(--color-brand) 50%, transparent),
     inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -1132,9 +1150,7 @@ html:has(main.lp-v2) {
   .glass-lift:hover {
     transform: translateY(-4px);
     border-color: color-mix(in srgb, var(--color-brand) 35%, transparent);
-    box-shadow:
-      inset 0 1px 1px var(--glass-highlight),
-      0 12px 32px -16px color-mix(in srgb, var(--color-brand) 35%, transparent);
+    box-shadow: inset 0 1px 1px var(--glass-highlight);
   }
 }
 
@@ -2068,10 +2084,9 @@ html:has(main.lp-v2) {
 }
 @media (hover: hover) {
   .panel-live:hover {
+    /* The lift stays, the shadow under it does not. Movement is enough to say
+       a thing responded; a shadow appearing as well says it left the page. */
     transform: translateY(-3px);
-    box-shadow:
-      0 24px 32px -8px rgba(0, 0, 0, 0.09),
-      0 10px 14px -8px rgba(0, 0, 0, 0.06);
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -2320,12 +2335,9 @@ html:has(main.lp-v2) {
   /* Through a variable, so the app can switch it off. See below. */
   --glass-blur: blur(18px) saturate(150%);
   backdrop-filter: var(--glass-blur);
-  /* The lift is tinted with the sunset rather than with black. A neutral
-     shadow under a warm panel on warm paper reads as dirt; this one reads as
-     the panel sitting in the same light as everything around it. */
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
-    0 20px 45px -22px rgba(124, 45, 18, 0.4);
+  /* The lit top edge only. The tinted lift under it is gone with every other
+     cast shadow in the product. */
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
 }
 
 /* The blur, only where there is something to blur.
@@ -2372,9 +2384,7 @@ html:has(main.lp-v2) {
     rgba(24, 20, 16, 0.6);
   border-color: rgba(244, 241, 234, 0.12);
   border-top-color: rgba(251, 191, 36, 0.28);
-  box-shadow:
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.07),
-    0 24px 60px -24px rgba(0, 0, 0, 0.85);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
 }
 @media (max-width: 767px) {
   .glass-panel {
@@ -2619,13 +2629,12 @@ html:has(main.lp-v2) {
   width: 2px;
   margin-left: -1px;
   background: var(--brand-ink);
-  box-shadow: 0 0 6px 1px color-mix(in oklab, var(--brand-ink) 60%, transparent);
+  /* A 2px bar in the accent is legible without a halo around it. */
   animation: lp-head-pulse 1.4s ease-in-out infinite;
 }
 
 .lp-v2 .lp-sky-nav:not(.is-light) .lp-read-head {
   background: #eef2f8;
-  box-shadow: 0 0 7px 1px rgba(238, 242, 248, 0.75);
 }
 
 @keyframes lp-head-pulse {
@@ -2808,7 +2817,6 @@ html:has(main.lp-v2) {
   --glass-blur: none;
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
-  box-shadow: 6px 7px 0 rgba(4, 14, 32, 0.62);
 }
 
 /* ---------------------------------------------------------------------------

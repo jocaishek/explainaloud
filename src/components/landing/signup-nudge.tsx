@@ -60,7 +60,7 @@ export function SignupNudge() {
           animate={{ opacity: 1, y: 0 }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
           transition={reduceMotion ? { duration: 0.2 } : transitions.spring}
-          className="fixed right-4 bottom-4 z-[80] w-[min(12.5rem,calc(100vw-2rem))] border border-white/15 bg-[var(--panel-deep)] p-3 text-primary-foreground shadow-[3px_3px_0_rgba(4,14,32,0.6)] md:right-4 md:bottom-4"
+          className="fixed right-4 bottom-4 z-[80] w-[min(12.5rem,calc(100vw-2rem))] border border-white/15 bg-[var(--panel-deep)] p-3 text-primary-foreground md:right-4 md:bottom-4"
         >
           <button
             type="button"
