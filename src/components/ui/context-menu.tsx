@@ -48,7 +48,7 @@ function ContextMenuContent({
         // step. See the note in `dropdown-menu.tsx`.
         data-slot="dropdown-menu-content"
         className={cn(
-          "z-50 max-h-(--radix-context-menu-content-available-height) min-w-[8rem] origin-(--radix-context-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground shadow-md",
+          "z-50 max-h-(--radix-context-menu-content-available-height) min-w-[8rem] origin-(--radix-context-menu-content-transform-origin) overflow-x-hidden overflow-y-auto rounded-md border bg-popover p-1 text-popover-foreground",
           className,
         )}
         {...props}
@@ -147,7 +147,7 @@ function ContextMenuSubContent({
     <ContextMenuPrimitive.SubContent
       data-slot="dropdown-menu-content"
       className={cn(
-        "z-50 min-w-[8rem] origin-(--radix-context-menu-content-transform-origin) overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-lg",
+        "z-50 min-w-[8rem] origin-(--radix-context-menu-content-transform-origin) overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground",
         className,
       )}
       {...props}

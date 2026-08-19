@@ -53,7 +53,7 @@ export default function UpdatePasswordPage() {
     <main className="flex min-h-screen w-full items-center justify-center bg-background px-6 text-foreground">
       <form
         onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-white/10 bg-[#171717] p-6 shadow-xl shadow-black/40"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-white/10 bg-[#171717] p-6/40"
       >
         <div>
           <h1 className="text-lg font-semibold text-white">
@@ -82,7 +82,7 @@ export default function UpdatePasswordPage() {
         <Button
           type="submit"
           disabled={submitting}
-          className="bg-accent-solid font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-accent-solid-hover active:scale-[0.98]"
+          className="bg-accent-solid font-semibold text-accent-contrast transition-transform hover:bg-accent-solid-hover active:scale-[0.98]"
         >
           {submitting ? "Saving…" : "Save new password"}
         </Button>

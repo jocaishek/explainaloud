@@ -4,12 +4,17 @@ import { cn } from "~/lib/utils";
 
 /* A card is a surface, not a box drawn around content.
  *
- * Three things carry that, and all three are tokens so the same component is
- * correct in both registers: the radius (20px in the app, 0 on the landing),
- * a hairline tinted with the text colour rather than a grey, and an elevation
- * that is two soft tinted layers instead of one hard `shadow-sm`. On the
- * landing every one of those resolves to nothing and the card is a plain
- * ruled block, which is what that page wants.
+ * Two things carry that, and both are tokens so the same component is correct
+ * in both registers: the radius (20px in the app, 0 on the landing) and a
+ * hairline tinted with the text colour rather than a grey. The card is a
+ * plain ruled block on both sides now.
+ *
+ * There used to be a third — an elevation of two soft tinted layers — and it
+ * is gone everywhere, not just here. A panel with a slab of shadow behind it
+ * is the most recognisable generated-interface tell there is, and the product
+ * had forty of them. `shadow-rest` is still on this component and still
+ * correct: it asks `globals.css` for the register's elevation, and the answer
+ * is now none in both.
  *
  * `interactive` is opt-in rather than the default. A card that lifts under the
  * cursor is making a promise that clicking it does something, and most cards

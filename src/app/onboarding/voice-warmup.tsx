@@ -372,7 +372,7 @@ export function VoiceWarmup({
               "h-11 gap-2 rounded-full px-5 font-semibold transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none",
               stage === "done"
                 ? "border-border bg-surface text-strong"
-                : "bg-accent-solid text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] hover:bg-accent-solid-hover",
+                : "bg-accent-solid text-accent-contrast hover:bg-accent-solid-hover",
             )}
           >
             <Mic className="size-4" />

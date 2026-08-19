@@ -473,7 +473,7 @@ export function NewTopicForm({
         <Button
           type="submit"
           disabled={pending}
-          className="bg-accent-solid font-semibold text-accent-contrast shadow-[0_0_30px_-8px_var(--color-brand-deep)] transition-transform hover:bg-accent-solid-hover active:scale-[0.98]"
+          className="bg-accent-solid font-semibold text-accent-contrast transition-transform hover:bg-accent-solid-hover active:scale-[0.98]"
         >
           {pending
             ? status || "Building course…"
