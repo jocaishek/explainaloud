@@ -30,7 +30,7 @@ export function HomeHeader({
     <header data-rise="" className="flex flex-col gap-2.5">
       <Greeting
         name={firstName}
-        className="max-w-[22ch] font-semibold text-[clamp(1.6rem,3vw,2.15rem)] text-strong leading-[1.12] tracking-[-0.03em]"
+        className="max-w-[22ch] font-semibold text-[2rem] text-strong leading-[1.12] tracking-[-0.03em]"
       />
       <p className="max-w-[58ch] text-[0.95rem] text-subtle leading-relaxed">
         {lede}

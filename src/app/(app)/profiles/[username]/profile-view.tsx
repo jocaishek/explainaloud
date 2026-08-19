@@ -94,7 +94,7 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
               size={64}
             />
             <div className="min-w-0">
-              <h1 className="truncate font-display text-[clamp(1.4rem,3vw,1.9rem)] text-strong leading-tight tracking-[-0.03em]">
+              <h1 className="truncate font-display text-[1.6rem] text-strong leading-tight tracking-[-0.03em]">
                 {name}
               </h1>
               <p className="mt-1 truncate font-mono text-[0.8rem] text-subtle">

@@ -77,7 +77,7 @@ export function FriendsClient({
   return (
     <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-8 pb-14 sm:px-6 lg:px-10 lg:py-10 lg:pb-16">
       <header data-rise="">
-        <h1 className="font-display text-[clamp(1.8rem,3.4vw,2.6rem)] text-strong leading-[1.05] tracking-[-0.035em]">
+        <h1 className="font-display text-[2rem] text-strong leading-[1.05] tracking-[-0.035em]">
           Friends
         </h1>
         <p className="mt-2.5 max-w-[52ch] text-[1.02rem] text-subtle leading-relaxed">
@@ -137,7 +137,7 @@ export function FriendsClient({
                argument at the size an argument deserves. */
             <div className="rounded-card border border-border bg-card px-6 py-11 shadow-rest sm:px-8 sm:py-12">
               <div className="max-w-[32rem]">
-                <h3 className="font-display text-[clamp(1.4rem,2.6vw,2rem)] text-strong leading-[1.08] tracking-[-0.035em]">
+                <h3 className="font-display text-[1.75rem] text-strong leading-[1.08] tracking-[-0.035em]">
                   Study alone, or{" "}
                   <span className="text-brand-ink">not alone</span>.
                 </h3>

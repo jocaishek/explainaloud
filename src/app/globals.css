@@ -652,7 +652,10 @@ html:has(main.lp-v2) {
      inside it. Buttons were the loudest offender: `rounded-full` was hardcoded
      into the shared component, so every control in the product was a pill no
      matter what this token said. */
-  --r-card: 20px;
+  /* 16, not 20. The larger figure came from the landing's demo window, where
+     one big panel carries a whole section; repeated across a dashboard of
+     small panels the same radius reads soft rather than considered. */
+  --r-card: 16px;
   --r-control: 0px;
 
   /* Elevation, tinted with the text hue rather than pure black — a neutral
@@ -1040,103 +1043,9 @@ html:has(main.lp-v2) {
  * at that size the loss is a blur nobody can see through a 6-inch screen
  * anyway. */
 @media (max-width: 767px) {
-  .glass,
-  .capsule {
-    backdrop-filter: none;
-  }
   .dark .glass {
     background: rgba(24, 24, 27, 0.72);
   }
-  .dark .capsule {
-    background: rgba(23, 23, 23, 0.92);
-  }
-}
-
-/* Hide scrollbars on the horizontal card rails while keeping them scrollable. */
-.no-scrollbar {
-  scrollbar-width: none;
-  -ms-overflow-style: none;
-}
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-/* Detached capsule surface for the floating nav. Three stacked shadows do the
-   work: an inset top highlight (the lit edge), a hairline ring, and a wide
-   soft drop so the capsule reads as hovering above the page rather than
-   painted onto it. */
-.capsule {
-  background: var(--capsule-bg);
-  backdrop-filter: blur(20px) saturate(180%);
-  /* The lit top edge and the hairline stay: both are edges of the element.
-     The cast layer underneath is gone. */
-  box-shadow:
-    inset 0 1px 0 0 var(--glass-highlight),
-    0 0 0 1px var(--glass-border);
-}
-
-/* An accent ring, for the one element on a section that should read as lit.
-   It was a ring plus a 60px outer bloom; the bloom went with every other cast
-   shadow in the product. Still used sparingly — it stops meaning "important"
-   the moment two of them share a screen. */
-/* Derived from the brand token rather than a copy of it. The old rule had the
-   previous blue written out three times in rgba(), which is why the sign-in
-   card kept a blue halo for a while after the brand had stopped being blue. */
-.glow-ring {
-  border: 1px solid color-mix(in srgb, var(--color-brand) 45%, transparent);
-  /* The ring and the inset, without the 60px bloom. A card glowing into the
-     page behind it is the same tell as a card floating above it. */
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-brand) 10%, transparent),
-    inset 0 1px 0 0 rgba(255, 255, 255, 0.06);
-}
-
-/* Specular sweep across a button on hover. Purely decorative, so it's gated
-   to pointer devices and disabled under reduced motion. */
-.shine {
-  position: relative;
-  overflow: hidden;
-  isolation: isolate;
-}
-.shine::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(
-    105deg,
-    transparent 40%,
-    rgba(255, 255, 255, 0.28) 50%,
-    transparent 60%
-  );
-  transform: translateX(-100%);
-}
-@media (hover: hover) and (pointer: fine) {
-  .shine::after {
-    transition: transform 750ms cubic-bezier(0.23, 1, 0.32, 1);
-  }
-  .shine:hover::after {
-    transform: translateX(100%);
-  }
-}
-
-/* Fade the ends of a horizontal rail so cards dissolve instead of getting
-   guillotined at the viewport edge. */
-.rail-mask {
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 4rem,
-    black calc(100% - 4rem),
-    transparent
-  );
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black 4rem,
-    black calc(100% - 4rem),
-    transparent
-  );
 }
 
 /* Hover lift for glass cards — pointer devices only */
@@ -1324,49 +1233,6 @@ html:has(main.lp-v2) {
     opacity: 0;
   }
 }
-.work-ping {
-  animation: work-ping 1.6s cubic-bezier(0.23, 1, 0.32, 1) infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .work-ping {
-    animation: none;
-  }
-}
-
-/* The timecode ladder down the left margin.
- *
- * Sections 03 to 06 are tall, and their gutter carried a two-character label
- * and then several hundred pixels of nothing. On a real running order that
- * margin is never blank: it is a ruled scale, because the whole document is
- * indexed against time.
- *
- * Two layers of ticks against the gutter's right edge, minor every 28px and
- * major every 140px, drawn from the same hairline value as every other rule on
- * the page. A repeating gradient is normally a wallpaper tell; it earns its
- * place here because there is an actual measuring tool under it and the ticks
- * line up with the timecodes the sections are indexed by.
- *
- * Desktop only. On a phone the gutter is 2.75rem and a ruler in it is lint. */
-.ladder {
-  background-image:
-    repeating-linear-gradient(
-      to bottom,
-      var(--rule) 0 1px,
-      transparent 1px 140px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--rule) 55%, transparent) 0 1px,
-      transparent 1px 28px
-    );
-  background-size:
-    22px 100%,
-    9px 100%;
-  background-position:
-    right top,
-    right top;
-  background-repeat: repeat-y, repeat-y;
-}
 
 /* Two papers, alternating, and a colour per panel.
  *
@@ -1384,10 +1250,6 @@ html:has(main.lp-v2) {
  */
 .paper {
   --stock: #ffffff;
-  background: var(--stock);
-}
-.paper-grey {
-  --stock: #f6f3f1;
   background: var(--stock);
 }
 
@@ -1462,50 +1324,6 @@ html:has(main.lp-v2) {
       animation-range: cover 0% cover 100%;
     }
   }
-}
-
-/* One hue, four values.
- *
- * The first pass at this reached for the reference's own palette — indigo,
- * violet, cyan, lilac — which is four hues doing the job of one and reads as
- * randomness rather than as a scheme. Everything below is the brand
- * ultramarine `#3b37e6` at a different value: a deep field, two tints, and a
- * band on white. What separates one section from the next is how dark it is,
- * not what colour it is, and that is what makes a long page feel composed
- * rather than decorated.
- *
- * It also keeps the count honest. The product has four colours — one brand hue
- * and the three verdicts — and a fifth introduced as scenery is how a reserved
- * palette stops being reserved. */
-
-/* The deep field. Dark enough that white body copy clears AA everywhere on it,
-   and hued toward the brand rather than to neutral black. Two stops of the one
-   colour lit from opposite corners, so the field has a direction without a
-   second hue appearing. */
-.ground-deep {
-  --stock: #14100c;
-  /* The verdicts, lifted for this one dark section. Same three meanings and
-     the same three hues, read against near-black instead of paper — `#0f7a3d`
-     green sits at 2.4:1 here, well under what a marked word needs. */
-  --ok: #4ade80;
-  --miss: #fb7185;
-  --vague: #d6c19a;
-  --ink: #ffffff;
-  --rule: rgba(255, 255, 255, 0.26);
-  --rule-strong: rgba(255, 255, 255, 0.6);
-  background-color: var(--stock);
-  color: var(--ink);
-  --ground-field:
-    radial-gradient(
-      62% 70% at 20% 16%,
-      rgba(249, 115, 22, 0.3) 0%,
-      rgba(249, 115, 22, 0) 64%
-    ),
-    radial-gradient(
-      52% 60% at 86% 90%,
-      rgba(251, 191, 36, 0.18) 0%,
-      rgba(249, 115, 22, 0) 68%
-    );
 }
 
 /* The deep warm stock, and the page's only mid-tone.
@@ -1722,68 +1540,6 @@ html:has(main.lp-v2) {
     background-size: 100% 2px;
   }
 }
-
-/* The one accent left standing.
- *
- * There were four here — blue, violet, magenta, ink — from when the landing
- * ran a different section colour down the page. Nothing has referenced the
- * first three since the palette became one hue at four values, and leaving
- * three unreachable brand colours in the stylesheet is how the next person
- * concludes the product has four. */
-.accent-ink {
-  --accent: #0c0c0d;
-}
-
-/* The closing field: ink, flat.
- *
- * This was four radial gradients in violet, magenta and blue, drifting on a
- * 26-second loop. It was the largest colour on the site and it meant nothing —
- * and a blurred radial gradient used as a background is the first thing on the
- * banned list in `.claude/rules/design.md`, which this predated and then
- * quietly outlived.
- *
- * Flat ink instead. The base of this page is paper, grey stock and ink; the
- * only colour anywhere is a verdict on a word somebody said, and a saturated
- * field this size was competing with the three colours the product runs on. */
-/* The closing band.
- *
- * Warm stock rather than a neutral near-black, and a sunset barely lifting off
- * the bottom-left corner — the same light as everything above it, turned right
- * down. Deliberately fainter than `.ground-deep`: that field defines a section
- * you read inside, this one just stops the last thing on the page from being a
- * flat rectangle. Any stronger and it competes with the white type on it. */
-.ribbon {
-  background-color: #14100c;
-  /* Dusk, not a trapdoor.
-   *
-   * The page's one inversion still met the white above it on a hard line, so
-   * the ending arrived as a cut. This drops from the white of section 05
-   * through the warm stock into carbon across the top of the band — the sun
-   * going down rather than the lights going off.
-   *
-   * The whole fall happens inside the band's own top padding (`py-28`, and
-   * `py-36` from `md`), so it is finished well above the "on air" slug and
-   * the heading; no white type is ever set on a light part of it. */
-  background-image: linear-gradient(
-    180deg,
-    #ffffff 0%,
-    #f2ede6 4%,
-    #6d4423 9%,
-    #14100c 15%
-  );
-  background-repeat: no-repeat;
-  --ground-field:
-    radial-gradient(
-      70% 80% at 12% 88%,
-      rgba(249, 115, 22, 0.13) 0%,
-      rgba(249, 115, 22, 0) 66%
-    ),
-    radial-gradient(
-      50% 60% at 88% 8%,
-      rgba(251, 191, 36, 0.07) 0%,
-      rgba(249, 115, 22, 0) 70%
-    );
-}
 /* The level meter running through the on-air strip.
  *
  * The track holds two copies of a seamless tile, so translating exactly -50%
@@ -1800,31 +1556,6 @@ html:has(main.lp-v2) {
   }
   to {
     transform: translate3d(-50%, 0, 0);
-  }
-}
-.wave-drift {
-  animation-name: wave-drift;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  will-change: transform;
-}
-.wave-field {
-  -webkit-mask-image: linear-gradient(
-    to bottom,
-    transparent,
-    black 30%,
-    transparent 88%
-  );
-  mask-image: linear-gradient(
-    to bottom,
-    transparent,
-    black 30%,
-    transparent 88%
-  );
-}
-@media (prefers-reduced-motion: reduce) {
-  .wave-drift {
-    animation: none;
   }
 }
 
@@ -1859,9 +1590,6 @@ html:has(main.lp-v2) {
 }
 .rule-b {
   border-bottom: 1px solid var(--rule);
-}
-.rule-strong-t {
-  border-top: 1px solid var(--rule-strong);
 }
 
 /* Scroll reveal. Driven by `ScrollReveal`, which toggles the attribute.
@@ -2370,31 +2098,10 @@ html:has(main.lp-v2) {
 .register-app .glass-panel {
   --glass-blur: none;
 }
-
-/* Inside the one dark section, the same panel inverts. */
-.register-sunset .glass-panel,
-.dark .register-app .glass-panel,
-.ground-deep .glass-panel {
-  background:
-    linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.07),
-      rgba(255, 255, 255, 0.02) 42%
-    ),
-    rgba(24, 20, 16, 0.6);
-  border-color: rgba(244, 241, 234, 0.12);
-  border-top-color: rgba(251, 191, 36, 0.28);
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.07);
-}
 @media (max-width: 767px) {
   .glass-panel {
     backdrop-filter: none;
     background: #fffdfb;
-  }
-  .register-sunset .glass-panel,
-  .dark .register-app .glass-panel,
-  .ground-deep .glass-panel {
-    background: #1b1712;
   }
 }
 
