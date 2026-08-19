@@ -1207,6 +1207,16 @@ export function RecordConsole({
 
     try {
       let text = transcriptRef.current.trim();
+      /* Whether the authoritative pass actually ran.
+       *
+       * It matters because the fallback is known to be short. The live caption
+       * loop is cancelled at the top of `finish()`, so the last few seconds of
+       * speech never reach it — the server's transcription of the whole audio
+       * is what fills them in. When that call fails the transcript silently
+       * becomes the live one, missing its own ending, and until now nothing
+       * said so. "It didn't pick up what I said at the end" is exactly what
+       * that looks like from the outside. */
+      let transcribedFromAudio = false;
       // Delivery statistics for this attempt — pace, pauses, filler rate. Only
       // the server-side pass produces them, because only Whisper returns the
       // word timings they are derived from; the browser's own recogniser gives
@@ -1232,6 +1242,7 @@ export function RecordConsole({
             TRANSCRIBE_TIMEOUT_MS,
           );
           if (response.ok && typeof json.transcript === "string") {
+            transcribedFromAudio = true;
             text = json.transcript.trim();
             if (json.metrics && typeof json.metrics === "object") {
               speechMetrics = json.metrics;
@@ -1279,6 +1290,19 @@ export function RecordConsole({
           text
             ? "Part of this recording was hard to hear, and the transcriber repeated itself there. Those repeats were removed before grading."
             : "None of this recording could be made out, so there is nothing to grade. Somewhere quieter, or closer to the microphone, usually fixes it.",
+        );
+      }
+
+      /* Said after the cleanup notice, so it wins if both apply.
+       *
+       * It is the more important of the two: a transcript that repeated
+       * itself is still a transcript of everything, while this one is
+       * missing its own ending and the person is about to be graded on it.
+       * Only raised when there is something to fall back to — with no text at
+       * all the branches above have already set a proper error. */
+      if (audio?.size && !transcribedFromAudio && text) {
+        setNotice(
+          "This recording couldn't be transcribed, so what you see is the live caption text. It stops a few seconds before you did, so the end of your answer may be missing from the grading.",
         );
       }
 
@@ -1432,6 +1456,39 @@ export function RecordConsole({
         tail,
         last.index,
         last.keyPoints,
+      );
+    }
+
+    /* One more attempt at any answer that never got a mark.
+     *
+     * `gradeSegment` gives up quietly on a failed or timed-out model call, and
+     * mid-interview that is right: interrupting question three to complain
+     * about question two would cost the answer being given. It is wrong here.
+     * The recording is over, nothing is waiting on it, and a question showing
+     * a dash on the report is one the person answered and was never told
+     * about — which is what "it didn't even grade my second question" is.
+     *
+     * Segments are pushed in question order, so a segment's index is its
+     * question's index in `askingRef`, which is where the key points live.
+     * Run together because they are independent; one failing again still
+     * leaves that dash rather than taking the others down with it. */
+    const ungraded = segmentsRef.current
+      .map((segment, at) => ({ segment, at }))
+      .filter(
+        ({ segment }) =>
+          segment.score === null && segment.transcript.length >= 24,
+      );
+
+    if (ungraded.length > 0) {
+      await Promise.all(
+        ungraded.map(({ segment, at }) =>
+          gradeSegment(
+            at,
+            segment.transcript,
+            segment.sectionIndex,
+            askingRef.current[at]?.keyPoints,
+          ),
+        ),
       );
     }
 
