@@ -154,6 +154,79 @@ function directYouTubeUrl(value: string) {
  * One explicit basic search finds and ranks direct videos for the whole
  * course. Search depth is never automatic, so this remains a one-credit call.
  */
+/**
+ * Whether the search key is configured, and whether it actually works.
+ *
+ * Written because "YouTube doesn't work" survived a fix to the YouTube code.
+ * There was nothing left to fix there — the key was the literal string
+ * `[SENSITIVE]`, which `vercel env pull` writes in place of a secret it will
+ * not hand over. It is eleven characters, so it satisfied the schema, so every
+ * `if (!env.TAVILY_API_KEY)` guard passed and a request went out with
+ * `Bearer [SENSITIVE]`. Tavily answered 401, the route logged it server-side,
+ * and the screen showed an empty list — which is indistinguishable from a
+ * search that ran and found nothing.
+ *
+ * `env.ts` now reads that placeholder as absent, so the honest "not
+ * configured" path is taken. This reports which state the deployment is
+ * actually in, so the next person does not have to guess from a blank panel.
+ *
+ * Never returns the key or any part of it.
+ */
+export type SearchHealth = {
+  configured: boolean;
+  /** Only attempted when asked: a live call spends a search credit. */
+  reachable?: boolean;
+  detail?: string;
+};
+
+export async function probeSearch(deep = false): Promise<SearchHealth> {
+  if (!env.TAVILY_API_KEY) {
+    return {
+      configured: false,
+      detail:
+        "TAVILY_API_KEY is unset, or is the `[SENSITIVE]` placeholder that `vercel env pull` writes. Set a real key for this environment.",
+    };
+  }
+  if (!deep) return { configured: true };
+
+  try {
+    const response = await fetch(TAVILY_SEARCH_URL, {
+      method: "POST",
+      signal: AbortSignal.timeout(10_000),
+      headers: {
+        "content-type": "application/json",
+        authorization: `Bearer ${env.TAVILY_API_KEY}`,
+      },
+      body: JSON.stringify({
+        query: "photosynthesis explained",
+        search_depth: "basic",
+        max_results: 1,
+        include_answer: false,
+        include_raw_content: false,
+      }),
+    });
+
+    if (response.ok) return { configured: true, reachable: true };
+
+    return {
+      configured: true,
+      reachable: false,
+      detail:
+        response.status === 401 || response.status === 403
+          ? `Tavily ${response.status}: the key is wrong, revoked, or a placeholder.`
+          : response.status === 429 || response.status === 432
+            ? `Tavily ${response.status}: out of search credits on this plan.`
+            : `Tavily ${response.status}.`,
+    };
+  } catch (error) {
+    return {
+      configured: true,
+      reachable: false,
+      detail: `Couldn't reach Tavily: ${error instanceof Error ? error.message : String(error)}`,
+    };
+  }
+}
+
 export async function discoverCourseVideos(
   topic: string,
   queries: string[],
