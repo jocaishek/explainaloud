@@ -147,7 +147,7 @@ export function UsernameField({
             onChange(
               event.target.value
                 .toLowerCase()
-                .replace(/[^a-z0-9_]/g, "")
+                .replace(/[^a-z0-9]/g, "")
                 .slice(0, USERNAME_MAX),
             );
           }}
@@ -170,8 +170,7 @@ export function UsernameField({
         aria-live="polite"
         className={cn("min-h-[1.25rem] text-[0.82rem]", tone)}
       >
-        {message ??
-          "Letters, numbers and underscores. Friends find you by this."}
+        {message ?? "Letters and numbers. Friends find you by this."}
       </p>
     </div>
   );
