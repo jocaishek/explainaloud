@@ -11,8 +11,17 @@
 export const USERNAME_MIN = 3;
 export const USERNAME_MAX = 20;
 
-/** The same expression the database enforces. */
-const SHAPE = /^[a-z0-9](?:[a-z0-9]|_(?!_)){1,18}[a-z0-9]$/;
+/**
+ * The same expression the database enforces.
+ *
+ * Letters and digits, and no separator at all. An earlier version allowed a
+ * single underscore between two alphanumerics, which is safe against the
+ * doubled-separator impersonations and still wrong: it makes `@ada_lovelace`
+ * and `@adalovelace` two different people, told apart by a character nobody
+ * says out loud. A handle is read aloud and typed from memory, so it has one
+ * spelling.
+ */
+const SHAPE = /^[a-z0-9]{3,20}$/;
 
 /**
  * Names nobody may take, because taking them is a way of pretending.
@@ -142,12 +151,6 @@ function normalise(value: string): string {
     .replace(/(.)\1{2,}/g, "$1");
 }
 
-/** Splits a name into the words a person reads in it. */
-function words(value: string): string[] {
-  const parts = value.split("_").filter(Boolean).map(normalise);
-  return [...parts, normalise(value)];
-}
-
 /**
  * The reason this name cannot be used, or `null`.
  *
@@ -165,14 +168,8 @@ export function usernameError(value: string): string | null {
   if (name.length > USERNAME_MAX) {
     return `Usernames are at most ${USERNAME_MAX} characters.`;
   }
-  if (/[^a-z0-9_]/.test(name)) {
-    return "Letters, numbers and underscores only.";
-  }
-  if (name.startsWith("_") || name.endsWith("_")) {
-    return "Usernames can't start or end with an underscore.";
-  }
-  if (name.includes("__")) {
-    return "One underscore at a time.";
+  if (/[^a-z0-9]/.test(name)) {
+    return "Letters and numbers only.";
   }
   if (!SHAPE.test(name)) {
     return "That username isn't allowed.";
@@ -180,7 +177,11 @@ export function usernameError(value: string): string | null {
   if (RESERVED.has(normalise(name))) {
     return "That username is reserved.";
   }
-  if (words(name).some((word) => PROFANITY.has(word))) {
+  /* One word, because there is nothing left to split on. This used to split
+     the name on underscores first, so `dick_head` was checked as two words as
+     well as one; with separators gone a username *is* a single word, and the
+     run-together spellings are exactly what the folding above is for. */
+  if (PROFANITY.has(normalise(name))) {
     return "Pick something else.";
   }
   return null;
@@ -216,9 +217,10 @@ function asciiFold(value: string): string {
  * worth respecting — it is permanent here, and people know it.
  *
  * Every candidate goes back through `usernameError`, so nothing is suggested
- * that the form would then refuse. That matters more than it sounds: trimming
- * a long pair of names to twenty characters can land on an underscore, and a
- * suggestion the product rejects when you take it is worse than no suggestion.
+ * that the form would then refuse — a suggestion the product rejects when you
+ * take it is worse than no suggestion. What that catches now is mostly the
+ * blocklists: two ordinary names can run together into a word neither of them
+ * contains, and `usernameError` is the only thing that knows.
  */
 export function usernameSuggestions(
   firstName: string,
@@ -233,9 +235,15 @@ export function usernameSuggestions(
      was here and was dropped: it produced handles people did not recognise as
      theirs, and on some names it produced worse than that. */
   const initial = last.slice(0, 1);
+  /* The underscored variant that used to sit second is gone with the
+     underscore. Its place goes to the first name on its own, which is the
+     handle most people would pick if they were not being helped — it is
+     usually taken, and `UsernameSuggestions` drops what is taken before
+     anybody sees it, so offering it costs one availability check and
+     occasionally hands somebody the name they wanted. */
   const candidates = [
     `${first}${last}`,
-    last ? `${first}_${last}` : "",
+    first,
     initial ? `${first}${initial}` : "",
     `${first}${last.slice(0, 3)}`,
   ];

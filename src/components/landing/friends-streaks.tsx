@@ -52,7 +52,7 @@ const EXAMPLE_STREAK = (() => {
 
 const EXAMPLE_FRIENDS = [
   { name: "Obi-Wan Kenobi", handle: "obiwankanobi", topics: 12, streak: 9 },
-  { name: "Ada Lovelace", handle: "countess_ada", topics: 7, streak: 4 },
+  { name: "Ada Lovelace", handle: "adalovelace", topics: 7, streak: 4 },
 ] as const;
 
 /**
