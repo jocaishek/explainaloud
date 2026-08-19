@@ -38,10 +38,27 @@ export default function PrivacyPage() {
           see your Google password.
         </li>
         <li>
-          <strong>Profile details</strong>: your first and last name, date of
-          birth, and whether you are using Explainaloud as a student or
-          otherwise. We collect date of birth to confirm the age requirement in
-          our Terms.
+          <strong>Profile details</strong>: your first and last name, your
+          username, your date of birth, an optional profile picture, and whether
+          you are using Explainaloud as a student or otherwise. We collect date
+          of birth to confirm the age requirement in our Terms. Your username
+          and date of birth are set once and cannot be changed afterwards.
+        </li>
+        <li>
+          <strong>Your timezone</strong>: the IANA timezone your browser
+          reports, such as <code>Europe/London</code>. We use it for one thing:
+          working out which calendar day a recording belongs to, so a streak is
+          counted in your own days rather than in the server&rsquo;s. It is not
+          a location, and we do not derive one from it.
+        </li>
+        <li>
+          <strong>Friends</strong>: who you have sent friend requests to, who
+          has sent them to you, and which requests were accepted.
+        </li>
+        <li>
+          <strong>Recording days</strong>: the calendar dates on which you
+          recorded, and how many recordings each holds. This is what a streak is
+          counted from. It records the date, not the content.
         </li>
         <li>
           <strong>Study content</strong>: the courses and topics you create, any
@@ -108,6 +125,11 @@ export default function PrivacyPage() {
           fraud, abuse, and unauthorised access.
         </li>
         <li>
+          <strong>To let people find you and be your friend</strong>: matching a
+          username or a name you searched for against other accounts, and
+          showing an accepted friend your topic count and your streak.
+        </li>
+        <li>
           <strong>To communicate with you</strong>: account and transactional
           email such as verification, password resets, and billing notices.
         </li>
@@ -126,7 +148,58 @@ export default function PrivacyPage() {
         records.
       </p>
 
-      <h2>3. Who else processes your information</h2>
+      <h2>3. What other users can see</h2>
+      <p>
+        Most of this policy is about us and our providers. This section is about
+        other people using Explainaloud, and it is short because the answer is
+        short.
+      </p>
+      <ul>
+        <li>
+          <strong>
+            Any signed-in user can find you by your username, or by your first
+            and last name, and can see your profile picture.
+          </strong>{" "}
+          That is what makes it possible for a friend to add you. Do not use a
+          name or a picture you would not want another user to see.
+        </li>
+        <li>
+          <strong>You have a profile page at a stable address</strong>, of the
+          form <code>/profiles/your-username</code>. Any signed-in user who has
+          that address, or who finds you in search, can open it. It shows your
+          name, your username, your picture, the month you joined, and a button
+          to send you a friend request. Whether they send one, and whether you
+          accept, is each of your decisions.
+        </li>
+        <li>
+          <strong>
+            An accepted friend can additionally see two numbers: how many topics
+            you have created, and your current streak.
+          </strong>{" "}
+          Nothing else. Not your topics, not your recordings, not your
+          transcripts, not your scores, not your gaps, not your email address,
+          and not your date of birth.
+        </li>
+        <li>
+          <strong>
+            Nobody, friend or otherwise, can see anything you have said.
+          </strong>{" "}
+          Your explanations and everything generated from them are visible to
+          you alone.
+        </li>
+        <li>
+          <strong>Removing a friend ends the sharing at once</strong>, in both
+          directions. So does declining or cancelling a request.
+        </li>
+      </ul>
+      <p>
+        <strong>None of this is public to the open web.</strong> Profile pages
+        sit behind sign-in, so somebody without an Explainaloud account cannot
+        open one, and the pages are marked not to be indexed. Search engines
+        cannot reach them.
+      </p>
+
+      <h2>4. Who else processes your information</h2>
       <p>
         We use the following providers. They act on our instructions and may
         process your information only to provide their service to us.
@@ -175,7 +248,7 @@ export default function PrivacyPage() {
         different policy.
       </p>
 
-      <h2>4. International transfers</h2>
+      <h2>5. International transfers</h2>
       <p>
         Our providers operate in the United States and other countries, so your
         information may be processed outside the country you live in. Where we
@@ -184,7 +257,7 @@ export default function PrivacyPage() {
         providers, including Standard Contractual Clauses.
       </p>
 
-      <h2>5. How long we keep it</h2>
+      <h2>6. How long we keep it</h2>
       <ul>
         <li>
           <strong>Audio</strong>: not retained; discarded once transcribed.
@@ -192,6 +265,17 @@ export default function PrivacyPage() {
         <li>
           <strong>Account and study content</strong>: kept while your account is
           open, so your history stays available to you.
+        </li>
+        <li>
+          <strong>Friendships</strong>: kept until either of you removes the
+          friendship or cancels the request, at which point the record is
+          deleted rather than marked inactive.
+        </li>
+        <li>
+          <strong>Recording days</strong>: kept while your account is open. A
+          streak is worked out from them each time it is shown, so deleting a
+          topic does not change your streak, and there is no separate stored
+          number to correct.
         </li>
         <li>
           <strong>After deletion</strong>: removed from live systems promptly
@@ -204,7 +288,7 @@ export default function PrivacyPage() {
         </li>
       </ul>
 
-      <h2>6. Security</h2>
+      <h2>7. Security</h2>
       <p>
         Your data is protected in transit by TLS and at rest by our database
         provider. Access to it is restricted by row-level security rules that
@@ -217,7 +301,7 @@ export default function PrivacyPage() {
         requires.
       </p>
 
-      <h2>7. Your rights</h2>
+      <h2>8. Your rights</h2>
       <p>
         Depending on where you live, you may have the right to access a copy of
         your personal information, correct it, delete it, restrict or object to
@@ -240,7 +324,7 @@ export default function PrivacyPage() {
         authority.
       </p>
 
-      <h2>8. Children</h2>
+      <h2>9. Children</h2>
       <p>
         Explainaloud is not directed at children under {MINIMUM_AGE}, and we do
         not knowingly collect personal information from them. If you believe a
@@ -249,14 +333,14 @@ export default function PrivacyPage() {
         we will delete the account and its data.
       </p>
 
-      <h2>9. Changes to this policy</h2>
+      <h2>10. Changes to this policy</h2>
       <p>
         We may update this policy. The effective date at the top will change,
         and if the update materially affects how we handle your information we
         will notify you by email or in the app before it takes effect.
       </p>
 
-      <h2>10. Contact</h2>
+      <h2>11. Contact</h2>
       <p>
         Privacy questions and requests:{" "}
         <a href={`mailto:${LEGAL_CONTACT_EMAIL}`}>{LEGAL_CONTACT_EMAIL}</a>.

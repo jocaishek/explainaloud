@@ -3,7 +3,6 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { useActionState, useEffect, useId, useState } from "react";
-import { DateOfBirthField } from "~/components/date-of-birth-field";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -14,10 +13,22 @@ import { type ProfileFormState, updateProfile } from "./actions";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
 
+/** `yyyy-mm-dd` read as a plain date, not as UTC midnight in another zone. */
+function formatDateOfBirth(value: string): string {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return "—";
+  const [, y, m, d] = match;
+  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString(
+    undefined,
+    { year: "numeric", month: "long", day: "numeric" },
+  );
+}
+
 export function ProfileForm({ profile }: { profile: Profile }) {
   const firstNameId = useId();
   const lastNameId = useId();
   const dobId = useId();
+  const usernameId = useId();
   const [useType, setUseType] = useState(profile.use_type);
 
   const [state, formAction, pending] = useActionState<
@@ -62,16 +73,46 @@ export function ProfileForm({ profile }: { profile: Profile }) {
         </div>
       </div>
 
-      <div className="flex max-w-md flex-col gap-2">
-        <span id={dobId} className="font-medium text-sm text-strong">
-          Date of birth
-        </span>
-        <DateOfBirthField
-          name="dateOfBirth"
-          defaultValue={profile.date_of_birth}
-          describedBy={dobId}
-        />
-      </div>
+      {/* Shown, not editable, and the same is true of the username above it.
+       *
+       * Both are set once during onboarding. A username is how other people
+       * find and recognise you, so one that can be swapped later is a way of
+       * becoming somebody else after the friend list has already learned who
+       * you are. A date of birth is what gates the account at thirteen, and
+       * a field anybody can rewrite is not something an age check can lean
+       * on.
+       *
+       * Removing the inputs is the smaller half of this. The database
+       * refuses the write as well, because an update goes through PostgREST
+       * with the caller's own token and the policy quite correctly lets
+       * somebody write their own row — so a field that is only absent from a
+       * form is a field anybody can still set from a console. */}
+      <dl className="flex max-w-md flex-col gap-4">
+        <div className="flex flex-col gap-1">
+          <dt id={usernameId} className="font-medium text-sm text-strong">
+            Username
+          </dt>
+          <dd className="flex items-baseline gap-2">
+            <span className="text-[1rem] text-strong">
+              @{profile.username ?? "—"}
+            </span>
+            <span className="text-[0.78rem] text-subtle">
+              Permanent. Friends find you by this.
+            </span>
+          </dd>
+        </div>
+        <div className="flex flex-col gap-1">
+          <dt id={dobId} className="font-medium text-sm text-strong">
+            Date of birth
+          </dt>
+          <dd className="flex items-baseline gap-2">
+            <span className="text-[1rem] text-strong">
+              {formatDateOfBirth(profile.date_of_birth)}
+            </span>
+            <span className="text-[0.78rem] text-subtle">Permanent.</span>
+          </dd>
+        </div>
+      </dl>
 
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-medium text-strong">
