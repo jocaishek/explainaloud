@@ -114,14 +114,14 @@ export function FriendSearch({
       aria-labelledby={`${id}-heading`}
       className="overflow-hidden rounded-card border border-border bg-card shadow-rest"
     >
-      <div className="border-border border-b px-6 py-5">
+      <div className="border-border border-b px-5 py-4">
         <h2
           id={`${id}-heading`}
-          className="font-semibold text-[1.1rem] text-strong tracking-[-0.015em]"
+          className="font-semibold text-[1.02rem] text-strong tracking-[-0.015em]"
         >
           Find someone
         </h2>
-        <p className="mt-1.5 text-[0.92rem] text-subtle leading-relaxed">
+        <p className="mt-1.5 text-[0.88rem] text-subtle leading-relaxed">
           Their username, or the name they signed up with.
         </p>
 
@@ -138,7 +138,7 @@ export function FriendSearch({
             autoCorrect="off"
             spellCheck={false}
             aria-label="Search for someone"
-            placeholder="obiwankanobi, or Obi-Wan Kenobi"
+            placeholder="Username or name"
             className="h-11 bg-surface pr-10 pl-10 text-base placeholder:text-subtle"
           />
           {searching && (
@@ -162,20 +162,20 @@ export function FriendSearch({
 
       <div aria-live="polite">
         {emailTyped && (
-          <p className="px-6 py-5 text-[0.9rem] text-subtle leading-relaxed">
+          <p className="px-5 py-4 text-[0.88rem] text-subtle leading-relaxed">
             People are not searchable by email address, so that nobody can work
             out who holds one. Ask them for their username instead.
           </p>
         )}
 
         {!emailTyped && failed && (
-          <p className="px-6 py-5 text-[0.9rem] text-subtle">
+          <p className="px-5 py-4 text-[0.88rem] text-subtle">
             Couldn&rsquo;t search just now. Try again in a moment.
           </p>
         )}
 
         {!emailTyped && !failed && results?.length === 0 && (
-          <p className="px-6 py-5 text-[0.9rem] text-subtle">
+          <p className="px-5 py-4 text-[0.88rem] text-subtle">
             Nobody by that name. Usernames are exact, so it is worth checking
             the spelling.
           </p>
@@ -200,7 +200,7 @@ export function FriendSearch({
           !results &&
           query.trim().length > 0 &&
           query.trim().length < MIN_QUERY && (
-            <p className="px-6 py-5 text-[0.9rem] text-subtle">
+            <p className="px-5 py-4 text-[0.88rem] text-subtle">
               Two letters or more.
             </p>
           )}
@@ -248,7 +248,7 @@ function ResultRow({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 px-5 py-4">
       {/* Straight to their page. Deciding whether to add somebody from one
           line of a result list is deciding on a name and a handle, which for
           two people with the same name is not a decision at all. */}
@@ -260,7 +260,7 @@ function ResultRow({
           firstName={person.first_name}
           lastName={person.last_name}
           avatarUrl={person.avatar_url}
-          size={44}
+          size={40}
         />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium text-[0.92rem] text-strong">

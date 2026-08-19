@@ -78,12 +78,8 @@ export default async function ProfilePage() {
           <Row label="Age" value={age === null ? "—" : `${age}`} />
           <Row
             label="Username"
-            value={profile.username ? `@${profile.username}` : "Not set"}
-            note={
-              profile.username
-                ? "Permanent. Friends find you by this."
-                : "Pick one on the Friends screen so people can find you."
-            }
+            value={profile.username ? `@${profile.username}` : "—"}
+            note="Permanent. Friends find you by this."
           />
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-sm">
             <dt className="text-subtle">Streak</dt>

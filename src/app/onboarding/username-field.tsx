@@ -115,10 +115,15 @@ export function UsernameField({
       <div className="relative">
         {/* The @ is part of the field rather than part of the value. Typing it
             yourself is the first thing everybody does and the first thing every
-            form of this kind rejects. */}
+            form of this kind rejects.
+            *
+            * It sits tight against the text on purpose. With the old spacing
+            * the sign and the example were far enough apart to read as two
+            * separate things — a stray glyph, then a word — rather than as one
+            * handle, which is the whole thing the prefix exists to show. */}
         <span
           aria-hidden
-          className="-translate-y-1/2 absolute top-1/2 left-4 text-[1.05rem] text-subtle"
+          className="-translate-y-1/2 absolute top-1/2 left-3.5 text-[1.05rem] text-subtle"
         >
           @
         </span>
@@ -130,7 +135,7 @@ export function UsernameField({
           spellCheck={false}
           autoComplete="off"
           maxLength={USERNAME_MAX}
-          placeholder="obiwankanobi"
+          placeholder="jovannyshek"
           aria-label="Username"
           aria-invalid={status.kind === "invalid" || status.kind === "taken"}
           value={value}
@@ -146,7 +151,7 @@ export function UsernameField({
                 .slice(0, USERNAME_MAX),
             );
           }}
-          className="h-12 bg-surface pr-11 pl-9 text-base placeholder:text-subtle"
+          className="h-12 bg-surface pr-11 pl-[1.85rem] text-base placeholder:text-subtle"
         />
         <span className="-translate-y-1/2 absolute top-1/2 right-4">
           {status.kind === "checking" && (
