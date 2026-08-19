@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "~/lib/supabase/server";
-import { normaliseUsername, usernameError } from "~/lib/username";
 
 export type FriendActionResult = {
   ok: boolean;
@@ -169,57 +168,4 @@ export async function removeFriendship(
 
   refresh();
   return { ok: true, message: "Removed." };
-}
-
-/**
- * Takes a username for an account that predates them.
- *
- * Every account created since onboarding asked for one has a username, and it
- * is immutable from that moment (see `profiles_immutable_fields`). Accounts
- * created before it have `null`, which is not a name somebody chose — it is a
- * column that did not exist when they signed up, and the friends feature is
- * unusable without it in both directions: they cannot be found, and the search
- * function will not return them.
- *
- * So the one write the trigger still allows — null to a value — is offered
- * here. The `is` filter is what makes that safe rather than a rename endpoint:
- * a row that already has a username matches nothing and the update changes
- * nothing, so this cannot be turned into the thing the trigger exists to
- * prevent even if the trigger were dropped tomorrow.
- */
-export async function claimUsername(
-  candidate: string,
-): Promise<FriendActionResult> {
-  const { supabase, user } = await requireUser();
-  const username = normaliseUsername(candidate);
-
-  const problem = usernameError(username);
-  if (problem) return { ok: false, message: problem };
-
-  const { data, error } = await supabase
-    .from("profiles")
-    .update({ username, updated_at: new Date().toISOString() })
-    .eq("user_id", user.id)
-    .is("username", null)
-    .select("username")
-    .maybeSingle<{ username: string }>();
-
-  if (error?.code === "23505") {
-    return {
-      ok: false,
-      message: "That username was just taken. Pick another.",
-    };
-  }
-  if (error) {
-    console.error("Claiming a username failed:", error);
-    return { ok: false, message: "We couldn't save that. Try again." };
-  }
-  if (!data) {
-    // Matched no row, which for this filter means one thing: they already have
-    // one, from another tab or another device.
-    return { ok: false, message: "You already have a username." };
-  }
-
-  refresh();
-  return { ok: true, message: `You are @${data.username}.` };
 }

@@ -5,13 +5,12 @@ import { AlertTriangle, Check, Loader2, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
-import { UsernameField } from "~/app/onboarding/username-field";
 import { PersonAvatar } from "~/components/person-avatar";
 import { StreakFlame } from "~/components/streak-flame";
 import { Button } from "~/components/ui/button";
 import { streakLabel } from "~/lib/streak";
 import { cn } from "~/lib/utils";
-import { claimUsername, removeFriendship, respondToRequest } from "./actions";
+import { removeFriendship, respondToRequest } from "./actions";
 import { FriendSearch } from "./friend-search";
 import type { Friend, PendingRequest, You } from "./types";
 import { YourHandle } from "./your-handle";
@@ -53,7 +52,6 @@ export function FriendsClient({
 }) {
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
-  const needsUsername = !you.username;
   const searchRef = useRef<HTMLInputElement>(null);
 
   const focusSearch = useCallback(() => {
@@ -89,15 +87,17 @@ export function FriendsClient({
         </p>
       </header>
 
-      {needsUsername ? (
-        <div data-rise="">
-          <ClaimUsername onClaimed={refresh} />
-        </div>
-      ) : (
-        <div data-rise="">
-          <YourHandle you={you} />
-        </div>
-      )}
+      {/* Always. There used to be a branch here offering a "pick your
+          username" form to accounts that predated usernames, and it was the
+          wrong answer to the right problem: those people did not choose to be
+          nameless, the column simply did not exist when they signed up.
+          Sending them to a form to repair the migration order is a chore this
+          product invented. They are named from their own name instead — see
+          20260823000000 — so by the time anybody reaches this screen there is
+          a handle to show. */}
+      <div data-rise="">
+        <YourHandle you={you} />
+      </div>
 
       {loadFailed && (
         <div
@@ -510,68 +510,5 @@ function FriendCard({
         )}
       </div>
     </article>
-  );
-}
-
-/**
- * For an account that predates usernames.
- *
- * Not a settings row, because this is the thing standing between somebody and
- * the page they are looking at: without a username they cannot be searched for
- * and they cannot search, and no amount of explaining that in the empty state
- * would let them fix it from there.
- */
-function ClaimUsername({ onClaimed }: { onClaimed: () => void }) {
-  const [username, setUsername] = useState("");
-  const [free, setFree] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function claim() {
-    startTransition(async () => {
-      const result = await claimUsername(username);
-      if (!result.ok) {
-        setError(result.message);
-        return;
-      }
-      setError(null);
-      onClaimed();
-    });
-  }
-
-  return (
-    <section className="rounded-card border border-border bg-card p-6 shadow-rest">
-      <h2 className="font-semibold text-[1.1rem] text-strong tracking-[-0.015em]">
-        Pick your username
-      </h2>
-      <p className="mt-1.5 max-w-[54ch] text-[0.92rem] text-subtle leading-relaxed">
-        Your account was made before usernames existed, so you have not got one
-        yet. It is how friends find you, and it is permanent once set.
-      </p>
-      <div className="mt-5 flex max-w-md flex-col gap-3">
-        <UsernameField
-          autoFocus={false}
-          value={username}
-          onChange={(next) => {
-            setUsername(next);
-            setError(null);
-          }}
-          onAvailability={setFree}
-        />
-        {error && (
-          <p role="alert" className="text-[0.85rem] text-destructive">
-            {error}
-          </p>
-        )}
-        <Button
-          onClick={claim}
-          disabled={pending || !free}
-          className="gap-1.5 self-start"
-        >
-          {pending && <Loader2 className="size-4 animate-spin" />}
-          {pending ? "Saving…" : "Take it"}
-        </Button>
-      </div>
-    </section>
   );
 }

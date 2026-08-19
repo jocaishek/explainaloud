@@ -105,7 +105,12 @@ export function YourHandle({ you }: { you: You }) {
               </span>
             </button>
           ) : (
-            <p className="mt-0.5 text-[0.8rem] text-subtle">No username yet</p>
+            /* Unreachable once the backfill has run, and kept because
+               "unreachable" and "cannot happen" are different words. It says
+               nothing and asks for nothing: there is no action to offer. */
+            <p className="mt-0.5 font-mono text-[0.76rem] text-subtle">
+              &mdash;
+            </p>
           )}
         </div>
       </div>
