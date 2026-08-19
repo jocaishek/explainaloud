@@ -1,0 +1,41 @@
+-- Hand back UPDATE on the three profile columns added since the grant list was
+-- last touched.
+--
+-- `20260728222940_plans_and_billing` revoked table-wide UPDATE on profiles and
+-- handed back a named list of columns, so that nobody could set their own
+-- `plan` to 'pro' with the anon key. That was right, and it has one cost that
+-- is easy to forget: **a column added later is not writable by anybody until
+-- it is named.** Three have been added since and none were.
+--
+--   avatar_url   added 20260818000000. Symptom: saving a profile picture fails
+--                with "permission denied for table profiles", which is what a
+--                missing column privilege says — not an RLS refusal, which
+--                would read "new row violates row-level security policy".
+--
+--   username     added 20260820000000.
+--   timezone     added 20260820000000. Symptom: worse. Onboarding saves with an
+--                upsert, and Postgres checks privileges on every column of the
+--                DO UPDATE SET clause when it *plans* the statement, not when
+--                it runs it — so the write is rejected even on a first insert
+--                where no conflict is possible. Every new account has been
+--                unable to finish onboarding since that migration landed.
+--
+-- That second failure mode is exactly the one 20260729045037 was written to
+-- fix for `user_id`, and its comment says so. The lesson did not survive
+-- contact with the next two columns, so it is restated here: **adding a column
+-- to profiles means adding it to this grant.**
+--
+-- Granting UPDATE on `username` does not make it changeable. The trigger from
+-- 20260820020000 raises on any change from a non-null value, so the privilege
+-- only permits the null-to-value write that onboarding performs. The privilege
+-- and the rule are doing different jobs and both are needed: without the
+-- grant, onboarding cannot set a username at all; without the trigger, the
+-- grant would let somebody rename themselves.
+--
+-- What stays ungranted is unchanged and is the boundary that matters: `plan`,
+-- `stripe_customer_id`, `stripe_subscription_id` and `plan_renews_at` remain
+-- writable only by the service role, which is to say only by the Stripe
+-- webhook.
+
+grant update (avatar_url, username, timezone)
+  on public.profiles to authenticated;

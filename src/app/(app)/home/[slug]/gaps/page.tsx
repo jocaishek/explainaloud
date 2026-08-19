@@ -872,7 +872,11 @@ function QuestionTabs({
           <Link
             key={segment.question}
             href={`${base}&q=${index}`}
-            title={segment.question}
+            title={
+              segment.score === null
+                ? `${segment.question}\n\nThis answer has no mark. Either too little of it was captured to grade, or the grader could not be reached.`
+                : segment.question
+            }
             aria-current={selected === index ? "page" : undefined}
             className={cn(
               "flex items-center gap-2 rounded-control border px-3 py-1.5 text-xs font-medium transition-colors",
@@ -884,6 +888,12 @@ function QuestionTabs({
             Question {index + 1}
             <span className="font-mono tabular-nums opacity-70">
               {segment.score ?? "—"}
+              {/* A dash is silent to a screen reader, and `aria-label` is not
+                  valid on a span carrying no role. Hidden text is, and it
+                  reads in place. */}
+              {segment.score === null && (
+                <span className="sr-only">not graded</span>
+              )}
             </span>
           </Link>
         ))}
