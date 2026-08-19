@@ -5,13 +5,12 @@ import { AlertTriangle, Check, Loader2, Search, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useRef, useState, useTransition } from "react";
-import { UsernameField } from "~/app/onboarding/username-field";
 import { PersonAvatar } from "~/components/person-avatar";
 import { StreakFlame } from "~/components/streak-flame";
 import { Button } from "~/components/ui/button";
 import { streakLabel } from "~/lib/streak";
 import { cn } from "~/lib/utils";
-import { claimUsername, removeFriendship, respondToRequest } from "./actions";
+import { removeFriendship, respondToRequest } from "./actions";
 import { FriendSearch } from "./friend-search";
 import type { Friend, PendingRequest, You } from "./types";
 import { YourHandle } from "./your-handle";
@@ -53,7 +52,6 @@ export function FriendsClient({
 }) {
   const router = useRouter();
   const refresh = useCallback(() => router.refresh(), [router]);
-  const needsUsername = !you.username;
   const searchRef = useRef<HTMLInputElement>(null);
 
   const focusSearch = useCallback(() => {
@@ -89,16 +87,6 @@ export function FriendsClient({
         </p>
       </header>
 
-      {needsUsername ? (
-        <div data-rise="">
-          <ClaimUsername onClaimed={refresh} />
-        </div>
-      ) : (
-        <div data-rise="">
-          <YourHandle you={you} />
-        </div>
-      )}
-
       {loadFailed && (
         <div
           role="alert"
@@ -121,52 +109,98 @@ export function FriendsClient({
         </div>
       )}
 
-      {/* Both directions in one panel.
+      {/* The people, then the ways of getting more of them.
        *
-       * They were two cards, and two cards a few pixels apart with near
-       * identical headings is how a page starts feeling like a form. They are
-       * the same thing seen from two ends — a request that has not been
-       * answered — so they are one panel with the half that needs you at the
-       * top of it. */}
-      {(incoming.length > 0 || outgoing.length > 0) && (
-        <section data-rise="" aria-labelledby="friend-requests-heading">
-          <div className="overflow-hidden rounded-card border border-border bg-card shadow-rest">
-            <div className="flex items-center gap-2.5 border-border border-b px-6 py-5">
-              <h2
-                id="friend-requests-heading"
-                className="font-semibold text-[1.1rem] text-strong tracking-[-0.015em]"
-              >
-                {incoming.length > 0 ? "Waiting on you" : "You asked"}
-              </h2>
-              {incoming.length > 0 && (
-                <span className="rounded-pill bg-accent-wash px-2.5 py-0.5 font-medium text-[0.78rem] text-brand-ink tabular-nums">
-                  {incoming.length}
-                </span>
-              )}
+       * The list used to sit at the bottom, under your own card, the requests
+       * and the search — so the screen called "Friends" opened on three panels
+       * of machinery and you scrolled to reach the thing it is named after.
+       * Now the list starts directly under the heading and everything that
+       * *acts* on it is a narrower column beside it. The proportion is the
+       * argument: the column you spend time in is twice the width of the one
+       * you visit to add somebody. */}
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,20.5rem)] lg:gap-8">
+        <section data-rise="" aria-labelledby="friend-list-heading">
+          <h2
+            id="friend-list-heading"
+            className="mb-4 font-semibold text-[1.1rem] text-strong tracking-[-0.015em]"
+          >
+            {friends.length > 0
+              ? `Your friends (${friends.length})`
+              : "Your friends"}
+          </h2>
+
+          {ranked.length === 0 ? (
+            /* Not a dashed box with an icon and a grey sentence in it. That
+               shape is the most recognisable placeholder in software and it
+               says nothing. An empty screen is the one screen with nothing
+               competing for the space, so it can afford the page's actual
+               argument at the size an argument deserves. */
+            <div className="rounded-card border border-border bg-card px-6 py-11 shadow-rest sm:px-8 sm:py-12">
+              <div className="max-w-[32rem]">
+                <h3 className="font-display text-[clamp(1.4rem,2.6vw,2rem)] text-strong leading-[1.08] tracking-[-0.035em]">
+                  Study alone, or{" "}
+                  <span className="text-brand-ink">not alone</span>.
+                </h3>
+                <p className="mt-4 text-[0.95rem] text-subtle leading-relaxed">
+                  Add somebody by their username and you will each see two
+                  things about the other: topics built, and days in a row. Not
+                  your recordings, not your scores, and nothing you have said.
+                </p>
+                <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+                  <Button onClick={focusSearch} className="gap-1.5">
+                    <Search className="size-4" />
+                    Find someone
+                  </Button>
+                  {you.username && (
+                    <p className="text-[0.88rem] text-subtle">
+                      Or give them yours:{" "}
+                      <span className="font-mono text-strong">
+                        @{you.username}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
-
-            <ul className="divide-y divide-border">
-              <AnimatePresence initial={false}>
-                {incoming.map((request) => (
-                  <RequestRow
-                    key={request.id}
-                    request={request}
-                    onChanged={refresh}
-                  />
-                ))}
-              </AnimatePresence>
+          ) : (
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {ranked.map((friend) => (
+                <li key={friend.user_id}>
+                  <FriendCard friend={friend} onChanged={refresh} />
+                </li>
+              ))}
             </ul>
+          )}
+        </section>
 
-            {outgoing.length > 0 && (
-              <>
-                {incoming.length > 0 && (
-                  <p className="border-border border-t bg-surface px-6 py-2.5 text-[0.82rem] text-subtle">
-                    You asked, and they have not answered yet
-                  </p>
-                )}
-                <ul className="divide-y divide-border border-border border-t">
+        <aside data-rise="" className="flex flex-col gap-6">
+          <YourHandle you={you} />
+
+          {/* Both directions in one panel. They were two cards a few pixels
+              apart with near-identical headings, which is how a page starts
+              feeling like a form. They are the same thing seen from two ends —
+              a request nobody has answered — so the half that needs you is at
+              the top of one panel. */}
+          {(incoming.length > 0 || outgoing.length > 0) && (
+            <section aria-labelledby="friend-requests-heading">
+              <div className="overflow-hidden rounded-card border border-border bg-card shadow-rest">
+                <div className="flex items-center gap-2.5 border-border border-b px-5 py-4">
+                  <h2
+                    id="friend-requests-heading"
+                    className="font-semibold text-[1.02rem] text-strong tracking-[-0.015em]"
+                  >
+                    {incoming.length > 0 ? "Waiting on you" : "You asked"}
+                  </h2>
+                  {incoming.length > 0 && (
+                    <span className="rounded-pill bg-accent-wash px-2.5 py-0.5 font-medium text-[0.76rem] text-brand-ink tabular-nums">
+                      {incoming.length}
+                    </span>
+                  )}
+                </div>
+
+                <ul className="divide-y divide-border">
                   <AnimatePresence initial={false}>
-                    {outgoing.map((request) => (
+                    {incoming.map((request) => (
                       <RequestRow
                         key={request.id}
                         request={request}
@@ -175,73 +209,34 @@ export function FriendsClient({
                     ))}
                   </AnimatePresence>
                 </ul>
-              </>
-            )}
-          </div>
-        </section>
-      )}
 
-      <div data-rise="">
-        <FriendSearch onChanged={refresh} inputRef={searchRef} />
-      </div>
-
-      <section data-rise="" aria-labelledby="friend-list-heading">
-        <h2
-          id="friend-list-heading"
-          className="mb-4 font-semibold text-[1.1rem] text-strong tracking-[-0.015em]"
-        >
-          {friends.length > 0
-            ? `Your friends (${friends.length})`
-            : "Your friends"}
-        </h2>
-
-        {ranked.length === 0 ? (
-          /* Not a dashed box with an icon and a grey sentence in it.
-           *
-           * That shape is the single most recognisable placeholder in software
-           * and it says nothing: an outline of a thing that is not there, and
-           * a line of help text at the size of a footnote. An empty screen is
-           * the one screen with nothing competing for the space, so it can
-           * afford the page's actual argument at the size an argument
-           * deserves — one line, the emphasis carried by colour and weight
-           * rather than by a second typeface, and exactly one thing to press. */
-          <div className="rounded-card border border-border bg-card px-6 py-12 shadow-rest sm:px-10 sm:py-14">
-            <div className="max-w-[34rem]">
-              <h3 className="font-display text-[clamp(1.5rem,3.4vw,2.3rem)] text-strong leading-[1.08] tracking-[-0.035em]">
-                Study alone, or{" "}
-                <span className="text-brand-ink">not alone</span>.
-              </h3>
-              <p className="mt-4 text-[0.98rem] text-subtle leading-relaxed">
-                Add somebody by their username and you will each see two things
-                about the other: topics built, and days in a row. Not your
-                recordings, not your scores, and nothing you have said.
-              </p>
-              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">
-                <Button onClick={focusSearch} className="gap-1.5">
-                  <Search className="size-4" />
-                  Find someone
-                </Button>
-                {you.username && (
-                  <p className="text-[0.88rem] text-subtle">
-                    Or give them yours:{" "}
-                    <span className="font-mono text-strong">
-                      @{you.username}
-                    </span>
-                  </p>
+                {outgoing.length > 0 && (
+                  <>
+                    {incoming.length > 0 && (
+                      <p className="border-border border-t bg-surface px-5 py-2.5 text-[0.8rem] text-subtle">
+                        You asked, and they have not answered yet
+                      </p>
+                    )}
+                    <ul className="divide-y divide-border border-border border-t">
+                      <AnimatePresence initial={false}>
+                        {outgoing.map((request) => (
+                          <RequestRow
+                            key={request.id}
+                            request={request}
+                            onChanged={refresh}
+                          />
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  </>
                 )}
               </div>
-            </div>
-          </div>
-        ) : (
-          <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {ranked.map((friend) => (
-              <li key={friend.user_id}>
-                <FriendCard friend={friend} onChanged={refresh} />
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+            </section>
+          )}
+
+          <FriendSearch onChanged={refresh} inputRef={searchRef} />
+        </aside>
+      </div>
     </div>
   );
 }
@@ -325,7 +320,7 @@ function RequestRow({
       layout={!reduced}
       exit={reduced ? { opacity: 0 } : { opacity: 0, x: -12 }}
       transition={{ duration: reduced ? 0.1 : 0.22, ease: EASE }}
-      className="flex flex-wrap items-center gap-x-4 gap-y-2 px-6 py-4"
+      className="flex flex-wrap items-center gap-x-3 gap-y-2.5 px-5 py-4"
     >
       {/* The whole identity block is the link, not the name alone: a request
           from somebody you do not recognise is exactly when you want to look
@@ -336,7 +331,7 @@ function RequestRow({
           firstName={request.first_name}
           lastName={request.last_name}
           avatarUrl={request.avatar_url}
-          size={44}
+          size={40}
         />
         <span className="min-w-0 flex-1">
           <span className="block truncate font-medium text-[0.98rem] text-strong">
@@ -510,68 +505,5 @@ function FriendCard({
         )}
       </div>
     </article>
-  );
-}
-
-/**
- * For an account that predates usernames.
- *
- * Not a settings row, because this is the thing standing between somebody and
- * the page they are looking at: without a username they cannot be searched for
- * and they cannot search, and no amount of explaining that in the empty state
- * would let them fix it from there.
- */
-function ClaimUsername({ onClaimed }: { onClaimed: () => void }) {
-  const [username, setUsername] = useState("");
-  const [free, setFree] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  function claim() {
-    startTransition(async () => {
-      const result = await claimUsername(username);
-      if (!result.ok) {
-        setError(result.message);
-        return;
-      }
-      setError(null);
-      onClaimed();
-    });
-  }
-
-  return (
-    <section className="rounded-card border border-border bg-card p-6 shadow-rest">
-      <h2 className="font-semibold text-[1.1rem] text-strong tracking-[-0.015em]">
-        Pick your username
-      </h2>
-      <p className="mt-1.5 max-w-[54ch] text-[0.92rem] text-subtle leading-relaxed">
-        Your account was made before usernames existed, so you have not got one
-        yet. It is how friends find you, and it is permanent once set.
-      </p>
-      <div className="mt-5 flex max-w-md flex-col gap-3">
-        <UsernameField
-          autoFocus={false}
-          value={username}
-          onChange={(next) => {
-            setUsername(next);
-            setError(null);
-          }}
-          onAvailability={setFree}
-        />
-        {error && (
-          <p role="alert" className="text-[0.85rem] text-destructive">
-            {error}
-          </p>
-        )}
-        <Button
-          onClick={claim}
-          disabled={pending || !free}
-          className="gap-1.5 self-start"
-        >
-          {pending && <Loader2 className="size-4 animate-spin" />}
-          {pending ? "Saving…" : "Take it"}
-        </Button>
-      </div>
-    </section>
   );
 }

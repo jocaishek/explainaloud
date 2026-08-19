@@ -61,14 +61,19 @@ export function YourHandle({ you }: { you: You }) {
   return (
     <section
       aria-label="Your profile"
-      className="flex flex-col gap-5 rounded-card border border-border bg-card p-6 shadow-rest sm:flex-row sm:items-center sm:justify-between"
+      /* Always a column. It used to go horizontal at `sm`, which is a
+         viewport width — and this card no longer occupies the viewport, it
+         occupies a 20rem sidebar. A breakpoint that asks about the window
+         while the element lives in a fixed column is a breakpoint asking the
+         wrong question. */
+      className="flex flex-col gap-4 rounded-card border border-border bg-card p-5 shadow-rest"
     >
       <div className="flex min-w-0 items-center gap-3.5">
         <PersonAvatar
           firstName={you.firstName}
           lastName={you.lastName}
           avatarUrl={you.avatarUrl}
-          size={52}
+          size={46}
         />
         <div className="min-w-0">
           <p className="truncate font-medium text-[1.05rem] text-strong">
@@ -105,7 +110,12 @@ export function YourHandle({ you }: { you: You }) {
               </span>
             </button>
           ) : (
-            <p className="mt-0.5 text-[0.8rem] text-subtle">No username yet</p>
+            /* Unreachable once the backfill has run, and kept because
+               "unreachable" and "cannot happen" are different words. It says
+               nothing and asks for nothing: there is no action to offer. */
+            <p className="mt-0.5 font-mono text-[0.76rem] text-subtle">
+              &mdash;
+            </p>
           )}
         </div>
       </div>
@@ -113,7 +123,7 @@ export function YourHandle({ you }: { you: You }) {
       {/* Said, not labelled. This is exactly what a friend sees on your card,
           so it is written the same way there and here: a number and the word
           for what it counts, in the body face, at a size somebody reads. */}
-      <p className="flex flex-wrap items-center gap-x-5 gap-y-1 border-border border-t pt-4 text-[0.95rem] sm:border-t-0 sm:pt-0">
+      <p className="flex flex-wrap items-center gap-x-5 gap-y-1 border-border border-t pt-4 text-[0.95rem]">
         <span className="flex items-center gap-2">
           {you.streak > 0 && <StreakFlame size="sm" />}
           {you.streak > 0 ? (
