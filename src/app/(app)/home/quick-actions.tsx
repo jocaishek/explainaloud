@@ -73,7 +73,7 @@ export function QuickActions() {
       <div className="p-5 pb-4">
         <h2
           id="quick-actions-heading"
-          className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.12em]"
+          className="font-semibold text-[0.95rem] text-strong tracking-[-0.01em]"
         >
           Start here
         </h2>

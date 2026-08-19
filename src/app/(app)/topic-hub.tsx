@@ -146,7 +146,7 @@ function Shell({
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
       <div data-rise="">
-        <h1 className="font-semibold text-[clamp(1.45rem,3vw,2rem)] text-strong leading-[1.1] tracking-[-0.025em]">
+        <h1 className="font-semibold text-[1.75rem] text-strong leading-[1.1] tracking-[-0.025em]">
           {title}
         </h1>
         <p className="mt-3 text-foreground leading-[1.6]">{lede}</p>

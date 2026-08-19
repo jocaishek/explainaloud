@@ -102,13 +102,28 @@ export function StatCards({ stats }: { stats: Stat[] }) {
     <div
       ref={ref}
       data-rise=""
-      className="grid grid-cols-1 divide-y divide-border overflow-hidden rounded-card border border-border bg-card shadow-rest sm:grid-cols-3 sm:divide-x sm:divide-y-0"
+      /* Ruled into the page rather than boxed on it.
+       *
+       * This was a bordered card, directly under the streak band, which is
+       * also a bordered card — two panels of identical weight stacked, and
+       * then a third row of panels under them. The page had one texture and
+       * repeated it four times, which is what makes a dashboard read as a
+       * template even when every panel is individually fine.
+       *
+       * These three are a readout, not a component: a rule above and below,
+       * dividers between, and the page's own ground behind. The streak band
+       * keeps its card and becomes the only object in that part of the
+       * screen, which is the point — it is the figure that moves today. */
+      className="grid grid-cols-1 divide-y divide-border border-border border-y sm:grid-cols-3 sm:divide-x sm:divide-y-0"
     >
       {stats.map((stat) => {
         const measured = stat.value > 0 || !stat.empty;
         return (
-          <div key={stat.label} className="p-5">
-            <p className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]">
+          <div
+            key={stat.label}
+            className="px-1 py-5 sm:px-5 sm:first:pl-0 sm:last:pr-0"
+          >
+            <p className="font-medium text-[0.85rem] text-subtle">
               {stat.label}
             </p>
             {/* One row, one height, whether or not there is a figure in it —

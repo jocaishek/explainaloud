@@ -97,9 +97,9 @@ export function TopicGrid({
   return (
     <div className="flex flex-col gap-10">
       <div className="flex items-center justify-between gap-4 border-border border-b pb-3">
-        <h2 className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.09em]">
+        <h2 className="font-semibold text-[0.95rem] text-strong tracking-[-0.01em]">
           Your topics
-          <span className="ml-3 text-strong tabular-nums">
+          <span className="ml-2.5 font-mono font-normal text-[0.8rem] text-subtle tabular-nums">
             {courses.length}
           </span>
         </h2>

@@ -71,14 +71,17 @@ function Heading({ baselineWpm }: { baselineWpm: number | null }) {
     <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
       <h2
         id="pace-panel-heading"
-        className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.12em]"
+        className="font-semibold text-[0.95rem] text-strong tracking-[-0.01em]"
       >
         Your pace
       </h2>
       {baselineWpm && (
-        <p className="font-mono text-[0.7rem] text-subtle uppercase tracking-[0.09em]">
+        <p className="text-[0.82rem] text-subtle">
           Baseline{" "}
-          <span className="text-strong tabular-nums">{baselineWpm}</span> wpm
+          <span className="font-mono text-strong tabular-nums">
+            {baselineWpm}
+          </span>{" "}
+          wpm
         </p>
       )}
     </div>
