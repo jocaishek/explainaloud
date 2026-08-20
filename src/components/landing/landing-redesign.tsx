@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, LockKeyhole } from "lucide-react";
+import { ArrowRight, ArrowUpRight, LockKeyhole } from "lucide-react";
 import Link from "next/link";
 import {
   type CSSProperties,
@@ -138,6 +138,19 @@ function SteppedEdge() {
     </svg>
   );
 }
+
+/** Where the partner mark points. The `ref` is how YRI attribute the referral. */
+const YRI_URL = "https://yriscience.com?ref=EXPLAINALOUD";
+
+/**
+ * The lion's own gold, sampled from the artwork rather than picked.
+ *
+ * Written here and used once. It is not a page colour and must not become
+ * one — `design.md` allows exactly four (three verdicts and the streak flame)
+ * beyond the register's accent, and this is none of them. It is the partner's
+ * identity, appearing inside the partner's block and nowhere else.
+ */
+const YRI_GOLD = "#eccc65";
 
 const ease = [0.23, 1, 0.32, 1] as const;
 /**
@@ -1984,6 +1997,85 @@ export function LandingRedesign() {
       </section>
 
       <FriendsAndStreaks />
+
+      {/* Partners.
+       *
+       * One partner, shown once, low on the page. `design.md` bans invented
+       * proof here and the ban is doing real work — but it bans *invented*
+       * proof, and this partnership is a fact somebody can check by following
+       * the link. What the rule still governs is the shape: a logo wall under
+       * the hero is a page claiming momentum, so this is one block above the
+       * close, ruled top and bottom like everything around it.
+       *
+       * The label and the link sit on one line over a hairline, and the mark
+       * is centred under a sentence it finishes. That last part is why the
+       * caption ends on "of" and is not a typo: the logo is the object of the
+       * sentence, so it is read rather than merely displayed.
+       *
+       * No colour is added to the page. The mark's own navy is within a few
+       * values of `--panel-deep`, and the short rule under it is the mark's
+       * own gold — sampled from the lion rather than chosen, and scoped to
+       * this block, because it belongs to the partner's identity rather than
+       * to this page's palette. It is a third of the mark's width, which is
+       * what stops it reading as a dash somebody left behind — at the 4rem
+       * the verdict caps use it looked orphaned under a mark this size, and
+       * that cap sits at the left end of a full rule rather than alone under
+       * a centred block. Same idea, different proportion, because the
+       * position is different. */}
+      <section
+        data-scroll-reveal
+        className="px-5 pb-24 md:px-8 md:pb-32"
+        aria-labelledby="partners-heading"
+      >
+        <div className="mx-auto max-w-[76rem] border-border border-y">
+          <div className="flex items-center justify-between gap-6 border-border border-b py-5">
+            <h2
+              id="partners-heading"
+              className="font-semibold text-[0.95rem] text-strong tracking-[-0.01em]"
+            >
+              Partners
+            </h2>
+            <a
+              href={YRI_URL}
+              target="_blank"
+              rel="noopener"
+              className="press group inline-flex items-center gap-1.5 font-medium text-[0.95rem] text-brand-ink underline-offset-[6px] hover:underline"
+            >
+              Visit YRI Fellowship
+              <ArrowUpRight className="size-4 transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />
+            </a>
+          </div>
+
+          <div className="flex flex-col items-center py-14 text-center md:py-16">
+            <p className="text-[1.05rem] text-muted-foreground">
+              Explainaloud is a partner of
+            </p>
+            <a
+              href={YRI_URL}
+              target="_blank"
+              rel="noopener"
+              aria-label="YRI Fellowship"
+              className="mt-7 inline-block outline-none transition-opacity duration-200 hover:opacity-70 focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] motion-reduce:transition-none"
+            >
+              {/* A fixed-size mark, so there is nothing for the optimiser to
+                  decide, and the file is already the size it renders at. */}
+              {/* biome-ignore lint/performance/noImgElement: fixed-size partner mark, pre-sized asset */}
+              <img
+                src="/landing/yri-fellowship-logo.webp"
+                width={823}
+                height={165}
+                alt="YRI Fellowship"
+                className="h-auto w-[15.5rem] md:w-[22rem]"
+              />
+            </a>
+            <span
+              aria-hidden="true"
+              className="mt-9 h-[2px] w-28"
+              style={{ backgroundColor: YRI_GOLD }}
+            />
+          </div>
+        </div>
+      </section>
 
       {/* The close is the open, again.
           It was still carrying the retired WebP as a background image, which
