@@ -16,10 +16,12 @@ import { cn } from "~/lib/utils";
  * on the right, drawn with the same component the dashboard draws it with, so
  * what somebody sees here is literally what they get.
  *
- * The two handles are authored and obviously so. `design.md` bans invented
- * proof on this page and means it: no counts of users, no testimonials, no
- * names of real people. A demonstration panel is allowed, and it is allowed
- * exactly because nobody will mistake Obi-Wan Kenobi for a customer.
+ * The row underneath is a real account and a real handle, and it is the one
+ * belonging to whoever built this. `design.md` bans invented proof on this
+ * page and means it: no counts of users, no testimonials, no names of people
+ * who did not agree to be there. A demonstration panel is allowed, and this
+ * one is allowed because there is no claim in it — a founder's own handle is
+ * not evidence that anybody else is here.
  *
  * **The numbers in it have to agree with each other.** An earlier version
  * showed four filled days under a heading reading "5 days", which is the one
@@ -50,9 +52,22 @@ const EXAMPLE_STREAK = (() => {
   return run;
 })();
 
+/**
+ * One row, and it is the account that ships the thing.
+ *
+ * This was two invented people, and the reasoning above it was that nobody
+ * would mistake Obi-Wan Kenobi for a customer. That reasoning still holds and
+ * this is not a retreat from it — it is the other way of satisfying the same
+ * rule. `design.md` bans invented proof; a handle that belongs to whoever
+ * built the product is not proof of anything and is not invented, so there is
+ * nothing here for a reader to be wrong about.
+ *
+ * The streak is seven and the reader's own, in the header above, is five. That
+ * ordering is deliberate: the panel exists to show what a friend's run looks
+ * like from your side, and a friend who is behind you demonstrates nothing.
+ */
 const EXAMPLE_FRIENDS = [
-  { name: "Obi-Wan Kenobi", handle: "obiwankanobi", topics: 12, streak: 9 },
-  { name: "Ada Lovelace", handle: "adalovelace", topics: 7, streak: 4 },
+  { name: "Jovanny Shek", handle: "jovannyshek", topics: 12, streak: 7 },
 ] as const;
 
 /**
@@ -76,7 +91,7 @@ export function FriendsAndStreaks() {
       data-scroll-reveal
       className="border-border border-y bg-card px-5 py-24 md:px-8 md:py-28"
     >
-      <div className="mx-auto grid max-w-[76rem] items-center gap-12 lg:grid-cols-[1fr_0.9fr] lg:gap-20">
+      <div className="mx-auto grid max-w-[76rem] items-center gap-12 lg:grid-cols-[1fr_0.68fr] lg:gap-20">
         <div>
           <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
             Keep at it
@@ -98,13 +113,26 @@ export function FriendsAndStreaks() {
           </p>
         </div>
 
-        {/* The artefact. Square and ruled, like everything else on this page. */}
-        <div className="border border-border">
-          <div className="flex items-center justify-between gap-4 border-border border-b p-5">
+        {/* The artefact. Square and ruled, like everything else on this page.
+            `min-w-0` because a grid item defaults to `min-width: auto`, which
+            means it refuses to shrink below its content — and the row inside
+            has a `shrink-0` group on the right, so at 390px the panel was
+            quietly ~40px wider than its track and the topic count was being
+            cut off by the page's own `overflow-x`. Nothing scrolled and
+            nothing warned; the number was simply not there. */}
+        <div className="min-w-0 border border-border">
+          <div /* Stacked until there is room, which is what `StreakStrip` does on the
+                 dashboard for the same reason: the count and seven day chips
+                 come to about 394px, and a phone is 390. Side by side, the
+                 last chip of the week was being cut off by the page's own
+                 `overflow-x` — silently, because nothing scrolled to reveal
+                 it. */
+            className="flex flex-col gap-4 border-border border-b p-5 sm:flex-row sm:items-center sm:justify-between md:p-6"
+          >
             <div className="flex items-center gap-3">
               <ArrivingFlame visible={visible} delay={BASE_MS} size="md" />
               <div>
-                <p className="font-medium text-[1.35rem] text-strong leading-none tracking-[-0.03em] tabular-nums">
+                <p className="whitespace-nowrap font-medium text-[1.35rem] text-strong leading-none tracking-[-0.03em] tabular-nums">
                   {EXAMPLE_STREAK} days
                 </p>
                 <p className="mt-1 text-[0.78rem] text-muted-foreground">
@@ -139,7 +167,7 @@ export function FriendsAndStreaks() {
             {EXAMPLE_FRIENDS.map((friend, index) => (
               <li
                 key={friend.handle}
-                className="flex items-center gap-3 p-5 text-sm"
+                className="flex items-center gap-3 p-5 text-sm md:p-6"
               >
                 <span
                   aria-hidden
