@@ -1985,6 +1985,76 @@ export function LandingRedesign() {
 
       <FriendsAndStreaks />
 
+      {/* Partners.
+       *
+       * One partner, shown once, low on the page. `design.md` bans invented
+       * proof here and the ban is doing real work — but it bans *invented*
+       * proof, and this partnership is a fact somebody can check by following
+       * the link. What the rule still applies to is the shape: a logo wall
+       * under the hero is a page claiming momentum, so this is a band above
+       * the close, the width of a caption, in the register of everything
+       * around it.
+       *
+       * The mark sits on a plate, and the plate is the one place on this page
+       * that names a colour instead of a token. That is not a design decision
+       * escaping the system — the file YRI publish for light surfaces is a
+       * JPEG with pure white baked in, and the stock behind it is three
+       * values off pure white, which on a hard edge is exactly the size of
+       * step the eye picks out. The alternative was keying the white out of
+       * their artwork, and their kit says in as many words not to modify it.
+       * So: an honest tile with clear space around the mark, which is how a
+       * third-party logo should be presented anyway.
+       *
+       * The asset is their `logo-dark-horizontal.jpg`, resampled to the size
+       * it renders at and nothing else. Untouched otherwise — same crop, same
+       * proportions to within 0.005%, no recolour. */}
+      <section
+        data-scroll-reveal
+        className="px-5 pb-24 md:px-8 md:pb-32"
+        aria-labelledby="partners-heading"
+      >
+        <div className="mx-auto flex max-w-[76rem] flex-col gap-8 border-border border-y py-10 md:flex-row md:items-center md:justify-between md:gap-16">
+          <div>
+            <h2
+              id="partners-heading"
+              className="font-semibold text-[0.95rem] text-strong tracking-[-0.01em]"
+            >
+              Partners
+            </h2>
+            <p className="mt-2 max-w-[46ch] text-muted-foreground leading-relaxed">
+              Explainaloud is a partner of the YRI Research Fellowship.
+            </p>
+          </div>
+          <a
+            href="https://yriscience.com?ref=EXPLAINALOUD"
+            /* Opens alongside the page rather than replacing it: somebody
+               reading the landing has not finished reading it. */
+            target="_blank"
+            /* `noopener` and not `noreferrer`. `noopener` is the half that
+               matters — it stops the opened tab reaching back through
+               `window.opener`. `noreferrer` additionally strips the referrer,
+               and the whole point of the `ref` parameter is that the
+               partnership is attributable, so blanking the header as well
+               works against what the link is for. The app's own
+               `Referrer-Policy: strict-origin-when-cross-origin` already
+               limits what crosses to the origin. */
+            rel="noopener"
+            className="inline-flex shrink-0 items-center self-start border border-border bg-white px-7 py-5 outline-none transition-colors duration-200 hover:border-strong focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] motion-reduce:transition-none"
+          >
+            {/* A fixed-size mark, so there is nothing for the optimiser to
+                decide. The file is already the size it renders at. */}
+            {/* biome-ignore lint/performance/noImgElement: fixed-size partner mark, pre-sized asset */}
+            <img
+              src="/landing/yri-fellowship-logo.webp"
+              width={758}
+              height={152}
+              alt="YRI Fellowship"
+              className="h-auto w-[13.5rem]"
+            />
+          </a>
+        </div>
+      </section>
+
       {/* The close is the open, again.
           It was still carrying the retired WebP as a background image, which
           is how the page ended up with two different answers to the same
