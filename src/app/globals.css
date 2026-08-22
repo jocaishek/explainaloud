@@ -35,57 +35,12 @@ main.lp-v2 {
   --miss: #c94f43;
   --miss-light: #efc1bb;
 
-  /* The same three verdicts, at the weight running text needs on the dark
-     ground.
-     The `-light` tints are display stops: at 60px in the headline they read as
-     green and red without argument, and at the size of a sentence they read as
-     tinted white — which is the one thing they cannot be where the whole point
-     is that a word changes colour as it is marked. The full stops are the
-     other extreme, dark enough against near-black to lose their hue.
-     These sit between: unmistakably the same green, amber and red, measured on
-     the hero ground at 9.7:1, 9.1:1 and 6.4:1. Three more values in a palette
-     that is meant to be reserved, and they earn it by being the same three
-     meanings rather than a fourth. */
-  --ok-spoken: #6fce9d;
-  --vague-spoken: #e2b463;
-  --miss-spoken: #e58a7e;
-
   /* Restated, because this block forces light surfaces regardless of the
      reader's theme. Without it, somebody browsing in dark mode gets the lifted
      night flame on a near-white card, which is the one place it washes out. */
   --flame: #ea580c;
   --flame-core: #fdba74;
   --flame-glow: rgba(234, 88, 12, 0.3);
-}
-
-/* One word of the hero's spoken line, arriving.
- *
- * A keyframe rather than a transition, which is the opposite of the rule and
- * correct for exactly this case: each span mounts once, plays once and is never
- * retargeted, so there is nothing for an interruptible transition to interrupt.
- * `both` holds the end state after it finishes.
- *
- * It is here rather than in the component because the component is a client
- * module rendering thirty of these at a time, and thirty `motion` elements each
- * running their own rAF loop over a WebGL canvas is how the hero dropped frames
- * the first time. */
-@keyframes lp-said-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.lp-said {
-  animation: lp-said-in 180ms linear both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-said {
-    animation: none;
-  }
 }
 
 /* The abstract field, not a photograph of anything.
@@ -2650,4 +2605,83 @@ html:has(main.lp-v2) {
     background-color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     border-color var(--dur-ui, 180ms) var(--ease-exit, ease-out);
+}
+
+/* ── The hero checklist ────────────────────────────────────────────────────
+ *
+ * Every row's resting state is its finished state. The arrival below is a
+ * keyframe that plays *from* nothing, so if it never runs — background tab,
+ * occluded window, a script that failed — the panel is a still picture of the
+ * completed list rather than four blank lines. The observer only ever adds
+ * motion. The streak flame learned this one the hard way.
+ * ------------------------------------------------------------------------ */
+
+.lp-v2 .lp-point {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: clamp(1.15rem, 2.1vw, 1.7rem);
+  line-height: 1.3;
+  letter-spacing: -0.025em;
+}
+
+.lp-v2 .lp-point-icon {
+  flex: none;
+  width: clamp(1.15rem, 1.6vw, 1.45rem);
+  height: clamp(1.15rem, 1.6vw, 1.45rem);
+  color: var(--ok);
+}
+
+/* The row that never arrived. Heavier than the three above it, because it is
+   the only one on the panel a reader has to leave with. */
+.lp-v2 .lp-point.is-miss {
+  font-weight: 600;
+  color: var(--miss);
+}
+
+.lp-v2 .lp-point.is-miss .lp-point-icon {
+  color: var(--miss);
+}
+
+/* Named rather than colour-coded alone: a red row means nothing to somebody
+   who cannot see that it is red, and "You never said this" is the whole
+   sentence the page is making. Hidden below `sm` only because there is no
+   room beside the text — the row is still the only red one, and the words are
+   still the first thing a screen reader meets after it. */
+.lp-v2 .lp-point-tag {
+  flex: none;
+  /* Beside the line it belongs to, not shoved to the far edge of a 76rem
+     panel. Pushed right it read as a legend for the whole list. */
+  margin-left: 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--miss);
+  border: 1px solid color-mix(in srgb, var(--miss) 35%, transparent);
+  background: color-mix(in srgb, var(--miss) 7%, transparent);
+  padding: 0.25rem 0.6rem;
+  border-radius: var(--r-pill);
+}
+
+@media (max-width: 40rem) {
+  .lp-v2 .lp-point-tag {
+    display: none;
+  }
+}
+
+@keyframes lp-point-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.lp-v2 .lp-point.is-lit {
+  animation: lp-point-in 460ms var(--ease-enter) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-point.is-lit {
+    animation: none;
+  }
 }
