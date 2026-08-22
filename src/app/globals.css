@@ -35,57 +35,12 @@ main.lp-v2 {
   --miss: #c94f43;
   --miss-light: #efc1bb;
 
-  /* The same three verdicts, at the weight running text needs on the dark
-     ground.
-     The `-light` tints are display stops: at 60px in the headline they read as
-     green and red without argument, and at the size of a sentence they read as
-     tinted white — which is the one thing they cannot be where the whole point
-     is that a word changes colour as it is marked. The full stops are the
-     other extreme, dark enough against near-black to lose their hue.
-     These sit between: unmistakably the same green, amber and red, measured on
-     the hero ground at 9.7:1, 9.1:1 and 6.4:1. Three more values in a palette
-     that is meant to be reserved, and they earn it by being the same three
-     meanings rather than a fourth. */
-  --ok-spoken: #6fce9d;
-  --vague-spoken: #e2b463;
-  --miss-spoken: #e58a7e;
-
   /* Restated, because this block forces light surfaces regardless of the
      reader's theme. Without it, somebody browsing in dark mode gets the lifted
      night flame on a near-white card, which is the one place it washes out. */
   --flame: #ea580c;
   --flame-core: #fdba74;
   --flame-glow: rgba(234, 88, 12, 0.3);
-}
-
-/* One word of the hero's spoken line, arriving.
- *
- * A keyframe rather than a transition, which is the opposite of the rule and
- * correct for exactly this case: each span mounts once, plays once and is never
- * retargeted, so there is nothing for an interruptible transition to interrupt.
- * `both` holds the end state after it finishes.
- *
- * It is here rather than in the component because the component is a client
- * module rendering thirty of these at a time, and thirty `motion` elements each
- * running their own rAF loop over a WebGL canvas is how the hero dropped frames
- * the first time. */
-@keyframes lp-said-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.lp-said {
-  animation: lp-said-in 180ms linear both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-said {
-    animation: none;
-  }
 }
 
 /* The abstract field, not a photograph of anything.
@@ -2650,4 +2605,68 @@ html:has(main.lp-v2) {
     background-color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     border-color var(--dur-ui, 180ms) var(--ease-exit, ease-out);
+}
+
+/* ── The hero gap report ───────────────────────────────────────────────────
+ *
+ * Every row's resting state is its finished state. The arrival is a keyframe
+ * playing *from* nothing, so if it never runs — background tab, occluded
+ * window, a script that failed — the panel is a still picture of the finished
+ * report rather than four blank lines. The observer only ever adds motion,
+ * which is the lesson the streak flame taught once already.
+ * ------------------------------------------------------------------------ */
+
+.lp-v2 .lp-point {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 0;
+  /* Scaled against the headline beside it, not against a paragraph. At
+     1.2rem next to display type at six times the size, the panel read as a
+     footnote to the sentence rather than as the other half of the
+     composition. */
+  font-size: clamp(1.08rem, 1.55vw, 1.45rem);
+  line-height: 1.35;
+  letter-spacing: -0.02em;
+}
+
+.lp-v2 .lp-point-icon {
+  flex: none;
+  width: clamp(1.1rem, 1.3vw, 1.3rem);
+  height: clamp(1.1rem, 1.3vw, 1.3rem);
+  color: var(--ok);
+}
+
+/* The row that never arrived, set apart rather than merely coloured: it is a
+   different kind of fact from the three above it, and a reader who takes one
+   thing from this panel has to take this one. */
+.lp-v2 .lp-point.is-miss {
+  margin-top: 0.9rem;
+  padding: 1.05rem 1.1rem;
+  font-weight: 600;
+  color: var(--miss);
+  border-radius: var(--r-control, 10px);
+  background: color-mix(in srgb, var(--miss) 7%, transparent);
+  box-shadow: inset 3px 0 0 var(--miss);
+}
+
+.lp-v2 .lp-point.is-miss .lp-point-icon {
+  color: var(--miss);
+}
+
+@keyframes lp-point-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.lp-v2 .lp-point.is-lit {
+  animation: lp-point-in 460ms var(--ease-enter) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-point.is-lit {
+    animation: none;
+  }
 }
