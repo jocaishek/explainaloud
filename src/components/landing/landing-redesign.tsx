@@ -3,19 +3,11 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import {
-  type CSSProperties,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { DemoConsole } from "~/components/landing/demo-console";
 import { FlowField } from "~/components/landing/flow-field";
 import { FriendsAndStreaks } from "~/components/landing/friends-streaks";
-import { GlassMark } from "~/components/landing/glass-mark";
 import { SignupNudge } from "~/components/landing/signup-nudge";
 
 const steps = [
@@ -175,430 +167,6 @@ const READ_WAVE = [
   46, 32, 22, 28, 42, 56, 70, 84, 66, 48, 32, 20, 26, 38, 54, 68, 60, 44, 30,
   20, 24, 36, 50, 64, 76, 58, 42, 28, 18, 22, 32, 46, 60, 52, 38, 26, 20,
 ] as const;
-
-/**
- * The hero's product panel: what the app does, marked the way the app marks.
- *
- * Three versions of this have now been thrown away, and the reasons are worth
- * keeping because each one was a different mistake.
- *
- * It began as an app window — a mic button with a pulsing ring, a twelve-bar
- * waveform, a running clock and three checklist rows. That is a picture of *a
- * recorder*, which is the least interesting true thing about this product, and
- * it carried every tell: chrome around content, a fake timestamp, an icon in a
- * circle, decoration that moves forever while explaining nothing.
- *
- * What replaced it was a sentence that typed itself into a paragraph, with the
- * words not yet said sitting there greyed out and the whole line riding a sine
- * curve. That was worse in a way that only shows up on screen. Ghosted text
- * means two weights and two colours on the same line with a ragged edge down
- * the middle of it; the curve means no two words share a baseline; and a
- * paragraph that fills up, stops, holds and empties is not continuous — it is
- * a thing that keeps starting over in the corner of your eye.
- *
- * So: one line, running. Words arrive at the speed somebody says them and the
- * line slides left to keep up, the way live captions do. Nothing is ever shown
- * before it is said, so there is no grey tail and no ragged edge. Nothing
- * resets, because the stream never ends — it is a loop with no seam in it.
- *
- * And a beat behind the newest word, each claim takes its verdict: green when
- * it is specific enough to check, amber when it was hedged, red where a step
- * was skipped. The same three colours the grader uses inside the app, because
- * the green somebody is shown before signing up has to be the green they are
- * graded in afterwards.
- *
- * The sentences are facts about the product. That is deliberate too — the page
- * marks its own claims, which is the only demonstration available to a landing
- * page that is forbidden from inventing proof.
- */
-
-/* `useLayoutEffect` is the right hook — the offset must be written before the
-   browser paints or the line is briefly in last word's position — but React
-   logs a warning for it on the server, where it does nothing at all. This is
-   the standard shim, and it is correct here because the first server render
-   has no words in it to measure. */
-const useIsomorphicLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
-
-/** A claim's verdict, or `null` for the connective tissue between claims. */
-type Verdict = "ok" | "vague" | "miss" | null;
-
-/**
- * The stream, in the order it is spoken. It loops, so the last line has to run
- * into the first without a join you can hear.
- *
- * Split by claim rather than by word, so a verdict covers the span it belongs
- * to; the words inside are what arrive one at a time.
- */
-const SPOKEN: Array<{ text: string; verdict: Verdict }> = [
-  { text: "So the idea is you give it whatever you are", verdict: null },
-  { text: "meant to know by Thursday,", verdict: "ok" },
-  { text: "a chapter, a deck, a paper you have", verdict: null },
-  { text: "not read closely enough,", verdict: "ok" },
-  { text: "and it reads the whole thing and works out", verdict: null },
-  { text: "the points you would be expected to hit.", verdict: "ok" },
-  { text: "Then you talk.", verdict: null },
-  { text: "Three minutes,", verdict: "ok" },
-  { text: "nothing in front of you,", verdict: "ok" },
-  { text: "no script to fall back on.", verdict: null },
-  { text: "And while you are still talking, it marks you.", verdict: null },
-  { text: "The claims solid enough to check", verdict: null },
-  { text: "turn green.", verdict: "ok" },
-  { text: "The ones you", verdict: null },
-  { text: "sort of, kind of", verdict: "vague" },
-  { text: "got to", verdict: null },
-  { text: "turn amber.", verdict: "vague" },
-  { text: "And the step you skipped straight past", verdict: null },
-  { text: "never turns up at all,", verdict: "miss" },
-  { text: "because you never said it.", verdict: null },
-  { text: "What you get at the end is not a score out of ten.", verdict: null },
-  { text: "It is a list of the things", verdict: null },
-  { text: "you did not say.", verdict: "miss" },
-  { text: "Which is the only part worth knowing.", verdict: "ok" },
-  { text: "So you read it, and you go again,", verdict: null },
-  { text: "and this time you say them.", verdict: null },
-];
-
-/**
- * Between words, and this is a speaking pace rather than an animation duration.
- *
- * It was 190ms, which is 315 words a minute. Nobody talks at 315 words a
- * minute — an unhurried explanation runs about 150 and a brisk one about 180,
- * which is the range the product measures people in and shows back to them.
- * At 190 the line was not somebody explaining something, it was a ticker, and
- * a reader could not finish a clause before it had gone.
- *
- * 340ms is 176 words a minute: the top of the ordinary range, because this
- * still has to hold a landing page rather than lull it.
- */
-const WORD_MS = 340;
-
-/**
- * How long the line takes to travel one word, and deliberately longer than the
- * gap between words.
- *
- * Set equal to `WORD_MS` each transition finished exactly as the next began,
- * so the line moved in discrete hops of one word — and because words are not
- * the same width, each hop ran at a different speed. Fast, slow, fast, stop.
- * That is the choppiness.
- *
- * Overlapping them fixes it, and CSS is what makes it free: a transition
- * retargeted mid-flight continues from where it actually is rather than
- * restarting, so these average out into one steady drift at about the speed of
- * speech. The line sits a word or so behind its mark, which nobody can see, and
- * moves evenly, which everybody can.
- *
- * The multiple came down from 2.1 with the slower word rate. The distance per
- * hop is unchanged — one word — so a longer gap between words already means a
- * lower velocity, and keeping the old overlap on top of that would leave the
- * line trailing two full words behind the one being said.
- */
-const GLIDE_MS = Math.round(WORD_MS * 1.7);
-
-/**
- * How far behind the newest word a verdict lands, counted in words.
- *
- * A timer per word would do the same job and would drift: fifteen timers all
- * started at once, each firing into React state, is fifteen chances for the
- * colours to arrive out of order after a tab has been backgrounded. Counting
- * words instead makes the delay a property of the stream — it cannot desync
- * from the thing it is trailing, because it *is* the thing it is trailing,
- * minus two.
- */
-const RESOLVE_LAG = 2;
-
-/**
- * How many words stay in the DOM behind the read edge.
- *
- * Anything further left has been clipped for several seconds. The window
- * slides rather than growing, so an hour on this page costs the same as a
- * minute — and dropping from the front is free precisely because the offset
- * below is measured from `scrollWidth` on every commit: the track gets
- * narrower by exactly the width that came off it, the offset shrinks to match,
- * and nothing on screen moves.
- */
-const WINDOW = 26;
-
-/** The verdict tokens sized for running text. See `globals.css` for why. */
-const VERDICT_INK: Record<Exclude<Verdict, null>, string> = {
-  ok: "var(--ok-spoken)",
-  vague: "var(--vague-spoken)",
-  miss: "var(--miss-spoken)",
-};
-
-const LEGEND: Array<{ verdict: Exclude<Verdict, null>; label: string }> = [
-  { verdict: "ok", label: "Checkable" },
-  { verdict: "vague", label: "Hedged" },
-  { verdict: "miss", label: "Skipped" },
-];
-
-/** Every word of the loop, flattened once, each remembering its claim. */
-const WORDS = SPOKEN.flatMap((part, partIndex) =>
-  part.text
-    .split(" ")
-    .map((word) => ({ word, verdict: part.verdict, partIndex })),
-);
-
-function SpokenLine() {
-  const reduceMotion = useReducedMotion();
-  const track = useRef<HTMLParagraphElement>(null);
-  const viewport = useRef<HTMLDivElement>(null);
-
-  /* One counter, and everything on screen is a function of it. It only ever
-     goes up — the modulo happens where the words are read, so the stream has
-     no wrap-around to render and therefore no seam.
-     *
-     * It starts at a full line rather than at zero, for two reasons. The first
-     * is that the hero's first painted frame should not contain a hole where a
-     * sentence is going to be; watching it type itself in from nothing is a
-     * worse arrival than finding it already talking. The second is a failure
-     * mode: the interval below refuses to run while the document reports
-     * itself hidden, and any context that reports hidden while still painting
-     * — an embedded webview, a preview pane — would otherwise get a blank
-     * strip forever. Starting full means the worst case is a line that does
-     * not move, rather than a line that is not there. */
-  const [spoken, setSpoken] = useState(WINDOW);
-  /* Two numbers rather than one, and the split is the whole trick — see the
-     layout effect below for what went wrong with a single offset. */
-  const [glide, setGlide] = useState(0);
-  const [shift, setShift] = useState(0);
-  /* Widths of the words currently on screen, plus running totals for every word
-     that has ever been said and every word that has since been dropped. Refs,
-     not state: they are the arithmetic behind the two numbers above, and
-     re-rendering when they change would be re-rendering twice for one word. */
-  const widths = useRef(new Map<number, number>());
-  const saidWidth = useRef(0);
-  const goneWidth = useRef(0);
-  /** Set by the resize observer, cleared by the layout effect that acts on it. */
-  const rebase = useRef(false);
-  const [resized, setResized] = useState(0);
-
-  /* Stopped while the tab is in the background, and this is not a nicety.
-   *
-   * A hidden tab suspends rendering but keeps firing timers, so the words
-   * would go on being added — hundreds of them over a lunch break — while the
-   * transition that carries the line to meet them never advances a frame. The
-   * two come back in sync the moment the tab is looked at again, which is a
-   * page opening on a sentence sprinting backwards out of shot. Measured at
-   * two thousand pixels adrift after a couple of minutes behind another
-   * window. */
-  useEffect(() => {
-    if (reduceMotion) return;
-    let id = 0;
-
-    const start = () => {
-      if (id) return;
-      id = window.setInterval(() => setSpoken((n) => n + 1), WORD_MS);
-    };
-    const stop = () => {
-      window.clearInterval(id);
-      id = 0;
-    };
-    const sync = () => (document.hidden ? stop() : start());
-
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", sync);
-    };
-  }, [reduceMotion]);
-
-  /* The sliding window, oldest first. `spoken` counts words said since the page
-     opened and keeps counting past the end of the loop; the modulo here is what
-     makes it a loop, and doing it per word rather than per pass is why there is
-     no moment where the line is empty. */
-  const visible = useMemo(() => {
-    const from = Math.max(0, spoken - WINDOW);
-    const out: Array<{ key: number; word: string; verdict: Verdict }> = [];
-    for (let i = from; i < spoken; i++) {
-      const source = WORDS[i % WORDS.length];
-      out.push({
-        key: i,
-        word: source.word,
-        // A verdict lands a couple of words after the claim has moved on.
-        verdict: i <= spoken - 1 - RESOLVE_LAG ? source.verdict : null,
-      });
-    }
-    return out;
-  }, [spoken]);
-
-  /* Reduced motion gets the same sentence, standing still and fully marked.
-     Not a second component: the same words, the same colours, no interval. */
-  const still = useMemo(
-    () =>
-      WORDS.slice(0, 14).map((source, index) => ({
-        key: index,
-        word: source.word,
-        verdict: source.verdict,
-      })),
-    [],
-  );
-  const shown = reduceMotion ? still : visible;
-
-  /* A rotation, a window drag, a devtools panel opening: all of them change the
-     box and the type size together. Nothing is recomputed here — the flag is
-     read by the layout effect below, which is the only place that owns the
-     numbers. */
-  useEffect(() => {
-    const box = viewport.current;
-    if (!box || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => {
-      rebase.current = true;
-      setResized((n) => n + 1);
-    });
-    observer.observe(box);
-    return () => observer.disconnect();
-  }, []);
-
-  /* Measured after layout and before paint, so the line has never been seen in
-     the wrong place. The read edge is the right-hand side of the viewport less
-     a gutter: words fill leftwards from there, which is where the eye already
-     is, and older ones slide out under the fade on the left.
-     *
-     * **Why two transforms.** The obvious version measures `scrollWidth` and
-     * transitions one transform to `readEdge - scrollWidth`, and it works right
-     * up until the window fills. After that, every tick both appends a word on
-     * the right and removes one on the left — and removing it shifts the whole
-     * line left *instantly*, by that word's width, because the track is
-     * anchored on its left edge. A single transform has to undo that jump and
-     * perform the glide at the same time, over the same 190ms, and the two
-     * mostly cancel: the line stops moving and the words start stepping.
-     *
-     * So the jump and the glide are separated. The outer element carries the
-     * total width of everything dropped and is never transitioned, which
-     * cancels the removal in the same frame it happens. The inner one carries
-     * the total width of everything ever said, only ever grows, and is the only
-     * thing that animates. What is left is one number sliding in one direction
-     * for as long as the page is open. */
-  useIsomorphicLayoutEffect(() => {
-    const row = track.current;
-    const box = viewport.current;
-    if (!row || !box) return;
-
-    const spans = row.children;
-    const oldest = shown.length > 0 ? shown[0].key : 0;
-
-    /* Everything measured so far is void once the box changes size, because the
-       type is set in `vw` and every cached width is from the old size. Summed
-       against the new layout they put the line hundreds of pixels out — on a
-       phone the whole strip left the screen and never came back, which is how
-       this was found. Rebasing throws the running totals away and starts again
-       from what is on screen right now. */
-    if (rebase.current) {
-      rebase.current = false;
-      widths.current.clear();
-      saidWidth.current = 0;
-      goneWidth.current = 0;
-    }
-
-    for (let i = 0; i < shown.length; i++) {
-      const key = shown[i].key;
-      if (widths.current.has(key)) continue;
-      // The fractional width, not `offsetWidth`: these are summed over
-      // thousands of words, and half a pixel of rounding per word is a line
-      // that has drifted a word and a half off its mark inside two minutes.
-      const width = (spans[i] as HTMLElement).getBoundingClientRect().width;
-      widths.current.set(key, width);
-      saidWidth.current += width;
-    }
-    for (const [key, width] of widths.current) {
-      if (key >= oldest) continue;
-      goneWidth.current += width;
-      widths.current.delete(key);
-    }
-
-    const readEdge = box.clientWidth - 24;
-    setGlide(Math.max(0, saidWidth.current - readEdge));
-    setShift(goneWidth.current);
-    // `resized` is a dependency for its side effect on `rebase`, not its value.
-  }, [shown, resized]);
-
-  return (
-    <section
-      aria-label="What Explainaloud does, marked the way it marks you"
-      className="w-full"
-    >
-      {/* Fixed to one line and one height. A strip that grows and shrinks with
-          its content is a strip that shoves the buttons under it around, and
-          the reason the last version looked broken was that its right edge was
-          a different length every second. */}
-      <div
-        ref={viewport}
-        className="relative overflow-hidden"
-        style={{
-          /* Faded at both ends rather than cut. Words are mid-sentence when
-             they leave, and a hard edge chops a letter in half. */
-          maskImage:
-            "linear-gradient(to right, transparent, black 8%, black 94%, transparent)",
-          WebkitMaskImage:
-            "linear-gradient(to right, transparent, black 8%, black 94%, transparent)",
-        }}
-      >
-        {/* A plain `p` with a CSS transition, deliberately, and this is the
-            second time this component has been rewritten for the same reason.
-            framer owns the `style` attribute of a `motion` element, and an
-            `animate` target recomputed from a ref measurement taken in a layout
-            effect never reached the DOM — the line sat at `translateX(0)` while
-            every word after the eighth ran off the right-hand edge.
-
-            A transition is also the better tool here. The value changes once
-            per word, always in the same direction, always by an amount decided
-            before the frame is drawn: that is a predetermined animation, so it
-            belongs on the compositor rather than in a `requestAnimationFrame`
-            loop competing with the WebGL field behind it. */}
-        {/* The instant half. Never transitioned, on purpose. */}
-        <div
-          style={{ transform: `translate3d(${shift}px, 0, 0)` }}
-          className="will-change-transform"
-        >
-          <p
-            ref={track}
-            /* The animated half. Linear, and longer than one word, so the
-               transitions overlap into one steady drift rather than a row of
-               discrete hops at varying speeds. See `GLIDE_MS`. */
-            style={{
-              transform: `translate3d(${-glide}px, 0, 0)`,
-              transition: reduceMotion
-                ? undefined
-                : `transform ${GLIDE_MS}ms linear`,
-            }}
-            className="whitespace-nowrap py-1 font-display text-[clamp(1.05rem,2.3vw,1.6rem)] text-primary-foreground leading-[1.6] tracking-[-0.02em] will-change-transform"
-          >
-            {shown.map(({ key, word, verdict }) => (
-              <span
-                key={key}
-                /* The arrival is a keyframe in `globals.css` and the colour is a
-                   transition on this class, and both are CSS rather than JS for
-                   the same reason: there are thirty of these on screen at once,
-                   over a canvas that is already using the GPU. */
-                style={verdict ? { color: VERDICT_INK[verdict] } : undefined}
-                className="lp-said inline-block whitespace-pre transition-colors duration-500"
-              >
-                {word}{" "}
-              </span>
-            ))}
-          </p>
-        </div>
-      </div>
-
-      {/* What the three colours mean, said once. The stream demonstrates them;
-          this names them, which is the part a moving line cannot do. */}
-      <ul className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 border-white/12 border-t pt-5 font-mono text-[0.66rem] uppercase tracking-[0.14em]">
-        {LEGEND.map((entry) => (
-          <li key={entry.verdict} className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="size-1.5 rounded-full"
-              style={{ background: VERDICT_INK[entry.verdict] }}
-            />
-            <span className="text-primary-foreground/70">{entry.label}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 /* The floating chat bubble lived here. It was a fixed circle in the corner
  * that opened a card asking "what do you need to say clearly today?" — which
@@ -829,9 +397,6 @@ export function LandingRedesign() {
   const heroRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const navSentinelRef = useRef<HTMLDivElement>(null);
-  const flyerRef = useRef<HTMLDivElement>(null);
-  const flyerSpinRef = useRef<HTMLDivElement>(null);
-  const navSlotRef = useRef<HTMLSpanElement>(null);
 
   /**
    * The bar turns to glass once it is off the hero.
@@ -895,60 +460,6 @@ export function LandingRedesign() {
         "is-light",
         sentinel.getBoundingClientRect().top <= 64,
       );
-
-      const flyer = flyerRef.current;
-      const spin = flyerSpinRef.current;
-      const slot = navSlotRef.current;
-      const hero = heroRef.current;
-      if (!flyer || !spin || !slot || !hero) return;
-
-      // Below `lg` the flyer is not rendered at all; nothing to place.
-      if (flyer.offsetWidth === 0) return;
-
-      const heroRect = hero.getBoundingClientRect();
-      const slotRect = slot.getBoundingClientRect();
-      const size = flyer.offsetWidth;
-
-      /* The journey is the first screen. It is complete by the time the hero
-         has scrolled away, so the mark is already the nav mark before any of
-         the light sections arrive — which is what stops it from ever being an
-         object floating over a paragraph. */
-      const travel = Math.max(1, heroRect.height * 0.72);
-      const raw = -heroRect.top / travel;
-      const t = raw < 0 ? 0 : raw > 1 ? 1 : raw;
-      // ease-in-out, so it leaves and arrives calmly rather than linearly
-      const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
-
-      /* Centred in the right half, on the hero's own centre line.
-         Every previous position was a number picked to avoid something: away
-         from the headline, out of the bright part of the water, lower so it
-         stopped colliding. Avoiding things is why it kept reading as awkward,
-         because a mark placed by exclusion is not placed at all, and the eye
-         can tell.
-
-         This is placed by the layout instead. The hero is a headline column
-         on the left and open water on the right; the centre of that right
-         half is a real position in the composition, and sitting on the hero's
-         vertical centre line puts it in the same optical row as the headline
-         it belongs to. It reads as deliberate because it is. */
-      const startX = heroRect.left + heroRect.width * 0.75 - size / 2;
-      const startY = heroRect.top + heroRect.height * 0.46 - size / 2;
-      const endScale = slotRect.width / size;
-
-      const x = startX + (slotRect.left - startX) * e;
-      const y = startY + (slotRect.top - startY) * e;
-      const scale = 1 + (endScale - 1) * e;
-
-      flyer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-      flyer.style.opacity = String(0.82 + 0.18 * e);
-      spin.style.transform = reduceMotion
-        ? "none"
-        : `rotateY(${(e * 360).toFixed(2)}deg)`;
-
-      /* The static nav mark only appears once the flyer is on top of it, so
-         the two are never both visible and never both absent. */
-      slot.style.opacity = e > 0.995 ? "1" : "0";
-      flyer.style.visibility = e > 0.995 ? "hidden" : "visible";
     };
     /* A frame loop, not a scroll listener.
        Scroll events are the obvious input here and they are not dependable
@@ -994,7 +505,7 @@ export function LandingRedesign() {
       window.removeEventListener("resize", forceSync);
       document.removeEventListener("visibilitychange", forceSync);
     };
-  }, [reduceMotion]);
+  }, []);
 
   useEffect(() => {
     if (!heroRef.current || !pageRef.current) return;
@@ -1570,12 +1081,7 @@ export function LandingRedesign() {
             <span className="lp-nav-brand-copy font-sans font-semibold text-[1.05rem] tracking-[-0.025em]">
               Explainaloud
             </span>
-            {/* The flyer lands here. Hidden until it arrives, so the mark is
-                never doubled and never missing. */}
-            <span
-              ref={navSlotRef}
-              className="block h-9 w-9 shrink-0 opacity-0 transition-opacity duration-150"
-            >
+            <span className="block h-9 w-9 shrink-0">
               <ExplainaloudMark className="h-9 w-9" />
             </span>
           </Link>
@@ -1612,103 +1118,68 @@ export function LandingRedesign() {
           className="lp-hero-scrim absolute inset-0 z-[1]"
         />
 
-        {/* `fixed` with `top:0; left:0`, and placed entirely by transform, so
-            the handler has one number to write instead of fighting a layout.
-            It is safe to be fixed again because its position is recomputed
-            from scroll every frame rather than animated toward a target. */}
-        <div
-          id="bg-logo"
-          ref={flyerRef}
-          aria-hidden="true"
-          className="pointer-events-none fixed top-0 left-0 z-[60] hidden h-[clamp(10rem,15vw,15rem)] w-[clamp(10rem,15vw,15rem)] origin-top-left text-[length:clamp(10rem,15vw,15rem)] [perspective:1100px] will-change-transform lg:block"
-        >
-          {/* The turn is on its own element so nothing competes for the
-              transform that is carrying the travel. */}
-          <div
-            ref={flyerSpinRef}
-            id="bg-logo-spin"
-            className="h-full w-full will-change-transform"
-            style={{ transformStyle: "preserve-3d" }}
-          >
-            <GlassMark className="h-full w-full" />
-          </div>
-        </div>
-        <div className="relative z-[2] flex min-h-screen flex-col pt-20 md:pt-24">
-          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center lg:items-start lg:text-left">
-            <h1 className="relative mx-auto max-w-[12ch] font-display lg:mx-0 lg:max-w-[11ch] text-[clamp(2.2rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
-              <span className="block overflow-hidden pb-[0.08em]">
-                <span data-hero-word className="inline-block">
-                  Say
-                </span>{" "}
-                <span data-hero-word className="inline-block">
-                  what
-                </span>{" "}
-                <span data-hero-word className="inline-block">
-                  you
-                </span>
-              </span>
-              <span className="block overflow-hidden pb-[0.08em]">
-                {/* The headline marks itself.
-                    Green under what you know, red under what you missed: the
-                    product's own two verdicts, drawn with the product's own
-                    gesture, on the first sentence anybody reads. It explains
-                    the entire idea before a word of copy has been read, and
-                    it is the reason the marks further down the page are
-                    already legible when they arrive. */}
-                <span data-hero-word className="inline-block">
-                  <span
-                    data-hero-mark="ok"
-                    data-verdict="ok"
-                    className="lp-verdict whitespace-nowrap"
-                  >
-                    know.
-                  </span>
-                </span>{" "}
-                <span data-hero-word className="lp-hero-em inline-block">
-                  See
-                </span>
-              </span>
-              <span className="block overflow-hidden pb-[0.08em]">
-                {/* The mark goes on "missed." alone, never on the phrase.
-                    It was on the whole of "what you missed.", which is an
-                    inline-block whose text wraps onto two lines. An
-                    inline-block does not fragment: it is one box as wide as
-                    its widest line, so the rule was drawn once, along the
-                    bottom of that box, running the full width of the column
-                    and far past the last word. `box-decoration-break` cannot
-                    help, because there is only ever one box to decorate.
+        {/* The nav is `fixed`, so it takes no flow space — the top padding here is
+            manual clearance for it. At `lg` the hero content is optically
+            centred instead, and adding clearance on *top* of centring is what
+            pushed the headline 250px down with 157px under it. At `lg` the
+            padding becomes a symmetrical gutter the centred block sits inside,
+            so it is a guaranteed minimum rather than an offset: on a short
+            viewport the hero grows past the fold instead of sliding the
+            headline under the bar, which is what it did at 1920. */}
+        <div className="relative z-[2] flex min-h-screen flex-col pt-20 md:pt-24 lg:py-24">
+          {/* The hero, Wispr-cut: two lines, eight words, no panel.
+              "Green. Amber. Missed." stood here for one build and failed the
+              cold-visitor test its own history warned about: three colour
+              words with no referent mean nothing to somebody who has not
+              used the product yet. The colours have to ride words that carry
+              their own sense. So: the promise the page has always made, with
+              the grader's tints on the two words that are the promise —
+              "know" goes green, "missed" goes red, in sequence, which is the
+              product's gesture performed on its own headline.
 
-                    A mark is a verdict on a phrase, so the phrase has to be
-                    something that cannot break. One word always is. */}
-                <span data-hero-word className="lp-hero-em inline-block">
-                  what you{" "}
-                  <span
-                    data-hero-mark="miss"
-                    data-verdict="miss"
-                    className="lp-verdict whitespace-nowrap"
-                  >
-                    missed.
-                  </span>
+              Pure CSS with `both` fills: before its delay a word is plain
+              ink, after it, coloured forever. No observer, no JS in the
+              loop — if scripting dies the page still ends marked, the
+              resting-state lesson the streak flame taught. */}
+          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-4 text-center">
+            <h1 className="flex flex-col items-center gap-[0.16em] font-display text-[clamp(2.45rem,6.2vw,5.9rem)] text-primary-foreground leading-[1.02] tracking-[-0.035em]">
+              <span data-hero-word className="block">
+                Say what you{" "}
+                <span
+                  className="lp-grade"
+                  data-verdict="ok"
+                  style={{ animationDelay: "1100ms" }}
+                >
+                  know.
+                </span>
+              </span>
+              <span data-hero-word className="block">
+                See what you{" "}
+                <span
+                  className="lp-grade"
+                  data-verdict="miss"
+                  style={{ animationDelay: "1950ms" }}
+                >
+                  missed.
                 </span>
               </span>
             </h1>
 
             <p
               data-hero-secondary
-              className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
+              className="mt-7 max-w-[34rem] text-[1.05rem] text-primary-foreground/80 leading-relaxed"
             >
-              Explain your notes out loud for three minutes. Get back every
-              point you nailed, rushed, or never reached.
+              Three minutes, no notes, marked as you speak.
             </p>
 
             <div
               data-hero-secondary
-              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
+              className="mt-8 flex w-full max-w-[22rem] flex-col items-stretch gap-4 sm:max-w-none sm:flex-row sm:items-center sm:justify-center"
             >
               <Link
                 href="/signup"
                 data-gsap-hover
-                className="group inline-flex h-12 items-center gap-5 border border-[var(--accent-solid)] bg-[var(--accent-solid)] px-6 font-medium text-[var(--brand-foreground)]"
+                className="group inline-flex h-14 items-center justify-center gap-4 border border-[var(--accent-solid)] bg-[var(--accent-solid)] px-8 font-medium text-[1.05rem] text-[var(--brand-foreground)]"
               >
                 Start explaining
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -1716,19 +1187,11 @@ export function LandingRedesign() {
               <a
                 href="#how-it-works"
                 data-gsap-hover
-                className="inline-flex h-12 items-center border border-white/30 px-6 font-medium text-primary-foreground"
+                className="lp-nav-link inline-flex h-14 items-center justify-center px-1 font-medium text-primary-foreground/80"
               >
                 See how it works
               </a>
             </div>
-          </div>
-
-          {/* Same measure and same left edge as the headline above it. The
-              strip ran centred inside a 46rem box for one build and it read as
-              a caption belonging to nothing — a line that starts a hundred and
-              fifty pixels to the right of every other line on the screen. */}
-          <div className="relative z-10 mx-auto w-full max-w-[76rem] pb-24 md:pb-28">
-            <SpokenLine />
           </div>
         </div>
         <div ref={navSentinelRef} aria-hidden="true" className="h-px w-full" />
