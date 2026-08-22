@@ -35,57 +35,12 @@ main.lp-v2 {
   --miss: #c94f43;
   --miss-light: #efc1bb;
 
-  /* The same three verdicts, at the weight running text needs on the dark
-     ground.
-     The `-light` tints are display stops: at 60px in the headline they read as
-     green and red without argument, and at the size of a sentence they read as
-     tinted white — which is the one thing they cannot be where the whole point
-     is that a word changes colour as it is marked. The full stops are the
-     other extreme, dark enough against near-black to lose their hue.
-     These sit between: unmistakably the same green, amber and red, measured on
-     the hero ground at 9.7:1, 9.1:1 and 6.4:1. Three more values in a palette
-     that is meant to be reserved, and they earn it by being the same three
-     meanings rather than a fourth. */
-  --ok-spoken: #6fce9d;
-  --vague-spoken: #e2b463;
-  --miss-spoken: #e58a7e;
-
   /* Restated, because this block forces light surfaces regardless of the
      reader's theme. Without it, somebody browsing in dark mode gets the lifted
      night flame on a near-white card, which is the one place it washes out. */
   --flame: #ea580c;
   --flame-core: #fdba74;
   --flame-glow: rgba(234, 88, 12, 0.3);
-}
-
-/* One word of the hero's spoken line, arriving.
- *
- * A keyframe rather than a transition, which is the opposite of the rule and
- * correct for exactly this case: each span mounts once, plays once and is never
- * retargeted, so there is nothing for an interruptible transition to interrupt.
- * `both` holds the end state after it finishes.
- *
- * It is here rather than in the component because the component is a client
- * module rendering thirty of these at a time, and thirty `motion` elements each
- * running their own rAF loop over a WebGL canvas is how the hero dropped frames
- * the first time. */
-@keyframes lp-said-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.lp-said {
-  animation: lp-said-in 180ms linear both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-said {
-    animation: none;
-  }
 }
 
 /* The abstract field, not a photograph of anything.
@@ -2650,4 +2605,75 @@ html:has(main.lp-v2) {
     background-color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     border-color var(--dur-ui, 180ms) var(--ease-exit, ease-out);
+}
+
+/* ── The hero take ─────────────────────────────────────────────────────────
+ *
+ * A mark's resting state is *marked*. The arrival below is a keyframe that
+ * plays from unmarked, so if it never runs — background tab, occluded window,
+ * a script that failed — the panel is a still picture of the finished thing
+ * rather than a paragraph with its verdicts missing. The observer only ever
+ * adds motion, which is the lesson the streak flame taught once already.
+ * ------------------------------------------------------------------------ */
+
+.lp-v2 .lp-mark {
+  font-weight: 600;
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 100% 0.12em;
+}
+
+.lp-v2 .lp-mark[data-mark="ok"] {
+  color: var(--ok);
+  background-image: linear-gradient(var(--ok), var(--ok));
+}
+
+.lp-v2 .lp-mark[data-mark="vague"] {
+  color: var(--vague);
+  background-image: linear-gradient(var(--vague), var(--vague));
+}
+
+/* The gesture the product makes: the words take their colour as the rule is
+   drawn under them, left to right, at the speed somebody reads them. */
+@keyframes lp-mark-in {
+  from {
+    color: var(--strong);
+    background-size: 0% 0.12em;
+  }
+}
+
+.lp-v2 .lp-mark[data-lit="true"] {
+  animation: lp-mark-in 620ms var(--ease-enter) both;
+}
+
+/* The gap column. A wash rather than a border, because the point is that this
+   half of the panel is a different kind of thing from the half beside it —
+   one is what was said, the other is what was not. Five per cent of `--miss`
+   over the card is a tint you read as a region, not as a warning. */
+.lp-v2 .lp-take-gap {
+  background: color-mix(in srgb, var(--miss) 5%, transparent);
+}
+
+.lp-v2 .lp-miss {
+  color: var(--miss);
+  border-left: 2px solid var(--miss);
+  padding-left: 0.85rem;
+}
+
+@keyframes lp-miss-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.lp-v2 .lp-miss.is-lit {
+  animation: lp-miss-in 640ms var(--ease-enter) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-mark[data-lit="true"],
+  .lp-v2 .lp-miss.is-lit {
+    animation: none;
+  }
 }
