@@ -35,57 +35,12 @@ main.lp-v2 {
   --miss: #c94f43;
   --miss-light: #efc1bb;
 
-  /* The same three verdicts, at the weight running text needs on the dark
-     ground.
-     The `-light` tints are display stops: at 60px in the headline they read as
-     green and red without argument, and at the size of a sentence they read as
-     tinted white — which is the one thing they cannot be where the whole point
-     is that a word changes colour as it is marked. The full stops are the
-     other extreme, dark enough against near-black to lose their hue.
-     These sit between: unmistakably the same green, amber and red, measured on
-     the hero ground at 9.7:1, 9.1:1 and 6.4:1. Three more values in a palette
-     that is meant to be reserved, and they earn it by being the same three
-     meanings rather than a fourth. */
-  --ok-spoken: #6fce9d;
-  --vague-spoken: #e2b463;
-  --miss-spoken: #e58a7e;
-
   /* Restated, because this block forces light surfaces regardless of the
      reader's theme. Without it, somebody browsing in dark mode gets the lifted
      night flame on a near-white card, which is the one place it washes out. */
   --flame: #ea580c;
   --flame-core: #fdba74;
   --flame-glow: rgba(234, 88, 12, 0.3);
-}
-
-/* One word of the hero's spoken line, arriving.
- *
- * A keyframe rather than a transition, which is the opposite of the rule and
- * correct for exactly this case: each span mounts once, plays once and is never
- * retargeted, so there is nothing for an interruptible transition to interrupt.
- * `both` holds the end state after it finishes.
- *
- * It is here rather than in the component because the component is a client
- * module rendering thirty of these at a time, and thirty `motion` elements each
- * running their own rAF loop over a WebGL canvas is how the hero dropped frames
- * the first time. */
-@keyframes lp-said-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.lp-said {
-  animation: lp-said-in 180ms linear both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-said {
-    animation: none;
-  }
 }
 
 /* The abstract field, not a photograph of anything.
@@ -2650,4 +2605,149 @@ html:has(main.lp-v2) {
     background-color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     border-color var(--dur-ui, 180ms) var(--ease-exit, ease-out);
+}
+
+/* ── The hero, spoken ──────────────────────────────────────────────────────
+ *
+ * The headline lights word by word at speaking pace — the karaoke gesture,
+ * not the typewriter one: every word is present from first paint at a
+ * readable dim, nothing reflows, nothing resets. The verdict words take
+ * their tints the moment they are "said", and the waveform below plays
+ * through on the same clock.
+ *
+ * Everything is pure CSS with `both` fills. Before its delay an element is
+ * in its not-yet state; after, its final one, forever. No observer and no
+ * JS in the loop, so if scripting fails the page still ends fully lit and
+ * marked — the resting-state lesson the streak flame taught once already.
+ * ------------------------------------------------------------------------ */
+
+.lp-v2 .lp-say {
+  animation: lp-say-in 320ms var(--ease-enter) both;
+}
+
+@keyframes lp-say-in {
+  from {
+    opacity: 0.38;
+  }
+}
+
+/* The grade is a highlighter stroke, not a fade: a translucent swatch of
+   the verdict's own tint sweeps across the word left to right — the gesture
+   the demo console paints on a spoken claim, at display size — and the ink
+   snaps to the tint as the stroke covers it. `background-size` animation,
+   the house wipe, nothing but paint. */
+.lp-v2 .lp-grade {
+  padding-inline: 0.08em;
+  margin-inline: -0.08em;
+  background-repeat: no-repeat;
+  background-position: 0 54%;
+  background-size: 100% 0.82em;
+  animation: lp-grade-in 560ms var(--ease-enter) both;
+}
+
+.lp-v2 .lp-grade[data-verdict="ok"] {
+  color: var(--ok-light);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--ok-light) 26%, transparent),
+    color-mix(in srgb, var(--ok-light) 26%, transparent)
+  );
+}
+
+.lp-v2 .lp-grade[data-verdict="miss"] {
+  color: var(--miss-light);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--miss-light) 26%, transparent),
+    color-mix(in srgb, var(--miss-light) 26%, transparent)
+  );
+}
+
+@keyframes lp-grade-in {
+  from {
+    color: var(--primary-foreground);
+    background-size: 0% 0.82em;
+  }
+}
+
+/* Each bar flashes to full white at its moment and settles, so the stagger
+   reads as a playhead crossing the strip: dark ahead of it, flaring where it
+   is, lit behind it. Transform and opacity only. */
+.lp-v2 .lp-hero-bar {
+  width: 4px;
+  flex: none;
+  border-radius: var(--r-pill);
+  background: rgba(238, 242, 248, 0.6);
+  transform-origin: center;
+  /* Two animations: the play-through flare, then an endless quiet breath.
+     Delay and duration pairs come inline per bar, so every bar sways on its
+     own phase and period — a room with air in it, not a machine pulsing. */
+  animation:
+    lp-hero-bar-in 520ms var(--ease-enter) both,
+    lp-hero-bar-idle 3s ease-in-out infinite alternate;
+}
+
+@keyframes lp-hero-bar-idle {
+  from {
+    transform: scaleY(1);
+  }
+  to {
+    transform: scaleY(0.72);
+  }
+}
+
+@keyframes lp-hero-bar-in {
+  from {
+    transform: scaleY(0.16);
+    opacity: 0.14;
+  }
+  55% {
+    transform: scaleY(1.06);
+    opacity: 1;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 0.62;
+  }
+}
+
+/* A fragment of the take, in the air. Dim until "said", then lit in its
+   verdict's tint at scenery opacity — present from first paint, `both`
+   fills, resting fully marked like everything else in this hero. */
+.lp-v2 .lp-frag {
+  white-space: nowrap;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  opacity: 0.27;
+  animation: lp-frag-in 900ms var(--ease-enter) both;
+}
+
+.lp-v2 .lp-frag[data-verdict="ok"] {
+  color: var(--ok-light);
+}
+
+.lp-v2 .lp-frag[data-verdict="vague"] {
+  color: var(--vague-light);
+}
+
+.lp-v2 .lp-frag[data-verdict="miss"] {
+  color: var(--miss-light);
+}
+
+@keyframes lp-frag-in {
+  from {
+    opacity: 0.09;
+    color: rgba(238, 242, 248, 0.85);
+  }
+  45% {
+    opacity: 0.42;
+    color: rgba(238, 242, 248, 0.95);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-frag,
+  .lp-v2 .lp-say,
+  .lp-v2 .lp-grade,
+  .lp-v2 .lp-hero-bar {
+    animation: none;
+  }
 }
