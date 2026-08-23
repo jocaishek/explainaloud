@@ -1,41 +1,53 @@
 <!--
-  The mark: lit blue on a deep navy disc.
+  The mark: top-lit blue on a night-gradient disc.
 
   This is what Google shows beside the result when somebody searches the
   product, and what sits in the browser tab, so it is the logo most people see
-  most often. It has to be the same logo as the one in the app.
+  most often. It has to be the same logo as the one in the app, and since the
+  social avatars adopted this dimensional cut, this file follows: the flat
+  #9cc8f2-on-#142744 disc became the same disc with the hero's night ramp in
+  the ground and the glyph carrying its own light, bright at the top and
+  settling to the lit blue at the base. At 16px the ramps are invisible and
+  the icon degrades to exactly the flat version it replaced; at 32px and up
+  they read as depth.
 
-  It was amber on #1a1206, which was correct while the product was amber. The
-  app and the landing are navy now, and an amber tab icon above a navy page
-  reads as a different company's site.
+  The numbers still hold, taken at each gradient's darkest-for-ground and
+  darkest-for-glyph stops, because a favicon is judged at 16px where a near
+  miss on contrast is an illegible smudge:
 
-  The numbers, because a favicon is judged at 16px where a near miss on
-  contrast is simply an illegible smudge:
+    glyph floor #8fc0f0 on ground floor #16294a   7.4:1
+    ground stops on white                          13.9:1 to 15.9:1
 
-    glyph #9cc8f2 on disc #142744  8.52:1
-    disc  #142744 on white         14.96:1
-    disc  #142744 on the stock     12.99:1
-
-  #eef2f8 would reach 13.32:1, and is not used: at that value the mark reads as
-  plain white and loses the one bit of brand colour a 16px square can carry.
-  8.5:1 is far past what is needed to be legible, so the remaining headroom is
-  better spent being recognisable.
-
-  Both colours are tokens, not new values: #142744 is panel-deep and #9cc8f2 is
-  brand-high. Written without leading dashes on purpose, because a double
-  hyphen is illegal inside an XML comment and silently breaks the whole file.
+  The glyph steps up from 0.78 to 0.84 of the disc, which is the other half of
+  "pop": clearance was designed at 0.78 for a mark sharing space with type,
+  and an avatar disc has no type. Both gradient families are the existing
+  tokens' neighbourhoods: the ground walks panel-deep between its hero-ramp
+  values, the glyph walks brand-high toward white. Written without leading
+  dashes on purpose, because a double hyphen is illegal inside an XML comment
+  and silently breaks the whole file.
 -->
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
-  <circle cx="32" cy="32" r="32" fill="#142744" />
-  <g transform="translate(32 32) scale(0.78) translate(-30 -33)">
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#0f2038" />
+      <stop offset="0.5" stop-color="#16294a" />
+      <stop offset="1" stop-color="#0b1830" />
+    </linearGradient>
+    <linearGradient id="glyph" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#d3e6fb" />
+      <stop offset="1" stop-color="#8fc0f0" />
+    </linearGradient>
+  </defs>
+  <circle cx="32" cy="32" r="32" fill="url(#ground)" />
+  <g transform="translate(32 32) scale(0.84) translate(-30 -33)">
     <path
       d="M 19.1 13.9 L 33.9 20.6 Q 38 22.5 33.9 24.4 L 19.1 31.1 Q 15 33 15 28.5 L 15 16.5 Q 15 12 19.1 13.9 Z"
-      fill="#9cc8f2"
+      fill="url(#glyph)"
     />
     <path
       d="M 17.5 39.5 A 18 18 0 0 0 42.5 50.5"
       fill="none"
-      stroke="#9cc8f2"
+      stroke="url(#glyph)"
       stroke-width="5"
       stroke-linecap="round"
     />

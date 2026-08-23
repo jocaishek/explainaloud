@@ -53,24 +53,31 @@ export default function AppleIcon() {
           alignItems: "center",
           justifyContent: "center",
           borderRadius: "50%",
-          background: "#142744",
+          /* The night ramp `icon.svg` carries, as a CSS gradient because this
+             renders through Satori. The glyph below stays a flat mid-stop of
+             the SVG's glyph gradient rather than a gradient fill: Satori's
+             SVG support is a narrow subset, and a `linearGradient` def that
+             silently fails would ship a black mark. A flat #aed4f7 is the
+             same icon to the eye at touch-icon size, and cannot fail. */
+          background:
+            "linear-gradient(155deg, #0f2038 0%, #16294a 50%, #0b1830 100%)",
         }}
       >
         {/* Rasterised to PNG, so the label is inert here — but the lint rule is
           right in general, and `role`/`aria-label` satisfy it without a
           <title> child, which Satori does not render. */}
         <svg
-          width="128"
-          height="128"
+          width="138"
+          height="138"
           viewBox="0 0 64 64"
           fill="none"
           role="img"
           aria-label="Explainaloud"
         >
-          <path d={EYE} fill="#9cc8f2" />
+          <path d={EYE} fill="#aed4f7" />
           <path
             d={SMILE}
-            stroke="#9cc8f2"
+            stroke="#aed4f7"
             strokeWidth="5"
             strokeLinecap="round"
           />
