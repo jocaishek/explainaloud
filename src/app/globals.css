@@ -35,57 +35,12 @@ main.lp-v2 {
   --miss: #c94f43;
   --miss-light: #efc1bb;
 
-  /* The same three verdicts, at the weight running text needs on the dark
-     ground.
-     The `-light` tints are display stops: at 60px in the headline they read as
-     green and red without argument, and at the size of a sentence they read as
-     tinted white — which is the one thing they cannot be where the whole point
-     is that a word changes colour as it is marked. The full stops are the
-     other extreme, dark enough against near-black to lose their hue.
-     These sit between: unmistakably the same green, amber and red, measured on
-     the hero ground at 9.7:1, 9.1:1 and 6.4:1. Three more values in a palette
-     that is meant to be reserved, and they earn it by being the same three
-     meanings rather than a fourth. */
-  --ok-spoken: #6fce9d;
-  --vague-spoken: #e2b463;
-  --miss-spoken: #e58a7e;
-
   /* Restated, because this block forces light surfaces regardless of the
      reader's theme. Without it, somebody browsing in dark mode gets the lifted
      night flame on a near-white card, which is the one place it washes out. */
   --flame: #ea580c;
   --flame-core: #fdba74;
   --flame-glow: rgba(234, 88, 12, 0.3);
-}
-
-/* One word of the hero's spoken line, arriving.
- *
- * A keyframe rather than a transition, which is the opposite of the rule and
- * correct for exactly this case: each span mounts once, plays once and is never
- * retargeted, so there is nothing for an interruptible transition to interrupt.
- * `both` holds the end state after it finishes.
- *
- * It is here rather than in the component because the component is a client
- * module rendering thirty of these at a time, and thirty `motion` elements each
- * running their own rAF loop over a WebGL canvas is how the hero dropped frames
- * the first time. */
-@keyframes lp-said-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.lp-said {
-  animation: lp-said-in 180ms linear both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-said {
-    animation: none;
-  }
 }
 
 /* The abstract field, not a photograph of anything.
@@ -106,29 +61,6 @@ main.lp-v2 {
  * artifacts off — more than that destroys the specular bands, which are the
  * only reason the image is worth having.
  */
-.lp-v2 .lp-atmosphere {
-  isolation: isolate;
-  /* The ground under the generated field, and the whole picture when the
-     field cannot run. Not the WebP any more: a still image behind this
-     headline has now been rejected three times, once as a photograph of a
-     place nobody could connect to the product and twice as an abstract that
-     read as stock. What is here instead is the same palette the shader
-     resolves to, laid out in the same composition, so the fallback is a
-     deliberate frame rather than a blank rectangle waiting for a script. */
-  background:
-    radial-gradient(
-      120% 90% at 78% 28%,
-      rgba(48, 106, 176, 0.55) 0%,
-      rgba(20, 55, 108, 0.4) 34%,
-      rgba(4, 14, 34, 0) 72%
-    ),
-    radial-gradient(
-      90% 70% at 92% 78%,
-      rgba(24, 74, 138, 0.4) 0%,
-      rgba(4, 12, 28, 0) 66%
-    ),
-    linear-gradient(112deg, #030a18 0%, #071633 46%, #0d2a52 100%);
-}
 
 /* Heaviest where the display type sits, lifting through the middle so the
  * artwork is actually visible, back over the lower third where the buttons
@@ -155,51 +87,6 @@ main.lp-v2 {
  * width, so a gradient that is 88% opaque at the left edge and clear by 64%
  * is simply a wash over the whole frame, and it was most of why the field was
  * invisible on a phone. Below the breakpoint only the vertical one runs. */
-/* The scrim over the hero's water.
- *
- * It used to clear almost completely through the middle — 0.06 at 42% — and on
- * a wide screen the horizontal pass fell to zero by 64%, which is exactly where
- * the panel and the mark sit. The field is a live fluid, so what that produced
- * was the busiest part of the page directly behind the thing the page is
- * trying to get read.
- *
- * These values are the closing section's, which nobody has ever complained
- * about: the water is present, it moves, and it stays behind the type instead
- * of competing with it. Same field, same ground, same treatment at both ends
- * of the page — which is the argument that section already makes for itself. */
-.lp-v2 .lp-hero-scrim {
-  background: linear-gradient(
-    180deg,
-    rgba(4, 12, 26, 0.55) 0%,
-    rgba(4, 12, 26, 0.42) 42%,
-    rgba(4, 12, 26, 0.55) 74%,
-    rgba(3, 9, 20, 0.72) 100%
-  );
-}
-
-@media (min-width: 1024px) {
-  .lp-v2 .lp-hero-scrim {
-    /* The horizontal pass still favours the left, because that is where the
-       headline is and it needs the most protection. What it no longer does is
-       reach zero: 0.28 on the right keeps the field readable as water without
-       letting it fight the panel sitting on top of it. */
-    background:
-      linear-gradient(
-        90deg,
-        rgba(3, 10, 24, 0.9) 0%,
-        rgba(3, 10, 24, 0.78) 30%,
-        rgba(3, 10, 24, 0.46) 50%,
-        rgba(3, 10, 24, 0.28) 64%
-      ),
-      linear-gradient(
-        180deg,
-        rgba(4, 12, 26, 0.5) 0%,
-        rgba(4, 12, 26, 0.36) 42%,
-        rgba(4, 12, 26, 0.5) 74%,
-        rgba(3, 9, 20, 0.7) 100%
-      );
-  }
-}
 
 .lp-v2 .lp-sky-nav {
   background: linear-gradient(
@@ -290,17 +177,6 @@ html:has(main.lp-v2) {
   html:has(main.lp-v2) {
     scroll-behavior: auto;
   }
-}
-
-.lp-v2 .lp-atmosphere::before {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
-  content: "";
-  opacity: 0.13;
-  pointer-events: none;
-  mix-blend-mode: soft-light;
 }
 
 /* A radial glow that tracked `--cursor-x` / `--cursor-y` lived here. Once the
@@ -2429,11 +2305,6 @@ html:has(main.lp-v2) {
 
 /* On the hero and the closing band the type sits on near-black water, so the
  * verdicts take their lit cuts. */
-.lp-v2 .lp-atmosphere {
-  --ok-mark: var(--ok-light);
-  --vague-mark: var(--vague-light);
-  --miss-mark: var(--miss-light);
-}
 
 /* Weight, not only colour. Colour alone fails in greyscale and for the eight
  * per cent of men who cannot separate the green from the red — which for a
@@ -2650,4 +2521,69 @@ html:has(main.lp-v2) {
     background-color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     border-color var(--dur-ui, 180ms) var(--ease-exit, ease-out);
+}
+
+/* ── The hero, spoken ──────────────────────────────────────────────────────
+ *
+ * The headline lights word by word at speaking pace — the karaoke gesture,
+ * not the typewriter one: every word is present from first paint at a
+ * readable dim, nothing reflows, nothing resets. The verdict words take
+ * their tints the moment they are "said", and the waveform below plays
+ * through on the same clock.
+ *
+ * Everything is pure CSS with `both` fills. Before its delay an element is
+ * in its not-yet state; after, its final one, forever. No observer and no
+ * JS in the loop, so if scripting fails the page still ends fully lit and
+ * marked — the resting-state lesson the streak flame taught once already.
+ * ------------------------------------------------------------------------ */
+
+/* The grade is a highlighter stroke, not a fade: a translucent swatch of
+   the verdict's own tint sweeps across the word left to right — the gesture
+   the demo console paints on a spoken claim, at display size — and the ink
+   snaps to the tint as the stroke covers it. `background-size` animation,
+   the house wipe, nothing but paint. */
+.lp-v2 .lp-grade {
+  padding-inline: 0.08em;
+  margin-inline: -0.08em;
+  background-repeat: no-repeat;
+  background-position: 0 54%;
+  background-size: 100% 0.82em;
+  animation: lp-grade-in 560ms var(--ease-enter) both;
+}
+
+.lp-v2 .lp-grade[data-verdict="ok"] {
+  color: var(--ok-light);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--ok-light) 26%, transparent),
+    color-mix(in srgb, var(--ok-light) 26%, transparent)
+  );
+}
+
+.lp-v2 .lp-grade[data-verdict="miss"] {
+  color: var(--miss-light);
+  background-image: linear-gradient(
+    color-mix(in srgb, var(--miss-light) 26%, transparent),
+    color-mix(in srgb, var(--miss-light) 26%, transparent)
+  );
+}
+
+@keyframes lp-grade-in {
+  from {
+    color: var(--primary-foreground);
+    background-size: 0% 0.82em;
+  }
+}
+
+/* Each bar flashes to full white at its moment and settles, so the stagger
+   reads as a playhead crossing the strip: dark ahead of it, flaring where it
+   is, lit behind it. Transform and opacity only. */
+
+/* A fragment of the take, in the air. Dim until "said", then lit in its
+   verdict's tint at scenery opacity — present from first paint, `both`
+   fills, resting fully marked like everything else in this hero. */
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-grade {
+    animation: none;
+  }
 }
