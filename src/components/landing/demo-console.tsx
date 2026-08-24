@@ -72,9 +72,6 @@ const TAKE_END = 0.8;
  *  and identical between renders, which a random set would not be. */
 const LEVELS = [0.2, 1.9, 3.4, 0.8, 2.6, 4.1, 1.2, 3.0, 5.2, 2.1] as const;
 
-/** Speaking pace, derived from the reveal rather than typed in. */
-const WORDS = (text: string) => text.trim().split(/\s+/).length;
-
 const VERDICT_LABEL: Record<PointVerdict, string> = {
   ok: "Reached",
   vague: "Too thin",
@@ -183,7 +180,7 @@ export function DemoConsole() {
      a word-at-a-time reveal on display type reads as a slideshow — and because
      the underline has to be able to wipe *across* a phrase, which needs a
      position inside it. */
-  const { chars, total, words } = useMemo(() => {
+  const { chars, total } = useMemo(() => {
     let charTotal = 0;
     const parts = demo.take.map(([text, verdict]) => {
       const start = charTotal;
@@ -193,7 +190,6 @@ export function DemoConsole() {
     return {
       chars: parts,
       total: charTotal,
-      words: demo.take.reduce((sum, [text]) => sum + WORDS(text), 0),
     };
   }, [demo]);
 
@@ -335,9 +331,6 @@ export function DemoConsole() {
   const clock = `${String(Math.floor(elapsed / 60)).padStart(2, "0")}:${String(
     Math.floor(elapsed % 60),
   ).padStart(2, "0")}`;
-  const wpm = Math.round(
-    words / (((TAKE_END - SETUP_END) * CYCLE_MS) / 1000 / 60),
-  );
 
   return (
     <div ref={rootRef} className="mx-auto w-full max-w-[76rem]">
@@ -630,10 +623,6 @@ export function DemoConsole() {
                       );
                     })}
                   </span>
-
-                  <Slug className="shrink-0 tabular-nums opacity-60">
-                    {wpm} wpm
-                  </Slug>
                 </div>
 
                 <p className="mt-5 font-display text-[1.15rem] leading-[1.45] tracking-[-0.01em] sm:text-[1.45rem] sm:leading-[1.38] lg:text-[clamp(1.5rem,2.1vw,2.1rem)] lg:leading-[1.32] lg:tracking-[-0.02em]">
