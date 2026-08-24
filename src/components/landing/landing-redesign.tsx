@@ -3,19 +3,10 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import {
-  type CSSProperties,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { type CSSProperties, useEffect, useRef, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { DemoConsole } from "~/components/landing/demo-console";
-import { FlowField } from "~/components/landing/flow-field";
 import { FriendsAndStreaks } from "~/components/landing/friends-streaks";
-import { GlassMark } from "~/components/landing/glass-mark";
 import { SignupNudge } from "~/components/landing/signup-nudge";
 
 const steps = [
@@ -73,7 +64,7 @@ const whyOutLoud = [
  * Only on blocks that are genuinely bounded. A mark at the corner of
  * something that runs off the edge of the screen is a lie about the layout.
  */
-function CornerMarks() {
+function CornerMarks({ tone = "text-border" }: { tone?: string }) {
   return (
     <>
       {(
@@ -87,7 +78,7 @@ function CornerMarks() {
         <span
           aria-hidden="true"
           key={position}
-          className={`pointer-events-none absolute size-[11px] text-border ${position}`}
+          className={`pointer-events-none absolute size-[11px] ${tone} ${position}`}
         >
           <span className="-translate-y-1/2 absolute top-1/2 left-0 h-px w-full bg-current" />
           <span className="-translate-x-1/2 absolute top-0 left-1/2 h-full w-px bg-current" />
@@ -152,6 +143,13 @@ const YRI_URL = "https://yriscience.com?ref=EXPLAINALOUD";
  */
 const YRI_GOLD = "#eccc65";
 
+/**
+ * The hero waveform, speech-shaped for the same reasons `READ_WAVE` is:
+ * runs of loud syllables, breath dips, one long quiet stretch. Identical on
+ * server and client, so nothing random. Each bar's delay walks the same
+ * 0.5-2.5s window the words light across, so the strip reads as the audio of
+ * the sentence above it.
+ */
 const ease = [0.23, 1, 0.32, 1] as const;
 /**
  * The read-through waveform.
@@ -175,430 +173,6 @@ const READ_WAVE = [
   46, 32, 22, 28, 42, 56, 70, 84, 66, 48, 32, 20, 26, 38, 54, 68, 60, 44, 30,
   20, 24, 36, 50, 64, 76, 58, 42, 28, 18, 22, 32, 46, 60, 52, 38, 26, 20,
 ] as const;
-
-/**
- * The hero's product panel: what the app does, marked the way the app marks.
- *
- * Three versions of this have now been thrown away, and the reasons are worth
- * keeping because each one was a different mistake.
- *
- * It began as an app window — a mic button with a pulsing ring, a twelve-bar
- * waveform, a running clock and three checklist rows. That is a picture of *a
- * recorder*, which is the least interesting true thing about this product, and
- * it carried every tell: chrome around content, a fake timestamp, an icon in a
- * circle, decoration that moves forever while explaining nothing.
- *
- * What replaced it was a sentence that typed itself into a paragraph, with the
- * words not yet said sitting there greyed out and the whole line riding a sine
- * curve. That was worse in a way that only shows up on screen. Ghosted text
- * means two weights and two colours on the same line with a ragged edge down
- * the middle of it; the curve means no two words share a baseline; and a
- * paragraph that fills up, stops, holds and empties is not continuous — it is
- * a thing that keeps starting over in the corner of your eye.
- *
- * So: one line, running. Words arrive at the speed somebody says them and the
- * line slides left to keep up, the way live captions do. Nothing is ever shown
- * before it is said, so there is no grey tail and no ragged edge. Nothing
- * resets, because the stream never ends — it is a loop with no seam in it.
- *
- * And a beat behind the newest word, each claim takes its verdict: green when
- * it is specific enough to check, amber when it was hedged, red where a step
- * was skipped. The same three colours the grader uses inside the app, because
- * the green somebody is shown before signing up has to be the green they are
- * graded in afterwards.
- *
- * The sentences are facts about the product. That is deliberate too — the page
- * marks its own claims, which is the only demonstration available to a landing
- * page that is forbidden from inventing proof.
- */
-
-/* `useLayoutEffect` is the right hook — the offset must be written before the
-   browser paints or the line is briefly in last word's position — but React
-   logs a warning for it on the server, where it does nothing at all. This is
-   the standard shim, and it is correct here because the first server render
-   has no words in it to measure. */
-const useIsomorphicLayoutEffect =
-  typeof window === "undefined" ? useEffect : useLayoutEffect;
-
-/** A claim's verdict, or `null` for the connective tissue between claims. */
-type Verdict = "ok" | "vague" | "miss" | null;
-
-/**
- * The stream, in the order it is spoken. It loops, so the last line has to run
- * into the first without a join you can hear.
- *
- * Split by claim rather than by word, so a verdict covers the span it belongs
- * to; the words inside are what arrive one at a time.
- */
-const SPOKEN: Array<{ text: string; verdict: Verdict }> = [
-  { text: "So the idea is you give it whatever you are", verdict: null },
-  { text: "meant to know by Thursday,", verdict: "ok" },
-  { text: "a chapter, a deck, a paper you have", verdict: null },
-  { text: "not read closely enough,", verdict: "ok" },
-  { text: "and it reads the whole thing and works out", verdict: null },
-  { text: "the points you would be expected to hit.", verdict: "ok" },
-  { text: "Then you talk.", verdict: null },
-  { text: "Three minutes,", verdict: "ok" },
-  { text: "nothing in front of you,", verdict: "ok" },
-  { text: "no script to fall back on.", verdict: null },
-  { text: "And while you are still talking, it marks you.", verdict: null },
-  { text: "The claims solid enough to check", verdict: null },
-  { text: "turn green.", verdict: "ok" },
-  { text: "The ones you", verdict: null },
-  { text: "sort of, kind of", verdict: "vague" },
-  { text: "got to", verdict: null },
-  { text: "turn amber.", verdict: "vague" },
-  { text: "And the step you skipped straight past", verdict: null },
-  { text: "never turns up at all,", verdict: "miss" },
-  { text: "because you never said it.", verdict: null },
-  { text: "What you get at the end is not a score out of ten.", verdict: null },
-  { text: "It is a list of the things", verdict: null },
-  { text: "you did not say.", verdict: "miss" },
-  { text: "Which is the only part worth knowing.", verdict: "ok" },
-  { text: "So you read it, and you go again,", verdict: null },
-  { text: "and this time you say them.", verdict: null },
-];
-
-/**
- * Between words, and this is a speaking pace rather than an animation duration.
- *
- * It was 190ms, which is 315 words a minute. Nobody talks at 315 words a
- * minute — an unhurried explanation runs about 150 and a brisk one about 180,
- * which is the range the product measures people in and shows back to them.
- * At 190 the line was not somebody explaining something, it was a ticker, and
- * a reader could not finish a clause before it had gone.
- *
- * 340ms is 176 words a minute: the top of the ordinary range, because this
- * still has to hold a landing page rather than lull it.
- */
-const WORD_MS = 340;
-
-/**
- * How long the line takes to travel one word, and deliberately longer than the
- * gap between words.
- *
- * Set equal to `WORD_MS` each transition finished exactly as the next began,
- * so the line moved in discrete hops of one word — and because words are not
- * the same width, each hop ran at a different speed. Fast, slow, fast, stop.
- * That is the choppiness.
- *
- * Overlapping them fixes it, and CSS is what makes it free: a transition
- * retargeted mid-flight continues from where it actually is rather than
- * restarting, so these average out into one steady drift at about the speed of
- * speech. The line sits a word or so behind its mark, which nobody can see, and
- * moves evenly, which everybody can.
- *
- * The multiple came down from 2.1 with the slower word rate. The distance per
- * hop is unchanged — one word — so a longer gap between words already means a
- * lower velocity, and keeping the old overlap on top of that would leave the
- * line trailing two full words behind the one being said.
- */
-const GLIDE_MS = Math.round(WORD_MS * 1.7);
-
-/**
- * How far behind the newest word a verdict lands, counted in words.
- *
- * A timer per word would do the same job and would drift: fifteen timers all
- * started at once, each firing into React state, is fifteen chances for the
- * colours to arrive out of order after a tab has been backgrounded. Counting
- * words instead makes the delay a property of the stream — it cannot desync
- * from the thing it is trailing, because it *is* the thing it is trailing,
- * minus two.
- */
-const RESOLVE_LAG = 2;
-
-/**
- * How many words stay in the DOM behind the read edge.
- *
- * Anything further left has been clipped for several seconds. The window
- * slides rather than growing, so an hour on this page costs the same as a
- * minute — and dropping from the front is free precisely because the offset
- * below is measured from `scrollWidth` on every commit: the track gets
- * narrower by exactly the width that came off it, the offset shrinks to match,
- * and nothing on screen moves.
- */
-const WINDOW = 26;
-
-/** The verdict tokens sized for running text. See `globals.css` for why. */
-const VERDICT_INK: Record<Exclude<Verdict, null>, string> = {
-  ok: "var(--ok-spoken)",
-  vague: "var(--vague-spoken)",
-  miss: "var(--miss-spoken)",
-};
-
-const LEGEND: Array<{ verdict: Exclude<Verdict, null>; label: string }> = [
-  { verdict: "ok", label: "Checkable" },
-  { verdict: "vague", label: "Hedged" },
-  { verdict: "miss", label: "Skipped" },
-];
-
-/** Every word of the loop, flattened once, each remembering its claim. */
-const WORDS = SPOKEN.flatMap((part, partIndex) =>
-  part.text
-    .split(" ")
-    .map((word) => ({ word, verdict: part.verdict, partIndex })),
-);
-
-function SpokenLine() {
-  const reduceMotion = useReducedMotion();
-  const track = useRef<HTMLParagraphElement>(null);
-  const viewport = useRef<HTMLDivElement>(null);
-
-  /* One counter, and everything on screen is a function of it. It only ever
-     goes up — the modulo happens where the words are read, so the stream has
-     no wrap-around to render and therefore no seam.
-     *
-     * It starts at a full line rather than at zero, for two reasons. The first
-     * is that the hero's first painted frame should not contain a hole where a
-     * sentence is going to be; watching it type itself in from nothing is a
-     * worse arrival than finding it already talking. The second is a failure
-     * mode: the interval below refuses to run while the document reports
-     * itself hidden, and any context that reports hidden while still painting
-     * — an embedded webview, a preview pane — would otherwise get a blank
-     * strip forever. Starting full means the worst case is a line that does
-     * not move, rather than a line that is not there. */
-  const [spoken, setSpoken] = useState(WINDOW);
-  /* Two numbers rather than one, and the split is the whole trick — see the
-     layout effect below for what went wrong with a single offset. */
-  const [glide, setGlide] = useState(0);
-  const [shift, setShift] = useState(0);
-  /* Widths of the words currently on screen, plus running totals for every word
-     that has ever been said and every word that has since been dropped. Refs,
-     not state: they are the arithmetic behind the two numbers above, and
-     re-rendering when they change would be re-rendering twice for one word. */
-  const widths = useRef(new Map<number, number>());
-  const saidWidth = useRef(0);
-  const goneWidth = useRef(0);
-  /** Set by the resize observer, cleared by the layout effect that acts on it. */
-  const rebase = useRef(false);
-  const [resized, setResized] = useState(0);
-
-  /* Stopped while the tab is in the background, and this is not a nicety.
-   *
-   * A hidden tab suspends rendering but keeps firing timers, so the words
-   * would go on being added — hundreds of them over a lunch break — while the
-   * transition that carries the line to meet them never advances a frame. The
-   * two come back in sync the moment the tab is looked at again, which is a
-   * page opening on a sentence sprinting backwards out of shot. Measured at
-   * two thousand pixels adrift after a couple of minutes behind another
-   * window. */
-  useEffect(() => {
-    if (reduceMotion) return;
-    let id = 0;
-
-    const start = () => {
-      if (id) return;
-      id = window.setInterval(() => setSpoken((n) => n + 1), WORD_MS);
-    };
-    const stop = () => {
-      window.clearInterval(id);
-      id = 0;
-    };
-    const sync = () => (document.hidden ? stop() : start());
-
-    sync();
-    document.addEventListener("visibilitychange", sync);
-    return () => {
-      stop();
-      document.removeEventListener("visibilitychange", sync);
-    };
-  }, [reduceMotion]);
-
-  /* The sliding window, oldest first. `spoken` counts words said since the page
-     opened and keeps counting past the end of the loop; the modulo here is what
-     makes it a loop, and doing it per word rather than per pass is why there is
-     no moment where the line is empty. */
-  const visible = useMemo(() => {
-    const from = Math.max(0, spoken - WINDOW);
-    const out: Array<{ key: number; word: string; verdict: Verdict }> = [];
-    for (let i = from; i < spoken; i++) {
-      const source = WORDS[i % WORDS.length];
-      out.push({
-        key: i,
-        word: source.word,
-        // A verdict lands a couple of words after the claim has moved on.
-        verdict: i <= spoken - 1 - RESOLVE_LAG ? source.verdict : null,
-      });
-    }
-    return out;
-  }, [spoken]);
-
-  /* Reduced motion gets the same sentence, standing still and fully marked.
-     Not a second component: the same words, the same colours, no interval. */
-  const still = useMemo(
-    () =>
-      WORDS.slice(0, 14).map((source, index) => ({
-        key: index,
-        word: source.word,
-        verdict: source.verdict,
-      })),
-    [],
-  );
-  const shown = reduceMotion ? still : visible;
-
-  /* A rotation, a window drag, a devtools panel opening: all of them change the
-     box and the type size together. Nothing is recomputed here — the flag is
-     read by the layout effect below, which is the only place that owns the
-     numbers. */
-  useEffect(() => {
-    const box = viewport.current;
-    if (!box || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(() => {
-      rebase.current = true;
-      setResized((n) => n + 1);
-    });
-    observer.observe(box);
-    return () => observer.disconnect();
-  }, []);
-
-  /* Measured after layout and before paint, so the line has never been seen in
-     the wrong place. The read edge is the right-hand side of the viewport less
-     a gutter: words fill leftwards from there, which is where the eye already
-     is, and older ones slide out under the fade on the left.
-     *
-     * **Why two transforms.** The obvious version measures `scrollWidth` and
-     * transitions one transform to `readEdge - scrollWidth`, and it works right
-     * up until the window fills. After that, every tick both appends a word on
-     * the right and removes one on the left — and removing it shifts the whole
-     * line left *instantly*, by that word's width, because the track is
-     * anchored on its left edge. A single transform has to undo that jump and
-     * perform the glide at the same time, over the same 190ms, and the two
-     * mostly cancel: the line stops moving and the words start stepping.
-     *
-     * So the jump and the glide are separated. The outer element carries the
-     * total width of everything dropped and is never transitioned, which
-     * cancels the removal in the same frame it happens. The inner one carries
-     * the total width of everything ever said, only ever grows, and is the only
-     * thing that animates. What is left is one number sliding in one direction
-     * for as long as the page is open. */
-  useIsomorphicLayoutEffect(() => {
-    const row = track.current;
-    const box = viewport.current;
-    if (!row || !box) return;
-
-    const spans = row.children;
-    const oldest = shown.length > 0 ? shown[0].key : 0;
-
-    /* Everything measured so far is void once the box changes size, because the
-       type is set in `vw` and every cached width is from the old size. Summed
-       against the new layout they put the line hundreds of pixels out — on a
-       phone the whole strip left the screen and never came back, which is how
-       this was found. Rebasing throws the running totals away and starts again
-       from what is on screen right now. */
-    if (rebase.current) {
-      rebase.current = false;
-      widths.current.clear();
-      saidWidth.current = 0;
-      goneWidth.current = 0;
-    }
-
-    for (let i = 0; i < shown.length; i++) {
-      const key = shown[i].key;
-      if (widths.current.has(key)) continue;
-      // The fractional width, not `offsetWidth`: these are summed over
-      // thousands of words, and half a pixel of rounding per word is a line
-      // that has drifted a word and a half off its mark inside two minutes.
-      const width = (spans[i] as HTMLElement).getBoundingClientRect().width;
-      widths.current.set(key, width);
-      saidWidth.current += width;
-    }
-    for (const [key, width] of widths.current) {
-      if (key >= oldest) continue;
-      goneWidth.current += width;
-      widths.current.delete(key);
-    }
-
-    const readEdge = box.clientWidth - 24;
-    setGlide(Math.max(0, saidWidth.current - readEdge));
-    setShift(goneWidth.current);
-    // `resized` is a dependency for its side effect on `rebase`, not its value.
-  }, [shown, resized]);
-
-  return (
-    <section
-      aria-label="What Explainaloud does, marked the way it marks you"
-      className="w-full"
-    >
-      {/* Fixed to one line and one height. A strip that grows and shrinks with
-          its content is a strip that shoves the buttons under it around, and
-          the reason the last version looked broken was that its right edge was
-          a different length every second. */}
-      <div
-        ref={viewport}
-        className="relative overflow-hidden"
-        style={{
-          /* Faded at both ends rather than cut. Words are mid-sentence when
-             they leave, and a hard edge chops a letter in half. */
-          maskImage:
-            "linear-gradient(to right, transparent, black 8%, black 94%, transparent)",
-          WebkitMaskImage:
-            "linear-gradient(to right, transparent, black 8%, black 94%, transparent)",
-        }}
-      >
-        {/* A plain `p` with a CSS transition, deliberately, and this is the
-            second time this component has been rewritten for the same reason.
-            framer owns the `style` attribute of a `motion` element, and an
-            `animate` target recomputed from a ref measurement taken in a layout
-            effect never reached the DOM — the line sat at `translateX(0)` while
-            every word after the eighth ran off the right-hand edge.
-
-            A transition is also the better tool here. The value changes once
-            per word, always in the same direction, always by an amount decided
-            before the frame is drawn: that is a predetermined animation, so it
-            belongs on the compositor rather than in a `requestAnimationFrame`
-            loop competing with the WebGL field behind it. */}
-        {/* The instant half. Never transitioned, on purpose. */}
-        <div
-          style={{ transform: `translate3d(${shift}px, 0, 0)` }}
-          className="will-change-transform"
-        >
-          <p
-            ref={track}
-            /* The animated half. Linear, and longer than one word, so the
-               transitions overlap into one steady drift rather than a row of
-               discrete hops at varying speeds. See `GLIDE_MS`. */
-            style={{
-              transform: `translate3d(${-glide}px, 0, 0)`,
-              transition: reduceMotion
-                ? undefined
-                : `transform ${GLIDE_MS}ms linear`,
-            }}
-            className="whitespace-nowrap py-1 font-display text-[clamp(1.05rem,2.3vw,1.6rem)] text-primary-foreground leading-[1.6] tracking-[-0.02em] will-change-transform"
-          >
-            {shown.map(({ key, word, verdict }) => (
-              <span
-                key={key}
-                /* The arrival is a keyframe in `globals.css` and the colour is a
-                   transition on this class, and both are CSS rather than JS for
-                   the same reason: there are thirty of these on screen at once,
-                   over a canvas that is already using the GPU. */
-                style={verdict ? { color: VERDICT_INK[verdict] } : undefined}
-                className="lp-said inline-block whitespace-pre transition-colors duration-500"
-              >
-                {word}{" "}
-              </span>
-            ))}
-          </p>
-        </div>
-      </div>
-
-      {/* What the three colours mean, said once. The stream demonstrates them;
-          this names them, which is the part a moving line cannot do. */}
-      <ul className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-2 border-white/12 border-t pt-5 font-mono text-[0.66rem] uppercase tracking-[0.14em]">
-        {LEGEND.map((entry) => (
-          <li key={entry.verdict} className="flex items-center gap-2">
-            <span
-              aria-hidden
-              className="size-1.5 rounded-full"
-              style={{ background: VERDICT_INK[entry.verdict] }}
-            />
-            <span className="text-primary-foreground/70">{entry.label}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
 
 /* The floating chat bubble lived here. It was a fixed circle in the corner
  * that opened a card asking "what do you need to say clearly today?" — which
@@ -829,9 +403,6 @@ export function LandingRedesign() {
   const heroRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const navSentinelRef = useRef<HTMLDivElement>(null);
-  const flyerRef = useRef<HTMLDivElement>(null);
-  const flyerSpinRef = useRef<HTMLDivElement>(null);
-  const navSlotRef = useRef<HTMLSpanElement>(null);
 
   /**
    * The bar turns to glass once it is off the hero.
@@ -895,60 +466,6 @@ export function LandingRedesign() {
         "is-light",
         sentinel.getBoundingClientRect().top <= 64,
       );
-
-      const flyer = flyerRef.current;
-      const spin = flyerSpinRef.current;
-      const slot = navSlotRef.current;
-      const hero = heroRef.current;
-      if (!flyer || !spin || !slot || !hero) return;
-
-      // Below `lg` the flyer is not rendered at all; nothing to place.
-      if (flyer.offsetWidth === 0) return;
-
-      const heroRect = hero.getBoundingClientRect();
-      const slotRect = slot.getBoundingClientRect();
-      const size = flyer.offsetWidth;
-
-      /* The journey is the first screen. It is complete by the time the hero
-         has scrolled away, so the mark is already the nav mark before any of
-         the light sections arrive — which is what stops it from ever being an
-         object floating over a paragraph. */
-      const travel = Math.max(1, heroRect.height * 0.72);
-      const raw = -heroRect.top / travel;
-      const t = raw < 0 ? 0 : raw > 1 ? 1 : raw;
-      // ease-in-out, so it leaves and arrives calmly rather than linearly
-      const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
-
-      /* Centred in the right half, on the hero's own centre line.
-         Every previous position was a number picked to avoid something: away
-         from the headline, out of the bright part of the water, lower so it
-         stopped colliding. Avoiding things is why it kept reading as awkward,
-         because a mark placed by exclusion is not placed at all, and the eye
-         can tell.
-
-         This is placed by the layout instead. The hero is a headline column
-         on the left and open water on the right; the centre of that right
-         half is a real position in the composition, and sitting on the hero's
-         vertical centre line puts it in the same optical row as the headline
-         it belongs to. It reads as deliberate because it is. */
-      const startX = heroRect.left + heroRect.width * 0.75 - size / 2;
-      const startY = heroRect.top + heroRect.height * 0.46 - size / 2;
-      const endScale = slotRect.width / size;
-
-      const x = startX + (slotRect.left - startX) * e;
-      const y = startY + (slotRect.top - startY) * e;
-      const scale = 1 + (endScale - 1) * e;
-
-      flyer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-      flyer.style.opacity = String(0.82 + 0.18 * e);
-      spin.style.transform = reduceMotion
-        ? "none"
-        : `rotateY(${(e * 360).toFixed(2)}deg)`;
-
-      /* The static nav mark only appears once the flyer is on top of it, so
-         the two are never both visible and never both absent. */
-      slot.style.opacity = e > 0.995 ? "1" : "0";
-      flyer.style.visibility = e > 0.995 ? "hidden" : "visible";
     };
     /* A frame loop, not a scroll listener.
        Scroll events are the obvious input here and they are not dependable
@@ -994,7 +511,7 @@ export function LandingRedesign() {
       window.removeEventListener("resize", forceSync);
       document.removeEventListener("visibilitychange", forceSync);
     };
-  }, [reduceMotion]);
+  }, []);
 
   useEffect(() => {
     if (!heroRef.current || !pageRef.current) return;
@@ -1212,73 +729,6 @@ export function LandingRedesign() {
              actually means something, and one of those is a signature while
              two is a mannerism. */
 
-          /* The console opens rather than appears: it comes in from below and
-             seats itself. This is the one thing on the page a reader is meant
-             to reach for, and it should feel like a piece of equipment being
-             set down in front of them.
-             *
-             * **This one is kept at full strength on purpose.** Everything
-             * else on the page was turned down; this was not. A reveal earns
-             * its distance when it is pointing at the thing the page is
-             * about, and one deliberate arrival among quiet ones reads as
-             * emphasis — where six of them read as a template. */
-          reveals.push(
-            gsap.from(".lp-product-window", {
-              y: 40,
-              opacity: 0,
-              duration: 0.66,
-              /* Was `back.out(1.15)` with a scale, so the console arrived
-                 slightly small and sprang to size. `design.md` bans overshoot,
-                 and a scale on this element in particular re-rasterises a
-                 window full of small type mid-flight. It rises and fades. */
-              ease: "power2.out",
-              scrollTrigger: {
-                trigger: ".lp-product-window",
-                start: "top 88%",
-                toggleActions: "play none none reverse",
-              },
-            }),
-          );
-
-          gsap.utils
-            .toArray<HTMLElement>("[data-feature-card]")
-            .forEach((element) => {
-              /* A rise and a fade, and nothing else.
-               *
-               * This used to overshoot: the card arrived *slightly large*
-               * and relaxed to size, on `back.out(1.1)`. `design.md` bans
-               * spring and overshoot easing outright and it was right to —
-               * an interface element that bounces is an interface element
-               * behaving like a toy, and this is a study tool somebody opens
-               * the night before a talk. The scale is gone with it: a card
-               * that changes size while arriving is a card whose type
-               * changes size while arriving.
-               *
-               * No horizontal component anywhere: the marks and the waveform
-               * already own left-to-right. */
-              reveals.push(
-                gsap.fromTo(
-                  element,
-                  { y: 10, opacity: 0 },
-                  {
-                    y: 0,
-                    opacity: 1,
-                    duration: 0.42,
-                    /* The per-card delay is gone with the stagger above. Three
-                       cards in a row arriving 80ms apart is a wave, and a wave
-                       is the reader watching the layout instead of reading
-                       it. */
-                    ease: "power2.out",
-                    scrollTrigger: {
-                      trigger: element,
-                      start: "top 88%",
-                      toggleActions: "play none none none",
-                    },
-                  },
-                ),
-              );
-            });
-
           /* The cursor halo, orb and particle trail lived here.
              `design.md` bans cursor-following effects by name, and this was
              three of them stacked: a lagging ring, a faster dot, and a
@@ -1366,6 +816,140 @@ export function LandingRedesign() {
               },
             },
           );
+
+          /* The one set-piece: the three steps, played.
+           *
+           * A pinned horizontal track was tried here once and removed,
+           * correctly: it pinned three cards that were 1424px wide inside a
+           * 1440px window and travelled zero pixels, so the page locked and
+           * nothing happened. The note left behind was that an effect whose
+           * existence depends on the reader's screen being narrow enough is a
+           * bug with good timing, and that is still true.
+           *
+           * Two things are different. The track is *authored* wide — three
+           * panels at 46vw with 7vw gutters and lead-ins at either end — so
+           * the travel is real at 1440px and at 2560px alike, and the guard
+           * below refuses to run at all if the measured distance is small.
+           *
+           * And it holds itself still with `position: sticky` rather than
+           * with ScrollTrigger's `pin`. That is not a stylistic preference.
+           * `pin` rewrites the element to `position: fixed` and computes a
+           * `top` from measurements taken when the trigger was built — and
+           * this page is still growing at that moment, because the display
+           * font has not landed. Measured with the pin: the stage sat at
+           * `top: -825px` through the whole run, which is a locked page with
+           * nothing on it. Sticky has no arithmetic to get wrong. The runway
+           * above it is a plain height, and the only thing the script does is
+           * slide the track and keep that height in step with the viewport.
+           *
+           * The head is fixed at a third of the width and the take goes past
+           * it. Crossing it marks a step: the rule draws across the panel and
+           * the step comes up to full. The clock underneath runs the length of
+           * a rehearsal, because that is what is being scrubbed. */
+          const rail = document.querySelector<HTMLElement>("[data-steps-rail]");
+          const stage =
+            document.querySelector<HTMLElement>("[data-steps-stage]");
+          const track =
+            document.querySelector<HTMLElement>("[data-steps-track]");
+          const clock =
+            document.querySelector<HTMLElement>("[data-steps-clock]");
+
+          /* Height as well as width. A short window — a laptop with the
+             console open, a browser on a 13-inch screen with a lot of
+             chrome — leaves a stage too shallow for a panel to sit in, and
+             the caption and the type end up on top of each other. */
+          if (
+            rail &&
+            stage &&
+            track &&
+            !reduceMotion &&
+            window.innerWidth >= 1024 &&
+            window.innerHeight >= 680
+          ) {
+            stage.classList.add("is-live");
+            track.classList.add("is-live");
+
+            const distance = () =>
+              Math.max(0, track.scrollWidth - window.innerWidth);
+
+            if (distance() > window.innerWidth * 0.5) {
+              const stepEls = Array.from(
+                track.querySelectorAll<HTMLElement>("[data-step]"),
+              );
+
+              /* The runway is exactly as long as the travel, so the track is
+                 still moving for every pixel the stage is stuck — a sticky
+                 section that holds after its content has stopped is a dead
+                 screen somebody has to scroll through. */
+              const sizeRail = () => {
+                rail.style.height = `${window.innerHeight + distance()}px`;
+              };
+              sizeRail();
+              ScrollTrigger.addEventListener("refreshInit", sizeRail);
+              docCleanups.push(() =>
+                ScrollTrigger.removeEventListener("refreshInit", sizeRail),
+              );
+
+              /* The head is a screen position, so the test is where a panel
+                 is *now* rather than what fraction of the tween has elapsed —
+                 which keeps it honest through a resize, a refresh, or a
+                 reader who lands in the middle of the run. */
+              const markPassed = () => {
+                const head = window.innerWidth * 0.32;
+                for (const step of stepEls) {
+                  step.dataset.lit =
+                    step.getBoundingClientRect().left <= head ? "1" : "0";
+                }
+              };
+
+              /* The marking runs off the *tween*, not off the trigger.
+                 A scrub keeps animating for a beat after the scroll stops, and
+                 ScrollTrigger's own `onUpdate` only fires on scroll — so the
+                 last frames of every run went unmarked and the third step
+                 stayed dim at the end of the track. */
+              /* The clock reads the track's own position rather than the
+                 trigger's progress. Reaching for the tween from inside its
+                 own `onUpdate` is a temporal-dead-zone error — GSAP fires the
+                 first update during construction, before the variable holding
+                 it exists — and this is truer anyway: it is a readout of where
+                 the take actually is, not of how far the scroll has got. */
+              const paint = () => {
+                markPassed();
+                if (!clock) return;
+                const travelled = -(Number(gsap.getProperty(track, "x")) || 0);
+                const total = distance() || 1;
+                const seconds = Math.round(
+                  Math.min(1, Math.max(0, travelled / total)) * 180,
+                );
+                clock.textContent = `${String(
+                  Math.floor(seconds / 60),
+                ).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`;
+              };
+
+              gsap.to(track, {
+                x: () => -distance(),
+                ease: "none",
+                onUpdate: paint,
+                scrollTrigger: {
+                  trigger: rail,
+                  start: "top top",
+                  end: "bottom bottom",
+                  scrub: 0.35,
+                  invalidateOnRefresh: true,
+                },
+              });
+
+              /* Once at rest, or the first step is dim until somebody
+                 scrolls — `onUpdate` does not fire for a page that has not
+                 moved yet. */
+              paint();
+            } else {
+              /* Not enough room to travel. Put it back rather than holding a
+                 page still in front of somebody for nothing. */
+              stage.classList.remove("is-live");
+              track.classList.remove("is-live");
+            }
+          }
 
           /* Character-by-character scrubbed resolve on the argument
              headlines lived here: every letter split into its own span,
@@ -1570,12 +1154,7 @@ export function LandingRedesign() {
             <span className="lp-nav-brand-copy font-sans font-semibold text-[1.05rem] tracking-[-0.025em]">
               Explainaloud
             </span>
-            {/* The flyer lands here. Hidden until it arrives, so the mark is
-                never doubled and never missing. */}
-            <span
-              ref={navSlotRef}
-              className="block h-9 w-9 shrink-0 opacity-0 transition-opacity duration-150"
-            >
+            <span className="block h-9 w-9 shrink-0">
               <ExplainaloudMark className="h-9 w-9" />
             </span>
           </Link>
@@ -1600,149 +1179,101 @@ export function LandingRedesign() {
       <section
         id="hero"
         ref={heroRef}
-        className="lp-atmosphere relative overflow-hidden bg-primary px-5 text-primary-foreground md:px-8"
+        /* `pt` carries the bar as well as the gutter. The section starts at the
+           top of the document and the bar floats over its first 64px, so equal
+           padding centres the block against a top that is not there and the
+           whole hero sits low in the frame. */
+        className="relative flex min-h-[64svh] flex-col justify-center overflow-hidden border-border border-b bg-background px-5 pt-32 pb-20 md:min-h-[min(86svh,48rem)] md:px-10 md:pt-40 md:pb-24 lg:px-14"
       >
-        {/* The field itself, generated per frame. It sits under the scrim and
-            over the CSS ground, so if WebGL is unavailable or the reader has
-            asked for reduced motion the canvas stays empty and the ground
-            below is what shows. */}
-        <FlowField className="absolute inset-0 z-0 h-full w-full" />
-        <div
-          aria-hidden="true"
-          className="lp-hero-scrim absolute inset-0 z-[1]"
-        />
-
-        {/* `fixed` with `top:0; left:0`, and placed entirely by transform, so
-            the handler has one number to write instead of fighting a layout.
-            It is safe to be fixed again because its position is recomputed
-            from scroll every frame rather than animated toward a target. */}
-        <div
-          id="bg-logo"
-          ref={flyerRef}
-          aria-hidden="true"
-          className="pointer-events-none fixed top-0 left-0 z-[60] hidden h-[clamp(10rem,15vw,15rem)] w-[clamp(10rem,15vw,15rem)] origin-top-left text-[length:clamp(10rem,15vw,15rem)] [perspective:1100px] will-change-transform lg:block"
-        >
-          {/* The turn is on its own element so nothing competes for the
-              transform that is carrying the travel. */}
+        {/* One idea, nothing around it.
+         *
+         * The last pass added a scrolling band of marks along the foot and a
+         * caption hung off the redaction, and both were wrong. A poster works
+         * because there is one thing on it. Adding a second and a third thing
+         * to a poster that read as quiet does not make it louder, it makes it
+         * a page with a poster on it — and the caption, set to `nowrap` off
+         * the right-hand end of a word that already runs most of the measure,
+         * pushed the headline off the screen at every width under about
+         * 1700px.
+         *
+         * What is left: two lines, two colours, and a redaction. Green on the
+         * doing, red on the finding, and a bar over the last word that lifts
+         * left to right. Twelve words of body copy instead of thirty. */}
+        <div className="relative z-[2] mx-auto w-full max-w-[92rem]">
           <div
-            ref={flyerSpinRef}
-            id="bg-logo-spin"
-            className="h-full w-full will-change-transform"
-            style={{ transformStyle: "preserve-3d" }}
+            data-hero-secondary
+            className="flex items-baseline justify-between gap-6 font-mono text-[0.6rem] text-muted-foreground uppercase tracking-[0.2em]"
           >
-            <GlassMark className="h-full w-full" />
+            <span className="text-brand-ink">Rehearse out loud</span>
+            {/* Off on a phone. Two short slugs at either end of a 350px line
+                both wrap to two lines and the row turns into a four-line
+                block of tracked capitals above the headline. */}
+            <span className="hidden text-right sm:inline">
+              Three minutes &middot; no notes
+            </span>
           </div>
-        </div>
-        <div className="relative z-[2] flex min-h-screen flex-col pt-20 md:pt-24">
-          <div className="relative z-10 mx-auto flex w-full max-w-[76rem] flex-1 flex-col items-center justify-center py-8 text-center lg:items-start lg:text-left">
-            <h1 className="relative mx-auto max-w-[12ch] font-display lg:mx-0 lg:max-w-[11ch] text-[clamp(2.2rem,5.4vw,5.4rem)] text-primary-foreground leading-[0.92] tracking-[-0.055em]">
-              <span className="block overflow-hidden pb-[0.08em]">
-                <span data-hero-word className="inline-block">
-                  Say
-                </span>{" "}
-                <span data-hero-word className="inline-block">
-                  what
-                </span>{" "}
-                <span data-hero-word className="inline-block">
-                  you
-                </span>
-              </span>
-              <span className="block overflow-hidden pb-[0.08em]">
-                {/* The headline marks itself.
-                    Green under what you know, red under what you missed: the
-                    product's own two verdicts, drawn with the product's own
-                    gesture, on the first sentence anybody reads. It explains
-                    the entire idea before a word of copy has been read, and
-                    it is the reason the marks further down the page are
-                    already legible when they arrive. */}
-                <span data-hero-word className="inline-block">
-                  <span
-                    data-hero-mark="ok"
-                    data-verdict="ok"
-                    className="lp-verdict whitespace-nowrap"
-                  >
-                    know.
-                  </span>
-                </span>{" "}
-                <span data-hero-word className="lp-hero-em inline-block">
-                  See
-                </span>
-              </span>
-              <span className="block overflow-hidden pb-[0.08em]">
-                {/* The mark goes on "missed." alone, never on the phrase.
-                    It was on the whole of "what you missed.", which is an
-                    inline-block whose text wraps onto two lines. An
-                    inline-block does not fragment: it is one box as wide as
-                    its widest line, so the rule was drawn once, along the
-                    bottom of that box, running the full width of the column
-                    and far past the last word. `box-decoration-break` cannot
-                    help, because there is only ever one box to decorate.
 
-                    A mark is a verdict on a phrase, so the phrase has to be
-                    something that cannot break. One word always is. */}
-                <span data-hero-word className="lp-hero-em inline-block">
-                  what you{" "}
-                  <span
-                    data-hero-mark="miss"
-                    data-verdict="miss"
-                    className="lp-verdict whitespace-nowrap"
-                  >
-                    missed.
-                  </span>
-                </span>
+          <h1
+            data-hero-word
+            className="mt-10 font-display text-[clamp(2.3rem,9.4vw,8.6rem)] text-strong uppercase leading-[0.88] tracking-[-0.055em] md:mt-12"
+          >
+            <span className="block whitespace-nowrap">
+              Say it <span className="text-[color:var(--ok)]">out loud.</span>
+            </span>
+            <span className="block whitespace-nowrap">
+              Find the{" "}
+              <span className="lp-redact">
+                <span aria-hidden="true" className="lp-redact-block" />
+                <span className="lp-redact-word">gaps.</span>
               </span>
-            </h1>
+            </span>
+          </h1>
 
+          <div className="mt-12 flex flex-col gap-8 border-border border-t pt-8 md:mt-16 md:flex-row md:items-center md:justify-between md:gap-16">
             <p
               data-hero-secondary
-              className="mt-6 max-w-[36rem] text-primary-foreground/85 text-[1.05rem] leading-relaxed lg:max-w-[30rem]"
+              className="max-w-[30ch] text-[1.08rem] text-muted-foreground leading-relaxed"
             >
-              Explain your notes out loud for three minutes. Get back every
-              point you nailed, rushed, or never reached.
+              Explain it in your own words. Every sentence gets marked as you
+              speak.
             </p>
-
             <div
               data-hero-secondary
-              className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row lg:justify-start"
+              className="flex w-full flex-col items-stretch gap-4 sm:w-auto sm:flex-row sm:items-center md:shrink-0"
             >
               <Link
                 href="/signup"
                 data-gsap-hover
-                className="group inline-flex h-12 items-center gap-5 border border-[var(--accent-solid)] bg-[var(--accent-solid)] px-6 font-medium text-[var(--brand-foreground)]"
+                className="group inline-flex h-13 items-center justify-center gap-4 bg-[var(--panel-deep)] px-8 font-medium text-[1.02rem] text-primary-foreground"
               >
                 Start explaining
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Link>
               <a
-                href="#how-it-works"
+                href="#live-demo"
                 data-gsap-hover
-                className="inline-flex h-12 items-center border border-white/30 px-6 font-medium text-primary-foreground"
+                className="group inline-flex h-13 items-center justify-center gap-2 px-1 font-medium text-brand-ink"
               >
-                See how it works
+                Watch it mark a take
+                <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
               </a>
             </div>
           </div>
-
-          {/* Same measure and same left edge as the headline above it. The
-              strip ran centred inside a 46rem box for one build and it read as
-              a caption belonging to nothing — a line that starts a hundred and
-              fifty pixels to the right of every other line on the screen. */}
-          <div className="relative z-10 mx-auto w-full max-w-[76rem] pb-24 md:pb-28">
-            <SpokenLine />
-          </div>
         </div>
-        <div ref={navSentinelRef} aria-hidden="true" className="h-px w-full" />
+        <div
+          ref={navSentinelRef}
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-px"
+        />
       </section>
 
-      {/* The demo, and it is the page.
+      {/* The console, one screen down.
        *
-       * What used to sit here was a picture of the product: a fixed transcript,
-       * a mic button that did nothing, a waveform on a loop and a card saying
-       * what the reader was supposed to imagine happening. It is the single
-       * most common shape a landing page takes and it asks to be believed,
-       * which is exactly what somebody who has never heard of this will not do.
-       *
-       * The console below runs. That is the whole difference. */}
+       * What used to sit in this slot on other landing pages is a picture of
+       * a product: a fixed transcript, a mic button that does nothing, a
+       * waveform on a loop. This one runs. That is the whole difference, and
+       * it is worth a reader's full attention, which is exactly why it is no
+       * longer competing with the headline for it. */}
       <section
         id="live-demo"
         className="border-border border-b bg-background px-5 pt-16 pb-20 md:px-8 md:pt-24 md:pb-28"
@@ -1856,7 +1387,14 @@ export function LandingRedesign() {
         id="how-it-works"
         data-story-section
         data-scroll-reveal
-        className="overflow-hidden border-border border-t bg-card py-24 md:py-32"
+        /* No `overflow-hidden` here. It was left over from an earlier
+           horizontal track, and it silently breaks the one below: a
+           `position: sticky` element only sticks within its nearest clipping
+           ancestor, so with this on the section the stage scrolled straight
+           past instead of holding. The clipping the track actually needs is
+           on the stage itself, which is allowed — an element may clip its own
+           overflow and still stick. */
+        className="border-border border-t bg-card py-24 md:py-32"
       >
         {/* The horizontal padding is on the blocks rather than the section,
             because the track below has to be able to run off the right edge
@@ -1907,38 +1445,87 @@ export function LandingRedesign() {
             terraced field behind the type it would be a decoration under a
             paragraph, and as the alignment of the paragraphs themselves it is
             the paragraphs. */}
-        <div className="relative mt-16 md:mt-20">
-          <div className="mx-auto grid max-w-[76rem] gap-10 px-5 md:px-8 lg:grid-cols-3 lg:items-start lg:gap-8">
-            {steps.map((step, index) => (
-              <article
-                key={step.number}
-                data-feature-card
-                className={`relative border-border border-t pt-7 ${
-                  ["", "lg:mt-11", "lg:mt-22"][index]
-                }`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="-top-px absolute left-0 h-[2px] w-16"
-                  style={{
-                    backgroundColor: [
-                      "var(--ok)",
-                      "var(--vague)",
-                      "var(--miss)",
-                    ][index],
-                  }}
-                />
-                <span className="font-mono text-[0.67rem] text-muted-foreground tabular-nums tracking-[0.13em]">
-                  {step.number}
-                </span>
-                <h3 className="mt-4 max-w-[18ch] font-display text-[clamp(1.3rem,2.4vw,2.2rem)] text-strong leading-[1.1] tracking-[-0.03em]">
-                  {step.title}
-                </h3>
-                <p className="mt-4 max-w-[34ch] text-muted-foreground leading-relaxed">
-                  {step.body}
-                </p>
-              </article>
-            ))}
+        {/* The three steps, played rather than listed.
+         *
+         * They were a row of three cards, which is what every product page
+         * does with an order of operations, and the order was carried by the
+         * numbers alone — 01, 02, 03 — which is a label, not a shape.
+         *
+         * Here the row is a take, and scrolling scrubs it. The track travels
+         * sideways past a fixed head at a third of the screen; a step is dim
+         * until it reaches the head, and the moment it crosses, its rule
+         * draws itself across the panel and the step lights. The clock under
+         * the head runs 00:00 to 03:00 as you go, because that is what the
+         * track is: three minutes of somebody talking.
+         *
+         * So the page's one set-piece is not a carousel with the brakes on.
+         * It is the product's own gesture — a recording being played and
+         * marked as it passes — done at the scale of the page, in the one
+         * section that is about the order things happen in.
+         *
+         * The horizontal layout lives entirely behind `.is-live`, which only
+         * JavaScript adds and only above `lg`. Without it, or with reduced
+         * motion, this is the three-column stack it has always been: no
+         * overflowing row, no pin, nothing to get stuck in. */}
+        <div data-steps-rail className="lp-steps-rail relative mt-16 md:mt-20">
+          <div data-steps-stage className="lp-steps-stage">
+            {/* A caption that holds still while the take runs past it, so a
+                held screen still says what it is. Live mode only: in the
+                stacked fallback the section already carries its heading. */}
+            <div className="lp-stage-caption" aria-hidden="true">
+              <span className="font-mono text-[0.6rem] text-brand-ink uppercase tracking-[0.2em]">
+                How it works
+              </span>
+              <p className="mt-3 font-display text-[1.9rem] text-strong leading-[1.02] tracking-[-0.035em]">
+                Three minutes, start to finish.
+              </p>
+            </div>
+
+            <div aria-hidden="true" className="lp-playhead" data-steps-playhead>
+              <span className="lp-playhead-clock" data-steps-clock>
+                00:00
+              </span>
+            </div>
+            <div
+              data-steps-track
+              className="lp-steps-track mx-auto grid max-w-[76rem] gap-10 px-5 md:px-8 lg:grid-cols-3 lg:items-start lg:gap-8"
+            >
+              {steps.map((step, index) => (
+                <article
+                  key={step.number}
+                  data-feature-card
+                  data-step
+                  /* The staircase lives in the stylesheet now, gated on
+                     `:not(.is-live)`. As Tailwind utilities it survived into
+                     the horizontal run: three panels in a row, each one lower
+                     than the last, marching off the bottom of a held screen.
+                     A margin reset in live mode is one specificity fight away
+                     from losing, and it lost. */
+                  className="lp-step relative border-border border-t pt-7"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="lp-step-rule -top-px absolute left-0 h-[2px] w-16"
+                    style={{
+                      backgroundColor: [
+                        "var(--ok)",
+                        "var(--vague)",
+                        "var(--miss)",
+                      ][index],
+                    }}
+                  />
+                  <span className="lp-step-num font-mono text-[0.67rem] text-muted-foreground tabular-nums tracking-[0.13em]">
+                    {step.number}
+                  </span>
+                  <h3 className="lp-step-title mt-4 max-w-[18ch] font-display text-[clamp(1.3rem,2.4vw,2.2rem)] text-strong leading-[1.1] tracking-[-0.03em]">
+                    {step.title}
+                  </h3>
+                  <p className="lp-step-body mt-4 max-w-[34ch] text-muted-foreground leading-relaxed">
+                    {step.body}
+                  </p>
+                </article>
+              ))}
+            </div>
           </div>
         </div>
       </section>
@@ -2085,13 +1672,8 @@ export function LandingRedesign() {
           field, same scrim. It is also the page's one sanctioned inversion
           back into dark, and arriving somewhere the reader has already been
           is what makes that read as a close rather than as a sixth section. */}
-      <section className="lp-atmosphere relative overflow-hidden px-5 pt-28 pb-20 md:px-8 md:pt-36 md:pb-28">
-        <FlowField className="absolute inset-0 z-0 h-full w-full" />
+      <section className="relative overflow-hidden bg-[color:var(--panel-deep)] px-5 pt-28 pb-20 md:px-8 md:pt-36 md:pb-28">
         <SteppedEdge />
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(4,12,26,0.62),rgba(3,9,20,0.78))]"
-        />
         <div
           data-scroll-reveal
           className="relative z-[2] mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-16 text-left text-primary-foreground md:px-12 md:py-24"
