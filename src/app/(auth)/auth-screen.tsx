@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AuthCard, type AuthMode } from "~/components/auth-card";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
-import { FlowField } from "~/components/landing/flow-field";
 
 /**
  * The shell around the sign-in form: a way back to the landing page, the
@@ -30,20 +29,13 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
      * one screen before the password field. That is every sign-in page ever
      * made, and it was the loudest seam in the product.
      *
-     * The water behind it is the same field the hero runs, which is what
-     * makes arriving here read as the next page of one document rather than
-     * as being handed to a different company. */
-    <main className="lp-v2 lp-atmosphere relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-6 py-16 text-primary-foreground">
-      <FlowField className="absolute inset-0 z-0 h-full w-full" />
-      {/* Heavier than the hero's scrim. There is a form here and every label
-          in it has to clear contrast against whatever frame of the water
-          happens to be behind it, which a headline can afford to be relaxed
-          about and an input cannot. */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(4,12,26,0.78),rgba(3,9,20,0.88))]"
-      />
-
+     * The ground behind it is the hero's own deep panel, which is what makes
+     * arriving here read as the next page of one document rather than as
+     * being handed to a different company. It was the WebGL water until the
+     * water was retired everywhere at once; a sign-in floating on an ocean
+     * the landing no longer has would be the seam this screen exists to
+     * avoid. */
+    <main className="lp-v2 relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-[color:var(--panel-deep)] px-6 py-16 text-primary-foreground">
       <Link
         href="/"
         className="press relative z-[2] flex items-center gap-2.5 font-semibold text-[0.92rem] text-primary-foreground uppercase tracking-[0.04em] transition-opacity hover:opacity-80"
