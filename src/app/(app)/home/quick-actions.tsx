@@ -20,10 +20,8 @@ import { cn } from "~/lib/utils";
  * tell and it is the same every time: an icon in a circle, everything centred,
  * three interchangeable grey paragraphs. So — no icons, because the numeral
  * already does that job. Everything ranged left, one line of copy per step
- * naming what you give it and what comes back. The duration stays, because a
- * real number is specific in a way a generated one never is, and because "how
- * long will this take" is the actual question being asked. The accent lands
- * once, on step one.
+ * naming what you give it and what comes back. The accent lands once, on step
+ * one.
  */
 const ACTIONS = [
   {
@@ -31,7 +29,6 @@ const ACTIONS = [
     n: "01",
     title: "Start a topic",
     detail: "Upload your notes. A short course gets built from them.",
-    dur: "2:30",
     primary: true,
   },
   {
@@ -39,7 +36,6 @@ const ACTIONS = [
     n: "02",
     title: "Explain it out loud",
     detail: "Three minutes, no notes. Claims are marked while you speak.",
-    dur: "3:00",
     primary: false,
   },
   {
@@ -47,7 +43,6 @@ const ACTIONS = [
     n: "03",
     title: "Read back the gaps",
     detail: "What you got right, what was vague, what you never reached.",
-    dur: "1:00",
     primary: false,
   },
 ] as const;
@@ -62,14 +57,11 @@ export function QuickActions() {
       {/* The heading sits inside the panel rather than above it, so this card
           and the pace panel beside it start on the same line.
           *
-          * No total time any more. It read "WHOLE LOOP 6:30", which is a number
-          * that answers a question nobody asked at the moment they are deciding
-          * whether to begin — and answers it with the largest figure available.
-          * Six and a half minutes is the honest sum and it is also the most
-          * off-putting way to describe three short steps. The per-step times
-          * stay: those are commitments a person can make one at a time, and
-          * "3:00" next to "Explain it out loud" is the product's promise
-          * rather than a cost. */}
+          * No times on the rows. They read as a cost sheet — three numbers
+          * ranged right down the edge of a panel whose job is to get somebody
+          * to start — and the mono voice is reserved for metadata, which is
+          * exactly what an estimate of how long you might take is not. The
+          * step's own sentence already says what it involves. */}
       <div className="p-5 pb-4">
         <h2
           id="quick-actions-heading"
@@ -110,9 +102,6 @@ export function QuickActions() {
                 </span>
               </span>
 
-              <span className="hidden font-mono text-[0.68rem] text-subtle uppercase tabular-nums tracking-[0.09em] sm:inline">
-                {action.dur}
-              </span>
               <ChevronRight
                 aria-hidden
                 className="size-4 shrink-0 text-subtle transition-transform duration-200 group-hover:translate-x-0.5"

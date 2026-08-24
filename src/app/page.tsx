@@ -536,8 +536,12 @@ function Masthead() {
           aria-label="Explainaloud, home"
         >
           <ExplainaloudMark className="h-7 w-7" />
-          <span className="font-semibold text-[0.92rem] uppercase tracking-[0.04em] [font-stretch:87%]">
-            Explainaloud
+          {/* Lowercase, and no tracked capitals. `uppercase` here was doing
+              the damage the rename was meant to undo — the string was set in
+              caps by CSS, so lowering the letters in every other file left
+              the one wordmark on the front door still shouting. */}
+          <span className="font-semibold text-[0.98rem] tracking-[-0.01em] [font-stretch:87%]">
+            explainaloud
           </span>
         </Link>
 
@@ -1662,7 +1666,11 @@ function Footer() {
     <footer className="flex flex-wrap items-center gap-x-6 gap-y-3 px-4 py-8 md:px-8">
       <span className="flex items-center gap-2">
         <ExplainaloudMark className="h-5 w-5" />
-        <Slug className="opacity-100">Explainaloud</Slug>
+        {/* Not `Slug`. That is the tracked-mono instrument voice used for
+            metadata all over this page, and the wordmark is not metadata. */}
+        <span className="font-semibold text-[0.88rem] tracking-[-0.01em]">
+          explainaloud
+        </span>
       </span>
       <Link href="/terms" className="ml-auto">
         <Slug className="transition-opacity hover:opacity-100">Terms</Slug>

@@ -1568,7 +1568,7 @@ export function LandingRedesign() {
             aria-label="Explainaloud home"
           >
             <span className="lp-nav-brand-copy font-sans font-semibold text-[1.05rem] tracking-[-0.025em]">
-              Explainaloud
+              explainaloud
             </span>
             {/* The flyer lands here. Hidden until it arrives, so the mark is
                 never doubled and never missing. */}
@@ -2141,7 +2141,7 @@ export function LandingRedesign() {
 
       <footer className="mx-auto flex max-w-[76rem] flex-wrap items-center gap-5 px-5 py-8 text-muted-foreground text-sm md:px-8">
         <span className="flex items-center gap-2 text-foreground">
-          <ExplainaloudMark className="h-7 w-7" /> Explainaloud
+          <ExplainaloudMark className="h-7 w-7" /> explainaloud
         </span>
         <Link href="/privacy" className="ml-auto hover:text-foreground">
           Privacy

@@ -117,7 +117,7 @@ FINISH: unreviewed and undocumented is unfinished; this build ends with the
 finish review, the verdict, and DESIGN.md
 -->`;
 
-const TITLE = "Explainaloud";
+const TITLE = "explainaloud";
 const DESCRIPTION =
   "Explain it back out loud and know exactly when you actually understand it.";
 

@@ -5,7 +5,7 @@ import { PLAN_FEATURES } from "~/lib/plans";
 import { requireProfile } from "~/lib/supabase/server";
 import { VoiceBaselinePanel } from "./voice-baseline-panel";
 
-export const metadata = { title: "Settings · Explainaloud" };
+export const metadata = { title: "Settings · explainaloud" };
 
 export default async function SettingsPage() {
   const { supabase, user, profile } = await requireProfile();
@@ -26,7 +26,7 @@ export default async function SettingsPage() {
           Settings
         </h1>
         <p className="mt-2 text-subtle">
-          Your account details and how Explainaloud looks.
+          Your account details and how explainaloud looks.
         </p>
       </div>
 
@@ -34,7 +34,7 @@ export default async function SettingsPage() {
           upgrade nobody can buy is worse than no panel. */}
       <Section
         title="What's included"
-        description="Everything Explainaloud does, at no cost."
+        description="Everything explainaloud does, at no cost."
       >
         <ul className="divide-y divide-border overflow-hidden rounded-card border border-border bg-card shadow-rest">
           {PLAN_FEATURES.map((feature) => (

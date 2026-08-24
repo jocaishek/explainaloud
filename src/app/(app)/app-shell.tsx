@@ -240,8 +240,8 @@ function Rail({
         >
           <ExplainaloudMark className="size-7 shrink-0 text-[color:var(--accent-solid)]" />
           {!collapsed && (
-            <span className="truncate font-semibold text-[0.92rem] uppercase tracking-[0.04em]">
-              Explainaloud
+            <span className="truncate font-semibold text-[0.95rem] tracking-[-0.01em]">
+              explainaloud
             </span>
           )}
         </Link>
@@ -505,8 +505,8 @@ export function AppShell({
             className="press flex min-w-0 items-center gap-2.5 text-strong"
           >
             <ExplainaloudMark className="size-6 shrink-0 text-[color:var(--accent-solid)]" />
-            <span className="truncate font-semibold text-[0.88rem] uppercase tracking-[0.04em]">
-              Explainaloud
+            <span className="truncate font-semibold text-[0.92rem] tracking-[-0.01em]">
+              explainaloud
             </span>
           </Link>
           <Button asChild size="sm" className="ml-auto gap-1.5 font-semibold">

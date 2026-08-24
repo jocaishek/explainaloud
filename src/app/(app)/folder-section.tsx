@@ -199,7 +199,8 @@ export function FolderHeader({
         type="button"
         aria-label={`Rename ${folder.name}`}
         onClick={() => setEditing(true)}
-        className="ml-auto rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors duration-200 hover:bg-surface hover:text-strong"
+        /* Sentence case in the body face: a control, not metadata. */
+        className="ml-auto rounded-control px-1.5 py-0.5 font-medium text-[11px] text-subtle transition-colors duration-200 hover:bg-surface hover:text-strong"
       >
         Rename
       </button>

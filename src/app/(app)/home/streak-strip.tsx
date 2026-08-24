@@ -70,38 +70,69 @@ export function StreakStrip({
         : "Explain something out loud and the week starts filling in.";
 
   return (
+    /* Two regions, not three.
+     *
+     * The version before this one was a three-column grid — number, meter,
+     * week — invented to fill a middle that `justify-between` had left
+     * empty. It filled it, and then the card had three weak clusters
+     * instead of two strong ones plus a hole, which is not the same as
+     * being composed. The meter was the giveaway: a bar measuring the run
+     * sitting beside seven circles that already draw the run, saying the
+     * same thing twice in two visual languages.
+     *
+     * So the week absorbs it. The circles are the picture of the streak and
+     * the rail is now their footing — label above, days, distance-to-target
+     * under — which gives the right-hand region three stacked rows of real
+     * structure and leaves the left free to be what it should have been all
+     * along: one very large number.
+     */
     <section
       data-rise=""
       aria-labelledby="streak-heading"
-      className="flex flex-col gap-6 rounded-card border border-border bg-card p-6 shadow-rest sm:flex-row sm:items-center sm:justify-between sm:gap-10"
+      className="flex flex-col gap-8 rounded-card border border-border bg-card p-6 shadow-rest sm:flex-row sm:items-center sm:justify-between sm:gap-12"
     >
-      <div className="flex items-center gap-4">
+      {/* Ranged to the top, not centred. Centring aligns the flame with the
+          middle of the whole left block, whose height depends on how many
+          lines the caption happens to take — so the mark drifted down beside
+          a two-line zero state and sat next to the sentence instead of next
+          to the number it belongs to. */}
+      <div className="flex items-start gap-5">
         <StreakFlame
           size="xl"
-          className={cn(streak === 0 && "opacity-25 saturate-0")}
+          className={cn(
+            "mt-1 shrink-0",
+            streak === 0 && "opacity-30 saturate-0",
+          )}
         />
-        <div>
+        <div className="min-w-0">
           <h2 id="streak-heading" className="sr-only">
             Your streak
           </h2>
-          <p className="flex items-baseline gap-2">
-            {/* An odometer rather than a number that is simply replaced. This
-                is the one figure on the dashboard that changes because
-                somebody did something, and it changes once a day — rare
-                enough that showing the change is worth a beat, which is
-                exactly the test `animate` applies. */}
+          {/* The number is the loudest thing on the card, and at zero it is
+              still legible. It used to be set in `--border`, an 18%-alpha
+              hairline colour meant for drawing edges — so the headline
+              figure of the loudest card on the dashboard was the faintest
+              mark on the page, and the words beside it were heavier than it
+              was. Grey says dormant perfectly well without disappearing. */}
+          <p className="flex items-baseline gap-2.5">
             <SlidingNumber
               value={streak}
               className={cn(
-                "font-display text-[2.75rem] tracking-[-0.045em]",
-                streak > 0 ? "text-strong" : "text-border",
+                /* No line-height override. `SlidingNumber` sizes its digit
+                   windows off the line box, so tightening the leading here
+                   cropped the numeral's own baseline — the component already
+                   sets `leading-none`. */
+                "font-display text-[3.5rem] tracking-[-0.05em]",
+                streak > 0 ? "text-strong" : "text-subtle",
               )}
             />
-            <span className="font-medium text-[1.05rem] text-strong">
+            <span className="font-medium text-[0.95rem] text-subtle">
               {streak === 1 ? "day in a row" : "days in a row"}
             </span>
           </p>
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.88rem] text-subtle leading-relaxed">
+          {/* Capped measure. Left to itself this line sets on one row and
+              pushes the week off the far edge of a narrow window. */}
+          <p className="mt-1.5 flex max-w-[21rem] flex-wrap items-center gap-x-3 gap-y-1 text-[0.88rem] text-subtle leading-relaxed">
             {caption}
             {/* Only while today is still open. An action offered after it has
                 been taken is an action that does nothing, and this row is the
@@ -122,45 +153,81 @@ export function StreakStrip({
         </div>
       </div>
 
-      <ol className="flex items-center gap-2 sm:shrink-0">
-        {week.map((day, index) => {
-          const label = WEEK_DAYS[index];
-          const recorded = day.sessions > 0;
-          const ahead = todayIndex >= 0 && index > todayIndex;
+      <div className="flex shrink-0 flex-col gap-2.5">
+        <div className="flex items-baseline justify-between gap-8">
+          <p className="text-[0.78rem] text-subtle">This week</p>
+          {target ? (
+            /* A fraction, because that is what the rail below it draws.
+               This read "{target - streak} to {target}", which at a streak
+               of zero renders "3 to 3" — two different quantities that
+               happen to be equal, printed as though one were the other. */
+            <p className="text-[0.78rem] text-subtle tabular-nums">
+              <span className="font-medium text-strong">{streak}</span> of{" "}
+              {target}
+            </p>
+          ) : null}
+        </div>
 
-          return (
-            <li key={day.day}>
-              <span
-                title={`${label?.full ?? ""}: ${
-                  recorded
-                    ? `${day.sessions} ${day.sessions === 1 ? "recording" : "recordings"}`
-                    : ahead
-                      ? "still to come"
-                      : "nothing recorded"
-                }`}
-                className={cn(
-                  /* Circles, at the size of a thing you could tap. Squares at
+        <ol className="flex items-center gap-2">
+          {week.map((day, index) => {
+            const label = WEEK_DAYS[index];
+            const recorded = day.sessions > 0;
+            const ahead = todayIndex >= 0 && index > todayIndex;
+
+            return (
+              <li key={day.day}>
+                <span
+                  title={`${label?.full ?? ""}: ${
+                    recorded
+                      ? `${day.sessions} ${day.sessions === 1 ? "recording" : "recordings"}`
+                      : ahead
+                        ? "still to come"
+                        : "nothing recorded"
+                  }`}
+                  className={cn(
+                    /* Circles, at the size of a thing you could tap. Squares at
                      the control radius made this read as seven cells of a
                      table, which is what a week is not. */
-                  "streak-day flex size-9 items-center justify-center rounded-pill border font-medium text-[0.78rem]",
-                  recorded
-                    ? "border-transparent bg-accent-solid text-accent-contrast"
-                    : "border-border bg-surface text-subtle",
-                  ahead && !recorded && "opacity-40",
-                  day.is_today &&
-                    "ring-2 ring-[color:var(--accent-ring)] ring-offset-2 ring-offset-card",
-                )}
-              >
-                <span aria-hidden>{label?.letter}</span>
-                <span className="sr-only">
-                  {label?.full}
-                  {recorded ? ", recorded" : ""}
+                    "streak-day flex size-9 items-center justify-center rounded-pill border font-medium text-[0.78rem]",
+                    recorded
+                      ? "border-transparent bg-accent-solid text-accent-contrast"
+                      : "border-border bg-surface text-subtle",
+                    ahead && !recorded && "opacity-40",
+                    day.is_today &&
+                      "ring-2 ring-[color:var(--accent-ring)] ring-offset-2 ring-offset-card",
+                  )}
+                >
+                  <span aria-hidden>{label?.letter}</span>
+                  <span className="sr-only">
+                    {label?.full}
+                    {recorded ? ", recorded" : ""}
+                  </span>
                 </span>
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+
+        {/* The run's distance to the next stop, ruled under the days it is
+            made of. `--flame` is reserved for the streak and nothing else,
+            and this is the streak. Drawn at zero too — an empty rail says
+            the run is at nothing and shows how far the first stop is, which
+            is the only thing worth knowing there. */}
+        {target ? (
+          <div
+            aria-hidden="true"
+            className="h-1 overflow-hidden rounded-pill bg-surface"
+          >
+            <div
+              className="h-full rounded-pill"
+              style={{
+                width: `${Math.min(100, Math.round((streak / target) * 100))}%`,
+                background: "var(--flame)",
+              }}
+            />
+          </div>
+        ) : null}
+      </div>
     </section>
   );
 }
