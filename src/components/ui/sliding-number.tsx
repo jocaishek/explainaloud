@@ -35,7 +35,23 @@ const DIGITS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
 
 function Digit({ digit }: { digit: number }) {
   return (
-    <span className="relative block h-[1em] w-[1ch] overflow-hidden">
+    /* `leading-none` here and on every digit, not only on the root.
+     *
+     * The window is `h-[1em]` and the digits are positioned by percentages of
+     * their own height, so both only line up while the line box is exactly
+     * 1em. The root asks for `leading-none` — and loses it: `cn` is
+     * tailwind-merge, which puts `text-*` sizes in a `font-size` group that
+     * conflicts with `leading`, because a Tailwind font-size utility can
+     * carry a line-height. So any caller passing a size, which is every
+     * caller, silently strips it and the line box falls back to the
+     * inherited 1.5.
+     *
+     * At 3.5rem that is an 84px line box inside a 56px window: the numeral is
+     * centred in the taller box, its foot lands below the window, and the
+     * bottom of the glyph is cut off — which reads as a broken typeface
+     * rather than a clipping bug. Setting it in here cannot be overridden
+     * from a call site, because a call site's classes only reach the root. */
+    <span className="relative block h-[1em] w-[1ch] overflow-hidden leading-none">
       {DIGITS.map((n) => {
         const raw = (10 + n - digit) % 10;
         const offset = raw > 5 ? raw - 10 : raw;
@@ -48,7 +64,7 @@ function Digit({ digit }: { digit: number }) {
               // glyph would sit in normal flow, so the strip drifts off the
               // baseline of the words beside it — which on "5 days in a row"
               // is the one alignment anybody would notice.
-              "absolute inset-x-0 top-0 block text-center",
+              "absolute inset-x-0 top-0 block text-center leading-none",
               // The wrap-around placements are the ones that would otherwise
               // be seen travelling the long way across the window. They are
               // out of sight either way, so they are moved without a

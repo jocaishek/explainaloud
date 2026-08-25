@@ -120,7 +120,11 @@ export function StreakStrip({
                    cropped the numeral's own baseline — the component already
                    sets `leading-none`. */
                 "font-display text-[3.5rem] tracking-[-0.05em]",
-                streak > 0 ? "text-strong" : "text-subtle",
+                /* Full-strength ink at zero too. Grey said "dormant" and on
+                   a dark card it said "illegible" — the largest figure on the
+                   dashboard was the hardest thing on it to read. The unlit
+                   flame beside it already carries that meaning. */
+                "text-strong",
               )}
             />
             <span className="font-medium text-[0.95rem] text-subtle">
