@@ -2398,6 +2398,270 @@ html:has(main.lp-v2) {
   color: #a8cdf5;
 }
 
+/* ── The take, running along a curve ──────────────────────────────────────
+ *
+ * A paragraph set on an invisible SVG path. The `<path>` is never stroked and
+ * never filled; it exists only as a rail for the glyphs, which is what makes
+ * this a wall of words that reads as a picture rather than as a wall of
+ * words.
+ *
+ * Two of them, and the pair is the argument. The left curve is a take exactly
+ * as it was spoken, in the same grey as any other quiet copy on the page. The
+ * right curve is the same take after the grader has been through it, and its
+ * colours arrive in sequence along the path, so it reads as being marked
+ * rather than as having been marked. Green where a claim landed, tan where it
+ * was said but not checkably, red where the point was never reached.
+ *
+ * Both are `aria-hidden`, and every claim they make is also made in the
+ * headline and in the demo below, so nothing is available only to somebody
+ * who can see them.
+ * ------------------------------------------------------------------------ */
+.lp-v2 .lp-flow {
+  position: absolute;
+  z-index: 0;
+  display: none;
+  pointer-events: none;
+  /* Only the arrival. The motion belongs to the words now — the marquee
+     slides them along their paths — and a transform drift on top of that
+     made the whole drawing swim. */
+  animation: lp-flow-in 900ms var(--ease-enter) both;
+}
+
+/* Off entirely below `lg`. A curve that needs 60% of the viewport to be
+   legible cannot have it on a phone, and text on a path does not reflow — it
+   only gets smaller. The centred column is the whole hero there. */
+@media (min-width: 1024px) {
+  .lp-v2 .lp-flow {
+    display: block;
+  }
+}
+
+.lp-v2 .lp-flow path {
+  fill: none;
+  stroke: none;
+}
+
+.lp-v2 .lp-flow text {
+  font-size: 16px;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  fill: color-mix(in oklab, var(--muted-foreground) 44%, transparent);
+}
+
+/* Bleeding off the edges on purpose: a take that stops inside the frame is a
+   caption, and one that runs off the page is a take. */
+/* Both live in the margins either side of the centred column and never reach
+   into it. The first pass gave them 60% of the width each and the two curves
+   ran straight through the headline and the buttons. */
+/* Three streams, drawn from a sketch, with the words in motion.
+ *
+ * One S climbing off the top edge on the left, one arc falling from the top
+ * edge to the right edge, one big wave running the whole foot of the page.
+ * All three share one 1440x900 coordinate space so they are composed against
+ * each other, and each SVG covers the whole hero — `slice` keeps the drawing
+ * pinned to the edges at any aspect ratio.
+ *
+ * The words travel their curves — see the marquee in the component — so the
+ * only CSS motion left here is the arrival fade. The fade level stays: at
+ * full strength a moving stream reads as a stock ticker to be read; at ~45%
+ * it is weather, and the verdict colours do the telling.
+ * ------------------------------------------------------------------------ */
+.lp-v2 .lp-flow {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.lp-v2 .lp-flow-tl {
+  opacity: 0.5;
+}
+
+.lp-v2 .lp-flow-tl text {
+  font-size: 17px;
+  fill: color-mix(in oklab, var(--muted-foreground) 42%, transparent);
+}
+
+.lp-v2 .lp-flow-tr {
+  opacity: 0.45;
+}
+
+.lp-v2 .lp-flow-tr text {
+  font-size: 18px;
+  font-weight: 550;
+}
+
+/* The wave is the star: the longest path, the marked take, the widest arc of
+   colour. Slightly larger and slightly stronger than the two above. */
+.lp-v2 .lp-flow-bw {
+  opacity: 0.5;
+}
+
+.lp-v2 .lp-flow-bw text {
+  font-size: 20px;
+  font-weight: 550;
+}
+
+/* A deeper stop on the page's own ramp: the demo chapter's ground. Mixed
+   from tokens rather than written as a hex, and kept far above the floor a
+   marked transcript needs — the verdicts inside the console sit on the
+   console's own dark window, not on this field. */
+.lp-v2 .lp-ground-tint {
+  background: color-mix(in oklab, var(--panel-deep) 7%, var(--background));
+}
+
+/* ── The steps, held and scrubbed ─────────────────────────────────────────
+ *
+ * Everything here is behind `.is-live`, which only the script adds and only
+ * above `lg` with motion allowed and real travel measured. The resting
+ * layout — the three-column staircase — is complete on its own, which is the
+ * whole reason the horizontal version is allowed to exist.
+ * ------------------------------------------------------------------------ */
+/* Pinned by ScrollTrigger, so no position of its own — just the held
+   screen's layout. */
+.lp-v2 .lp-steps-stage.is-live {
+  display: flex;
+  height: 100svh;
+  flex-direction: column;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.lp-v2 .lp-steps-track.is-live {
+  display: flex;
+  max-width: none;
+  flex-wrap: nowrap;
+  align-items: flex-start;
+  gap: 5vw;
+  /* A short lead-in so the first card is already under the heading. */
+  padding-inline: 7vw 0;
+  will-change: transform;
+}
+
+/* Hidden in the stacked layout, where it would otherwise be a fourth grid
+   cell; a real 42vw flex item in the run, so the third card travels all the
+   way in before the hold releases. */
+.lp-v2 .lp-steps-tail {
+  display: none;
+}
+
+.lp-v2 .lp-steps-track.is-live > .lp-steps-tail {
+  display: block;
+  /* Long enough that the third panel travels fully in, short enough that it
+     does not end up stranded at the far left of an empty screen. */
+  flex: 0 0 24vw;
+  /* Not zero-height. Chrome leaves zero-height boxes out of the overflow
+     area entirely, so a flat spacer — like the trailing padding and the
+     `::after` before it — measured as no travel at all. One transparent
+     pixel is enough to exist. */
+  height: 1px;
+}
+
+.lp-v2 .lp-steps-track.is-live > .lp-step {
+  width: min(34rem, 40vw);
+  min-height: min(28rem, 56svh);
+  flex: 0 0 auto;
+  /* The staircase is a vertical idea; the travel is the order now. This
+     out-specifies the `lg:mt-*` utilities, which is what kept the staircase
+     out of live mode the last time nothing did. */
+  margin-top: 0;
+  border: 1px solid var(--border);
+  padding: 2.25rem 2.5rem 2.5rem;
+  opacity: 0.35;
+  transform: translateX(2.5rem);
+  transition:
+    opacity 520ms var(--ease-enter),
+    transform 520ms var(--ease-enter);
+}
+
+/* Each panel takes a tint of its own verdict — the same three colours the
+   rules above the steps already assign, extended to the ground, so panel
+   one is unmistakably not panel two. Tints, not fills: every verdict has
+   to stay legible on a light ground, and these stay far above the floor. */
+.lp-v2 .lp-steps-track.is-live > .lp-step:nth-child(1) {
+  background: color-mix(in oklab, var(--ok) 9%, var(--card));
+}
+
+.lp-v2 .lp-steps-track.is-live > .lp-step:nth-child(2) {
+  background: color-mix(in oklab, var(--vague) 10%, var(--card));
+}
+
+.lp-v2 .lp-steps-track.is-live > .lp-step:nth-child(3) {
+  background: color-mix(in oklab, var(--miss) 8%, var(--card));
+}
+
+.lp-v2 .lp-steps-track.is-live > .lp-step[data-lit="1"] {
+  opacity: 1;
+  transform: none;
+}
+
+/* The mark itself: at rest the rule is a 4rem tab; as the step crosses the
+   head it draws the full width of the panel, which is the grader's gesture. */
+.lp-v2 .lp-steps-track.is-live .lp-step-rule {
+  width: 4rem;
+  transition: width 700ms var(--ease-enter) 120ms;
+}
+
+.lp-v2 .lp-steps-track.is-live > .lp-step[data-lit="1"] .lp-step-rule {
+  width: 100%;
+}
+
+/* A held screen earns its hold with scale. */
+.lp-v2 .lp-steps-track.is-live h3 {
+  margin-top: 1.25rem;
+  max-width: 15ch;
+  font-size: clamp(1.9rem, 2.8vw, 2.7rem);
+}
+
+.lp-v2 .lp-steps-track.is-live p {
+  margin-top: 1.25rem;
+  max-width: 34ch;
+  font-size: 1.05rem;
+}
+
+.lp-v2 .lp-flow tspan {
+  animation: lp-flow-grade 620ms var(--ease-enter) both;
+}
+
+.lp-v2 .lp-flow tspan[data-mark="ok"] {
+  fill: var(--ok);
+}
+
+.lp-v2 .lp-flow tspan[data-mark="vague"] {
+  fill: var(--vague);
+}
+
+.lp-v2 .lp-flow tspan[data-mark="miss"] {
+  fill: var(--miss);
+}
+
+/* `both`, as everywhere on this page: before its delay a run is unmarked,
+   after it, marked, forever. A reader whose animations never run gets the
+   finished take rather than a blank curve. */
+@keyframes lp-flow-grade {
+  from {
+    fill: color-mix(in oklab, var(--muted-foreground) 52%, transparent);
+  }
+}
+
+@keyframes lp-flow-in {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+/* Sideways only. Rotating a row that is ruled against five other rows makes
+   the set look crooked rather than alive; sliding it along its own axis reads
+   as the current moving, which is what it is. */
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-flow,
+  .lp-v2 .lp-flow-b,
+  .lp-v2 .lp-flow-e,
+  .lp-v2 .lp-flow tspan {
+    animation: none;
+  }
+}
+
 /* ── The page's own claims, judged ──────────────────────────────────────
  *
  * The one piece of motion here that could not appear on any other page.
