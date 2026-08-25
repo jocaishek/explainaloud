@@ -8,7 +8,7 @@ import { OnboardingForm } from "./onboarding-form";
  * chips beside three interchangeable grey paragraphs is the most reliable tell
  * that nobody chose anything — it is the shape a generated page reaches for
  * every time, and the app's own dashboard already rejected it for the same
- * reason (see `quick-actions.tsx`). The numeral does the icon's job better,
+ * reason. The numeral does the icon's job better,
  * because these are steps rather than features: reading 01, 02, 03 alone gives
  * you the product.
  */

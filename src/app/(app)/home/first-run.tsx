@@ -49,15 +49,24 @@ type Step = {
   body: string;
 };
 
+/* The three steps ring three real parts of the frame.
+ *
+ * Steps 1 and 2 used to point at the same thing: a "Start here" panel on the
+ * dashboard that listed the loop as three numbered rows. That panel is gone —
+ * the topics somebody came for now lead the page — so the tour points at the
+ * controls that actually do the work instead of at a description of them,
+ * which is what a tour is for. A ring around the real Record button teaches
+ * where Record is; a ring around a row that says "Explain it out loud" only
+ * teaches that the row exists. */
 const STEPS: Step[] = [
   {
-    target: "actions",
+    target: "topics",
     kicker: "Step 1 of 3",
     title: "Start with your material",
     body: "Upload slides, a chapter or your notes. A short course gets built from them, and every claim in it is tied to a quote from your files.",
   },
   {
-    target: "actions",
+    target: "record",
     kicker: "Step 2 of 3",
     title: "Then explain it out loud",
     body: "Three minutes, the way you would to someone who has never met it. You are marked while you are still talking.",
@@ -107,7 +116,8 @@ export function FirstRunTour({ seen }: { seen: boolean }) {
 
     const measure = () => {
       const el = document.querySelector(`[data-tour="${current.target}"]`);
-      setRect(el ? el.getBoundingClientRect() : null);
+      const box = el?.getBoundingClientRect() ?? null;
+      setRect(box && box.height > 0 ? box : null);
     };
     measure();
 
@@ -141,7 +151,13 @@ export function FirstRunTour({ seen }: { seen: boolean }) {
   useEffect(() => {
     if (!current) return;
     const el = document.querySelector(`[data-tour="${current.target}"]`);
-    el?.scrollIntoView({ block: "center", behavior: "smooth" });
+    /* Only when the target is actually laid out. Below `lg` the rail is a
+       drawer, so `[data-tour="record"]` may be present but zero-sized —
+       scrolling to it would jump the page for no visible reason, and the ring
+       is skipped for the same measurement. The card still says its piece. */
+    if (el && el.getBoundingClientRect().height > 0) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
   }, [current]);
 
   /* Stable, so the Escape listener below binds once for the whole tour rather
