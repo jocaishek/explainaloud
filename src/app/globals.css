@@ -2427,13 +2427,37 @@ html:has(main.lp-v2) {
   animation: lp-flow-in 900ms var(--ease-enter) both;
 }
 
-/* Off entirely below `lg`. A curve that needs 60% of the viewport to be
-   legible cannot have it on a phone, and text on a path does not reflow — it
-   only gets smaller. The centred column is the whole hero there. */
+/* Which drawing is on, by width.
+ *
+ * This used to switch the streams off below `lg` entirely, reasoning that a
+ * curve needing 60% of the viewport to be legible cannot have it on a phone.
+ * True of *these* curves: they are composed in a 1440x900 space and `slice`
+ * crops that to the middle quarter of a 390-wide window, so three gestures
+ * arrive as three unrelated diagonals with the type scaled down to match.
+ *
+ * The answer is not to shrink them. Text on a path does not reflow, so a
+ * portrait frame needs its own drawing — two streams in the hero's own
+ * coordinate space, in the bands the centred column leaves empty. */
 @media (min-width: 1024px) {
   .lp-v2 .lp-flow {
     display: block;
   }
+
+  .lp-v2 .lp-flow-sm {
+    display: none;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .lp-v2 .lp-flow-sm {
+    display: block;
+  }
+}
+
+.lp-v2 .lp-flow-sm text {
+  font-size: 15px;
+  font-weight: 550;
+  fill: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
 }
 
 .lp-v2 .lp-flow path {
