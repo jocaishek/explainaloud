@@ -222,7 +222,14 @@ const HERO_CURVES_SM = [
     /* The hero measures 578 tall on a phone and the centred column occupies
        112–513 of it. Both curves sit outside that: this one crests at ~100,
        a dozen pixels clear of the headline. */
-    d: "M-46 70C60 100 214 96 436 54",
+    /* Runs well past the viewBox on both sides. `meet` fits the drawing
+       rather than filling the frame, so on anything wider than a phone the
+       390-unit box is scaled to the height and centred — at 900 that leaves
+       ~180px of margin each side, and a stream that stops inside the frame
+       reads as a caption rather than as a take running through it. Extending
+       the path beyond the box costs nothing: an SVG clips to its viewport,
+       not to its viewBox. */
+    d: "M-150 78C40 108 240 100 540 46",
     delay: 900,
     runs: [
       { verdict: "ok", text: "A derivative is a rate of change. " },
@@ -233,7 +240,7 @@ const HERO_CURVES_SM = [
     key: "sm-bottom",
     place: "lp-flow-sm-b",
     viewBox: "0 0 390 578",
-    d: "M-46 524C70 562 240 570 436 528",
+    d: "M-150 516C50 560 250 572 540 520",
     delay: 1250,
     runs: [
       {
@@ -1623,14 +1630,25 @@ export function LandingRedesign() {
           </div>
         </div>
         <div className="mx-auto grid h-16 max-w-[76rem] grid-cols-[1fr_auto_1fr] items-center px-5 md:px-8">
-          <div className="hidden items-center gap-5 text-[0.78rem] lg:flex">
-            <a href="#live-demo" className="lp-nav-link">
+          {/* The cell stays, its links go.
+           *
+           * This was `hidden lg:flex`, and `display: none` takes an element
+           * out of grid flow altogether — so below `lg` the two survivors
+           * slid into tracks one and two, the brand landed in the *left*
+           * track and the third track sat empty. The masthead was only
+           * centred at `lg` and above; everywhere between there and the
+           * phone it was bunched against the left edge with a hole beside
+           * it. Hiding the anchors instead leaves an empty cell holding the
+           * left track open, which is what a three-track grid needs to put
+           * its middle track in the middle. */}
+          <div className="flex items-center gap-5 text-[0.78rem]">
+            <a href="#live-demo" className="lp-nav-link hidden lg:inline">
               Live demo
             </a>
-            <a href="#results" className="lp-nav-link">
+            <a href="#results" className="lp-nav-link hidden lg:inline">
               Results
             </a>
-            <a href="#how-it-works" className="lp-nav-link">
+            <a href="#how-it-works" className="lp-nav-link hidden lg:inline">
               How it works
             </a>
           </div>
