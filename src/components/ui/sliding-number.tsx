@@ -106,10 +106,21 @@ export function SlidingNumber({
 
   return (
     <span
-      className={cn(
-        "relative inline-block leading-none tabular-nums",
-        className,
-      )}
+      /* The leading is set here, in a style attribute, for the same reason
+         `Digit` sets its own out of reach of a call site: `cn` is
+         tailwind-merge, and a caller's `text-[3.5rem]` conflicts a font-size
+         utility with `leading-*` and drops it. A class could not survive
+         that; an inline declaration is not in the merge at all.
+
+         It has to survive, because this box is the strip's positioning
+         context. At the inherited 1.5 the root is an 84px box around a 56px
+         numeral, so the absolutely positioned digits — pinned to its top
+         edge — are drawn a half-leading *above* the invisible glyph whose
+         baseline the words beside it align to. The number floats clear of
+         its own label, which is the one misalignment on "0 days in a row"
+         that anybody would notice. */
+      style={{ lineHeight: 1 }}
+      className={cn("relative inline-block tabular-nums", className)}
     >
       {/* In normal flow, so the strip inherits a real baseline and a real
           width. Everything animated is absolutely positioned over it — an
