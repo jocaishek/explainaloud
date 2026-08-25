@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useState } from "react";
 import { cn } from "~/lib/utils";
+import { markTourSeen } from "./tour-actions";
 
 /**
  * The first-run tour: three steps, then it never appears again.
@@ -19,12 +20,23 @@ import { cn } from "~/lib/utils";
  * stays live, clicking anywhere carries on, and somebody who would rather just
  * start can. A tutorial that traps you is worse than no tutorial.
  *
- * **Why localStorage and not the profile.** Getting this wrong in either
- * direction is cheap — a second showing is a mild annoyance, a missed showing
- * costs nothing, because every step names a thing that is visible on screen
- * anyway. That is not worth a column, a migration and a round trip on every
- * dashboard load. It is keyed by version so a future rewrite of the tour can
- * show itself again.
+ * **Why the account and not just localStorage.** This used to be a
+ * `localStorage` key alone, on the argument that a second showing is a mild
+ * annoyance and not worth a column. That argument is sound on a desktop
+ * browser and wrong on a phone, which is where it was reported: the tour came
+ * back on every sign-in.
+ *
+ * The cause is that a phone often signs in from an emailed link, which opens
+ * in the mail app's in-app webview — a storage partition of its own, usually
+ * discarded when the sheet closes. So the tour was not repeating; it was being
+ * shown for the first time, again, to a browser that had never seen it. Safari
+ * evicting script-written storage after seven idle days does the same thing
+ * more slowly. Neither is fixable on the client, because in both cases the
+ * client genuinely has no memory.
+ *
+ * So the account remembers, and `localStorage` stays as a second, cheaper
+ * guard: it costs nothing, it covers the browser that already dismissed the
+ * tour before this shipped, and it means a failed write is not a repeat.
  */
 
 const SEEN_KEY = "explainaloud:tour:v1";
@@ -58,7 +70,7 @@ const STEPS: Step[] = [
   },
 ];
 
-export function FirstRunTour() {
+export function FirstRunTour({ seen }: { seen: boolean }) {
   /* `null` until the effect has read localStorage. Rendering the card on the
      first paint and then hiding it would flash the tour at everybody who has
      already dismissed it — localStorage is not readable during SSR, so the
@@ -67,13 +79,23 @@ export function FirstRunTour() {
   const [rect, setRect] = useState<DOMRect | null>(null);
 
   useEffect(() => {
+    if (seen) return;
+    let dismissedHere = false;
     try {
-      if (!localStorage.getItem(SEEN_KEY)) setStep(0);
+      dismissedHere = localStorage.getItem(SEEN_KEY) !== null;
     } catch {
-      // Private mode, or storage disabled. Skip the tour rather than show it
-      // on every single visit with no way to make it stop.
+      // Private mode, or storage disabled. The account is the real record, so
+      // fall through and let it decide.
     }
-  }, []);
+    if (dismissedHere) return;
+
+    setStep(0);
+    /* Marked on show, not on dismissal. The failure being fixed is the tour
+       coming back, and the most ordinary thing anybody does on a phone is
+       read the first card, tap the thing it points at, and never press Done —
+       which under a mark-on-dismiss rule is a tour that repeats forever. */
+    void markTourSeen();
+  }, [seen]);
 
   const current = step === null ? null : STEPS[step];
 

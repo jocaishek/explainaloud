@@ -22,6 +22,26 @@ const PACE_WINDOW = 20;
 export default async function DashboardPage() {
   const { supabase, user, profile } = await requireProfile();
 
+  /* Read separately rather than as part of `requireProfile`'s select, and on
+     purpose.
+     *
+     * That select is one string listing every column, and PostgREST fails the
+     * whole statement if any name in it does not exist — which `maybeSingle`
+     * reports as no row, which `requireProfile` reads as "has not onboarded"
+     * and redirects to `/onboarding`. Migrations here are applied by hand and
+     * the deploy happens on merge, so naming a new column there means every
+     * signed-in person is bounced to onboarding for the length of that window.
+     *
+     * Asking for it on its own costs one primary-key lookup on a connection
+     * this request already holds, and its failure mode is contained: an error
+     * leaves `tourSeen` false and somebody sees the tour once. */
+  const { data: tourRow } = await supabase
+    .from("profiles")
+    .select("tour_seen_at")
+    .eq("user_id", user.id)
+    .maybeSingle<{ tour_seen_at: string | null }>();
+  const tourSeen = tourRow?.tour_seen_at != null;
+
   /* The zone the streak is counted in.
    *
    * The profile's, not the server's, and not this request's headers either: a
@@ -204,7 +224,7 @@ export default async function DashboardPage() {
 
       {/* Three steps, once, for somebody who has just arrived. Renders
           nothing at all for everybody else. */}
-      <FirstRunTour />
+      <FirstRunTour seen={tourSeen} />
     </div>
   );
 }
