@@ -2427,13 +2427,37 @@ html:has(main.lp-v2) {
   animation: lp-flow-in 900ms var(--ease-enter) both;
 }
 
-/* Off entirely below `lg`. A curve that needs 60% of the viewport to be
-   legible cannot have it on a phone, and text on a path does not reflow — it
-   only gets smaller. The centred column is the whole hero there. */
+/* Which drawing is on, by width.
+ *
+ * This used to switch the streams off below `lg` entirely, reasoning that a
+ * curve needing 60% of the viewport to be legible cannot have it on a phone.
+ * True of *these* curves: they are composed in a 1440x900 space and `slice`
+ * crops that to the middle quarter of a 390-wide window, so three gestures
+ * arrive as three unrelated diagonals with the type scaled down to match.
+ *
+ * The answer is not to shrink them. Text on a path does not reflow, so a
+ * portrait frame needs its own drawing — two streams in the hero's own
+ * coordinate space, in the bands the centred column leaves empty. */
 @media (min-width: 1024px) {
   .lp-v2 .lp-flow {
     display: block;
   }
+
+  .lp-v2 .lp-flow-sm {
+    display: none;
+  }
+}
+
+@media (max-width: 1023.98px) {
+  .lp-v2 .lp-flow-sm {
+    display: block;
+  }
+}
+
+.lp-v2 .lp-flow-sm text {
+  font-size: 15px;
+  font-weight: 550;
+  fill: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
 }
 
 .lp-v2 .lp-flow path {
@@ -2445,7 +2469,7 @@ html:has(main.lp-v2) {
   font-size: 16px;
   font-weight: 500;
   letter-spacing: -0.005em;
-  fill: color-mix(in oklab, var(--muted-foreground) 44%, transparent);
+  fill: color-mix(in oklab, var(--muted-foreground) 46%, transparent);
 }
 
 /* Bleeding off the edges on purpose: a take that stops inside the frame is a
@@ -2465,6 +2489,16 @@ html:has(main.lp-v2) {
  * only CSS motion left here is the arrival fade. The fade level stays: at
  * full strength a moving stream reads as a stock ticker to be read; at ~45%
  * it is weather, and the verdict colours do the telling.
+ *
+ * **The fade is applied once.** It used to be applied twice: an `opacity` on
+ * each SVG *and* an alpha in the text's `fill`, which multiply — 0.45 of 0.42
+ * is 0.19, so the streams were drawn at less than half the strength this
+ * paragraph claims and the hero read as having no curves at all. Worse, an
+ * element `opacity` cannot tell a faded stream from a verdict: it took the
+ * same half out of `--ok`, `--vague` and `--miss`, so the three colours that
+ * are supposed to mean exactly one thing everywhere in the product were
+ * quietly weaker here than anywhere else. The level now lives in the fill
+ * alone, where it applies to the grey and leaves a mark at full strength.
  * ------------------------------------------------------------------------ */
 .lp-v2 .lp-flow {
   inset: 0;
@@ -2473,32 +2507,34 @@ html:has(main.lp-v2) {
 }
 
 .lp-v2 .lp-flow-tl {
-  opacity: 0.5;
+  opacity: 1;
 }
 
 .lp-v2 .lp-flow-tl text {
   font-size: 17px;
-  fill: color-mix(in oklab, var(--muted-foreground) 42%, transparent);
+  fill: color-mix(in oklab, var(--muted-foreground) 44%, transparent);
 }
 
 .lp-v2 .lp-flow-tr {
-  opacity: 0.45;
+  opacity: 1;
 }
 
 .lp-v2 .lp-flow-tr text {
   font-size: 18px;
   font-weight: 550;
+  fill: color-mix(in oklab, var(--muted-foreground) 46%, transparent);
 }
 
 /* The wave is the star: the longest path, the marked take, the widest arc of
    colour. Slightly larger and slightly stronger than the two above. */
 .lp-v2 .lp-flow-bw {
-  opacity: 0.5;
+  opacity: 1;
 }
 
 .lp-v2 .lp-flow-bw text {
   font-size: 20px;
   font-weight: 550;
+  fill: color-mix(in oklab, var(--muted-foreground) 52%, transparent);
 }
 
 /* A deeper stop on the page's own ramp: the demo chapter's ground. Mixed

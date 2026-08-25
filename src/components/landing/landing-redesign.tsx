@@ -183,6 +183,54 @@ const HERO_CURVES = [
 ] as const;
 
 /**
+ * The same idea, redrawn for a phone.
+ *
+ * The desktop streams were switched off below `lg` because they are composed
+ * in a 1440x900 space, and `slice` on a 390-wide window crops that to the
+ * middle quarter — three curves become three unrelated diagonals and the type
+ * scales down with them. The conclusion drawn at the time was that a phone
+ * cannot have them. What a phone cannot have is *those*: text on a path does
+ * not reflow, so a drawing made for a landscape frame has to be drawn again
+ * for a portrait one rather than shrunk into it.
+ *
+ * So: two streams instead of three, in the hero's own portrait coordinate
+ * space, placed in the two bands the centred column leaves empty — above the
+ * headline and below the buttons. The marked take keeps the lower band,
+ * because it is the one that shows what the product does.
+ */
+const HERO_CURVES_SM = [
+  {
+    key: "sm-top",
+    place: "lp-flow-sm-t",
+    viewBox: "0 0 390 578",
+    /* The hero measures 578 tall on a phone and the centred column occupies
+       112–513 of it. Both curves sit outside that: this one crests at ~100,
+       a dozen pixels clear of the headline. */
+    d: "M-46 70C60 100 214 96 436 54",
+    delay: 900,
+    runs: [
+      { verdict: "ok", text: "A derivative is a rate of change. " },
+      { verdict: "miss", text: "Never said: at a point. " },
+    ],
+  },
+  {
+    key: "sm-bottom",
+    place: "lp-flow-sm-b",
+    viewBox: "0 0 390 578",
+    d: "M-46 524C70 562 240 570 436 528",
+    delay: 1250,
+    runs: [
+      {
+        verdict: "ok",
+        text: "Mitosis copies the DNA before anything splits. ",
+      },
+      { verdict: "vague", text: "Then it all gets pulled apart. " },
+      { verdict: "miss", text: "Never said: each cell keeps the full count. " },
+    ],
+  },
+] as const;
+
+/**
  * A paragraph on an invisible curve.
  *
  * The `<path>` is `fill="none"` and never stroked: it exists only as a rail
@@ -197,6 +245,7 @@ function FlowCurve({
   className,
   runs,
   delay,
+  fit = "slice",
 }: {
   id: string;
   d: string;
@@ -204,6 +253,18 @@ function FlowCurve({
   className: string;
   runs: string | readonly { verdict: string; text: string }[];
   delay: number;
+  /**
+   * `slice` fills the frame and crops the overflow, which is what the
+   * landscape streams want — they are drawn to bleed off the edges.
+   *
+   * `meet` fits the whole drawing instead, and the portrait set needs it. A
+   * 9:19.5 phone is not the only phone: on a wider one `slice` scales the
+   * drawing by the width ratio and crops the difference off the top and
+   * bottom, which is precisely where the two curves are. The paths still run
+   * past x=390 in both directions, so they keep bleeding sideways — an SVG
+   * clips to its viewport, not to its viewBox.
+   */
+  fit?: "slice" | "meet";
 }) {
   return (
     <svg
@@ -211,7 +272,7 @@ function FlowCurve({
       className={className}
       viewBox={viewBox}
       fill="none"
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio={`xMidYMid ${fit}`}
       style={{ animationDelay: `${delay - 700}ms` }}
     >
       <title>A rehearsal, marked</title>
@@ -1585,6 +1646,22 @@ export function LandingRedesign() {
             d={curve.d}
             runs={curve.runs}
             delay={curve.delay}
+          />
+        ))}
+        {/* Both sets are in the document and CSS decides which one is drawn.
+            The marquee skips whichever is hidden on its own: a `display:none`
+            SVG measures `getComputedTextLength()` as 0, which is already the
+            condition it uses to skip a stream it cannot measure. */}
+        {HERO_CURVES_SM.map((curve) => (
+          <FlowCurve
+            key={curve.key}
+            id={`lp-flow-${curve.key}`}
+            className={`lp-flow lp-flow-sm ${curve.place}`}
+            viewBox={curve.viewBox}
+            d={curve.d}
+            runs={curve.runs}
+            delay={curve.delay}
+            fit="meet"
           />
         ))}
 
