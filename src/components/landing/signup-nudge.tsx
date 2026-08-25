@@ -60,7 +60,16 @@ export function SignupNudge() {
           animate={{ opacity: 1, y: 0 }}
           exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 12 }}
           transition={reduceMotion ? { duration: 0.2 } : transitions.spring}
-          className="fixed right-4 bottom-4 z-[80] w-[min(12.5rem,calc(100vw-2rem))] border border-white/15 bg-[var(--panel-deep)] p-3 text-primary-foreground md:right-4 md:bottom-4"
+          /* A card on a monitor, a bar on a phone.
+           *
+           * The width was a flat 12.5rem at every size. That is 14% of a
+           * 1440 window and 51% of a 390 one, so the same "unobtrusive
+           * corner card" was a slab parked over half the screen on a phone,
+           * covering the copy it was trying to sell. Below `sm` it spans the
+           * width instead and lays its three parts out in a row, which is
+           * shallower — it costs a strip at the foot of the screen rather
+           * than a quarter of the middle. */
+          className="fixed inset-x-3 bottom-3 z-[80] flex items-center gap-3 border border-white/15 bg-[var(--panel-deep)] p-3 text-primary-foreground sm:inset-x-auto sm:right-4 sm:bottom-4 sm:block sm:w-[12.5rem]"
         >
           <button
             type="button"
@@ -71,16 +80,18 @@ export function SignupNudge() {
             <X className="h-3 w-3" />
           </button>
 
-          <p className="font-mono text-[0.55rem] text-[var(--ok-light)] uppercase tracking-[0.13em]">
-            That was an example
-          </p>
-          <p className="mt-1 pr-3 font-display text-[0.88rem] leading-snug">
-            Run it on your own material.
-          </p>
+          <div className="min-w-0 flex-1 sm:flex-none">
+            <p className="font-mono text-[0.55rem] text-[var(--ok-light)] uppercase tracking-[0.13em]">
+              That was an example
+            </p>
+            <p className="mt-1 pr-3 font-display text-[0.88rem] leading-snug">
+              Run it on your own material.
+            </p>
+          </div>
 
           <Link
             href="/signup"
-            className="mt-2.5 inline-flex h-7 items-center gap-1.5 bg-[var(--accent-solid)] px-2.5 font-medium text-[0.75rem] text-[var(--brand-foreground)] transition-transform duration-200 hover:scale-[1.03]"
+            className="inline-flex h-7 shrink-0 items-center gap-1.5 bg-[var(--accent-solid)] px-2.5 font-medium text-[0.75rem] text-[var(--brand-foreground)] transition-transform duration-200 hover:scale-[1.03] sm:mt-2.5"
           >
             Start free <ArrowRight className="h-3 w-3" />
           </Link>
