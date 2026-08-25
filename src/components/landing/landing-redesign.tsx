@@ -1334,6 +1334,25 @@ export function LandingRedesign() {
            * copies of a marked run grade at the same moment and stay
            * identical — which the seamlessness depends on. */
           if (!reduceMotion) {
+            /* Whole user units on a phone, every frame on a pointer.
+             *
+             * Writing `startOffset` is not a composited transform. It is a
+             * geometry change on text laid along a Bézier, so the browser
+             * re-measures every glyph in the belt — a few hundred of them —
+             * and repaints the SVG, on every write. That is the cost this
+             * effect actually has, and it is why the hero stutters on a
+             * phone while it is fine on a laptop.
+             *
+             * The belt travels at 24 units a second and a unit is about a
+             * CSS pixel at either drawing's scale, so rounding the value
+             * caps the work at roughly 24 relayouts a second instead of one
+             * per frame — and the cap holds even on a device already
+             * dropping frames, which is the case that matters. A pixel step
+             * at 24Hz is film, and this is background text. */
+            const coarse = window.matchMedia("(pointer: coarse)").matches;
+            const marquees: Array<{ pause: () => void; resume: () => void }> =
+              [];
+
             for (const stream of gsap.utils.toArray<SVGTextPathElement>(
               "[data-flow-stream]",
             )) {
@@ -1347,26 +1366,79 @@ export function LandingRedesign() {
               );
               const one = stream.getComputedTextLength();
               if (one <= 0) continue;
-              let guard = 0;
-              while (
-                stream.getComputedTextLength() < pathLength + one &&
-                guard < 12
-              ) {
+
+              /* Counted, not measured up to.
+               *
+               * This used to clone one copy at a time and re-read
+               * `getComputedTextLength()` after each, which is a forced
+               * layout of a text-on-path belt per iteration — up to twelve
+               * of them per stream, synchronously, during the first frames
+               * of the page. The condition it was testing is arithmetic:
+               * after k clones the belt is (k + 1) copies long, so it
+               * outruns `pathLength + one` at k = ceil(pathLength / one).
+               * One measurement, same belt. */
+              const clones = Math.min(12, Math.ceil(pathLength / one));
+              for (let k = 0; k < clones; k += 1) {
                 for (const node of copy)
                   stream.appendChild(node.cloneNode(true));
-                guard += 1;
               }
-              gsap.fromTo(
-                stream,
-                { attr: { startOffset: 0 } },
-                {
-                  attr: { startOffset: -one },
-                  /* ~24px a second: reading pace, not ticker-tape pace. */
-                  duration: one / 24,
-                  ease: "none",
-                  repeat: -1,
-                },
+
+              const state = { offset: 0 };
+              let written = Number.NaN;
+              marquees.push(
+                gsap.fromTo(
+                  state,
+                  { offset: 0 },
+                  {
+                    offset: -one,
+                    /* ~24px a second: reading pace, not ticker-tape pace. */
+                    duration: one / 24,
+                    ease: "none",
+                    repeat: -1,
+                    onUpdate: () => {
+                      const next = coarse
+                        ? Math.round(state.offset)
+                        : state.offset;
+                      if (next === written) return;
+                      written = next;
+                      stream.setAttribute("startOffset", String(next));
+                    },
+                  },
+                ),
               );
+            }
+
+            /* Nothing runs while nobody is looking.
+             *
+             * `repeat: -1` meant these relayouts carried on for the whole
+             * length of the page — the hero is one screen of six, so most of
+             * a visit was spent re-measuring several hundred glyphs a second
+             * for a drawing that had scrolled away. The flow field behind
+             * them has stopped itself on exactly these two conditions since
+             * it was written; the streams never learned to. */
+            const hero = heroRef.current;
+            if (marquees.length > 0 && hero) {
+              let onScreen = true;
+              const sync = () => {
+                const run = onScreen && !document.hidden;
+                for (const marquee of marquees) {
+                  if (run) marquee.resume();
+                  else marquee.pause();
+                }
+              };
+              const observer = new IntersectionObserver(
+                (entries) => {
+                  onScreen = entries.some((entry) => entry.isIntersecting);
+                  sync();
+                },
+                { rootMargin: "10% 0px" },
+              );
+              observer.observe(hero);
+              document.addEventListener("visibilitychange", sync);
+              docCleanups.push(() => {
+                observer.disconnect();
+                document.removeEventListener("visibilitychange", sync);
+              });
             }
           }
 

@@ -2431,11 +2431,15 @@ html:has(main.lp-v2) {
    * Chrome picks a DOM node near the top of the viewport, and if that node
    * moves or resizes because of layout above it, Chrome shifts the scroll
    * position to keep it visually still. The streams are the worst possible
-   * candidate: the marquee walks `startOffset` every frame, so the glyphs
-   * travel along the curve and the `text`, `textPath` and `tspan` boxes are
-   * re-measured constantly — 1,966 resize events on the tspans alone in two
-   * and a half seconds. Anchor to one of those and the page is pulled a
-   * pixel or two back and forth forever.
+   * candidate: the marquee walks `startOffset`, so the glyphs travel along
+   * the curve and the `text`, `textPath` and `tspan` boxes are re-measured
+   * constantly — 1,966 resize events on the tspans alone in two and a half
+   * seconds. Anchor to one of those and the page is pulled a pixel or two
+   * back and forth forever.
+   *
+   * The marquee has since been capped to about 24 writes a second on a
+   * coarse pointer and stopped entirely while the hero is off screen, which
+   * thins that stream of resizes but does not end it. This stays.
    *
    * `overflow-anchor: none` takes an element and its subtree out of the
    * candidate set. It belongs here rather than on `html`, which would turn
