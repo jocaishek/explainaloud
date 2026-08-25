@@ -60,17 +60,17 @@ export default function AppleIcon() {
           right in general, and `role`/`aria-label` satisfy it without a
           <title> child, which Satori does not render. */}
         <svg
-          width="128"
-          height="128"
+          width="138"
+          height="138"
           viewBox="0 0 64 64"
           fill="none"
           role="img"
           aria-label="Explainaloud"
         >
-          <path d={EYE} fill="#9cc8f2" />
+          <path d={EYE} fill="#aed4f7" />
           <path
             d={SMILE}
-            stroke="#9cc8f2"
+            stroke="#aed4f7"
             strokeWidth="5"
             strokeLinecap="round"
           />
