@@ -89,14 +89,11 @@ export function StreakStrip({
     <section
       data-rise=""
       aria-labelledby="streak-heading"
-      className="flex flex-col gap-8 rounded-card border border-border bg-card p-6 shadow-rest sm:flex-row sm:items-center sm:justify-between sm:gap-12"
+      className="grid gap-6 rounded-card border border-border bg-card p-6 shadow-rest lg:grid-cols-[auto_1fr_auto] lg:items-center lg:gap-10"
     >
-      {/* Ranged to the top, not centred. Centring aligns the flame with the
-          middle of the whole left block, whose height depends on how many
-          lines the caption happens to take — so the mark drifted down beside
-          a two-line zero state and sat next to the sentence instead of next
-          to the number it belongs to. */}
-      <div className="flex items-start gap-5">
+      {/* Centred again, and now safely: the caption has moved out of this
+          block, so its height is the number's height and nothing else. */}
+      <div className="flex items-center gap-5">
         <StreakFlame
           size="xl"
           className={cn(
@@ -132,26 +129,40 @@ export function StreakStrip({
           </p>
           {/* Capped measure. Left to itself this line sets on one row and
               pushes the week off the far edge of a narrow window. */}
-          <p className="mt-1.5 flex max-w-[21rem] flex-wrap items-center gap-x-3 gap-y-1 text-[0.88rem] text-subtle leading-relaxed">
-            {caption}
-            {/* Only while today is still open. An action offered after it has
-                been taken is an action that does nothing, and this row is the
-                one place on the page that has to stay true. */}
-            {!recordedToday && (
-              <Link
-                href="/record"
-                className="press group inline-flex items-center gap-1 whitespace-nowrap font-medium text-brand-ink underline-offset-4 hover:underline"
-              >
-                Record now
-                <ArrowRight
-                  aria-hidden
-                  className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none"
-                />
-              </Link>
-            )}
-          </p>
         </div>
       </div>
+
+      {/* The sentence is its own region, and that is what closes the hole.
+       *
+       * With the number left and the week right, `justify-between` pushed
+       * them to opposite edges of an 1104px card and stretched 342px of
+       * nothing between them — the same void the three-column version was
+       * built to fix, reintroduced the moment the middle column was taken
+       * out. The middle needs real content, and the caption is the only
+       * thing on this card that is prose: it grows to whatever space is
+       * going, which is exactly what a `1fr` track wants, and unlike the
+       * meter it does not restate what the seven circles already draw.
+       *
+       * On a narrow screen the grid is one column and this simply stacks
+       * under the number, which is where it used to live anyway. */}
+      <p className="flex max-w-[34rem] flex-wrap items-center gap-x-3 gap-y-1 text-[0.9rem] text-subtle leading-relaxed">
+        {caption}
+        {/* Only while today is still open. An action offered after it has
+            been taken is an action that does nothing, and this row is the
+            one place on the page that has to stay true. */}
+        {!recordedToday && (
+          <Link
+            href="/record"
+            className="press group inline-flex items-center gap-1 whitespace-nowrap font-medium text-brand-ink underline-offset-4 hover:underline"
+          >
+            Record now
+            <ArrowRight
+              aria-hidden
+              className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none"
+            />
+          </Link>
+        )}
+      </p>
 
       <div className="flex shrink-0 flex-col gap-2.5">
         <div className="flex items-baseline justify-between gap-8">
