@@ -93,15 +93,27 @@ export function TopicCard({
               <span className="line-clamp-2 font-semibold text-[0.92rem] text-strong leading-snug">
                 {title}
               </span>
-              {/* Always show the source topic — it's what the course was
-                  generated from, and a rename shouldn't hide it. */}
-              <span className="mt-1 line-clamp-1 block text-[11px] text-subtle">
-                Topic: {course.topic}
+              {/* The source topic, only when a rename has hidden it. A card
+                  called "Mitosis" captioned "Topic: Mitosis" says the same
+                  word twice on a tile with room for about twelve, and every
+                  card on a fresh account did exactly that. */}
+              {course.topic !== title && (
+                <span className="mt-1 line-clamp-1 block text-[11px] text-subtle">
+                  From: {course.topic}
+                </span>
+              )}
+            </span>
+            {/* Only when there is something to say. Every card in a settled
+                account is ready, and a grid where every tile ends in the
+                word READY is a column of the word READY — the exact failure
+                this card's own comment describes from when status led. */}
+            {course.status.toLowerCase() === "ready" ? (
+              <span aria-hidden="true" />
+            ) : (
+              <span className="font-mono text-[0.62rem] text-subtle uppercase tracking-[0.09em]">
+                {course.status}
               </span>
-            </span>
-            <span className="font-mono text-[0.62rem] text-subtle uppercase tracking-[0.09em]">
-              {course.status}
-            </span>
+            )}
           </Link>
 
           <button
@@ -109,7 +121,10 @@ export function TopicCard({
             aria-label={`Rename ${title}`}
             onClick={() => setEditing(true)}
             className={cn(
-              "absolute top-2 right-2 rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase",
+              /* Body face, sentence case. `design.md` reserves the tracked
+                 mono voice for metadata and timecodes, and a button is a
+                 control — the same rule that renamed the folder rows. */
+              "absolute top-2 right-2 rounded-control px-1.5 py-0.5 font-medium text-[11px] text-subtle",
               "opacity-0 transition-[opacity,color,background-color] duration-200 group-hover:opacity-100 focus-visible:opacity-100",
               "hover:bg-surface hover:text-strong",
             )}
@@ -260,7 +275,7 @@ function DeleteTopic({ course }: { course: Course }) {
       <button
         type="button"
         onClick={() => setArmed(true)}
-        className="self-start font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:text-destructive/80"
+        className="self-start font-medium text-[11px] text-destructive transition-colors hover:text-destructive/80"
       >
         Delete
       </button>

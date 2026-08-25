@@ -171,14 +171,18 @@ export function PacePanel({
               key={session.id}
               href={session.href}
               aria-label={`${session.topic}, ${session.wpm} words per minute — open this session's gap report`}
-              className="press group flex flex-1 items-end self-stretch rounded-t-[4px] focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
+              className="press group flex flex-1 items-end justify-center self-stretch rounded-t-[4px] focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-2"
             >
               {/* The bar is inside the link rather than being it, so the
                   whole column height is clickable — a 40 wpm bar is a
                   thirty-pixel target otherwise, and the short bars are the
                   ones worth reading about. */}
+              {/* Three fifths of the column, not all of it. Five full-width
+                  slabs shoulder to shoulder read as a wall of ink with slots
+                  cut into it; the same five at bar width read as a chart. The
+                  whole column stays the click target either way. */}
               <span
-                className="w-full rounded-t-[4px] transition-[filter,transform] duration-200 ease-out group-hover:brightness-110 group-focus-visible:brightness-110"
+                className="w-[58%] min-w-5 rounded-t-[4px] transition-[filter,transform] duration-200 ease-out group-hover:brightness-110 group-focus-visible:brightness-110"
                 style={{
                   height: `${(session.wpm / peak) * 100}%`,
                   /* Ink for an ordinary session, the reserved amber for a
@@ -206,7 +210,7 @@ export function PacePanel({
           that happen to be clickable, and nothing says where a click goes. */}
       <div className="mt-2 flex gap-2">
         {sessions.map((session) => (
-          <div key={session.id} className="min-w-0 flex-1">
+          <div key={session.id} className="min-w-0 flex-1 text-center">
             <p className="font-mono text-[0.7rem] text-strong tabular-nums">
               {session.wpm}
             </p>

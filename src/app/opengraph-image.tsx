@@ -27,7 +27,7 @@ import { ImageResponse } from "next/og";
  */
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const alt = "Explainaloud: say what you know, see what you missed.";
+export const alt = "explainaloud: say what you know, see what you missed.";
 
 /* The landing's own tokens. `LIT` is the headline's second voice, the same
  * #a8cdf5 the page sets on "See what you missed."
@@ -148,7 +148,7 @@ export default function OpengraphImage() {
             letterSpacing: "-0.02em",
           }}
         >
-          Explainaloud
+          explainaloud
         </span>
       </div>
 

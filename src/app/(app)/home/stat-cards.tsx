@@ -121,7 +121,7 @@ export function StatCards({ stats }: { stats: Stat[] }) {
         return (
           <div
             key={stat.label}
-            className="px-1 py-5 sm:px-5 sm:first:pl-0 sm:last:pr-0"
+            className="px-1 py-4 sm:px-5 sm:first:pl-0 sm:last:pr-0"
           >
             <p className="font-medium text-[0.85rem] text-subtle">
               {stat.label}
@@ -129,10 +129,17 @@ export function StatCards({ stats }: { stats: Stat[] }) {
             {/* One row, one height, whether or not there is a figure in it —
                 three cards whose baselines disagree is half of what makes a
                 row look unconsidered. */}
-            <p className="mt-2.5 flex h-9 items-baseline gap-1.5">
+            {/* The caption sits on the number's baseline rather than under
+                it. Three cells of label-over-number-over-caption is three
+                stacked lines of text repeated three times across, which is
+                the shape of a spreadsheet row: tall, evenly grey, and read
+                as furniture. Putting the words that describe the figure
+                beside the figure collapses it to two lines, and the number
+                gets to be the biggest thing in its own cell. */}
+            <p className="mt-2 flex h-10 flex-wrap items-baseline gap-x-2 gap-y-1">
               <span
                 className={cn(
-                  "font-medium text-[2.1rem] leading-none tracking-[-0.045em] tabular-nums",
+                  "font-medium text-[2.5rem] leading-none tracking-[-0.045em] tabular-nums",
                   measured ? "text-strong" : "text-border",
                 )}
               >
@@ -146,9 +153,9 @@ export function StatCards({ stats }: { stats: Stat[] }) {
                   {stat.unit}
                 </span>
               )}
-            </p>
-            <p className="mt-2 text-[0.82rem] text-subtle leading-relaxed">
-              {measured ? stat.caption : stat.empty}
+              <span className="text-[0.82rem] text-subtle">
+                {measured ? stat.caption : stat.empty}
+              </span>
             </p>
           </div>
         );
