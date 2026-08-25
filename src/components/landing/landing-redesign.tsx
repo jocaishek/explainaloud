@@ -132,9 +132,25 @@ const HERO_CURVES = [
      * Slopes stay inside the budget text on a path allows: steep is fine,
      * past vertical is upside down. */
     viewBox: "0 0 1440 900",
-    d: "M-60 430C120 390 175 265 210 175C245 85 330 15 480 -40",
+    d: "M-60 430C120 390 175 265 215 178C255 92 390 28 620 -40",
     delay: 900,
-    runs: "okay so mitosis is when one cell splits into two, and before any of that happens it copies all of its dna, so every chromosome ends up as identical halves, ",
+    /* Mostly unmarked, on purpose. This is the take as spoken, and a take is
+       not a wall of verdicts — most of what anybody says is just said. Two
+       marks in a long grey paragraph read as a grader picking things out;
+       every clause coloured reads as a highlighter accident, which is what
+       the other two streams risk and this one is the counterweight to. */
+    runs: [
+      {
+        verdict: "none",
+        text: "okay so mitosis is when one cell splits into two, ",
+      },
+      { verdict: "ok", text: "the DNA gets copied first, " },
+      {
+        verdict: "none",
+        text: "and then the chromosomes line up and get pulled to opposite ends, so each side ends up with ",
+      },
+      { verdict: "miss", text: "Never said: the same number of chromosomes. " },
+    ],
   },
   {
     key: "arc-top-right",
@@ -276,6 +292,44 @@ function FlowCurve({
       style={{ animationDelay: `${delay - 700}ms` }}
     >
       <title>A rehearsal, marked</title>
+      {/* A word arrives grey and is graded as it travels.
+       *
+       * The streams run leftward — `startOffset` walks toward the path's
+       * start — so a word enters at the right of the frame and leaves at the
+       * left. Painting it with a gradient laid across the frame in user
+       * space, rather than with a flat colour, means the mark happens *to*
+       * the word while it moves: grey as it comes in, its verdict colour by
+       * the time it is halfway across. Nothing has to be animated per word
+       * and nothing runs per frame — the paint is fixed to the frame and the
+       * text moves through it.
+       *
+       * `userSpaceOnUse` is what makes that true. The default,
+       * `objectBoundingBox`, would map the ramp onto each tspan's own box,
+       * which would grade every word identically no matter where it was. */}
+      <defs>
+        {(["ok", "vague", "miss"] as const).map((verdict) => (
+          <linearGradient
+            key={verdict}
+            id={`${id}-g-${verdict}`}
+            gradientUnits="userSpaceOnUse"
+            x1="0"
+            y1="0"
+            x2={viewBox.split(" ")[2]}
+            y2="0"
+          >
+            <stop offset="0" stopColor={`var(--${verdict})`} />
+            <stop offset="0.44" stopColor={`var(--${verdict})`} />
+            <stop
+              offset="0.78"
+              stopColor="color-mix(in oklab, var(--muted-foreground) 62%, transparent)"
+            />
+            <stop
+              offset="1"
+              stopColor="color-mix(in oklab, var(--muted-foreground) 62%, transparent)"
+            />
+          </linearGradient>
+        ))}
+      </defs>
       <path id={id} d={d} />
       <text>
         {/* Always anchored at the start of the path: the marquee measures one
@@ -284,13 +338,18 @@ function FlowCurve({
         <textPath href={`#${id}`} data-flow-stream>
           {typeof runs === "string"
             ? runs
-            : runs.map((run, index) => (
+            : runs.map((run) => (
                 <tspan
                   key={run.text}
                   data-mark={run.verdict}
-                  /* One clock across every stream, so the wave of colour
-                     crosses the page once rather than per curve. */
-                  style={{ animationDelay: `${delay + index * 300}ms` }}
+                  /* Inline, because the stylesheet's flat `fill: var(--ok)`
+                     would otherwise win over a presentation attribute. An
+                     unmarked run sets nothing and inherits the stream grey. */
+                  style={
+                    run.verdict === "none"
+                      ? undefined
+                      : { fill: `url(#${id}-g-${run.verdict})` }
+                  }
                 >
                   {run.text}
                 </tspan>
@@ -1580,6 +1639,11 @@ export function LandingRedesign() {
             className="lp-nav-brand flex h-10 items-center justify-center gap-3 whitespace-nowrap text-primary-foreground sm:min-w-52"
             aria-label="Explainaloud home"
           >
+            {/* The mark, then the word. The masthead was the one place in the
+                product showing the wordmark without it — the rail, the auth
+                screen and the footer all pair them — so the front door was
+                the only door with no logo on it. */}
+            <ExplainaloudMark className="h-[1.35rem] w-[1.35rem] shrink-0" />
             <span className="lp-nav-brand-copy font-sans font-semibold text-[1.05rem] tracking-[-0.025em]">
               explainaloud
             </span>
@@ -1877,7 +1941,15 @@ export function LandingRedesign() {
            `position: fixed`, and ScrollTrigger's pin is `position: fixed` —
            which is half of how the first pinned attempt ended up parked at
            -825px. */
-        className="border-border border-t bg-card py-24 md:py-32"
+        /* Almost no vertical padding, unlike every other section here.
+         *
+         * The stage inside is `100svh` and centres its own content, so this
+         * section's job is to hold a full viewport, not to frame a block. The
+         * page's standard `py-24 md:py-32` was being added on top of that: a
+         * 128px band of empty card above a panel that was already going to
+         * centre itself, which read as a hole between the demo and the first
+         * step rather than as breathing room. */
+        className="border-border border-t bg-card py-8 md:py-10"
       >
         {/* The stage. ScrollTrigger pins it for exactly the track's travel —
             the pin inserts its own spacer, so there is no hand-sized rail

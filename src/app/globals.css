@@ -2654,9 +2654,13 @@ html:has(main.lp-v2) {
   font-size: 1.05rem;
 }
 
-.lp-v2 .lp-flow tspan {
-  animation: lp-flow-grade 620ms var(--ease-enter) both;
-}
+/* No arrival animation on a run any more.
+ *
+ * This faded each run from grey to its verdict once, on a stagger, at load.
+ * The grading is positional now — a gradient fixed to the frame that the
+ * words travel through — so a run is grey when it enters and marked once it
+ * has moved, every lap rather than only the first. A CSS animation on `fill`
+ * would beat the inline gradient for its whole duration and undo that. */
 
 .lp-v2 .lp-flow tspan[data-mark="ok"] {
   fill: var(--ok);
@@ -2673,12 +2677,6 @@ html:has(main.lp-v2) {
 /* `both`, as everywhere on this page: before its delay a run is unmarked,
    after it, marked, forever. A reader whose animations never run gets the
    finished take rather than a blank curve. */
-@keyframes lp-flow-grade {
-  from {
-    fill: color-mix(in oklab, var(--muted-foreground) 52%, transparent);
-  }
-}
-
 @keyframes lp-flow-in {
   from {
     opacity: 0;
@@ -2692,8 +2690,7 @@ html:has(main.lp-v2) {
 @media (prefers-reduced-motion: reduce) {
   .lp-v2 .lp-flow,
   .lp-v2 .lp-flow-b,
-  .lp-v2 .lp-flow-e,
-  .lp-v2 .lp-flow tspan {
+  .lp-v2 .lp-flow-e {
     animation: none;
   }
 }
