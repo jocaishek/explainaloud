@@ -127,6 +127,11 @@ function RailLink({
     <Link
       href={item.href}
       onClick={onNavigate}
+      /* The first-run tour rings this one. It is on the link rather than on a
+         wrapper so the ring follows the control, and it is only on Record
+         because that is the one step of the loop the dashboard no longer
+         spells out for itself. */
+      data-tour={item.href === "/record" ? "record" : undefined}
       aria-current={active ? "page" : undefined}
       // The label is the accessible name when it is not on screen to be read.
       aria-label={collapsed ? item.label : undefined}

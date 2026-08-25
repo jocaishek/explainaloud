@@ -1,11 +1,11 @@
 import type { Course, Folder } from "~/lib/folders";
 import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { requireProfile } from "~/lib/supabase/server";
+import { cn } from "~/lib/utils";
 import { TopicGrid } from "../topic-grid";
 import { FirstRunTour } from "./first-run";
 import { HomeHeader } from "./home-header";
 import { PacePanel, type PaceSession } from "./pace-panel";
-import { QuickActions } from "./quick-actions";
 import { StatCards } from "./stat-cards";
 import { StreakStrip, type WeekDay } from "./streak-strip";
 
@@ -187,28 +187,43 @@ export default async function DashboardPage() {
     <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-8 pb-14 sm:px-6 lg:px-10 lg:py-10 lg:pb-16">
       <HomeHeader firstName={profile.first_name} lede={lede} />
 
-      {/* Above the totals, because it is the only figure on this page that
-          moves today. */}
-      {weekDays.length > 0 && (
-        <StreakStrip streak={currentStreak} week={weekDays} />
-      )}
+      {/* Your topics, immediately.
+       *
+       * They used to be the last thing on the page, under a streak band, a
+       * row of totals and a two-panel row — so opening the app put four
+       * screens of summary between somebody and the only thing on it that is
+       * theirs. The summary is worth having and it is not worth arriving at
+       * first: a dashboard whose top half is about the dashboard is a page
+       * you scroll past every time.
+       *
+       * The panel that used to lead — a numbered "Start here" of the three
+       * steps — is gone rather than moved. It was a restatement of the loop
+       * for somebody who had already learned it, and every route in it is
+       * still one click away: the grid's own new-topic tile is `/new`, and
+       * Record sits in the rail. The first-run tour still teaches the loop,
+       * once, to the only people who need telling. */}
+      <div data-rise="" data-tour="topics">
+        <TopicGrid folders={folders ?? []} courses={courses ?? []} />
+      </div>
 
-      <StatCards stats={stats} />
-
-      {/* The two panels of the second row: what to do, and how the doing has
-          been going. Side by side on a wide screen because they answer the
-          same question from opposite ends — one is the loop, the other is
-          your record of running it. */}
-      <div className="grid items-stretch gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)]">
+      {/* Where the doing has been going, under the thing being done. Side by
+          side on a wide screen because they answer the same question from
+          opposite ends — one is today, the other is the last five takes. */}
+      <div
+        className={cn(
+          "grid items-stretch gap-4",
+          /* The second track only exists when there is a band to put in it.
+             Left declared unconditionally, an account with no week data would
+             leave a 21rem column of nothing beside the pace panel. */
+          weekDays.length > 0 && "lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)]",
+        )}
+      >
         {/* One `data-rise` each rather than one on the row, so the two panels
             arrive left then right. The index comes from document order — see
             `ScrollReveal` — so nothing here has to know its own position. */}
-        <div data-rise="" className="h-full">
-          {/* Before the topic list, not after it: arriving usually means
-              knowing what you want to do rather than which topic you want to
-              do it to. */}
-          <QuickActions />
-        </div>
+        {weekDays.length > 0 && (
+          <StreakStrip streak={currentStreak} week={weekDays} />
+        )}
         <div data-rise="" className="h-full">
           <PacePanel
             sessions={paceSessions}
@@ -218,9 +233,7 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div data-rise="" data-tour="topics">
-        <TopicGrid folders={folders ?? []} courses={courses ?? []} />
-      </div>
+      <StatCards stats={stats} />
 
       {/* Three steps, once, for somebody who has just arrived. Renders
           nothing at all for everybody else. */}
