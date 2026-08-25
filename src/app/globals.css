@@ -2421,6 +2421,29 @@ html:has(main.lp-v2) {
   z-index: 0;
   display: none;
   pointer-events: none;
+  /* Never an anchor for scroll anchoring.
+   *
+   * This is the whole of the "page jitters when you scroll a little" bug,
+   * and it is not a scroll handler — nothing in the page calls a scroll
+   * method, and the document height never changes. It is the browser doing
+   * its job with bad material.
+   *
+   * Chrome picks a DOM node near the top of the viewport, and if that node
+   * moves or resizes because of layout above it, Chrome shifts the scroll
+   * position to keep it visually still. The streams are the worst possible
+   * candidate: the marquee walks `startOffset` every frame, so the glyphs
+   * travel along the curve and the `text`, `textPath` and `tspan` boxes are
+   * re-measured constantly — 1,966 resize events on the tspans alone in two
+   * and a half seconds. Anchor to one of those and the page is pulled a
+   * pixel or two back and forth forever.
+   *
+   * `overflow-anchor: none` takes an element and its subtree out of the
+   * candidate set. It belongs here rather than on `html`, which would turn
+   * anchoring off for the whole document and lose the thing it is good at —
+   * holding your place when something above you loads. These curves are
+   * `aria-hidden` decoration; they should never have been holding anybody's
+   * place to begin with. */
+  overflow-anchor: none;
   /* Only the arrival. The motion belongs to the words now — the marquee
      slides them along their paths — and a transform drift on top of that
      made the whole drawing swim. */
