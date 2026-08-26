@@ -706,7 +706,22 @@ export function FlowField({ className }: { className?: string }) {
          is indistinguishable from rendering it at full size, and it costs a
          quarter as much. This is the difference between a background and a
          hot laptop. */
-      const ratio = Math.min(window.devicePixelRatio || 1, 1) * 0.9;
+      /* Lower again on a phone, and for a different reason than the cap
+         above.
+       *
+       * That cap is about retina screens spending fragments on detail a
+       * field of soft gradients does not contain. This one is about the
+       * GPU underneath: the visible pass is seven fractal-noise
+       * evaluations per pixel, four octaves each, and a phone runs it on a
+       * budget a laptop does not have. At 0.9 across a 375-wide hero that
+       * is nearly two hundred thousand pixels of it, every frame, behind
+       * type that is trying to move.
+       *
+       * 0.6 is a little over half the fragments. On an image with no edge
+       * in it the upscale is invisible; the frame it gives back is not. */
+      const coarse = window.matchMedia("(pointer: coarse)").matches;
+      const ratio =
+        Math.min(window.devicePixelRatio || 1, 1) * (coarse ? 0.6 : 0.9);
       const width = Math.max(1, Math.round(canvas.clientWidth * ratio));
       const height = Math.max(1, Math.round(canvas.clientHeight * ratio));
       if (canvas.width === width && canvas.height === height && targets) return;

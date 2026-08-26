@@ -257,6 +257,57 @@ const HERO_CURVES_SM = [
 ] as const;
 
 /**
+ * The phone's stream: a line of type that travels by transform.
+ *
+ * Three identical copies of the take sit in one track, and the track moves
+ * exactly a third of its own width before repeating — so the loop is
+ * seamless by construction and nothing has to be measured to make it so.
+ * Only the duration is measured, once, from one copy's width, so that both
+ * bands travel at the same speed rather than at a speed proportional to how
+ * much they happen to say.
+ *
+ * Everything per frame is a composited `translate3d`. See `globals.css` for
+ * why that matters more than the effect it gives up.
+ */
+function FlowBand({
+  className,
+  runs,
+  delay,
+}: {
+  className: string;
+  runs: readonly { verdict: string; text: string }[];
+  delay: number;
+}) {
+  const copy = (
+    <span className="lp-band-copy">
+      {runs.map((run) => (
+        <span
+          key={run.text}
+          data-mark={run.verdict === "none" ? undefined : run.verdict}
+        >
+          {run.text}
+        </span>
+      ))}
+    </span>
+  );
+  return (
+    <div
+      aria-hidden="true"
+      className={className}
+      style={{ animationDelay: `${delay - 700}ms` }}
+    >
+      <div className="lp-band-track" data-flow-band>
+        {[0, 1, 2].map((n) => (
+          <span key={n} className="contents">
+            {copy}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
  * A paragraph on an invisible curve.
  *
  * The `<path>` is `fill="none"` and never stroked: it exists only as a rail
@@ -946,6 +997,63 @@ export function LandingRedesign() {
       document.removeEventListener("visibilitychange", forceSync);
     };
   }, [reduceMotion]);
+
+  /* The phone bands: one measurement, then nothing.
+   *
+   * The loop is seamless on its own — three copies, a third of the width —
+   * so the only thing JavaScript is needed for is the duration, and only so
+   * that a long take and a short one travel at the same speed instead of at
+   * speeds proportional to how much they say. Re-measured when the web font
+   * lands, because the fallback's metrics are not the real ones.
+   *
+   * After that the animation is entirely the compositor's, which is the
+   * point: there is no per-frame work here to be slow. */
+  useEffect(() => {
+    const bands = Array.from(
+      document.querySelectorAll<HTMLElement>(".lp-band"),
+    );
+    if (bands.length === 0) return;
+
+    const measure = () => {
+      for (const band of bands) {
+        const track = band.querySelector<HTMLElement>("[data-flow-band]");
+        if (!track) continue;
+        /* Three copies in the track, so a third of it is one take. A hidden
+           band measures zero and is left alone. */
+        const one = track.scrollWidth / 3;
+        if (one > 0) band.style.setProperty("--band-dur", `${one / SPEED}s`);
+      }
+    };
+    measure();
+    if (document.fonts?.ready) void document.fonts.ready.then(measure);
+    window.addEventListener("resize", measure);
+
+    /* Paused off screen and in a background tab. A composited animation is
+       cheap, not free, and this one has nothing to say to somebody four
+       sections down the page. */
+    const hero = heroRef.current;
+    let onScreen = true;
+    const sync = () => {
+      const idle = !onScreen || document.hidden;
+      for (const band of bands) band.classList.toggle("is-idle", idle);
+    };
+    const observer = new IntersectionObserver(
+      (entries) => {
+        onScreen = entries.some((entry) => entry.isIntersecting);
+        sync();
+      },
+      { rootMargin: "10% 0px" },
+    );
+    if (hero) observer.observe(hero);
+    document.addEventListener("visibilitychange", sync);
+    sync();
+
+    return () => {
+      window.removeEventListener("resize", measure);
+      document.removeEventListener("visibilitychange", sync);
+      observer.disconnect();
+    };
+  }, []);
 
   useEffect(() => {
     if (!heroRef.current || !pageRef.current) return;
@@ -1814,19 +1922,16 @@ export function LandingRedesign() {
           />
         ))}
         {/* Both sets are in the document and CSS decides which one is drawn.
-            The marquee skips whichever is hidden on its own: a `display:none`
-            SVG measures `getComputedTextLength()` as 0, which is already the
-            condition it uses to skip a stream it cannot measure. */}
-        {HERO_CURVES_SM.map((curve) => (
-          <FlowCurve
+            The marquee skips the curves whenever they are hidden on its own:
+            a `display:none` SVG measures `getComputedTextLength()` as 0,
+            which is already the condition it uses to skip a stream it cannot
+            measure. Below `lg` that is all of them, and these run instead. */}
+        {HERO_CURVES_SM.map((curve, i) => (
+          <FlowBand
             key={curve.key}
-            id={`lp-flow-${curve.key}`}
-            className={`lp-flow lp-flow-sm ${curve.place}`}
-            viewBox={curve.viewBox}
-            d={curve.d}
+            className={`lp-band ${i === 0 ? "lp-band-t" : "lp-band-b"}`}
             runs={curve.runs}
             delay={curve.delay}
-            fit="meet"
           />
         ))}
 
