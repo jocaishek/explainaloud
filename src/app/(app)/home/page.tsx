@@ -1,7 +1,6 @@
 import type { Course, Folder } from "~/lib/folders";
 import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { requireProfile } from "~/lib/supabase/server";
-import { cn } from "~/lib/utils";
 import { TopicGrid } from "../topic-grid";
 import { FirstRunTour } from "./first-run";
 import { HomeHeader } from "./home-header";
@@ -206,34 +205,29 @@ export default async function DashboardPage() {
         <TopicGrid folders={folders ?? []} courses={courses ?? []} />
       </div>
 
-      {/* Where the doing has been going, under the thing being done. Side by
-          side on a wide screen because they answer the same question from
-          opposite ends — one is today, the other is the last five takes. */}
-      <div
-        className={cn(
-          "grid items-stretch gap-4",
-          /* The second track only exists when there is a band to put in it.
-             Left declared unconditionally, an account with no week data would
-             leave a 21rem column of nothing beside the pace panel. */
-          weekDays.length > 0 && "lg:grid-cols-[minmax(0,1fr)_minmax(0,21rem)]",
-        )}
-      >
-        {/* One `data-rise` each rather than one on the row, so the two panels
-            arrive left then right. The index comes from document order — see
-            `ScrollReveal` — so nothing here has to know its own position. */}
-        {weekDays.length > 0 && (
-          <StreakStrip streak={currentStreak} week={weekDays} />
-        )}
-        <div data-rise="" className="h-full">
-          <PacePanel
-            sessions={paceSessions}
-            baselineWpm={baselineWpm}
-            recorded={recorded}
-          />
-        </div>
-      </div>
+      {/* The streak band goes the full measure, and has to.
+       *
+       * It was briefly put in a `1fr` column beside the pace panel, on the
+       * arithmetic that the measure is 72rem and 1fr would therefore be
+       * about 720px. That forgot the 256px rail: the content column is the
+       * viewport minus the rail, so at 1280px the band actually got 592px.
+       * Its three tracks need ~530px between the number and the seven day
+       * circles, which left the sentence sixty pixels to wrap in and pushed
+       * the last day off the card. A band whose own week does not fit is not
+       * a band. */}
+      {weekDays.length > 0 && (
+        <StreakStrip streak={currentStreak} week={weekDays} />
+      )}
 
       <StatCards stats={stats} />
+
+      <div data-rise="">
+        <PacePanel
+          sessions={paceSessions}
+          baselineWpm={baselineWpm}
+          recorded={recorded}
+        />
+      </div>
 
       {/* Three steps, once, for somebody who has just arrived. Renders
           nothing at all for everybody else. */}

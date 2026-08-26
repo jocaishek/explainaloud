@@ -89,7 +89,16 @@ export function StreakStrip({
     <section
       data-rise=""
       aria-labelledby="streak-heading"
-      className="grid gap-6 rounded-card border border-border bg-card p-6 shadow-rest lg:grid-cols-[auto_1fr_auto] lg:items-center lg:gap-10"
+      /* `xl`, not `lg`, and the difference is the rail.
+       *
+       * The three-track layout needs about 530px between the number and
+       * the seven day circles before the sentence gets any width at all.
+       * At the `lg` breakpoint the viewport is 1024 but this card is not:
+       * the app's rail takes 256 of it and the column's own padding
+       * another 80, so the card was laying out three tracks in 688px and
+       * setting "days in a row" three words deep. The breakpoint has to
+       * be read against the column, not the window. */
+      className="grid gap-6 rounded-card border border-border bg-card p-6 shadow-rest xl:grid-cols-[auto_1fr_auto] xl:items-center xl:gap-10"
     >
       {/* Centred again, and now safely: the caption has moved out of this
           block, so its height is the number's height and nothing else. */}
