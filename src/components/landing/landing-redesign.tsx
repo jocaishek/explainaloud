@@ -198,6 +198,9 @@ const HERO_CURVES = [
   },
 ] as const;
 
+/** How fast the streams travel, in user units a second — about a CSS pixel. */
+const SPEED = 54;
+
 /**
  * The same idea, redrawn for a phone.
  *
@@ -1334,22 +1337,24 @@ export function LandingRedesign() {
            * copies of a marked run grade at the same moment and stay
            * identical — which the seamlessness depends on. */
           if (!reduceMotion) {
-            /* Whole user units on a phone, every frame on a pointer.
+            /* Every frame, everywhere, and no rounding.
              *
-             * Writing `startOffset` is not a composited transform. It is a
-             * geometry change on text laid along a Bézier, so the browser
-             * re-measures every glyph in the belt — a few hundred of them —
-             * and repaints the SVG, on every write. That is the cost this
-             * effect actually has, and it is why the hero stutters on a
-             * phone while it is fine on a laptop.
+             * This used to round the value and write it only when it
+             * changed, which on a phone capped the work at 24 writes a
+             * second. Measured, that is 24 distinct positions across 61
+             * frames — 37 frames in every 61 showing no movement at all —
+             * and because the speed is about a unit per write, every step
+             * was exactly one pixel. The result is not a cheaper animation,
+             * it is a visibly stepping one, and "a pixel step at 24Hz is
+             * film" was wrong: film is continuous motion sampled, not a
+             * glyph teleporting a pixel at a time.
              *
-             * The belt travels at 24 units a second and a unit is about a
-             * CSS pixel at either drawing's scale, so rounding the value
-             * caps the work at roughly 24 relayouts a second instead of one
-             * per frame — and the cap holds even on a device already
-             * dropping frames, which is the case that matters. A pixel step
-             * at 24Hz is film, and this is background text. */
-            const coarse = window.matchMedia("(pointer: coarse)").matches;
+             * It also was not buying much. One forced relayout of a belt
+             * this size measures 0.31ms, so two streams cost about 0.6ms a
+             * frame — a few milliseconds on a phone, inside the budget. The
+             * expensive things were the streams running for the whole page
+             * and the twelve forced layouts at build time, and both of
+             * those are already gone. */
             const marquees: Array<{ pause: () => void; resume: () => void }> =
               [];
 
@@ -1384,24 +1389,26 @@ export function LandingRedesign() {
               }
 
               const state = { offset: 0 };
-              let written = Number.NaN;
               marquees.push(
                 gsap.fromTo(
                   state,
                   { offset: 0 },
                   {
                     offset: -one,
-                    /* ~24px a second: reading pace, not ticker-tape pace. */
-                    duration: one / 24,
+                    /* A unit is about a CSS pixel at either drawing's scale,
+                       so this is the speed in pixels a second. It was 24,
+                       which at a glyph's width per third of a second reads
+                       as a crawl rather than as speech; this is a drift you
+                       can see without watching for it, and still nowhere
+                       near ticker-tape. */
+                    duration: one / SPEED,
                     ease: "none",
                     repeat: -1,
                     onUpdate: () => {
-                      const next = coarse
-                        ? Math.round(state.offset)
-                        : state.offset;
-                      if (next === written) return;
-                      written = next;
-                      stream.setAttribute("startOffset", String(next));
+                      stream.setAttribute(
+                        "startOffset",
+                        state.offset.toFixed(2),
+                      );
                     },
                   },
                 ),
@@ -1435,6 +1442,10 @@ export function LandingRedesign() {
               );
               observer.observe(hero);
               document.addEventListener("visibilitychange", sync);
+              /* Once now, because a tween starts playing the moment it is
+                 built: a page opened in a background tab would otherwise
+                 walk both belts until the first visibility change. */
+              sync();
               docCleanups.push(() => {
                 observer.disconnect();
                 document.removeEventListener("visibilitychange", sync);
