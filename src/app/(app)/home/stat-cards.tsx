@@ -126,17 +126,24 @@ export function StatCards({ stats }: { stats: Stat[] }) {
             <p className="font-medium text-[0.85rem] text-subtle">
               {stat.label}
             </p>
-            {/* One row, one height, whether or not there is a figure in it —
-                three cards whose baselines disagree is half of what makes a
-                row look unconsidered. */}
-            {/* The caption sits on the number's baseline rather than under
-                it. Three cells of label-over-number-over-caption is three
-                stacked lines of text repeated three times across, which is
-                the shape of a spreadsheet row: tall, evenly grey, and read
-                as furniture. Putting the words that describe the figure
-                beside the figure collapses it to two lines, and the number
-                gets to be the biggest thing in its own cell. */}
-            <p className="mt-2 flex h-10 flex-wrap items-baseline gap-x-2 gap-y-1">
+            {/* The caption takes its own line, and takes it deliberately.
+             *
+             * It used to sit on the number's baseline and wrap only when it
+             * had to, inside a fixed `h-10`. Both halves of that were
+             * wrong. The fixed height was 40px — exactly the height of the
+             * figure alone — so the moment a caption wrapped, 64px of
+             * content sat in a 40px box and the second line was drawn
+             * straight through the rule under the cell. And it always did
+             * wrap: at any real column width "Your own baseline, with the
+             * pauses left out" does not fit beside a four-digit figure, so
+             * the row permanently had one cell of three in a different
+             * shape from its neighbours.
+             *
+             * `basis-full` makes the wrap the design rather than the
+             * failure. Every cell is now label, figure, caption, with the
+             * figures aligned across the row — which is the thing the
+             * fixed height was reaching for and could not hold. */}
+            <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1.5">
               <span
                 className={cn(
                   "font-medium text-[2.5rem] leading-none tracking-[-0.045em] tabular-nums",
@@ -153,7 +160,7 @@ export function StatCards({ stats }: { stats: Stat[] }) {
                   {stat.unit}
                 </span>
               )}
-              <span className="text-[0.82rem] text-subtle">
+              <span className="basis-full text-[0.82rem] text-subtle">
                 {measured ? stat.caption : stat.empty}
               </span>
             </p>
