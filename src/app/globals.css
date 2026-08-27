@@ -2454,35 +2454,45 @@ html:has(main.lp-v2) {
   animation: lp-flow-in 900ms var(--ease-enter) both;
 }
 
-/* ── The phone's streams, as a composited band ────────────────────────────
+/* ── The phone's streams, as words walking a wave ─────────────────────────
  *
- * Below `lg` the streams are not text on a path any more, and the reason is
- * the only one that matters on a phone: `startOffset` is a geometry change,
- * so walking it re-shapes every glyph in the belt on every frame. Two belts
- * of a couple of hundred glyphs is a text layout twice per frame, forever,
- * and on a mid-range phone that is most of the frame budget before the hero's
- * fluid field has drawn anything. It measured fine on a laptop and ran at
- * about ten frames a second in somebody's hand, which is the whole lesson.
+ * Below `lg` the streams are the same picture the wide hero draws — a take
+ * running along an invisible curve — built out of a different machine,
+ * because the desktop's machine is what made a phone run at ten frames a
+ * second.
  *
- * A band is a line of ordinary text moved by `translate3d`. That is a
- * composited transform: no layout, no re-shaping, no paint — the compositor
- * moves a texture it already has. It cannot go slowly on any device, because
- * there is nothing per frame for a device to be slow at.
+ * That machine is `startOffset`: walking a paragraph along an SVG path is a
+ * geometry change, so every glyph in the belt is re-shaped on every frame.
+ * Two belts of a couple of hundred letters is a text layout twice a frame,
+ * forever. The first answer was to take the curve away and slide a straight
+ * line of type with `translate3d` — smooth, and the wrong drawing, since this
+ * page is curves everywhere it is wide. The second was to put the wave back
+ * and slide the whole picture, which was smooth and the wrong *idea*: a
+ * translated wave travels, so the page waved at the reader instead of running
+ * a take past them.
  *
- * What it costs is the grading-as-they-travel, which needs a paint fixed to
- * the frame while the words move through it, and that is exactly what a
- * transform cannot do. The verdict colours stay — the marking is the point —
- * and the grey-to-colour crossing is a desktop refinement now.
+ * A curve that holds still while type walks along it cannot be any kind of
+ * rigid transform. So the words walk one at a time: each is a `<span>` on a
+ * CSS motion path, and the only thing that animates is how far along the rail
+ * it has got. The rail never changes. Every frame is a transform per word —
+ * no layout, no re-shaping, no paint.
  *
- * The loop is seamless without measuring anything: the track holds three
- * identical copies and travels exactly a third of its own width, so the
- * frame after the last is pixel-identical to the first. Only the duration is
- * measured, once, at mount.
+ * What it still costs is the grading-as-they-travel, which needs a paint
+ * fixed to the frame while the words move through it, and a word carrying its
+ * own colour cannot be painted by the frame. The verdict colours stay — the
+ * marking is the point — and the grey-to-colour crossing is a desktop
+ * refinement.
+ *
+ * The numbers are all in `landing-redesign.tsx`, measured once at mount.
  * ------------------------------------------------------------------------ */
 .lp-v2 .lp-band {
   position: absolute;
-  left: -70vw;
-  right: -70vw;
+  /* Wide enough that the belt's own ends are always outside the frame, and
+     no wider: every pixel of this box is a pixel of texture the compositor
+     has to hold. The straight band ran 70vw past each edge because it was
+     turned hard enough to need it; a wave is not. */
+  left: -14vw;
+  right: -14vw;
   z-index: 0;
   display: none;
   overflow: hidden;
@@ -2497,7 +2507,16 @@ html:has(main.lp-v2) {
   animation: lp-flow-in 900ms var(--ease-enter) both;
 }
 
-@media (max-width: 1023.98px) {
+/* Where the drawing changes hands.
+ *
+ * This was `lg`, and `lg` was too high. The three landscape curves are
+ * composed in a 1440x900 space and they hold together a long way down —
+ * measured, they are still in the margins and clear of every line of type at
+ * 900, and it is at about 700 that the bottom wave starts crossing the trust
+ * line. A 1024 cut-off therefore handed the phone's drawing to a perfectly
+ * ordinary half-screen desktop window, which is where "this is on a desktop
+ * and it looks bad" came from: not a phone at all. */
+@media (max-width: 899.98px) {
   .lp-v2 .lp-band {
     display: block;
   }
@@ -2520,53 +2539,108 @@ html:has(main.lp-v2) {
    18.2%. The band is set a size smaller and turned a degree less so its
    swinging ends still clear both. */
 .lp-v2 .lp-band-t {
-  top: 13.2%;
-  transform: rotate(-2deg);
+  top: 15.2%;
+  transform: translateY(-50%);
 }
 
 .lp-v2 .lp-band-b {
-  top: 92.5%;
-  transform: rotate(2deg);
+  top: 94.3%;
+  transform: translateY(-50%);
 }
 
-.lp-v2 .lp-band-track {
-  display: inline-flex;
-  white-space: nowrap;
-  will-change: transform;
-  animation: lp-band-run var(--band-dur, 26s) linear infinite;
-}
-
-.lp-v2 .lp-band.is-idle .lp-band-track {
-  animation-play-state: paused;
-}
-
-@keyframes lp-band-run {
-  to {
-    transform: translate3d(-33.3333%, 0, 0);
-  }
-}
-
-.lp-v2 .lp-band-copy {
+/* One line of the take, set the way the browser would set it, and never
+   painted. It is the only thing in the band that is ever laid out, and the
+   belt reads its word positions off it — which is how the spacing on the
+   curve ends up with the real kerning and the real spaces in it rather than a
+   sum of measured widths. */
+.lp-v2 .lp-band-probe,
+.lp-v2 .lp-band-word {
   font-size: 14px;
   font-weight: 550;
   letter-spacing: -0.005em;
   color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
 }
 
-.lp-v2 .lp-band-copy span[data-mark="ok"] {
+.lp-v2 .lp-band-probe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  white-space: pre;
+}
+
+/* The two coats, stacked. Same words, same distances, same rail: the pair is
+   one belt that changes colour as it crosses the frame. */
+.lp-v2 .lp-band-rails {
+  position: relative;
+}
+
+.lp-v2 .lp-band-rail {
+  position: absolute;
+  inset: 0;
+}
+
+/* Marked on the left of the frame, grey on the right, and a crossing in
+   between — measured across the *band*, not the rail, so a word turns colour
+   at the same place on the page whatever the belt behind it is doing. The
+   stops are the ones the desktop curves paint with. */
+.lp-v2 .lp-band-rail-mark {
+  mask-image: linear-gradient(
+    to right,
+    #000 var(--mark-until, 40%),
+    transparent var(--grey-from, 70%)
+  );
+}
+
+.lp-v2 .lp-band-word {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: pre;
+  /* The rail. Declared once on the rail as a custom property and inherited,
+     so a hundred words share one path rather than each parsing their own. */
+  offset-path: var(--wave);
+  /* The word rides by its left edge and turns with the curve, which is what a
+     `textPath` does to a glyph and the whole reason this reads as type on a
+     path rather than as type bouncing. */
+  offset-anchor: 0% 50%;
+  offset-rotate: auto;
+  offset-distance: var(--from);
+  animation: lp-word-run var(--band-dur, 26s) linear infinite;
+}
+
+.lp-v2 .lp-band.is-idle .lp-band-word {
+  animation-play-state: paused;
+}
+
+/* One take back, per cycle. Every word travels the same distance at the same
+   time, so the spacing never changes; and because the copies are laid exactly
+   one take apart, each word finishes where the word behind it started. */
+@keyframes lp-word-run {
+  from {
+    offset-distance: var(--from);
+  }
+  to {
+    offset-distance: var(--to);
+  }
+}
+
+/* An unmarked word is the same grey in both coats, so it does not flicker
+   as the crossing passes over it. */
+.lp-v2 .lp-band-word[data-mark="ok"] {
   color: var(--ok);
 }
 
-.lp-v2 .lp-band-copy span[data-mark="vague"] {
+.lp-v2 .lp-band-word[data-mark="vague"] {
   color: var(--vague);
 }
 
-.lp-v2 .lp-band-copy span[data-mark="miss"] {
+.lp-v2 .lp-band-word[data-mark="miss"] {
   color: var(--miss);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .lp-v2 .lp-band-track {
+  .lp-v2 .lp-band-word {
     animation: none;
   }
 }
@@ -2580,15 +2654,12 @@ html:has(main.lp-v2) {
  * arrive as three unrelated diagonals with the type scaled down to match.
  *
  * The answer is not to shrink them. Text on a path does not reflow, so a
- * portrait frame needs its own drawing — two streams in the hero's own
- * coordinate space, in the bands the centred column leaves empty. */
-@media (min-width: 1024px) {
+ * narrow frame needs its own drawing — two waves in the hero's own
+ * coordinate space, in the bands the centred column leaves empty. Where the
+ * handover happens, and why it is not `lg`, is at `.lp-band` above. */
+@media (min-width: 900px) {
   .lp-v2 .lp-flow {
     display: block;
-  }
-
-  .lp-v2 .lp-flow-sm {
-    display: none;
   }
 }
 
