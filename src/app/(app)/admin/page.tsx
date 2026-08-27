@@ -13,6 +13,15 @@ const adminTopicSchema = z.object({
 const adminUserOverviewSchema = z.object({
   user_id: z.string().uuid(),
   email: z.string().nullable(),
+  /* Optional as well as nullable, and the two mean different things.
+   *
+   * Null is an account that has no handle — everybody who signed up before
+   * usernames existed and has not been backfilled. Absent is a database whose
+   * `admin_user_overview` predates this column, which is the state between
+   * this deploying and its migration being pushed. Rejecting that would take
+   * the whole page down over a field that is decoration, so it renders a dash
+   * and the counts still work. */
+  username: z.string().nullable().optional(),
   first_name: z.string().nullable(),
   last_name: z.string().nullable(),
   joined_at: z.string(),
@@ -115,6 +124,19 @@ export default async function AdminPage() {
                       {displayName(user)}
                     </span>
                     <span className="block truncate text-xs text-subtle">
+                      {/* The handle first, because it is what every other
+                          screen in the product calls this person and what a
+                          support message will quote at you. The email is the
+                          account, and stays — but it is the thing you check
+                          second. */}
+                      {user.username ? (
+                        <span className="font-mono text-foreground">
+                          @{user.username}
+                        </span>
+                      ) : (
+                        <span title="No username set">—</span>
+                      )}
+                      <span aria-hidden> · </span>
                       {user.email ?? "No email"}
                     </span>
                   </span>
