@@ -614,6 +614,28 @@ export function RecordConsole({
     sectionIndex: number | null;
   } | null>(null);
 
+  /**
+   * A finished take, waiting to be read back before it is marked.
+   *
+   * The transcriber is good and it is not perfect, and the words it gets wrong
+   * are exactly the words that carry the marks: names, dates, technical terms.
+   * Somebody who says "Bacon's Rebellion" and is handed "bacons rebellion" has
+   * been graded on what the microphone heard rather than on what they said,
+   * and the appeal they cannot make is the worst kind of wrong answer.
+   *
+   * So a topic take stops one step short of the grader and shows its own
+   * transcript first. Nothing is lost by waiting: the session row is already
+   * saved and the day is already marked, so a reader who closes the tab here
+   * keeps their streak and can grade it later from the same "never checked"
+   * path a timed-out grader leaves behind.
+   */
+  const [review, setReview] = useState<{
+    id: string;
+    transcript: string;
+    sectionIndex: number | null;
+  } | null>(null);
+  const [draft, setDraft] = useState("");
+
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -1480,12 +1502,23 @@ export function RecordConsole({
         return;
       }
 
-      setStatus("analyzing");
       if (interviewRef.current) {
+        /* Interview answers are cut out of the audio by time — see
+           `answersByTime` — so the transcript is not one text to correct but
+           several, each pinned to the moment it was spoken. Editing the whole
+           thing would move the boundaries. It gets no review step yet, and
+           that is a gap rather than a decision. */
+        setStatus("analyzing");
         await finishInterview(data.id);
-      } else {
-        await analyzeSession(text, data.id);
+        return;
       }
+
+      setReview({
+        id: data.id,
+        transcript: text,
+        sectionIndex: answeringRef.current?.index ?? null,
+      });
+      setDraft(text);
     } catch (finishError) {
       console.error("Recording finalization failed:", finishError);
       setError(
@@ -1963,6 +1996,51 @@ export function RecordConsole({
     }
   }
 
+  /**
+   * Send the take to the grader, with whatever corrections were made to it.
+   *
+   * The edit is written back to the session row before grading rather than
+   * after, and rather than not at all: the report is stored against that row
+   * and read back on the course page, so a transcript that disagrees with the
+   * marks beside it is a bug somebody will find weeks later. If the write
+   * fails the grading still runs on the corrected words — being marked
+   * correctly matters more than the row agreeing about it.
+   */
+  async function gradeReviewed() {
+    const pending = review;
+    if (!pending) return;
+    const corrected = draft.trim();
+    const text = corrected.length > 0 ? corrected : pending.transcript;
+
+    setReview(null);
+    setError(null);
+    setStatus("analyzing");
+    try {
+      if (text !== pending.transcript) {
+        const supabase = createClient();
+        const { error: saveError } = await supabase
+          .from("course_sessions")
+          .update({ transcript: text })
+          .eq("id", pending.id);
+        if (saveError) {
+          console.error("Transcript correction failed to save:", saveError);
+        } else {
+          setSessions((prev) =>
+            prev.map((session) =>
+              session.id === pending.id
+                ? { ...session, transcript: text }
+                : session,
+            ),
+          );
+          setTranscript(text);
+        }
+      }
+      await analyzeSession(text, pending.id, pending.sectionIndex);
+    } finally {
+      setStatus("idle");
+    }
+  }
+
   /** Grade a session that was saved but never checked. */
   async function runPendingCheck() {
     const pending = pendingCheck;
@@ -2013,6 +2091,8 @@ export function RecordConsole({
       setSpans([]);
       setSpansCover("");
       setReport(null);
+      // A take waiting to be read back belongs to the take that produced it.
+      setReview(null);
       setAgentRun(null);
       // The session it referred to has just been deleted, so the offer to
       // grade it would fail on a row that is gone.
@@ -2527,6 +2607,7 @@ export function RecordConsole({
     setSpans([]);
     setSpansCover("");
     setReport(null);
+    setReview(null);
     setAgentRun(null);
     setDisplayedSessionId(null);
     setNotice(null);
@@ -3007,6 +3088,60 @@ export function RecordConsole({
          * reader did, and a red alert over a recording that saved correctly
          * reads as "you lost it". The words are still there and the check is
          * one press away. */}
+        {/* Read it back before it is marked.
+         *
+         * The primary action grades it, edited or not, so the fastest path
+         * through is one press — the same number of presses this took before
+         * the step existed. There is no "skip": skipping and grading are the
+         * same button, because a screen that offers to be dismissed teaches
+         * people to dismiss it.
+         *
+         * Not a modal, and not an error. Nothing has gone wrong; this is the
+         * last chance to say what you actually said. */}
+        {review && status !== "analyzing" && (
+          <div className="flex w-full max-w-xl flex-col gap-3 rounded-card border border-border bg-card p-4 text-left shadow-rest">
+            <div className="flex flex-col gap-1">
+              <p className="font-semibold text-sm text-strong">
+                Read it back before it&apos;s marked
+              </p>
+              <p className="text-xs text-subtle leading-5">
+                Names and technical terms are what the transcriber gets wrong,
+                and they&apos;re what the marks are for. Fix anything it
+                misheard — everything else can stay as it is.
+              </p>
+            </div>
+            <label className="sr-only" htmlFor="transcript-review">
+              Your transcript
+            </label>
+            <textarea
+              id="transcript-review"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              rows={8}
+              spellCheck
+              className="w-full resize-y rounded-control border border-border bg-surface p-3 text-sm text-foreground leading-6 focus:border-brand/40 focus:outline-none focus:ring-2 focus:ring-brand/25"
+            />
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                onClick={gradeReviewed}
+                className="press h-9 rounded-control bg-accent-solid px-4 font-semibold text-[0.85rem] text-accent-contrast hover:bg-accent-solid-hover"
+              >
+                Grade it
+              </Button>
+              {draft.trim() !== review.transcript && (
+                <button
+                  type="button"
+                  onClick={() => setDraft(review.transcript)}
+                  className="text-xs text-subtle underline underline-offset-4 hover:text-foreground"
+                >
+                  Undo my edits
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         {pendingCheck && status !== "analyzing" && (
           <div className="flex max-w-sm flex-col items-center gap-2">
             <p className="text-xs text-subtle leading-5">
