@@ -234,7 +234,12 @@ export function FriendsClient({
             </section>
           )}
 
-          <FriendSearch onChanged={refresh} inputRef={searchRef} />
+          <FriendSearch
+            friends={friends}
+            requests={requests}
+            onChanged={refresh}
+            inputRef={searchRef}
+          />
         </aside>
       </div>
     </div>
