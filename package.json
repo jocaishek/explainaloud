@@ -12,6 +12,7 @@
     "format": "biome format --write .",
     "lint": "biome check .",
     "typecheck": "tsc --noEmit",
+    "check:migrations": "node scripts/check-migrations.mjs --new-since=origin/main",
     "preinstall": "npx only-allow pnpm"
   },
   "dependencies": {

@@ -34,6 +34,36 @@ All database schema changes must go through Supabase CLI migrations — never mo
    npx supabase db push             # apply
    ```
 
+## Check it before you open a pull request
+
+```bash
+pnpm check:migrations
+```
+
+Replays every migration in order and checks that each one only references
+functions and columns that exist by the time it runs. It fails on what *your
+branch adds* and only mentions already-merged problems in passing, so it is a
+gate rather than a backlog.
+
+**This catches what running the migration cannot.** Postgres does not resolve
+the identifiers inside a `plpgsql` body until somebody calls the function — so
+a migration can apply perfectly, on a fresh database and on production, and
+still be broken. That is not a hypothetical:
+
+- `admin_user_overview` was recreated calling `is_ropes_admin()`, which a
+  rename had dropped a month earlier. It applied cleanly on both, and then
+  returned a 500 on every load of `/admin` until somebody opened the page.
+- A squad migration joined `public.profiles p on p.id`, and `profiles` keys on
+  `user_id` and has no `id` column at all.
+
+It is a text-level model, not a parser. It will not catch a type error, a bad
+plan or a broken policy, and it is not a reason to skip `db reset`. It catches
+the class of mistake that survives being run.
+
+**And run the page.** Both of the above would also have been caught by opening
+the screen the migration exists for, once, before merging. A migration is not
+verified by applying; it is verified by something calling it.
+
 ## Rules
 
 - Never reset or revert a migration that has been deployed to production — always roll forward
