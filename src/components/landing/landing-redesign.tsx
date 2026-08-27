@@ -3,7 +3,13 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { DemoConsole } from "~/components/landing/demo-console";
 import { FlowField } from "~/components/landing/flow-field";
@@ -131,8 +137,9 @@ const HERO_CURVES = [
      *
      * Slopes stay inside the budget text on a path allows: steep is fine,
      * past vertical is upside down. */
-    viewBox: "0 0 1440 900",
     d: "M-60 430C120 390 175 265 215 178C255 92 390 28 620 -40",
+    /* Which edge of the hero this curve belongs to. See `scaleFlow`. */
+    anchor: "top",
     delay: 900,
     /* Mostly unmarked, on purpose. This is the take as spoken, and a take is
        not a wall of verdicts — most of what anybody says is just said. Two
@@ -155,10 +162,10 @@ const HERO_CURVES = [
   {
     key: "arc-top-right",
     place: "lp-flow-tr",
-    viewBox: "0 0 1440 900",
     /* Bent harder: enters near-vertical off the top and rolls out flat
        toward the right edge, a real quarter-turn instead of a diagonal. */
     d: "M1035 -40C1090 140 1210 292 1470 362",
+    anchor: "top",
     delay: 1250,
     runs: [
       { verdict: "ok", text: "A derivative is a rate of change. " },
@@ -168,7 +175,6 @@ const HERO_CURVES = [
   {
     key: "wave-bottom",
     place: "lp-flow-bw",
-    viewBox: "0 0 1440 900",
     /* Every point stays inside the slice-safe band. The hero is shorter
        than the 900-unit viewBox, and `slice` crops the overflow top and
        bottom — the first draft dipped to y=905, so the valley and the crest
@@ -184,6 +190,7 @@ const HERO_CURVES = [
        single valley and one long gentle rise, and nothing on it climbs past
        y=714, a full band below the lock line at any aspect ratio. */
     d: "M-60 640C60 735 250 852 480 822C720 790 950 736 1160 722C1290 714 1380 724 1440 736",
+    anchor: "bottom",
     delay: 1600,
     runs: [
       {
@@ -201,110 +208,106 @@ const HERO_CURVES = [
 /** How fast the streams travel, in user units a second — about a CSS pixel. */
 const SPEED = 54;
 
-/**
- * The same idea, redrawn for a phone.
- *
- * The desktop streams were switched off below `lg` because they are composed
- * in a 1440x900 space, and `slice` on a 390-wide window crops that to the
- * middle quarter — three curves become three unrelated diagonals and the type
- * scales down with them. The conclusion drawn at the time was that a phone
- * cannot have them. What a phone cannot have is *those*: text on a path does
- * not reflow, so a drawing made for a landscape frame has to be drawn again
- * for a portrait one rather than shrunk into it.
- *
- * So: two streams instead of three, in the hero's own portrait coordinate
- * space, placed in the two bands the centred column leaves empty — above the
- * headline and below the buttons. The marked take keeps the lower band,
- * because it is the one that shows what the product does.
- */
-const HERO_CURVES_SM = [
-  {
-    key: "sm-top",
-    place: "lp-flow-sm-t",
-    viewBox: "0 0 390 578",
-    /* The hero measures 578 tall on a phone and the centred column occupies
-       112–513 of it. Both curves sit outside that: this one crests at ~100,
-       a dozen pixels clear of the headline. */
-    /* Runs well past the viewBox on both sides. `meet` fits the drawing
-       rather than filling the frame, so on anything wider than a phone the
-       390-unit box is scaled to the height and centred — at 900 that leaves
-       ~180px of margin each side, and a stream that stops inside the frame
-       reads as a caption rather than as a take running through it. Extending
-       the path beyond the box costs nothing: an SVG clips to its viewport,
-       not to its viewBox. */
-    d: "M-150 78C40 108 240 100 540 46",
-    delay: 900,
-    runs: [
-      { verdict: "ok", text: "A derivative is a rate of change. " },
-      { verdict: "miss", text: "Never said: at a point. " },
-    ],
-  },
-  {
-    key: "sm-bottom",
-    place: "lp-flow-sm-b",
-    viewBox: "0 0 390 578",
-    d: "M-150 516C50 560 250 572 540 520",
-    delay: 1250,
-    runs: [
-      {
-        verdict: "ok",
-        text: "Mitosis copies the DNA before anything splits. ",
-      },
-      { verdict: "vague", text: "Then it all gets pulled apart. " },
-      { verdict: "miss", text: "Never said: each cell keeps the full count. " },
-    ],
-  },
-] as const;
+/** The space the three curves were composed against each other in. */
+const FLOW_DESIGN = { width: 1440, height: 900 };
 
 /**
- * The phone's stream: a line of type that travels by transform.
+ * Scale the drawing to the hero, and only scale it.
  *
- * Three identical copies of the take sit in one track, and the track moves
- * exactly a third of its own width before repeating — so the loop is
- * seamless by construction and nothing has to be measured to make it so.
- * Only the duration is measured, once, from one copy's width, so that both
- * bands travel at the same speed rather than at a speed proportional to how
- * much they happen to say.
+ * The three curves used to be an SVG with a 1440x900 `viewBox` and
+ * `preserveAspectRatio="slice"`, which is the browser scaling the drawing to
+ * *cover* the frame and cropping the rest. On a landscape window that is
+ * exactly right. On a narrow one it is a disaster in two directions at once:
+ * covering a 390x578 frame means scaling by the height, so the visible slice
+ * is the middle 40% of the width — the left and right curves are outside it
+ * and the composition arrives as one diagonal through the headline.
  *
- * Everything per frame is a composited `translate3d`. See `globals.css` for
- * why that matters more than the effect it gives up.
+ * `meet` fixes the crop and breaks the type instead: fitting the whole 1440
+ * across 390 is a scale of 0.27, and the streams are set in the drawing's own
+ * units, so 16 becomes four pixels.
+ *
+ * What a person means by "make it smaller" is neither. It is: keep the shapes
+ * exactly, scale them by the width, hold the type at the size it reads at,
+ * and let the *gap between* the top curves and the bottom one take up the
+ * slack — because that gap is where the headline lives, and it is the only
+ * part of the drawing that is empty by design.
+ *
+ * So the SVG is given the hero's own pixels as its coordinate space, and the
+ * curve is rewritten into it: every coordinate multiplied by `width / 1440`,
+ * and the bottom wave carried down by whatever is left over. Type stays put
+ * because a user unit is now a pixel. Nothing about the drawing changes but
+ * its size and the distance between its two halves.
  */
-function FlowBand({
-  className,
-  runs,
-  delay,
-}: {
-  className: string;
-  runs: readonly { verdict: string; text: string }[];
-  delay: number;
-}) {
-  const copy = (
-    <span className="lp-band-copy">
-      {runs.map((run) => (
-        <span
-          key={run.text}
-          data-mark={run.verdict === "none" ? undefined : run.verdict}
-        >
-          {run.text}
-        </span>
-      ))}
-    </span>
-  );
-  return (
-    <div
-      aria-hidden="true"
-      className={className}
-      style={{ animationDelay: `${delay - 700}ms` }}
-    >
-      <div className="lp-band-track" data-flow-band>
-        {[0, 1, 2].map((n) => (
-          <span key={n} className="contents">
-            {copy}
-          </span>
-        ))}
-      </div>
-    </div>
-  );
+function scaleFlow(hero: HTMLElement) {
+  const width = hero.clientWidth;
+  const height = hero.clientHeight;
+  if (width <= 0 || height <= 0) return 0;
+  const scale = width / FLOW_DESIGN.width;
+  const drop = height - FLOW_DESIGN.height * scale;
+
+  /* Where the type ends, in the hero's own pixels. The wave is drawn to
+     pass under it, and on a frame that is wide but short there is not enough
+     room below the buttons for it to — the drawing is scaled by the width
+     and the column is not, so the two close on each other. Rather than
+     letting it run through the trust line, the wave is pushed down and off
+     the bottom edge, which is where it was always drawn to go. */
+  const column = hero.querySelector("[data-hero-column]");
+  const floor = column
+    ? column.getBoundingClientRect().bottom - hero.getBoundingClientRect().top
+    : 0;
+
+  for (const svg of hero.querySelectorAll<SVGSVGElement>(".lp-flow")) {
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const path = svg.querySelector<SVGPathElement>("[data-design-d]");
+    if (path) {
+      const design = path.dataset.designD ?? "";
+      let offset = 0;
+      if (path.dataset.anchor === "bottom") {
+        offset = Math.max(drop, floor + FLOW_CLEAR - highestOf(design) * scale);
+      }
+      path.setAttribute("d", scalePath(design, scale, offset));
+    }
+    /* The grading ramp is laid across the frame in user space, so it has to
+       be told how wide the frame is now. */
+    for (const stop of svg.querySelectorAll("[data-flow-grad]")) {
+      stop.setAttribute("x2", `${width}`);
+    }
+  }
+  return scale;
+}
+
+/** How much air the drawing leaves around the type it passes. */
+const FLOW_CLEAR = 12;
+
+/**
+ * The topmost point of a curve, in design units.
+ *
+ * Same alternation as `scalePath`, and safe for the same reason: these paths
+ * are absolute `M` and `C` only, so every second number is a y.
+ */
+function highestOf(d: string) {
+  const numbers = d.match(/-?\d+(?:\.\d+)?/g) ?? [];
+  let top = Number.POSITIVE_INFINITY;
+  for (let n = 1; n < numbers.length; n += 2) {
+    top = Math.min(top, Number.parseFloat(numbers[n] as string));
+  }
+  return Number.isFinite(top) ? top : 0;
+}
+
+/**
+ * Every number in the path, scaled — and the odd ones dropped.
+ *
+ * Safe because these three paths are written the one way: absolute `M` and
+ * `C` only, so the numbers are x, y, x, y all the way along. A relative
+ * command or an arc would break the alternation, which is why there are none
+ * and why a new curve has to keep to the same vocabulary.
+ */
+function scalePath(d: string, scale: number, offset: number) {
+  let n = 0;
+  return d.replace(/-?\d+(?:\.\d+)?/g, (raw) => {
+    const value = Number.parseFloat(raw) * scale + (n++ % 2 === 1 ? offset : 0);
+    return value.toFixed(1);
+  });
 }
 
 /**
@@ -318,38 +321,31 @@ function FlowBand({
 function FlowCurve({
   id,
   d,
-  viewBox,
   className,
   runs,
   delay,
-  fit = "slice",
+  anchor,
 }: {
   id: string;
+  /** The curve as drawn, in the 1440x900 space the three were composed in. */
   d: string;
-  viewBox: string;
   className: string;
   runs: string | readonly { verdict: string; text: string }[];
   delay: number;
-  /**
-   * `slice` fills the frame and crops the overflow, which is what the
-   * landscape streams want — they are drawn to bleed off the edges.
-   *
-   * `meet` fits the whole drawing instead, and the portrait set needs it. A
-   * 9:19.5 phone is not the only phone: on a wider one `slice` scales the
-   * drawing by the width ratio and crops the difference off the top and
-   * bottom, which is precisely where the two curves are. The paths still run
-   * past x=390 in both directions, so they keep bleeding sideways — an SVG
-   * clips to its viewport, not to its viewBox.
-   */
-  fit?: "slice" | "meet";
+  /** Which edge of the hero the curve keeps station on. See `scaleFlow`. */
+  anchor: "top" | "bottom";
 }) {
   return (
     <svg
       aria-hidden="true"
       className={className}
-      viewBox={viewBox}
+      /* Both of these are placeholders until `scaleFlow` has measured the
+         hero: the drawing is laid out in the hero's own pixels, so its box
+         is not known until there is a hero. The arrival keeps the stream at
+         zero opacity for the first 200ms, which is longer than that takes. */
+      viewBox="0 0 1440 900"
       fill="none"
-      preserveAspectRatio={`xMidYMid ${fit}`}
+      preserveAspectRatio="xMidYMid meet"
       style={{ animationDelay: `${delay - 700}ms` }}
     >
       <title>A rehearsal, marked</title>
@@ -375,7 +371,8 @@ function FlowCurve({
             gradientUnits="userSpaceOnUse"
             x1="0"
             y1="0"
-            x2={viewBox.split(" ")[2]}
+            data-flow-grad
+            x2="1440"
             y2="0"
           >
             <stop offset="0" stopColor={`var(--${verdict})`} />
@@ -391,7 +388,9 @@ function FlowCurve({
           </linearGradient>
         ))}
       </defs>
-      <path id={id} d={d} />
+      {/* `d` is the design drawing; `scaleFlow` rewrites the attribute to
+          the hero's pixels and needs the original back on every resize. */}
+      <path id={id} d={d} data-design-d={d} data-anchor={anchor} />
       <text>
         {/* Always anchored at the start of the path: the marquee measures one
             copy of this content, clones it until the belt outruns the curve,
@@ -998,61 +997,24 @@ export function LandingRedesign() {
     };
   }, [reduceMotion]);
 
-  /* The phone bands: one measurement, then nothing.
+  /* The drawing is sized to the hero before anything else happens to it.
    *
-   * The loop is seamless on its own — three copies, a third of the width —
-   * so the only thing JavaScript is needed for is the duration, and only so
-   * that a long take and a short one travel at the same speed instead of at
-   * speeds proportional to how much they say. Re-measured when the web font
-   * lands, because the fallback's metrics are not the real ones.
-   *
-   * After that the animation is entirely the compositor's, which is the
-   * point: there is no per-frame work here to be slow. */
-  useEffect(() => {
-    const bands = Array.from(
-      document.querySelectorAll<HTMLElement>(".lp-band"),
-    );
-    if (bands.length === 0) return;
-
-    const measure = () => {
-      for (const band of bands) {
-        const track = band.querySelector<HTMLElement>("[data-flow-band]");
-        if (!track) continue;
-        /* Three copies in the track, so a third of it is one take. A hidden
-           band measures zero and is left alone. */
-        const one = track.scrollWidth / 3;
-        if (one > 0) band.style.setProperty("--band-dur", `${one / SPEED}s`);
-      }
-    };
-    measure();
-    if (document.fonts?.ready) void document.fonts.ready.then(measure);
-    window.addEventListener("resize", measure);
-
-    /* Paused off screen and in a background tab. A composited animation is
-       cheap, not free, and this one has nothing to say to somebody four
-       sections down the page. */
+   * Deliberately its own effect rather than a line inside the GSAP block:
+   * the streams are a *drawing*, and a reader who has asked for reduced
+   * motion still gets one. The marquee runs `scaleFlow` again when it
+   * rebuilds, which is idempotent — it reads the design path off the DOM
+   * every time rather than the last thing it wrote. */
+  useLayoutEffect(() => {
     const hero = heroRef.current;
-    let onScreen = true;
-    const sync = () => {
-      const idle = !onScreen || document.hidden;
-      for (const band of bands) band.classList.toggle("is-idle", idle);
-    };
-    const observer = new IntersectionObserver(
-      (entries) => {
-        onScreen = entries.some((entry) => entry.isIntersecting);
-        sync();
-      },
-      { rootMargin: "10% 0px" },
-    );
-    if (hero) observer.observe(hero);
-    document.addEventListener("visibilitychange", sync);
-    sync();
-
-    return () => {
-      window.removeEventListener("resize", measure);
-      document.removeEventListener("visibilitychange", sync);
-      observer.disconnect();
-    };
+    if (!hero) return;
+    const apply = () => scaleFlow(hero);
+    apply();
+    /* The web font does not change the geometry, but the hero's height
+       follows its own content, and an observer sees that where a resize
+       listener does not. */
+    const watcher = new ResizeObserver(apply);
+    watcher.observe(hero);
+    return () => watcher.disconnect();
   }, []);
 
   useEffect(() => {
@@ -1463,65 +1425,128 @@ export function LandingRedesign() {
              * expensive things were the streams running for the whole page
              * and the twelve forced layouts at build time, and both of
              * those are already gone. */
-            const marquees: Array<{ pause: () => void; resume: () => void }> =
-              [];
-
-            for (const stream of gsap.utils.toArray<SVGTextPathElement>(
-              "[data-flow-stream]",
-            )) {
-              const svg = stream.closest("svg");
-              const rail = svg?.querySelector("path");
-              if (!rail) continue;
-              const pathLength = rail.getTotalLength();
-              stream.appendChild(document.createTextNode("  "));
-              const copy = Array.from(stream.childNodes).map((node) =>
-                node.cloneNode(true),
-              );
-              const one = stream.getComputedTextLength();
-              if (one <= 0) continue;
-
-              /* Counted, not measured up to.
-               *
-               * This used to clone one copy at a time and re-read
-               * `getComputedTextLength()` after each, which is a forced
-               * layout of a text-on-path belt per iteration — up to twelve
-               * of them per stream, synchronously, during the first frames
-               * of the page. The condition it was testing is arithmetic:
-               * after k clones the belt is (k + 1) copies long, so it
-               * outruns `pathLength + one` at k = ceil(pathLength / one).
-               * One measurement, same belt. */
-              const clones = Math.min(12, Math.ceil(pathLength / one));
-              for (let k = 0; k < clones; k += 1) {
-                for (const node of copy)
-                  stream.appendChild(node.cloneNode(true));
+            const marquees: Array<gsap.core.Tween> = [];
+            /* One copy of the take, exactly as React rendered it.
+             *
+             * The belt is built by cloning, so a rebuild has to start from a
+             * single copy rather than from whatever the last build left
+             * behind — otherwise every resize multiplies the belt by itself. */
+            const seeds = new Map<SVGTextPathElement, Node[]>();
+            let onScreen = true;
+            const sync = () => {
+              const run = onScreen && !document.hidden;
+              for (const marquee of marquees) {
+                if (run) marquee.resume();
+                else marquee.pause();
               }
+            };
 
-              const state = { offset: 0 };
-              marquees.push(
-                gsap.fromTo(
-                  state,
-                  { offset: 0 },
-                  {
-                    offset: -one,
-                    /* A unit is about a CSS pixel at either drawing's scale,
-                       so this is the speed in pixels a second. It was 24,
-                       which at a glyph's width per third of a second reads
-                       as a crawl rather than as speech; this is a drift you
-                       can see without watching for it, and still nowhere
-                       near ticker-tape. */
-                    duration: one / SPEED,
-                    ease: "none",
-                    repeat: -1,
-                    onUpdate: () => {
-                      stream.setAttribute(
-                        "startOffset",
-                        state.offset.toFixed(2),
-                      );
+            const build = () => {
+              for (const marquee of marquees) marquee.kill();
+              marquees.length = 0;
+              const hero = heroRef.current;
+              if (hero) scaleFlow(hero);
+
+              for (const stream of gsap.utils.toArray<SVGTextPathElement>(
+                "[data-flow-stream]",
+              )) {
+                const svg = stream.closest("svg");
+                const rail = svg?.querySelector("path");
+                if (!rail) continue;
+
+                const known = seeds.get(stream);
+                let seed: Node[];
+                if (known) {
+                  seed = known;
+                } else {
+                  stream.appendChild(document.createTextNode("  "));
+                  seed = Array.from(stream.childNodes).map((node) =>
+                    node.cloneNode(true),
+                  );
+                  seeds.set(stream, seed);
+                }
+                stream.replaceChildren(
+                  ...seed.map((node) => node.cloneNode(true)),
+                );
+                stream.setAttribute("startOffset", "0");
+
+                const pathLength = rail.getTotalLength();
+                const one = stream.getComputedTextLength();
+                if (one <= 0) continue;
+
+                /* Counted, not measured up to.
+                 *
+                 * This used to clone one copy at a time and re-read
+                 * `getComputedTextLength()` after each, which is a forced
+                 * layout of a text-on-path belt per iteration — up to twelve
+                 * of them per stream, synchronously, during the first frames
+                 * of the page. The condition it was testing is arithmetic:
+                 * after k clones the belt is (k + 1) copies long, so it
+                 * outruns `pathLength + one` at k = ceil(pathLength / one).
+                 * One measurement, same belt. */
+                const clones = Math.min(12, Math.ceil(pathLength / one));
+                for (let k = 0; k < clones; k += 1) {
+                  for (const node of seed)
+                    stream.appendChild(node.cloneNode(true));
+                }
+
+                const state = { offset: 0 };
+                marquees.push(
+                  gsap.fromTo(
+                    state,
+                    { offset: 0 },
+                    {
+                      offset: -one,
+                      /* A unit is a CSS pixel now — the drawing is laid out
+                         in the hero's own pixels — so this is the speed in
+                         pixels a second. It was 24, which at a glyph's width
+                         per third of a second reads as a crawl rather than
+                         as speech; this is a drift you can see without
+                         watching for it, and still nowhere near
+                         ticker-tape. */
+                      duration: one / SPEED,
+                      ease: "none",
+                      repeat: -1,
+                      onUpdate: () => {
+                        stream.setAttribute(
+                          "startOffset",
+                          state.offset.toFixed(2),
+                        );
+                      },
                     },
-                  },
-                ),
-              );
-            }
+                  ),
+                );
+              }
+              sync();
+            };
+
+            build();
+
+            /* Rebuilt when the hero changes width, and only then.
+             *
+             * Width is the scale, and the scale decides how long the curve
+             * is — so the belt that was long enough to cover it may not be
+             * any more. Height is a translation: the bottom wave is carried
+             * down by whatever is left over, and moving a path does not
+             * change its length, so the belt is still right and `scaleFlow`
+             * on its own is enough. Which matters, because on a phone the
+             * height changes every time the address bar hides. */
+            let lastWidth = heroRef.current?.clientWidth ?? 0;
+            const onResize = () => {
+              const hero = heroRef.current;
+              if (!hero) return;
+              if (Math.abs(hero.clientWidth - lastWidth) < 1) {
+                scaleFlow(hero);
+                return;
+              }
+              lastWidth = hero.clientWidth;
+              build();
+            };
+            window.addEventListener("resize", onResize);
+            docCleanups.push(() => {
+              window.removeEventListener("resize", onResize);
+              for (const marquee of marquees) marquee.kill();
+            });
 
             /* Nothing runs while nobody is looking.
              *
@@ -1532,15 +1557,7 @@ export function LandingRedesign() {
              * them has stopped itself on exactly these two conditions since
              * it was written; the streams never learned to. */
             const hero = heroRef.current;
-            if (marquees.length > 0 && hero) {
-              let onScreen = true;
-              const sync = () => {
-                const run = onScreen && !document.hidden;
-                for (const marquee of marquees) {
-                  if (run) marquee.resume();
-                  else marquee.pause();
-                }
-              };
+            if (hero) {
               const observer = new IntersectionObserver(
                 (entries) => {
                   onScreen = entries.some((entry) => entry.isIntersecting);
@@ -1915,27 +1932,17 @@ export function LandingRedesign() {
             key={curve.key}
             id={`lp-flow-${curve.key}`}
             className={`lp-flow ${curve.place}`}
-            viewBox={curve.viewBox}
             d={curve.d}
-            runs={curve.runs}
-            delay={curve.delay}
-          />
-        ))}
-        {/* Both sets are in the document and CSS decides which one is drawn.
-            The marquee skips the curves whenever they are hidden on its own:
-            a `display:none` SVG measures `getComputedTextLength()` as 0,
-            which is already the condition it uses to skip a stream it cannot
-            measure. Below `lg` that is all of them, and these run instead. */}
-        {HERO_CURVES_SM.map((curve, i) => (
-          <FlowBand
-            key={curve.key}
-            className={`lp-band ${i === 0 ? "lp-band-t" : "lp-band-b"}`}
+            anchor={curve.anchor}
             runs={curve.runs}
             delay={curve.delay}
           />
         ))}
 
-        <div className="relative z-[2] mx-auto flex w-full max-w-[52rem] flex-col items-center">
+        <div
+          data-hero-column
+          className="relative z-[2] mx-auto flex w-full max-w-[52rem] flex-col items-center"
+        >
           <h1
             data-hero-word
             className="font-display text-[clamp(2.4rem,6.6vw,5.4rem)] text-strong leading-[0.98] tracking-[-0.05em]"

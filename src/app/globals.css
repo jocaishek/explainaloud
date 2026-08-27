@@ -2419,7 +2419,7 @@ html:has(main.lp-v2) {
 .lp-v2 .lp-flow {
   position: absolute;
   z-index: 0;
-  display: none;
+  display: block;
   pointer-events: none;
   /* Never an anchor for scroll anchoring.
    *
@@ -2454,144 +2454,24 @@ html:has(main.lp-v2) {
   animation: lp-flow-in 900ms var(--ease-enter) both;
 }
 
-/* ── The phone's streams, as a composited band ────────────────────────────
+/* One drawing, at every width.
  *
- * Below `lg` the streams are not text on a path any more, and the reason is
- * the only one that matters on a phone: `startOffset` is a geometry change,
- * so walking it re-shapes every glyph in the belt on every frame. Two belts
- * of a couple of hundred glyphs is a text layout twice per frame, forever,
- * and on a mid-range phone that is most of the frame budget before the hero's
- * fluid field has drawn anything. It measured fine on a laptop and ran at
- * about ten frames a second in somebody's hand, which is the whole lesson.
+ * There were two here, and a breakpoint choosing between them, and both of
+ * those were mistakes. The streams were switched off below `lg` on the
+ * reasoning that a curve needing 60% of the viewport cannot have it on a
+ * phone; then a second, portrait drawing was written to fill the gap, and
+ * the page became two products with a seam in the middle of it — the
+ * handover landing on any half-screen desktop window, which is where "this
+ * looks bad when the window gets smaller" came from.
  *
- * A band is a line of ordinary text moved by `translate3d`. That is a
- * composited transform: no layout, no re-shaping, no paint — the compositor
- * moves a texture it already has. It cannot go slowly on any device, because
- * there is nothing per frame for a device to be slow at.
- *
- * What it costs is the grading-as-they-travel, which needs a paint fixed to
- * the frame while the words move through it, and that is exactly what a
- * transform cannot do. The verdict colours stay — the marking is the point —
- * and the grey-to-colour crossing is a desktop refinement now.
- *
- * The loop is seamless without measuring anything: the track holds three
- * identical copies and travels exactly a third of its own width, so the
- * frame after the last is pixel-identical to the first. Only the duration is
- * measured, once, at mount.
- * ------------------------------------------------------------------------ */
-.lp-v2 .lp-band {
-  position: absolute;
-  left: -70vw;
-  right: -70vw;
-  z-index: 0;
-  display: none;
-  overflow: hidden;
-  pointer-events: none;
-  /* Same reasoning as the curves: a moving belt is the worst possible thing
-     for the browser to hold your scroll position against. */
-  overflow-anchor: none;
-  /* A shade behind the composition. The desktop streams get their distance
-     from being large and sparse across a wide frame; a phone has neither, so
-     it is bought here instead. */
-  opacity: 0.82;
-  animation: lp-flow-in 900ms var(--ease-enter) both;
-}
-
-@media (max-width: 1023.98px) {
-  .lp-v2 .lp-band {
-    display: block;
-  }
-}
-
-/* Placed in the hero's two empty bands, measured rather than guessed.
- *
- * On a 375px phone the column occupies 18.2% to 89.4% of the hero: headline,
- * sentence, buttons, then the line about audio never being stored. That
- * leaves exactly two gaps worth putting a stream in — the 18% above the
- * headline and the 10% under the trust line — and the first pass at this put
- * one band 1.2% clear of the headline and drew the other straight through
- * the trust line at 86.9% against its 86.8%. Which is what "odd and out of
- * place" was: not the drawing, its position.
- *
- * They sit where the desktop's do relative to the composition: in the
- * margins the type is not using, at the top and the foot. */
-/* The upper gap is 44px and that is all there is: the masthead and its
-   waveform strip own the first 11% of the hero and the headline starts at
-   18.2%. The band is set a size smaller and turned a degree less so its
-   swinging ends still clear both. */
-.lp-v2 .lp-band-t {
-  top: 13.2%;
-  transform: rotate(-2deg);
-}
-
-.lp-v2 .lp-band-b {
-  top: 92.5%;
-  transform: rotate(2deg);
-}
-
-.lp-v2 .lp-band-track {
-  display: inline-flex;
-  white-space: nowrap;
-  will-change: transform;
-  animation: lp-band-run var(--band-dur, 26s) linear infinite;
-}
-
-.lp-v2 .lp-band.is-idle .lp-band-track {
-  animation-play-state: paused;
-}
-
-@keyframes lp-band-run {
-  to {
-    transform: translate3d(-33.3333%, 0, 0);
-  }
-}
-
-.lp-v2 .lp-band-copy {
-  font-size: 14px;
-  font-weight: 550;
-  letter-spacing: -0.005em;
-  color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
-}
-
-.lp-v2 .lp-band-copy span[data-mark="ok"] {
-  color: var(--ok);
-}
-
-.lp-v2 .lp-band-copy span[data-mark="vague"] {
-  color: var(--vague);
-}
-
-.lp-v2 .lp-band-copy span[data-mark="miss"] {
-  color: var(--miss);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-v2 .lp-band-track {
-    animation: none;
-  }
-}
-
-/* Which drawing is on, by width.
- *
- * This used to switch the streams off below `lg` entirely, reasoning that a
- * curve needing 60% of the viewport to be legible cannot have it on a phone.
- * True of *these* curves: they are composed in a 1440x900 space and `slice`
- * crops that to the middle quarter of a 390-wide window, so three gestures
- * arrive as three unrelated diagonals with the type scaled down to match.
- *
- * The answer is not to shrink them. Text on a path does not reflow, so a
- * portrait frame needs its own drawing — two streams in the hero's own
- * coordinate space, in the bands the centred column leaves empty. */
-@media (min-width: 1024px) {
-  .lp-v2 .lp-flow {
-    display: block;
-  }
-
-  .lp-v2 .lp-flow-sm {
-    display: none;
-  }
-}
-
+ * What a narrow frame needs is not a different drawing. It is the same one,
+ * smaller — which is what every other site with artwork in its hero does, and
+ * what `preserveAspectRatio` cannot give you, because it scales the type
+ * along with the geometry and four-pixel type is not type. `scaleFlow` in
+ * `landing-redesign.tsx` does it instead: the shapes are scaled by the
+ * width, the type is left at the size it reads at, and the slack goes into
+ * the gap between the top curves and the bottom one, which is empty by
+ * design and is where the headline sits. */
 .lp-v2 .lp-flow path {
   fill: none;
   stroke: none;
