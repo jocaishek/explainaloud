@@ -3,7 +3,13 @@
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, ArrowUpRight, LockKeyhole } from "lucide-react";
 import Link from "next/link";
-import { type CSSProperties, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { DemoConsole } from "~/components/landing/demo-console";
 import { FlowField } from "~/components/landing/flow-field";
@@ -257,19 +263,43 @@ const HERO_CURVES_SM = [
 ] as const;
 
 /**
- * The phone's stream: a line of type that travels by transform.
+ * The phone's stream: words running along a wave that holds still.
  *
- * Three identical copies of the take sit in one track, and the track moves
- * exactly a third of its own width before repeating — so the loop is
- * seamless by construction and nothing has to be measured to make it so.
- * Only the duration is measured, once, from one copy's width, so that both
- * bands travel at the same speed rather than at a speed proportional to how
- * much they happen to say.
+ * The narrow hero has had three goes at this and the first two each got one
+ * half of it right.
  *
- * Everything per frame is a composited `translate3d`. See `globals.css` for
- * why that matters more than the effect it gives up.
+ * The desktop drawing — a paragraph on an invisible `<path>`, walked with
+ * `startOffset` — is the right *picture*, and it is the wrong machine on a
+ * phone. `startOffset` is a geometry change, so every glyph in the belt is
+ * re-shaped on every frame: two belts of a couple of hundred letters is a
+ * text layout twice a frame, forever, and it ran at about ten frames a second
+ * in somebody's hand. Replacing it with a straight line of type slid by
+ * `translate3d` fixed the frame rate and lost the picture. Putting the wave
+ * back but sliding the whole drawing fixed the picture and broke the idea:
+ * the wave travelled along with the words, so the page looked like it was
+ * waving rather than like a take running past.
+ *
+ * What is wanted is a curve that stays exactly where it is while the words
+ * walk along it — and no rigid transform can do that, because translating a
+ * wave moves the wave. So the words are moved one at a time instead: each is
+ * an ordinary `<span>` on a CSS motion path, and what animates is its
+ * `offset-distance` — how far along the rail it has walked. The rail itself
+ * is a `path()` that never changes. Every frame is a transform per word and
+ * nothing else: no layout, no re-shaping, no paint.
+ *
+ * A word is the unit rather than a letter because a word is a hundredth of
+ * the elements and the difference is invisible: over the 60px of a long word
+ * this wave bends away from a straight chord by under two pixels.
+ *
+ * The loop is seamless by arithmetic. Copies of the take are laid end to end
+ * one take apart along the rail, and every word walks back by exactly one
+ * take per cycle — so at the end of a cycle each word stands where the one
+ * behind it stood at the start, and the frame repeats. The wavelength is
+ * solved (`waveFor`) so that a whole number of hills measures exactly one
+ * take along the curve, which is what keeps the type sitting the same way on
+ * the wave at both ends of the loop.
  */
-function FlowBand({
+function FlowWave({
   className,
   runs,
   delay,
@@ -278,33 +308,281 @@ function FlowBand({
   runs: readonly { verdict: string; text: string }[];
   delay: number;
 }) {
-  const copy = (
-    <span className="lp-band-copy">
-      {runs.map((run) => (
-        <span
-          key={run.text}
-          data-mark={run.verdict === "none" ? undefined : run.verdict}
-        >
-          {run.text}
-        </span>
-      ))}
-    </span>
+  const bandRef = useRef<HTMLDivElement>(null);
+  const probeRef = useRef<HTMLSpanElement>(null);
+  const [belt, setBelt] = useState<Belt | null>(null);
+  /* What the belt was last built from. The observer below watches boxes the
+     belt itself can change — laying a hundred words into the band gives it a
+     height — so without this the first measurement would schedule the second
+     and the page would measure itself forever. */
+  const builtRef = useRef("");
+
+  /* Every word of the take, in order, carrying its verdict. Split here rather
+     than in the effect so the probe and the belt are always the same list. */
+  const words = useMemo(
+    () =>
+      runs.flatMap((run) =>
+        run.text
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean)
+          .map((text, n) => ({
+            text,
+            verdict: run.verdict,
+            key: `${run.verdict}-${n}-${text}`,
+          })),
+      ),
+    [runs],
   );
+
+  useEffect(() => {
+    const band = bandRef.current;
+    const probe = probeRef.current;
+    if (!band || !probe) return;
+
+    const measure = () => {
+      /* A band that is `display: none` — every viewport at `lg` and up — has
+         no probe to measure, which is how the whole thing switches itself off
+         without asking the width. */
+      const spans = Array.from(probe.children) as HTMLElement[];
+      if (spans.length === 0 || probe.offsetWidth === 0) {
+        builtRef.current = "";
+        setBelt(null);
+        return;
+      }
+
+      /* Undo whatever the band is being drawn at.
+       *
+       * A rect is in painted pixels, and the band arrives on a 900ms
+       * `scale(1.04)` — so measuring during it built the whole belt four per
+       * cent too long and nothing afterwards corrected it: a transform does
+       * not change a layout box, so the observer below had nothing to see.
+       * The bands carry no rotation, so the matrix's `a` is the scale. */
+      const drawn = getComputedStyle(band).transform;
+      const scale =
+        drawn && drawn !== "none" ? new DOMMatrixReadOnly(drawn).a || 1 : 1;
+
+      /* Where each word starts, measured from the flow the browser has
+         already laid out. Reading the positions back beats adding up widths:
+         the spaces, the kerning and the tracking are all in the answer
+         because they were all in the layout. */
+      const left = probe.getBoundingClientRect().left;
+      const starts = spans.map(
+        (span) => (span.getBoundingClientRect().left - left) / scale,
+      );
+      /* Every word carries the space that follows it, the last one included,
+         so the end of the probe is already one take: copies laid end to end
+         are a space apart rather than butted together. */
+      const last = spans[spans.length - 1] as HTMLElement;
+      const take = (last.getBoundingClientRect().right - left) / scale;
+      if (take <= 0) {
+        builtRef.current = "";
+        setBelt(null);
+        return;
+      }
+
+      const size = Number.parseFloat(getComputedStyle(probe).fontSize) || 14;
+      const from = `${take.toFixed(2)}|${band.clientWidth}|${size}`;
+      if (from === builtRef.current) return;
+      builtRef.current = from;
+
+      /* Shallow on purpose, and the ceiling is not taste — it is the gap. The
+         upper band has 48px of clear hero to live in, between the masthead's
+         waveform strip and the top of the headline, and the box has to hold
+         the whole swing plus a line of type above and below it. */
+      const amp = size * 0.64;
+      const height = Math.round(2 * (amp + size));
+
+      /* How many hills to a take. The upper band says one sentence and the
+         lower one says three, so pinning a take to a single hill would give
+         the page two waves of visibly different frequency — one a ripple, the
+         other almost a straight rule. */
+      const hills = Math.max(1, Math.round(take / WAVE_PITCH));
+      const wavelength = waveFor(take / hills, amp);
+      /* What one take costs in horizontal travel. */
+      const unit = wavelength * hills;
+      /* Enough copies that the stretch covered for the whole cycle is wider
+         than the band. The rail is one unit longer again at each end: the
+         first copy starts a take in, so that a word which has walked its
+         whole cycle is still on the rail rather than clamped to the end of
+         it, and everything before that is off the left edge. */
+      const copies = Math.ceil(band.clientWidth / unit) + 1;
+
+      const mid = height / 2;
+      const span = unit * (copies + 1);
+      const steps = WAVE_SAMPLES * hills * (copies + 1);
+      let d = "";
+      for (let i = 0; i <= steps; i += 1) {
+        const x = (span * i) / steps;
+        const y = mid + amp * Math.sin((2 * Math.PI * i) / WAVE_SAMPLES);
+        d += `${i === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
+      }
+
+      setBelt({
+        d,
+        height,
+        width: Math.ceil(span),
+        leadX: unit,
+        take,
+        starts,
+        /* Named rather than counted, so React is not asked to tell identical
+           copies apart by where they sit in an array. */
+        rungs: Array.from({ length: copies }, (_, n) => `copy-${n}`),
+        duration: take / SPEED,
+      });
+    };
+
+    measure();
+    /* Watching the probe rather than waiting on `document.fonts.ready`.
+       Whatever changes the width of one line of this take — the web font
+       landing, a resize that changes the type scale, a reader's own text
+       size — changes every number above, and the probe is the one element
+       that sees all of them. Waiting on the font alone missed the swap by a
+       frame and left the belt running at the fallback's measurements. */
+    const watcher = new ResizeObserver(measure);
+    watcher.observe(probe);
+    /* And the band, because how many copies it takes to cross depends on how
+       wide it is. */
+    watcher.observe(band);
+    return () => watcher.disconnect();
+  }, []);
+
   return (
     <div
       aria-hidden="true"
       className={className}
+      ref={bandRef}
       style={{ animationDelay: `${delay - 700}ms` }}
     >
-      <div className="lp-band-track" data-flow-band>
-        {[0, 1, 2].map((n) => (
-          <span key={n} className="contents">
-            {copy}
-          </span>
+      {/* The take as the browser would set it: one line, never painted, and
+          the only thing here that is ever laid out. Everything the belt knows
+          about spacing it read off this. */}
+      <span className="lp-band-probe" ref={probeRef}>
+        {words.map((word) => (
+          <span key={word.key}>{word.text} </span>
         ))}
-      </div>
+      </span>
+      {belt ? (
+        <div
+          className="lp-band-rail"
+          style={
+            {
+              "--wave": `path("${belt.d}")`,
+              "--band-dur": `${belt.duration}s`,
+              width: belt.width,
+              height: belt.height,
+              marginLeft: -belt.leadX,
+            } as CSSProperties
+          }
+        >
+          {belt.rungs.map((rung, copy) =>
+            words.map((word, n) => {
+              /* Where this word stands on the rail, in distance travelled
+                 along the curve — which is the same unit the type was
+                 measured in, so the spacing survives the bend. */
+              const at = (copy + 1) * belt.take + (belt.starts[n] ?? 0);
+              return (
+                <span
+                  key={`${rung}-${word.key}`}
+                  className="lp-band-word"
+                  data-mark={word.verdict === "none" ? undefined : word.verdict}
+                  style={
+                    {
+                      "--from": `${at.toFixed(2)}px`,
+                      "--to": `${(at - belt.take).toFixed(2)}px`,
+                    } as CSSProperties
+                  }
+                >
+                  {word.text}
+                </span>
+              );
+            }),
+          )}
+        </div>
+      ) : null}
     </div>
   );
+}
+
+/** What the effect above works out, once, and the belt is then drawn from. */
+type Belt = {
+  /** The rail, as an SVG path string. */
+  d: string;
+  height: number;
+  width: number;
+  /**
+   * How far the rail is pulled left, in pixels.
+   *
+   * The first copy of the take starts one take *along the curve* rather than
+   * at the rail's start, so a word that has walked a whole cycle is still on
+   * the rail instead of clamped to the end of it. This is the same distance
+   * counted across the page — the wavelength is solved so that one take of
+   * curve spans exactly this much of it — and it is what puts the belt's
+   * beginning off the left edge rather than in the middle of the band.
+   */
+  leadX: number;
+  /** One copy of the take, along the curve. Also the distance walked. */
+  take: number;
+  /** Where each word starts within a take, along the curve. */
+  starts: number[];
+  /** One name per copy of the take laid along the rail. */
+  rungs: string[];
+  duration: number;
+};
+
+/**
+ * Samples per wavelength on the rail.
+ *
+ * A polyline, not a curve: at this spacing a sine is reproduced to within a
+ * tenth of a pixel, and a `path()` of straight segments is the one shape
+ * every engine agrees about the arc length of — which matters here, because
+ * arc length is the unit the words are spaced in.
+ */
+const WAVE_SAMPLES = 24;
+
+/**
+ * Roughly how much speech goes into one hill and one trough.
+ *
+ * The only job of this number is to keep the two bands looking like the same
+ * drawing when one of them says three times as much as the other.
+ */
+const WAVE_PITCH = 300;
+
+/**
+ * The wavelength whose arc length is one copy of the take.
+ *
+ * A sine of amplitude `amp` and wavelength `p` is longer than `p`, by a
+ * factor that depends only on `amp / p` — so arc length rises monotonically
+ * with `p`, and a bisection finds the `p` that makes one hill and one trough
+ * measure exactly `arc` along the curve. That equality is what makes the belt
+ * seamless: one wavelength of travel is one take of type.
+ *
+ * Measured on the same polyline the `<path>` is drawn from, so the answer is
+ * the rendered geometry rather than an integral of the ideal curve.
+ */
+function waveFor(arc: number, amp: number) {
+  const lengthOf = (p: number) => {
+    let total = 0;
+    let px = 0;
+    let py = 0;
+    for (let i = 0; i <= WAVE_SAMPLES; i += 1) {
+      const x = (p * i) / WAVE_SAMPLES;
+      const y = amp * Math.sin((2 * Math.PI * i) / WAVE_SAMPLES);
+      if (i > 0) total += Math.hypot(x - px, y - py);
+      px = x;
+      py = y;
+    }
+    return total;
+  };
+
+  let low = arc / 4;
+  let high = arc;
+  for (let i = 0; i < 24; i += 1) {
+    const mid = (low + high) / 2;
+    if (lengthOf(mid) < arc) low = mid;
+    else high = mid;
+  }
+  return (low + high) / 2;
 }
 
 /**
@@ -998,39 +1276,19 @@ export function LandingRedesign() {
     };
   }, [reduceMotion]);
 
-  /* The phone bands: one measurement, then nothing.
+  /* The phone bands, paused when nobody is looking.
    *
-   * The loop is seamless on its own — three copies, a third of the width —
-   * so the only thing JavaScript is needed for is the duration, and only so
-   * that a long take and a short one travel at the same speed instead of at
-   * speeds proportional to how much they say. Re-measured when the web font
-   * lands, because the fallback's metrics are not the real ones.
-   *
-   * After that the animation is entirely the compositor's, which is the
-   * point: there is no per-frame work here to be slow. */
+   * Each band works out its own geometry — see `FlowWave` — so all that is
+   * left here is the thing no band can know on its own: whether the hero is
+   * on screen at all. A composited animation is cheap, not free, and a
+   * hundred words walking a curve has nothing to say to somebody four
+   * sections down the page. */
   useEffect(() => {
     const bands = Array.from(
       document.querySelectorAll<HTMLElement>(".lp-band"),
     );
     if (bands.length === 0) return;
 
-    const measure = () => {
-      for (const band of bands) {
-        const track = band.querySelector<HTMLElement>("[data-flow-band]");
-        if (!track) continue;
-        /* Three copies in the track, so a third of it is one take. A hidden
-           band measures zero and is left alone. */
-        const one = track.scrollWidth / 3;
-        if (one > 0) band.style.setProperty("--band-dur", `${one / SPEED}s`);
-      }
-    };
-    measure();
-    if (document.fonts?.ready) void document.fonts.ready.then(measure);
-    window.addEventListener("resize", measure);
-
-    /* Paused off screen and in a background tab. A composited animation is
-       cheap, not free, and this one has nothing to say to somebody four
-       sections down the page. */
     const hero = heroRef.current;
     let onScreen = true;
     const sync = () => {
@@ -1049,7 +1307,6 @@ export function LandingRedesign() {
     sync();
 
     return () => {
-      window.removeEventListener("resize", measure);
       document.removeEventListener("visibilitychange", sync);
       observer.disconnect();
     };
@@ -1927,7 +2184,7 @@ export function LandingRedesign() {
             which is already the condition it uses to skip a stream it cannot
             measure. Below `lg` that is all of them, and these run instead. */}
         {HERO_CURVES_SM.map((curve, i) => (
-          <FlowBand
+          <FlowWave
             key={curve.key}
             className={`lp-band ${i === 0 ? "lp-band-t" : "lp-band-b"}`}
             runs={curve.runs}
