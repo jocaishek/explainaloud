@@ -16,7 +16,7 @@ import {
 import { audioExtension, preferredRecorderMimeType } from "~/lib/audio";
 import { localDay } from "~/lib/limits";
 import { markRecordingDay } from "~/lib/record-day";
-import type { SpeechMetrics } from "~/lib/speech-metrics";
+import type { SpeechMetrics, TranscribedWord } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 import { LevelMeter } from "./level-meter";
@@ -294,6 +294,8 @@ type ApiPayload = {
    * places would mean updating both every time a statistic is added.
    */
   metrics?: SpeechMetrics | null;
+  /** Whisper's timed words, from the final pass. Answers are cut from these. */
+  words?: TranscribedWord[] | null;
   /** From the Examiner route: drawn from the bank, or written on the spot. */
   questions?: Array<{
     /** Bank row id. Absent on a follow-up, which is never banked. */
@@ -354,6 +356,44 @@ function newSpeech(whole: string, captured: string) {
   const seam = captured.slice(-60);
   const at = seam ? whole.lastIndexOf(seam) : -1;
   return at >= 0 ? whole.slice(at + seam.length).trim() : whole.trim();
+}
+
+/**
+ * Cut the recording into answers at the moments the student pressed Next.
+ *
+ * `boundaries` are milliseconds of recorded audio; Whisper timestamps every
+ * word in seconds from the start of the same audio. So an answer is simply
+ * the words whose start falls inside its own span — no prefix test, nothing
+ * to fall back to, and no way for one answer to come back holding the whole
+ * recording.
+ *
+ * A word is placed by where it *starts*. A word straddling a boundary was
+ * begun before Next was pressed, and that is the answer it belongs to.
+ *
+ * Returns one string per answer: `boundaries.length + 1` of them, some
+ * possibly empty, which is honest — an empty one means nothing was said in
+ * that span, not that the cut failed.
+ */
+function answersByTime(words: TranscribedWord[], boundaries: number[]) {
+  const answers: string[] = Array.from(
+    { length: boundaries.length + 1 },
+    () => "",
+  );
+  const parts: string[][] = answers.map(() => []);
+  for (const word of words) {
+    const atMs = word.start * 1000;
+    let slot = 0;
+    while (slot < boundaries.length && atMs >= (boundaries[slot] as number)) {
+      slot += 1;
+    }
+    (parts[slot] as string[]).push(word.word);
+  }
+  return parts.map((part) =>
+    part
+      .join(" ")
+      .replace(/\s+([,.!?;:])/g, "$1")
+      .trim(),
+  );
 }
 
 function formatClock(ms: number) {
@@ -489,6 +529,42 @@ export function RecordConsole({
    * graded on nearly the same text and scoring the same.
    */
   const capturedRef = useRef("");
+
+  /* Where each answer ended, as a position in the recorded audio.
+   *
+   * This is the fix for three separate reports, and they were all one bug.
+   * A boundary used to be a position in the live caption *text*: each answer
+   * was whatever the transcript had grown by since the last one. That holds
+   * only while the text grows by appending, and it does not.
+   *
+   *  - When the server caption path rebuilds the transcript instead of
+   *    extending it, the prefix test fails, the 60-character seam search
+   *    misses, and the slice falls back to the whole recording. That is
+   *    question three showing the entire transcript.
+   *  - When captions stall or die, the transcript has not grown at all, the
+   *    last answer comes out empty, and an empty answer is dropped. That is
+   *    question three not registering.
+   *  - And because captions lag the microphone by seconds, pressing Next the
+   *    moment you stop talking cuts the answer before its own ending, which
+   *    then lands at the head of the next one.
+   *
+   * A moment in the audio has none of those failure modes. The clock only
+   * counts down while recording and the recorder is paused across the same
+   * intervals, so elapsed recording time and audio time are the same number —
+   * except on a browser that refuses to pause, which is why this accumulates
+   * from the recorder's actual state rather than from the clock.
+   */
+  const audioMsRef = useRef(0);
+  const audioSinceRef = useRef<number | null>(null);
+  const boundariesRef = useRef<number[]>([]);
+  /** Timed words from the final pass, once it has run. */
+  const wordsRef = useRef<TranscribedWord[] | null>(null);
+
+  /** Milliseconds of audio recorded so far, paused gaps excluded. */
+  function audioElapsed() {
+    const since = audioSinceRef.current;
+    return audioMsRef.current + (since === null ? 0 : Date.now() - since);
+  }
   /** The final answer, captured at the stop and never re-derived. */
   const lastAnswerRef = useRef("");
   /** Podcast mode for the recording in progress, whatever the chooser says now. */
@@ -1247,6 +1323,9 @@ export function RecordConsole({
             if (json.metrics && typeof json.metrics === "object") {
               speechMetrics = json.metrics;
             }
+            if (Array.isArray(json.words) && json.words.length > 0) {
+              wordsRef.current = json.words;
+            }
             transcriptRef.current = text;
             setTranscript(text);
             applyInterim("");
@@ -1427,17 +1506,92 @@ export function RecordConsole({
    * one report, which is what makes the gap report and Re-Teach able to read a
    * interview session without knowing that questions exist.
    *
-   * The transcript stored is the one the grading actually read — the live
-   * captions, sliced per answer — not the server's cleaner pass over the whole
-   * audio. Spans are positions in a specific string, so storing a different
-   * string would leave every colour pointing at the wrong words. The server
-   * pass still runs, because the pace metrics come from its word timings.
+   * The transcript stored is the server's pass over the whole audio, cut into
+   * answers at the moments Next was pressed. It used to be the live captions
+   * sliced by string prefix, on the reasoning that spans are positions in a
+   * specific string — true, and the reason any answer whose text changes here
+   * is regraded before the report is built. What that reasoning missed is that
+   * the captions are a preview: they lag the microphone, they get rebuilt
+   * wholesale by the server-caption path, and they stop altogether when
+   * recognition dies. Every one of those turns a prefix slice into somebody
+   * else's answer, or into all of them.
    */
   async function finishInterview(sessionId: string) {
+    /* Recut every answer out of the authoritative transcript.
+     *
+     * The segments already on the list were sliced from the live captions so
+     * that each could be graded while the next question was being answered —
+     * that part still works and still happens. But captions are a preview,
+     * not the record: they lag, they get rebuilt, they stop. What gets stored
+     * and reported is cut from the audio instead, at the moments Next was
+     * pressed, which is the only boundary that cannot be wrong.
+     *
+     * Only when the final pass actually returned timings. When it did not,
+     * the caption slices are all there is and the old path runs unchanged. */
+    const words = wordsRef.current;
+    const boundaries = boundariesRef.current;
+    const recut =
+      words && words.length > 0 ? answersByTime(words, boundaries) : null;
+
+    if (recut) {
+      /* The last answer never went through `endSegment`, so it has no segment
+         yet — but it does have a span in the audio, which is everything after
+         the final boundary. It is pushed whether or not it has words in it:
+         a question that was reached and produced nothing is a question the
+         report should say was not captured, not one it should silently
+         forget. That silence is what "it doesn't register q3" was. */
+      const last = askingRef.current[segmentIndexRef.current];
+      if (last && segmentsRef.current.length < recut.length) {
+        segmentsRef.current = [
+          ...segmentsRef.current,
+          {
+            question: last.question,
+            sectionIndex: last.index,
+            section: last.section,
+            transcript: "",
+            score: null,
+            verdict: null,
+            spans: [],
+            gaps: [],
+            strengths: [],
+          },
+        ];
+      }
+      /* Any answer whose text actually changed is regraded, because its spans
+         are positions in a string that no longer exists. Run together: they
+         are independent, and three at once costs about what one costs. */
+      const changed: number[] = [];
+      segmentsRef.current = segmentsRef.current.map((segment, at) => {
+        const text = recut[at];
+        if (text === undefined || text === segment.transcript) return segment;
+        changed.push(at);
+        return { ...segment, transcript: text, spans: [], score: null };
+      });
+      setSegments(segmentsRef.current);
+      if (changed.length > 0) {
+        await Promise.all(
+          changed
+            .filter(
+              (at) =>
+                (segmentsRef.current[at]?.transcript.length ?? 0) >=
+                LIVE_GRADE_MIN_CHARS,
+            )
+            .map((at) =>
+              gradeSegment(
+                at,
+                segmentsRef.current[at]?.transcript ?? "",
+                segmentsRef.current[at]?.sectionIndex ?? 0,
+                askingRef.current[at]?.keyPoints,
+              ),
+            ),
+        );
+      }
+    }
+
     // The last answer never went through `endSegment`.
     const last = askingRef.current[segmentIndexRef.current];
     const tail = lastAnswerRef.current;
-    if (last && tail) {
+    if (!recut && last && tail) {
       const segment: Segment = {
         question: last.question,
         sectionIndex: last.index,
@@ -2058,17 +2212,34 @@ export function RecordConsole({
     // purpose — so the silence watchdog would stop the take for doing exactly
     // what it was told to do.
     stopWatching();
+    /* Stamped before the pause, so it is the moment they stopped talking
+       rather than the moment the recorder got around to stopping. */
+    boundariesRef.current = [...boundariesRef.current, audioElapsed()];
+
     const recorder = mediaRecorderRef.current;
     if (recorder?.state === "recording") {
       try {
         recorder.pause();
       } catch {
-        // A browser that will not pause still records a continuous take; the
-        // segment boundary is a position in the transcript, not in the audio.
+        // Nothing to do here; the check below is what decides whether the
+        // gap counts as audio.
       }
+    }
+    /* Whether the recorder actually stopped, asked rather than assumed.
+     *
+     * A browser that will not pause records a continuous take, so the seconds
+     * spent reading the next question are seconds of audio and Whisper will
+     * timestamp everything after them accordingly. Stopping our own count
+     * there would put every later boundary ahead of the words it is meant to
+     * come after. */
+    if (mediaRecorderRef.current?.state === "paused") {
+      audioMsRef.current = audioElapsed();
+      audioSinceRef.current = null;
     }
 
     const whole = transcriptRef.current.trim();
+    // Still sliced from the captions, but only to grade this answer while the
+    // next one is being given. The stored answer is cut from the audio.
     const answer = newSpeech(whole, capturedRef.current);
     capturedRef.current = whole;
 
@@ -2169,6 +2340,7 @@ export function RecordConsole({
         // transcript is what the grading reads either way.
       }
     }
+    if (audioSinceRef.current === null) audioSinceRef.current = Date.now();
 
     // The deadline is rebuilt from what was left rather than kept running, so
     // the seconds spent reading a question are not charged to the answer.
@@ -2377,6 +2549,10 @@ export function RecordConsole({
     finishingRef.current = false;
     sessionRowIdRef.current = null;
     lastSavedTranscriptRef.current = "";
+    audioMsRef.current = 0;
+    audioSinceRef.current = Date.now();
+    boundariesRef.current = [];
+    wordsRef.current = null;
     resetGradedHead();
 
     // Claim the row now and keep flushing the transcript into it. Not awaited:
