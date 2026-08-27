@@ -69,3 +69,37 @@ export type PublicProfile = {
   topics: number | null;
   streak: number | null;
 };
+
+/** One row of `squad_overview` — a squad joined to one of its members. */
+export type SquadRow = {
+  squad_id: string;
+  squad_name: string;
+  join_code: string;
+  is_owner: boolean;
+  streak: number;
+  member_id: string;
+  member_username: string | null;
+  member_avatar_url: string | null;
+  recorded_today: boolean;
+};
+
+/**
+ * The same rows, folded back into squads.
+ *
+ * The function returns them flat because one round trip beats a request per
+ * squad; the shape a panel wants is the other one, so the folding happens
+ * once, on the server, rather than in three places in the markup.
+ */
+export type Squad = {
+  id: string;
+  name: string;
+  joinCode: string;
+  isOwner: boolean;
+  streak: number;
+  members: Array<{
+    id: string;
+    username: string | null;
+    avatarUrl: string | null;
+    recordedToday: boolean;
+  }>;
+};
