@@ -2490,6 +2490,10 @@ html:has(main.lp-v2) {
   /* Same reasoning as the curves: a moving belt is the worst possible thing
      for the browser to hold your scroll position against. */
   overflow-anchor: none;
+  /* A shade behind the composition. The desktop streams get their distance
+     from being large and sparse across a wide frame; a phone has neither, so
+     it is bought here instead. */
+  opacity: 0.82;
   animation: lp-flow-in 900ms var(--ease-enter) both;
 }
 
@@ -2499,14 +2503,30 @@ html:has(main.lp-v2) {
   }
 }
 
+/* Placed in the hero's two empty bands, measured rather than guessed.
+ *
+ * On a 375px phone the column occupies 18.2% to 89.4% of the hero: headline,
+ * sentence, buttons, then the line about audio never being stored. That
+ * leaves exactly two gaps worth putting a stream in — the 18% above the
+ * headline and the 10% under the trust line — and the first pass at this put
+ * one band 1.2% clear of the headline and drew the other straight through
+ * the trust line at 86.9% against its 86.8%. Which is what "odd and out of
+ * place" was: not the drawing, its position.
+ *
+ * They sit where the desktop's do relative to the composition: in the
+ * margins the type is not using, at the top and the foot. */
+/* The upper gap is 44px and that is all there is: the masthead and its
+   waveform strip own the first 11% of the hero and the headline starts at
+   18.2%. The band is set a size smaller and turned a degree less so its
+   swinging ends still clear both. */
 .lp-v2 .lp-band-t {
-  top: 13%;
-  transform: rotate(-2.4deg);
+  top: 13.2%;
+  transform: rotate(-2deg);
 }
 
 .lp-v2 .lp-band-b {
-  bottom: 9%;
-  transform: rotate(1.8deg);
+  top: 92.5%;
+  transform: rotate(2deg);
 }
 
 .lp-v2 .lp-band-track {
@@ -2527,7 +2547,7 @@ html:has(main.lp-v2) {
 }
 
 .lp-v2 .lp-band-copy {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 550;
   letter-spacing: -0.005em;
   color: color-mix(in oklab, var(--muted-foreground) 50%, transparent);
