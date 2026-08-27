@@ -1,6 +1,6 @@
 import { requireProfile } from "~/lib/supabase/server";
 import { FriendsClient } from "./friends-client";
-import type { Friend, PendingRequest } from "./types";
+import type { Friend, PendingRequest, Squad, SquadRow } from "./types";
 
 export const metadata = { title: "Friends · Explainaloud" };
 
@@ -17,6 +17,7 @@ export default async function FriendsPage() {
     { data: requests, error: requestsError },
     { data: streak },
     { count: topics },
+    { data: squadRows, error: squadsError },
   ] = await Promise.all([
     supabase.rpc("friend_overview"),
     supabase.rpc("friend_requests"),
@@ -26,7 +27,33 @@ export default async function FriendsPage() {
       .from("courses")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id),
+    supabase.rpc("squad_overview"),
   ]);
+
+  /* Flat rows in, squads out. One row per member per squad is the shape that
+     costs one round trip; the shape the panel wants is this one. */
+  const squads: Squad[] = [];
+  for (const row of (squadRows ?? []) as SquadRow[]) {
+    let squad = squads.find((entry) => entry.id === row.squad_id);
+    if (!squad) {
+      squad = {
+        id: row.squad_id,
+        name: row.squad_name,
+        joinCode: row.join_code,
+        isOwner: row.is_owner,
+        streak: row.streak,
+        members: [],
+      };
+      squads.push(squad);
+    }
+    squad.members.push({
+      id: row.member_id,
+      username: row.member_username,
+      avatarUrl: row.member_avatar_url,
+      recordedToday: row.recorded_today,
+    });
+  }
+  if (squadsError) console.error("Loading squads failed:", squadsError);
 
   /* Told apart from "you have no friends", which is what an empty array means
      and what a failed call used to look like. Somebody with eleven friends
@@ -47,6 +74,7 @@ export default async function FriendsPage() {
         topics: topics ?? 0,
       }}
       friends={(friends ?? []) as Friend[]}
+      squads={squads}
       requests={(requests ?? []) as PendingRequest[]}
       loadFailed={loadFailed}
     />
