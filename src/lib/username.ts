@@ -68,16 +68,17 @@ const RESERVED = new Set([
 /**
  * Slurs and the coarser profanity, matched as whole normalised words.
  *
- * Kept short on purpose. A long substring blocklist is the version of this
- * that rejects `bassist`, `assistant`, `scunthorpe` and `analysis`, and a
- * moderation rule that fires on ordinary words teaches people the product is
- * broken rather than that the rule exists. What is here is matched against the
- * name with its separators and leet spellings folded away, so `f_u_c_k` and
- * `fu9k` do not walk past a list written in letters.
+ * Whole words, because these are the short ones that live inside ordinary
+ * English: `ass` is in `bassist` and `glass`, `anal` in `analysis`, `cum` in
+ * `document`, `tit` in `title`. A rule that fires on those teaches people the
+ * product is broken rather than that the rule exists.
  *
- * This is a floor rather than a policy. Anything cleverer than this belongs in
- * a report-and-review flow, because no list catches a name that is only
- * offensive to the person it is aimed at.
+ * The list below this one is the other half, and it is the half that was
+ * missing: words unambiguous enough to match anywhere in a name. `@user` was
+ * rejected for being exactly `dick` and accepted for being
+ * `rithviklikesdick`, which is the wrong way round — a handle is a thing
+ * other people have to say out loud, and the offensive part does not stop
+ * being offensive for having a name in front of it.
  */
 const PROFANITY = new Set([
   "anal",
@@ -127,6 +128,74 @@ const PROFANITY = new Set([
   "vagina",
   "wank",
   "whore",
+]);
+
+/**
+ * The ones that may be matched anywhere inside a name.
+ *
+ * Longer and less ambiguous than the set above: there is no ordinary English
+ * word with `faggot` or `cunt` inside it, and a handle containing one is not
+ * an accident of spelling. Every entry here has to survive the same question —
+ * *what innocent word contains this?* — and anything that has an answer stays
+ * in the whole-word list instead.
+ *
+ * `ALLOWED` is the escape hatch for the few that have one anyway.
+ */
+const PROFANITY_ANYWHERE = [
+  "asshole",
+  "bastard",
+  "bitch",
+  "bollocks",
+  "cunt",
+  "dildo",
+  "dyke",
+  "faggot",
+  "fuck",
+  "jizz",
+  "kike",
+  "nigga",
+  "nigger",
+  "paki",
+  "pussy",
+  "rapist",
+  "retard",
+  "shit",
+  "slut",
+  "spastic",
+  "tranny",
+  "twat",
+  "vagina",
+  "wank",
+  "whore",
+  "dick",
+  "penis",
+  "porn",
+  "boner",
+  "goatse",
+];
+
+/**
+ * Names that contain one of the above and are somebody's actual name.
+ *
+ * Short, and it will be incomplete — this is the cost of matching anywhere,
+ * paid deliberately, and the people it costs are the ones whose surname is
+ * Dickens. Checked against the whole normalised handle, so it excuses
+ * `dickinson` without excusing `dickinsonsucksdick`.
+ */
+const ALLOWED = new Set([
+  "dick",
+  "dickens",
+  "dickenson",
+  "dickerson",
+  "dickie",
+  "dickins",
+  "dickinson",
+  "dickson",
+  "moby",
+  "mobydick",
+  "scunthorpe",
+  "shitake",
+  "penistone",
 ]);
 
 /**
@@ -181,7 +250,14 @@ export function usernameError(value: string): string | null {
      the name on underscores first, so `dick_head` was checked as two words as
      well as one; with separators gone a username *is* a single word, and the
      run-together spellings are exactly what the folding above is for. */
-  if (PROFANITY.has(normalise(name))) {
+  const folded = normalise(name);
+  if (PROFANITY.has(folded)) {
+    return "Pick something else.";
+  }
+  if (
+    !ALLOWED.has(folded) &&
+    PROFANITY_ANYWHERE.some((word) => folded.includes(word))
+  ) {
     return "Pick something else.";
   }
   return null;
