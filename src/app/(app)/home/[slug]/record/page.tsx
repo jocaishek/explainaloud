@@ -2,7 +2,7 @@ import { isAdminEmail } from "~/lib/admin";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import { courseIdForSlug } from "~/lib/courses";
 import { localDay, usageToday } from "~/lib/limits";
-import { PLAN_LIMITS, PLAN_RECORDING_MS } from "~/lib/plans";
+import { PLAN_LIMITS, PLAN_RECORDING_MS, recordingLengths } from "~/lib/plans";
 import { requireProfile } from "~/lib/supabase/server";
 import { type CourseQuestion, RecordConsole } from "./record-console";
 
@@ -73,6 +73,9 @@ export default async function RecordPage({
         unlimited={isAdminEmail(user.email) || profile.plan === "pro"}
         dailyLimit={PLAN_LIMITS[profile.plan].recording}
         maxRecordingMs={PLAN_RECORDING_MS[profile.plan]}
+        // The plan's ceiling stays the default, so somebody who never touches
+        // the picker records exactly what they recorded before.
+        lengths={recordingLengths(profile.plan)}
       />
     </div>
   );

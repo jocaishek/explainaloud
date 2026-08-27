@@ -15,6 +15,7 @@ import {
 } from "~/lib/ai/transcript-cleanup";
 import { audioExtension, preferredRecorderMimeType } from "~/lib/audio";
 import { localDay } from "~/lib/limits";
+import type { RecordingLength } from "~/lib/plans";
 import { markRecordingDay } from "~/lib/record-day";
 import type { SpeechMetrics, TranscribedWord } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/client";
@@ -401,6 +402,20 @@ function formatClock(ms: number) {
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
+/**
+ * The length of a recording, said the way a person would say it.
+ *
+ * A minute is "60 seconds" here and not "1 minute", because the shortest
+ * option is a named thing — a blitz — and calling it a minute invites reading
+ * it as a smaller version of the three-minute one rather than a different
+ * exercise.
+ */
+function spanOf(ms: number) {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 120) return `${seconds} seconds`;
+  return `${Math.round(seconds / 60)} minutes`;
+}
+
 function indexOfSequence(bytes: Uint8Array, needle: number[]) {
   outer: for (let i = 0; i + needle.length <= bytes.length; i++) {
     for (let j = 0; j < needle.length; j++) {
@@ -451,6 +466,7 @@ export function RecordConsole({
   unlimited,
   dailyLimit,
   maxRecordingMs,
+  lengths,
 }: {
   courseId: string;
   /** The course's URL segment. Links use it; the API routes use the id. */
@@ -466,6 +482,8 @@ export function RecordConsole({
   /** Recordings a day for this plan; `null` when there is no cap. */
   dailyLimit: number | null;
   maxRecordingMs: number;
+  /** What lengths this plan may record, longest last. Never empty. */
+  lengths: RecordingLength[];
 }) {
   /**
    * Only ever used to invalidate, never to navigate.
@@ -491,6 +509,17 @@ export function RecordConsole({
   const [report, setReport] = useState<Report | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  /**
+   * How long this recording gets, which is not the same as how long the plan
+   * allows.
+   *
+   * The plan's ceiling is the default, so nothing changes for somebody who
+   * never touches the picker. Held in state rather than read from the prop
+   * because the whole point is that it can be spent differently one day to the
+   * next, and the picker is only offered while nothing is running — changing
+   * the length of a recording that has started is a way to lose one.
+   */
+  const [lengthMs, setLengthMs] = useState(maxRecordingMs);
   const [remainingMs, setRemainingMs] = useState(maxRecordingMs);
   const [sessions, setSessions] = useState(initialSessions);
   const [used, setUsed] = useState(recordingsUsed);
@@ -2032,9 +2061,7 @@ export function RecordConsole({
     setRemainingMs(left);
     if (left <= 0) {
       if (tickRef.current) clearInterval(tickRef.current);
-      setNotice(
-        `${Math.round(maxRecordingMs / 60_000)}-minute limit reached, wrapping up.`,
-      );
+      setNotice(`${spanOf(lengthMs)} up, wrapping up.`);
       stopRecording();
       return;
     }
@@ -2598,8 +2625,8 @@ export function RecordConsole({
     // Hard stop at the cap. The interval only drives the readout; the
     // deadline itself is a timestamp, so a throttled background tab can't
     // let a recording run past three minutes.
-    deadlineRef.current = Date.now() + maxRecordingMs;
-    setRemainingMs(maxRecordingMs);
+    deadlineRef.current = Date.now() + lengthMs;
+    setRemainingMs(lengthMs);
     if (tickRef.current) clearInterval(tickRef.current);
     tickRef.current = setInterval(tick, 250);
 
@@ -2858,6 +2885,15 @@ export function RecordConsole({
 
   return (
     <div className="flex flex-col items-center gap-8">
+      {!running && !busy && (
+        <LengthChooser
+          lengths={lengths}
+          value={lengthMs}
+          onChange={setLengthMs}
+          disabled={outOfQuota || drafting}
+        />
+      )}
+
       {!running && !busy && questions.length > 0 && (
         <ModeChooser
           mode={mode}
@@ -2895,7 +2931,7 @@ export function RecordConsole({
               .finally(() => setWriting(false));
           }}
           questionCount={Math.min(INTERVIEW_QUESTIONS, questions.length)}
-          minutes={Math.round(maxRecordingMs / 60_000)}
+          spend={spanOf(lengthMs)}
         />
       )}
 
@@ -2966,7 +3002,7 @@ export function RecordConsole({
         {running && (
           <ExamClock
             remainingMs={remainingMs}
-            totalMs={maxRecordingMs}
+            totalMs={lengthMs}
             paused={status === "between"}
             question={interviewRef.current ? segmentIndex + 1 : null}
             of={INTERVIEW_QUESTIONS}
@@ -3341,6 +3377,76 @@ function ExamClock({
 }
 
 /**
+ * How long to spend, before anything starts.
+ *
+ * The cap used to be the plan and nothing else, which quietly said every
+ * recall is the same size. It is not: naming one term and explaining mitosis
+ * are different exercises, and three minutes on the first is two and a half
+ * minutes of a person filling silence — which the grader then reads as
+ * padding. A shorter recording is not a smaller version of a longer one.
+ *
+ * The plan's ceiling stays the default and the longest option, so this only
+ * ever offers to spend *less*. Lengths a plan cannot record are absent rather
+ * than shown and refused: an option you are not allowed to take is an
+ * advertisement, and there is a pricing page for that.
+ */
+function LengthChooser({
+  lengths,
+  value,
+  onChange,
+  disabled,
+}: {
+  lengths: RecordingLength[];
+  value: number;
+  onChange: (ms: number) => void;
+  disabled: boolean;
+}) {
+  if (lengths.length < 2) return null;
+  return (
+    <fieldset
+      className="flex w-full max-w-2xl flex-col items-center gap-2"
+      disabled={disabled}
+    >
+      <legend className="mb-1 text-center text-sm text-subtle">
+        How long are you speaking for?
+      </legend>
+      <div className="flex flex-wrap items-stretch justify-center gap-2">
+        {lengths.map((length) => {
+          const selected = value === length.ms;
+          return (
+            <label
+              key={length.ms}
+              htmlFor={`length-${length.ms}`}
+              className={cn(
+                "flex cursor-pointer flex-col gap-0.5 rounded-control border px-4 py-2.5 text-left transition-colors",
+                "focus-within:ring-2 focus-within:ring-brand/40",
+                selected
+                  ? "border-brand/40 bg-brand/[0.06]"
+                  : "border-border bg-surface hover:border-brand/25",
+              )}
+            >
+              <input
+                id={`length-${length.ms}`}
+                type="radio"
+                name="recording-length"
+                value={length.ms}
+                checked={selected}
+                onChange={() => onChange(length.ms)}
+                className="sr-only"
+              />
+              <span className="text-sm font-semibold text-strong">
+                {length.label}
+              </span>
+              <span className="text-xs text-subtle">{length.note}</span>
+            </label>
+          );
+        })}
+      </div>
+    </fieldset>
+  );
+}
+
+/**
  * Topic or interview, before anything starts.
  *
  * Both spend one of the day's recordings, which is the point: this is a choice
@@ -3352,12 +3458,13 @@ function ModeChooser({
   mode,
   onChange,
   questionCount,
-  minutes,
+  spend,
 }: {
   mode: Mode;
   onChange: (mode: Mode) => void;
   questionCount: number;
-  minutes: number;
+  /** How long the recording will run, already worded. */
+  spend: string;
 }) {
   const options: Array<{
     value: Mode;
@@ -3369,13 +3476,13 @@ function ModeChooser({
       value: "topic",
       icon: Mic,
       title: "Topic mode",
-      body: `Open-ended. Say what you know about the topic, in ${minutes} minutes.`,
+      body: `Open-ended. Say what you know about the topic, in ${spend}.`,
     },
     {
       value: "interview",
       icon: Radio,
       title: "Interview mode",
-      body: `${questionCount} questions, asked one at a time, sharing the same ${minutes} minutes. You cannot see the next one until you have answered this one.`,
+      body: `${questionCount} questions, asked one at a time, sharing the same ${spend}. You cannot see the next one until you have answered this one.`,
     },
   ];
 
