@@ -1,6 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { z } from "zod";
 import { requireAdmin } from "~/lib/supabase/server";
+import { usernameError } from "~/lib/username";
 
 const adminTopicSchema = z.object({
   id: z.string().uuid(),
@@ -178,9 +179,28 @@ export default async function AdminPage() {
                           account, and stays — but it is the thing you check
                           second. */}
                       {user.username ? (
-                        <span className="font-mono text-foreground">
-                          @{user.username}
-                        </span>
+                        <>
+                          <span className="font-mono text-foreground">
+                            @{user.username}
+                          </span>
+                          {/* Flagged rather than hidden.
+                              A username is permanent, so the rules only ever
+                              applied to the moment somebody picked one — and a
+                              rule that tightens afterwards leaves the names it
+                              would now refuse sitting in the product with
+                              nothing anywhere pointing at them. Running the
+                              same check the sign-up form runs, against the
+                              names already taken, is the difference between a
+                              rule and a rule that is enforced. */}
+                          {usernameError(user.username) && (
+                            <span
+                              title="This username would be refused at sign-up today"
+                              className="ml-1.5 rounded-full bg-destructive/10 px-1.5 py-0.5 font-medium text-[0.7rem] text-destructive"
+                            >
+                              flagged
+                            </span>
+                          )}
+                        </>
                       ) : (
                         <span title="No username set">—</span>
                       )}
