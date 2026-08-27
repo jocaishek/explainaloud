@@ -48,8 +48,56 @@ export default async function AdminPage() {
   const { data, error } = await supabase.rpc("admin_user_overview");
   const parsed = z.array(adminUserOverviewSchema).safeParse(data);
 
+  /* Say which of the two went wrong, and what it said.
+   *
+   * This threw one sentence for both cases and logged neither, so a broken
+   * admin page produced a black screen with an error digest on it and nothing
+   * anywhere that named a cause — the database's own message, which is the
+   * only part worth having, was discarded at the point it arrived. Postgres
+   * error messages are specific and this page is behind an admin check, so
+   * there is nothing here worth hiding from the server log. */
+  if (error) {
+    console.error("admin_user_overview failed:", {
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+    });
+  } else if (!parsed.success) {
+    console.error(
+      "admin_user_overview returned an unexpected shape:",
+      parsed.error.issues.slice(0, 5),
+    );
+  }
+
+  /* And it does not take the route down.
+   *
+   * Throwing from a server component is a 500 and Vercel's own error page —
+   * no navigation, no way back, nothing that says which page failed. The
+   * statistics are the only thing that depends on this call, so failing it
+   * renders as a panel where the statistics would have been, inside a page
+   * that still works. */
   if (error || !parsed.success) {
-    throw new Error("Could not load admin statistics.");
+    return (
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 px-4 py-10 sm:px-6 lg:px-8 lg:py-14">
+        <h1 className="font-semibold text-3xl text-strong tracking-tight">
+          User activity
+        </h1>
+        <div
+          role="alert"
+          className="rounded-card border border-border bg-card p-5 shadow-rest"
+        >
+          <p className="font-medium text-strong text-sm">
+            Couldn&apos;t load the statistics.
+          </p>
+          <p className="mt-1 text-sm text-subtle">
+            {error
+              ? "The database refused the request. The reason is in the server log."
+              : "The database answered in a shape this page does not recognise. The details are in the server log."}
+          </p>
+        </div>
+      </div>
+    );
   }
 
   const users = parsed.data;
