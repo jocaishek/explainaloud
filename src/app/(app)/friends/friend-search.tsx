@@ -2,13 +2,25 @@
 
 import { Check, Clock, Loader2, Search, UserPlus, X } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useId, useRef, useState, useTransition } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { PersonAvatar } from "~/components/person-avatar";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { createClient } from "~/lib/supabase/client";
 import { respondToRequest, sendFriendRequest } from "./actions";
-import type { PersonStatus, SearchResult } from "./types";
+import type {
+  Friend,
+  PendingRequest,
+  PersonStatus,
+  SearchResult,
+} from "./types";
 
 /** Long enough that typing a username is one request, not nine. */
 const DEBOUNCE_MS = 300;
@@ -40,11 +52,31 @@ function looksLikeEmail(value: string) {
  * Every result says where it already stands with you. A list where every row
  * offers "Add", including the people you are already friends with, produces a
  * duplicate-key error as its answer to a perfectly reasonable click.
+ *
+ * Where it stands comes from this screen's own data rather than from the
+ * search, and that is a correction. `search_people` returns the standing as it
+ * was at the moment of the query, and these results are client state that
+ * outlives it: cancel a request from the panel above and the page's data
+ * refreshes, but the row down here still says "Asked" — for somebody who is no
+ * longer in "You asked", which is the same screen contradicting itself in two
+ * places. Accepting had the mirror of it, offering "Accept" to somebody
+ * already accepted.
+ *
+ * So the search supplies *who*, and the friends and requests already on the
+ * page supply *where you stand with them*. There is one source of that answer
+ * now and it cannot drift, because it is the same array the panels above are
+ * drawn from.
  */
 export function FriendSearch({
+  friends,
+  requests,
   onChanged,
   inputRef,
 }: {
+  /** Everyone you are already friends with, as the page has them. */
+  friends: Friend[];
+  /** Everything pending, either direction, as the page has them. */
+  requests: PendingRequest[];
   onChanged: () => void;
   /* Held by the screen above, so the empty state's one action can put the
      caret in this field. A button that says "find someone" and then leaves
@@ -97,17 +129,29 @@ export function FriendSearch({
     return () => clearTimeout(timer);
   }, [query]);
 
-  /* Applied on top of whatever the last search returned, so a row that has
-     just been added says so without a second round trip to find out. */
-  function restate(userId: string, status: PersonStatus) {
-    setResults((previous) =>
-      previous
-        ? previous.map((row) =>
-            row.user_id === userId ? { ...row, status } : row,
-          )
-        : previous,
-    );
-  }
+  /* Where you stand with everybody the page knows about, by id.
+   *
+   * Rebuilt whenever the page's data changes, which is what makes the search
+   * rows follow a cancel or an accept that happened somewhere else on the
+   * screen. Somebody absent from both lists is a stranger — and saying so
+   * explicitly is the half that fixes cancelling, since a stale row would
+   * otherwise keep whatever the search last said about them. */
+  const standing = useMemo(() => {
+    const map = new Map<
+      string,
+      { status: PersonStatus; requestId: string | null }
+    >();
+    for (const friend of friends) {
+      map.set(friend.user_id, { status: "friends", requestId: null });
+    }
+    for (const request of requests) {
+      map.set(request.user_id, {
+        status: request.direction === "incoming" ? "incoming" : "outgoing",
+        requestId: request.id,
+      });
+    }
+    return map;
+  }, [friends, requests]);
 
   return (
     <section
@@ -183,15 +227,22 @@ export function FriendSearch({
 
         {!emailTyped && !failed && results && results.length > 0 && (
           <ul className="divide-y divide-border">
-            {results.map((person) => (
-              <li key={person.user_id}>
-                <ResultRow
-                  person={person}
-                  onChanged={onChanged}
-                  onStatus={(status) => restate(person.user_id, status)}
-                />
-              </li>
-            ))}
+            {results.map((person) => {
+              /* The search said who; the page says where you stand. */
+              const known = standing.get(person.user_id);
+              return (
+                <li key={person.user_id}>
+                  <ResultRow
+                    person={{
+                      ...person,
+                      status: known?.status ?? "none",
+                      request_id: known?.requestId ?? null,
+                    }}
+                    onChanged={onChanged}
+                  />
+                </li>
+              );
+            })}
           </ul>
         )}
 
@@ -212,11 +263,9 @@ export function FriendSearch({
 function ResultRow({
   person,
   onChanged,
-  onStatus,
 }: {
   person: SearchResult;
   onChanged: () => void;
-  onStatus: (status: PersonStatus) => void;
 }) {
   const [pending, startTransition] = useTransition();
   const [note, setNote] = useState<string | null>(null);
@@ -225,12 +274,12 @@ function ResultRow({
     startTransition(async () => {
       const result = await sendFriendRequest(person.user_id);
       setNote(result.ok ? null : result.message);
-      if (result.ok) {
-        /* Adding somebody who had already asked *you* accepts instead, so the
-           row can come back as either. The action says which. */
-        onStatus(result.status ?? "outgoing");
-        onChanged();
-      }
+      /* No local restating. The row redraws from the page's own lists, and
+         `onChanged` is what refreshes those — so the button that was pressed
+         and the panel above it can never end up saying different things.
+         Adding somebody who had already asked *you* accepts instead, and that
+         comes back through the same route without this having to know. */
+      if (result.ok) onChanged();
     });
   }
 
@@ -240,10 +289,7 @@ function ResultRow({
     startTransition(async () => {
       const result = await respondToRequest(requestId, true);
       setNote(result.ok ? null : result.message);
-      if (result.ok) {
-        onStatus("friends");
-        onChanged();
-      }
+      if (result.ok) onChanged();
     });
   }
 
