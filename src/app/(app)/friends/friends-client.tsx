@@ -12,8 +12,7 @@ import { streakLabel } from "~/lib/streak";
 import { cn } from "~/lib/utils";
 import { removeFriendship, respondToRequest } from "./actions";
 import { FriendSearch } from "./friend-search";
-import { Squads } from "./squads";
-import type { Friend, PendingRequest, Squad, You } from "./types";
+import type { Friend, PendingRequest, You } from "./types";
 import { YourHandle } from "./your-handle";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -42,13 +41,11 @@ const EASE = [0.23, 1, 0.32, 1] as const;
 export function FriendsClient({
   you,
   friends,
-  squads,
   requests,
   loadFailed,
 }: {
   you: You;
   friends: Friend[];
-  squads: Squad[];
   requests: PendingRequest[];
   /** A read that failed, as distinct from a person with no friends. */
   loadFailed: boolean;
@@ -121,14 +118,6 @@ export function FriendsClient({
        * *acts* on it is a narrower column beside it. The proportion is the
        * argument: the column you spend time in is twice the width of the one
        * you visit to add somebody. */}
-      {/* Above the friends list, and that is the order on purpose. The list is
-          a scoreboard — it says how everybody is doing. A squad says what is
-          still owed today, and only one of those is something a reader can
-          act on before midnight. */}
-      <div data-rise="" className="mb-8">
-        <Squads squads={squads} />
-      </div>
-
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,20.5rem)] lg:gap-8">
         <section data-rise="" aria-labelledby="friend-list-heading">
           <h2
