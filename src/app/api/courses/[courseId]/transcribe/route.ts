@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { NoSpeechDetectedError, transcribeAudio } from "~/lib/ai/provider";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
+import { transcriptionVocabulary } from "~/lib/ai/vocabulary";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
 import { speechMetrics } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/server";
@@ -83,14 +84,16 @@ export async function POST(
   }
 
   try {
-    // The course's own words, so the transcriber spells them the way the
-    // grader expects to read them. Titles before key points: a section title
-    // is where the proper nouns live, and the prompt is length-capped.
-    const sections = course.generated?.sections ?? [];
-    const vocabulary = [
-      ...sections.map((section) => section.title),
-      ...sections.flatMap((section) => section.key_points),
-    ];
+    /* The course's own words, so the transcriber spells them the way the
+     * grader expects to read them.
+     *
+     * This used to pass whole section titles and key points, which is
+     * sentences, and the prompt is length-capped — so the budget bought about
+     * eight sentences and spent most of itself protecting "copies" and
+     * "before". `transcriptionVocabulary` spends the same room on terms, ranked
+     * by how badly each one needs protecting, and falls through to the
+     * subject's own vocabulary when the course has not been generated yet. */
+    const vocabulary = transcriptionVocabulary(course.topic, course.generated);
     const { transcript, words } = await transcribeAudio(
       audio,
       course.topic,

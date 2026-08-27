@@ -839,14 +839,16 @@ export async function transcribeAudio(
   file: File,
   topic: string,
   /**
-   * The course's own vocabulary — section titles and key-point terms.
+   * The words this recording is most likely to contain and get wrong.
    *
    * Whisper's prompt is a decoding hint, not an instruction: words in it are
    * far likelier to come out spelled that way. Without it the model hears an
    * unfamiliar proper noun and writes what it sounds like, which is how
    * "Claude Code" was transcribed as "Clawd Code" and "Cloud Code" in the same
    * recording. The terms come from the course the student is being graded
-   * against, so they are exactly the words that must not be mangled.
+   * against — see `transcriptionVocabulary` — so they are exactly the words
+   * that must not be mangled, ranked with the most mangle-prone first,
+   * because only the first few hundred characters of this survive the cap.
    */
   vocabulary: string[] = [],
 ): Promise<TranscriptionResult> {
@@ -866,10 +868,20 @@ export async function transcribeAudio(
   // Capped: the prompt is a decoding bias, and past a couple of hundred
   // characters it starts steering the transcript towards its own wording
   // rather than towards the student's.
-  const terms = [...new Set(vocabulary.map((term) => term.trim()))]
+  //
+  // The cap has not moved, but what it buys has. This used to be handed whole
+  // sentences and fitted about eight of them; `transcriptionVocabulary` hands
+  // it terms, ranked by how badly each needs protecting, and the same 400
+  // characters now carry twenty to forty. Trimmed at a comma so the last term
+  // is a term rather than half of one.
+  const list = [...new Set(vocabulary.map((term) => term.trim()))]
     .filter((term) => term.length > 2)
-    .join(", ")
-    .slice(0, 400);
+    .join(", ");
+  const clipped = list.slice(0, 400);
+  const terms =
+    clipped.length < list.length
+      ? clipped.slice(0, Math.max(0, clipped.lastIndexOf(", ")))
+      : clipped;
   /* "um, uh" in the prompt is not an instruction — it is an example.
    *
    * Whisper tidies disfluency away by default: it is trained on written
