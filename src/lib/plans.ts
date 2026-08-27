@@ -33,6 +33,38 @@ export const PLAN_RECORDING_MS: Record<Plan, number> = {
   pro: 5 * 60_000,
 };
 
+/**
+ * The lengths somebody can choose from, longest last.
+ *
+ * The cap above is a ceiling, not a sentence: three minutes is the right size
+ * for a topic and much too long for one definition, and a person revising
+ * knows which they are doing. Anything longer than their plan allows is left
+ * out of the list rather than shown and refused.
+ *
+ * Sixty seconds is its own thing rather than "one minute" — at that length a
+ * teach-back is not a shortened explanation, it is a single term answered at
+ * speed, and naming it says so before anybody presses record.
+ */
+export type RecordingLength = {
+  ms: number;
+  label: string;
+  /** One line under the label, in the chooser. */
+  note: string;
+};
+
+export const RECORDING_LENGTHS: readonly RecordingLength[] = [
+  { ms: 60_000, label: "Blitz", note: "60 seconds, one term" },
+  { ms: 3 * 60_000, label: "3 minutes", note: "A topic, end to end" },
+  { ms: 5 * 60_000, label: "5 minutes", note: "Room for a dense one" },
+];
+
+/** The lengths a plan can actually record, in order. Never empty. */
+export function recordingLengths(plan: Plan): RecordingLength[] {
+  const cap = PLAN_RECORDING_MS[plan];
+  const within = RECORDING_LENGTHS.filter((length) => length.ms <= cap);
+  return within.length > 0 ? within : [RECORDING_LENGTHS[0] as RecordingLength];
+}
+
 /** `null` means no cap. */
 export const PLAN_LIMITS: Record<
   Plan,
@@ -64,7 +96,9 @@ export type PlanFeature = {
  */
 export const PLAN_FEATURES: PlanFeature[] = [
   {
-    label: "Recording length",
+    /* The longest, not the only. Both plans can also record a blitz or a
+       three-minute take; what Pro buys is the extra two minutes on top. */
+    label: "Longest recording",
     free: `${PLAN_RECORDING_MS.free / 60_000} minutes`,
     pro: `${PLAN_RECORDING_MS.pro / 60_000} minutes`,
   },
