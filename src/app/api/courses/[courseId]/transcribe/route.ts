@@ -96,10 +96,22 @@ export async function POST(
       course.topic,
       vocabulary,
     );
-    // Metrics ride along with the transcript rather than in a second request:
-    // the word timings only exist here, and re-deriving them would mean paying
-    // for the same transcription twice.
-    return NextResponse.json({ transcript, metrics: speechMetrics(words) });
+    /* Metrics ride along with the transcript rather than in a second request:
+     * the word timings only exist here, and re-deriving them would mean paying
+     * for the same transcription twice.
+     *
+     * The timed words ride along for the same reason, and for a second one.
+     * An interview is several answers inside one recording, and the only
+     * honest boundary between them is a moment in the audio — the browser
+     * used to cut them out of the live caption text by string prefix, which
+     * fails silently and completely whenever that text is rebuilt or stops
+     * arriving. With the timings here the caller can cut the answers out of
+     * the authoritative transcript instead. */
+    return NextResponse.json({
+      transcript,
+      words,
+      metrics: speechMetrics(words),
+    });
   } catch (error) {
     if (error instanceof NoSpeechDetectedError) {
       return NextResponse.json(
