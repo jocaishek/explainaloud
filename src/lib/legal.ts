@@ -7,8 +7,16 @@
  * paragraphs.
  */
 
-/** Where legal, privacy, and account-deletion requests go. */
-export const LEGAL_CONTACT_EMAIL = "jovanny.shek@gmail.com";
+/**
+ * Where legal, privacy, and account-deletion requests go.
+ *
+ * A role address rather than a person's. These documents promise a reply to
+ * deletion and access requests, and a promise made to a personal inbox is one
+ * that breaks the day the person is unreachable or the account is renamed —
+ * both of which happen, and neither of which is a reason a data request should
+ * go unanswered.
+ */
+export const LEGAL_CONTACT_EMAIL = "hello@explainaloud.com";
 
 /** The trading name the documents bind. */
 export const LEGAL_ENTITY_NAME = "Explainaloud";
