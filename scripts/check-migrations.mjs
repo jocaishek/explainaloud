@@ -52,11 +52,13 @@ if (since) {
   }
 }
 
-const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+const files = readdirSync(dir)
+  .filter((f) => f.endsWith(".sql"))
+  .sort();
 
-const funcs = new Set();          // public.name  (ignoring arity)
-const tables = new Set();         // public.name, so a table is never read as a call
-const cols = new Map();           // public.table -> Set(column)
+const funcs = new Set(); // public.name  (ignoring arity)
+const tables = new Set(); // public.name, so a table is never read as a call
+const cols = new Map(); // public.table -> Set(column)
 const problems = [];
 
 const strip = (sql) =>
@@ -66,42 +68,73 @@ for (const file of files) {
   const sql = strip(readFileSync(`${dir}/${file}`, "utf8"));
 
   /* A file's own tables and columns exist for the rest of that file. */
-  for (const m of sql.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?public\.(\w+)\s*\(([\s\S]*?)\n\)\s*;/gi)) {
+  for (const m of sql.matchAll(
+    /create\s+table\s+(?:if\s+not\s+exists\s+)?public\.(\w+)\s*\(([\s\S]*?)\n\)\s*;/gi,
+  )) {
     tables.add(m[1]);
     const set = cols.get(m[1]) ?? new Set();
     for (const line of m[2].split("\n")) {
-      const c = line.trim().match(/^(\w+)\s+(uuid|text|date|integer|int|bigint|boolean|timestamptz|jsonb|numeric|public\.\w+)/i);
+      const c = line
+        .trim()
+        .match(
+          /^(\w+)\s+(uuid|text|date|integer|int|bigint|boolean|timestamptz|jsonb|numeric|public\.\w+)/i,
+        );
       if (c) set.add(c[1]);
     }
     cols.set(m[1], set);
   }
-  for (const m of sql.matchAll(/alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?public\.(\w+)((?:[^;]|'[^']*')*);/gi)) {
+  for (const m of sql.matchAll(
+    /alter\s+table\s+(?:only\s+)?(?:if\s+exists\s+)?public\.(\w+)((?:[^;]|'[^']*')*);/gi,
+  )) {
     tables.add(m[1]);
     const set = cols.get(m[1]) ?? new Set();
-    for (const a of m[2].matchAll(/add\s+column\s+(?:if\s+not\s+exists\s+)?(\w+)/gi)) set.add(a[1]);
-    for (const d of m[2].matchAll(/drop\s+column\s+(?:if\s+exists\s+)?(\w+)/gi)) set.delete(d[1]);
+    for (const a of m[2].matchAll(
+      /add\s+column\s+(?:if\s+not\s+exists\s+)?(\w+)/gi,
+    ))
+      set.add(a[1]);
+    for (const d of m[2].matchAll(/drop\s+column\s+(?:if\s+exists\s+)?(\w+)/gi))
+      set.delete(d[1]);
     cols.set(m[1], set);
   }
 
   /* ---- what this file references, checked against the state so far ---- */
   const defined = new Set(
-    [...sql.matchAll(/create\s+(?:or\s+replace\s+)?function\s+public\.(\w+)/gi)].map((m) => m[1]),
+    [
+      ...sql.matchAll(
+        /create\s+(?:or\s+replace\s+)?function\s+public\.(\w+)/gi,
+      ),
+    ].map((m) => m[1]),
   );
   for (const m of sql.matchAll(/\bpublic\.(\w+)\s*\(/gi)) {
     const name = m[1];
     if (defined.has(name) || funcs.has(name) || tables.has(name)) continue;
     // `create table public.x (`, `on public.x (`, `references public.x (` are
     // not calls. Only a name that no statement in this file declares is.
-    if (new RegExp(`(?:table|on|references|into)\\s+public\\.${name}\\b`, "i").test(sql)) continue;
+    if (
+      new RegExp(
+        `(?:table|on|references|into)\\s+public\\.${name}\\b`,
+        "i",
+      ).test(sql)
+    )
+      continue;
     // A create/drop statement naming it is a definition, not a call.
-    problems.push(`${file}: calls public.${name}() — not defined by any earlier migration`);
+    problems.push(
+      `${file}: calls public.${name}() — not defined by any earlier migration`,
+    );
   }
 
   // alias -> table, from `from public.x y` / `join public.x as y`
   const alias = new Map();
-  for (const m of sql.matchAll(/\b(?:from|join)\s+public\.(\w+)(?:\s+as)?\s+(\w+)/gi)) {
+  for (const m of sql.matchAll(
+    /\b(?:from|join)\s+public\.(\w+)(?:\s+as)?\s+(\w+)/gi,
+  )) {
     const [, table, a] = m;
-    if (!/^(on|using|where|group|order|left|right|inner|join|lateral|set)$/i.test(a)) alias.set(a, table);
+    if (
+      !/^(on|using|where|group|order|left|right|inner|join|lateral|set)$/i.test(
+        a,
+      )
+    )
+      alias.set(a, table);
   }
   for (const [a, table] of alias) {
     const known = cols.get(table);
@@ -109,15 +142,18 @@ for (const file of files) {
     for (const m of sql.matchAll(new RegExp(`\\b${a}\\.(\\w+)\\b`, "g"))) {
       const col = m[1];
       if (!known.has(col)) {
-        problems.push(`${file}: ${a}.${col} — public.${table} has no column "${col}"`);
+        problems.push(
+          `${file}: ${a}.${col} — public.${table} has no column "${col}"`,
+        );
       }
     }
   }
 
-
   /* ---- then apply this file's own effects ---- */
   for (const name of defined) funcs.add(name);
-  for (const m of sql.matchAll(/drop\s+function\s+(?:if\s+exists\s+)?public\.(\w+)/gi)) {
+  for (const m of sql.matchAll(
+    /drop\s+function\s+(?:if\s+exists\s+)?public\.(\w+)/gi,
+  )) {
     // A drop immediately followed by a create in the same file is a replace.
     if (!defined.has(m[1])) funcs.delete(m[1]);
   }
@@ -135,6 +171,8 @@ if (fresh.length > 0) {
 }
 console.error(
   `\n${files.length} migrations checked, ${funcs.size} functions live at head` +
-    (older > 0 ? `, ${older} known problem${older === 1 ? "" : "s"} in already-merged migrations` : ""),
+    (older > 0
+      ? `, ${older} known problem${older === 1 ? "" : "s"} in already-merged migrations`
+      : ""),
 );
 process.exit(fresh.length > 0 ? 1 : 0);

@@ -1,38 +1,45 @@
 "use client";
 
-import { motion, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 
 /**
  * App-wide cross-fade between top-level routes — landing → onboarding →
  * dashboard no longer cut hard from one page to the next.
  *
- * Opacity only, deliberately. `transform` and `filter` both establish a
- * containing block for `position: fixed` descendants, which would break the
- * landing page's pinned scroll-progress bar. Per-section motion lives in the
- * nested templates, where nothing is fixed.
+ * A plain CSS animation, deliberately: the previous framer-motion version
+ * pulled the whole motion runtime into every route's bundle to animate one
+ * opacity. Opacity only, also deliberately — `transform` and `filter` both
+ * establish a containing block for `position: fixed` descendants, which
+ * would break the landing page's fixed nav. Reduced motion is handled by
+ * the media query rather than JS, so the fade costs nothing to skip.
  */
 export default function RootTemplate({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const shouldReduceMotion = useReducedMotion();
   const pathname = usePathname();
 
   // The authenticated app optimizes for repeated task navigation. Marketing
   // routes keep the entrance fade, but dashboard clicks render immediately.
-  if (shouldReduceMotion || pathname.startsWith("/home")) {
+  if (pathname.startsWith("/home")) {
     return <>{children}</>;
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
-    >
+    <div className="route-fade">
+      <style>{`
+        .route-fade {
+          animation: route-fade-in 0.22s cubic-bezier(0.23, 1, 0.32, 1);
+        }
+        @keyframes route-fade-in {
+          from { opacity: 0; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .route-fade { animation: none; }
+        }
+      `}</style>
       {children}
-    </motion.div>
+    </div>
   );
 }

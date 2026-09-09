@@ -106,7 +106,11 @@ main.lp-v2 {
  * artifacts off — more than that destroys the specular bands, which are the
  * only reason the image is worth having.
  */
-.lp-v2 .lp-atmosphere {
+/* Both the descendant shape the landing used and the same-element shape the
+   auth screens use (`main.lp-v2.lp-atmosphere`) — the latter got no ground at
+   all under the descendant-only selector, which the water shader used to
+   paper over. */
+:is(.lp-v2 .lp-atmosphere, .lp-v2.lp-atmosphere) {
   isolation: isolate;
   /* The ground under the generated field, and the whole picture when the
      field cannot run. Not the WebP any more: a still image behind this
@@ -130,23 +134,6 @@ main.lp-v2 {
     linear-gradient(112deg, #030a18 0%, #071633 46%, #0d2a52 100%);
 }
 
-/* Heaviest where the display type sits, lifting through the middle so the
- * artwork is actually visible, back over the lower third where the buttons
- * and the tagline are. */
-/* Two scrims, because the hero has two jobs on two axes.
- *
- * The horizontal one holds the left column dark so the headline has a bed —
- * which is what the reference itself does: an empty navy third with the type
- * in it, and the artwork to the right of it. It is gone by 62%, so the swirl
- * is never touched.
- *
- * The vertical one is only for the bottom band, where the product panel and
- * the tagline sit over whatever the crop happens to put behind them. */
-/* Two scrims on two axes. The horizontal one holds the left column dark so
- * the headline has a bed — the artwork's own composition does the same, an
- * empty field with the type in it and the picture to the right of it. It is
- * gone by 64%, so the swirl itself is never touched. The vertical one is only
- * for the bottom band, under the product panel. */
 /* One axis on a phone, two on a desktop.
  *
  * The horizontal scrim exists to hold a left-hand column dark so the headline
@@ -155,51 +142,6 @@ main.lp-v2 {
  * width, so a gradient that is 88% opaque at the left edge and clear by 64%
  * is simply a wash over the whole frame, and it was most of why the field was
  * invisible on a phone. Below the breakpoint only the vertical one runs. */
-/* The scrim over the hero's water.
- *
- * It used to clear almost completely through the middle — 0.06 at 42% — and on
- * a wide screen the horizontal pass fell to zero by 64%, which is exactly where
- * the panel and the mark sit. The field is a live fluid, so what that produced
- * was the busiest part of the page directly behind the thing the page is
- * trying to get read.
- *
- * These values are the closing section's, which nobody has ever complained
- * about: the water is present, it moves, and it stays behind the type instead
- * of competing with it. Same field, same ground, same treatment at both ends
- * of the page — which is the argument that section already makes for itself. */
-.lp-v2 .lp-hero-scrim {
-  background: linear-gradient(
-    180deg,
-    rgba(4, 12, 26, 0.55) 0%,
-    rgba(4, 12, 26, 0.42) 42%,
-    rgba(4, 12, 26, 0.55) 74%,
-    rgba(3, 9, 20, 0.72) 100%
-  );
-}
-
-@media (min-width: 1024px) {
-  .lp-v2 .lp-hero-scrim {
-    /* The horizontal pass still favours the left, because that is where the
-       headline is and it needs the most protection. What it no longer does is
-       reach zero: 0.28 on the right keeps the field readable as water without
-       letting it fight the panel sitting on top of it. */
-    background:
-      linear-gradient(
-        90deg,
-        rgba(3, 10, 24, 0.9) 0%,
-        rgba(3, 10, 24, 0.78) 30%,
-        rgba(3, 10, 24, 0.46) 50%,
-        rgba(3, 10, 24, 0.28) 64%
-      ),
-      linear-gradient(
-        180deg,
-        rgba(4, 12, 26, 0.5) 0%,
-        rgba(4, 12, 26, 0.36) 42%,
-        rgba(4, 12, 26, 0.5) 74%,
-        rgba(3, 9, 20, 0.7) 100%
-      );
-  }
-}
 
 .lp-v2 .lp-sky-nav {
   background: linear-gradient(
@@ -292,7 +234,7 @@ html:has(main.lp-v2) {
   }
 }
 
-.lp-v2 .lp-atmosphere::before {
+:is(.lp-v2 .lp-atmosphere, .lp-v2.lp-atmosphere)::before {
   position: absolute;
   inset: 0;
   z-index: 0;
@@ -1592,19 +1534,6 @@ html:has(main.lp-v2) {
   border-bottom: 1px solid var(--rule);
 }
 
-/* Scroll reveal. Driven by `ScrollReveal`, which toggles the attribute.
-   See that component for why the state lives on the element.
-
-   The revealed state is `transform: none`, not `translateY(0)`: a settled
-   block must not be left holding a transform, because a transform makes an
-   element the containing block for anything absolutely positioned inside it,
-   and several of these blocks contain hairlines and tooltips pinned to
-   ancestors. `none` interpolates as the identity, so the transition is
-   unaffected.
-
-   750ms sounds long written down. It is not doing the work of an entrance;
-   it is doing the work of the page feeling like it has weight, which needs
-   the tail of the exponential ease to be long enough to notice. */
 /* ---------------------------------------------------------------------------
  * Motion.
  *
@@ -1981,29 +1910,6 @@ html:has(main.lp-v2) {
   }
 }
 
-/* ---------------------------------------------------------------------------
- * The sunset register — tarmac black, Athens gold.
- *
- * Scoped to `.register-sunset` rather than `:root` for the same reason the app
- * register is: the landing and the signed-in product are two worlds, and a
- * second `:root` gives one its canvas by taking the other's away.
- *
- * **The problem this block had to solve.** The three verdict colours are the
- * product's entire semantic: green means the claim was correct, red means a
- * step was missed, tan means it was said but not checkably. On a near-black
- * canvas the shipped values fail outright — `#0f7a3d` green sits at 2.4:1 on
- * `#0b0b0c`, well under the 4.5:1 a marked word needs to be read. And the
- * brief's accent family is gold and amber, which is *the same hue* as the tan
- * that means "vague". A brand colour indistinguishable from a verdict is worse
- * than an ugly brand colour: it makes the marking unreadable as marking.
- *
- * So the verdicts get dark-canvas values here — lifted in value, held at the
- * same hue, so they still read as the greens and reds somebody will be graded
- * in — and `--vague` is pulled to a desaturated sand that separates from the
- * luminous CTA gold by saturation rather than by hue. Both stay reserved: they
- * mark words and nothing else, and the sunset accents never touch a
- * transcript.
- * ------------------------------------------------------------------------- */
 /* The landing runs in this world.
  *
  * `.tx` is the class the page root already carries, and every section below it
@@ -2261,21 +2167,53 @@ html:has(main.lp-v2) {
   outline-offset: 4px;
 }
 
-/* ── The read-through, as a recording ────────────────────────────────────
+/* The booth.
  *
- * How far down the page you are, drawn as a waveform being captured rather
- * than as a bar being filled.
+ * The ground under the two field rooms, painted on the fixed field layer so
+ * every transparent region of the page — the first screen, the close, the
+ * footer — opens onto the same dark volume. This is the page's inversion,
+ * spent at the *start*: you arrive inside a dark room full of drifting,
+ * glowing speech, the material sections are the lit world you move through,
+ * and the close is the same room again with the whole take marked. A ground,
+ * not an orb: it is the room's own light falling from above, it defines the
+ * region, and the type stands in it. */
+.lp-v2 .lp-field-void {
+  background:
+    radial-gradient(
+      120% 90% at 50% -12%,
+      rgba(38, 64, 104, 0.85) 0%,
+      rgba(23, 40, 68, 0.35) 45%,
+      rgba(10, 20, 38, 0) 72%
+    ),
+    linear-gradient(#0e1c33 0%, #0a1526 55%, #081120 100%);
+}
+
+/* A room's worth of tokens.
  *
- * It was a two pixel line with `transform: scaleX()` on it, which is the
- * progress indicator every site has. It answered the question and said
- * nothing. This answers the same question and also says what the product is:
- * the page listens to you the way the product listens to you, and scrolling
- * lays down a take.
- *
- * Two identical layers. The dim one is the whole page; the lit one is clipped
- * to how much of it has been read. That is exactly the shape of a recording
- * in progress, so nobody has to be told what it means.
- */
+ * Everything that stands inside the booth — hero, close, footer — takes this
+ * class and nothing else changes: the utilities those blocks already use
+ * (`text-strong`, `text-muted-foreground`, `text-brand-ink`) resolve against
+ * these re-pointed values, which is the same indirection `main.lp-v2` itself
+ * uses. The three verdicts re-point to their `-spoken` stops — the variants
+ * that exist precisely because the full stops lose their hue against
+ * near-black — so a word marked in the dark is unmistakably the same
+ * judgement it is on paper. */
+.lp-v2 .lp-room {
+  --strong: #f2f6fc;
+  --foreground: #dce5f1;
+  --muted-foreground: #9aabc4;
+  --brand-ink: #9cc8f2;
+  --border: rgba(220, 232, 248, 0.16);
+  --ok: var(--ok-spoken);
+  --vague: var(--vague-spoken);
+  --miss: var(--miss-spoken);
+}
+
+/* The legend under the instrument: the grading system in six words of
+ * metadata. */
+
+/* ── The converter: the hero's one machine ── */
+
 .lp-v2 .lp-read-through {
   position: absolute;
   right: 0;
@@ -2314,6 +2252,54 @@ html:has(main.lp-v2) {
 .lp-v2 .lp-read-wave-lit {
   color: var(--brand-ink);
   clip-path: inset(0% 100% 0% 0%);
+}
+
+/* The verdicts, laid down on the recording as you pass them.
+ *
+ * This is the one thing on the page that only exists because you read it.
+ * Every phrase the product marks in the copy — the headline's two words, the
+ * quiet screen's red line, the claim the close turns into certainty — has a
+ * position in the document, and therefore a position in the take the bar
+ * above is recording. Passing one plants its verdict on the waveform, in its
+ * own colour, and it stays there.
+ *
+ * By the footer the nav is holding a marked take of your own read-through:
+ * green where a claim landed, tan where one was too vague to check, red where
+ * something was never said. Nobody is told this is happening and there is
+ * nothing to click. It is a page that has quietly been doing to the reader
+ * exactly what the product does to a rehearsal, and the only way to see it is
+ * to have gone all the way down.
+ *
+ * `scaleY` from the foot rather than opacity: a mark on a recording is
+ * *struck*, and something that fades in reads as an image loading. */
+.lp-v2 .lp-read-marks {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.lp-v2 .lp-read-mark {
+  position: absolute;
+  bottom: 0;
+  width: 2px;
+  height: 100%;
+  margin-left: -1px;
+  border-radius: 1px;
+  opacity: 0.9;
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform 240ms var(--ease-enter);
+}
+
+.lp-v2 .lp-read-mark.is-struck {
+  transform: scaleY(1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-v2 .lp-read-mark {
+    transition: none;
+  }
 }
 
 /* The recording head: the live edge of the take.
@@ -2381,174 +2367,6 @@ html:has(main.lp-v2) {
   flex: 0 0 auto;
 }
 
-/* The headline's second voice.
- *
- * It was an italic, and there is no italic in this type system to use. Weight
- * carries it instead: the emphasised phrase sets a step heavier than the roman
- * around it and takes the accent colour. Weight is the one contrast that
- * survives greyscale, which colour on its own would not.
- */
-.lp-v2 .lp-hero-em {
-  font-weight: 700;
-  /* Lit blue, sampled off the brightest band the field resolves to, rather
-     than `--accent-solid`. That token is the near white the primary button
-     needs behind dark ink; as type on a dark field it is the same colour as
-     the rest of the headline, so the emphasis disappeared entirely the moment
-     the italic went. */
-  color: #a8cdf5;
-}
-
-/* ── The take, running along a curve ──────────────────────────────────────
- *
- * A paragraph set on an invisible SVG path. The `<path>` is never stroked and
- * never filled; it exists only as a rail for the glyphs, which is what makes
- * this a wall of words that reads as a picture rather than as a wall of
- * words.
- *
- * Two of them, and the pair is the argument. The left curve is a take exactly
- * as it was spoken, in the same grey as any other quiet copy on the page. The
- * right curve is the same take after the grader has been through it, and its
- * colours arrive in sequence along the path, so it reads as being marked
- * rather than as having been marked. Green where a claim landed, tan where it
- * was said but not checkably, red where the point was never reached.
- *
- * Both are `aria-hidden`, and every claim they make is also made in the
- * headline and in the demo below, so nothing is available only to somebody
- * who can see them.
- * ------------------------------------------------------------------------ */
-.lp-v2 .lp-flow {
-  position: absolute;
-  z-index: 0;
-  display: block;
-  pointer-events: none;
-  /* Never an anchor for scroll anchoring.
-   *
-   * This is the whole of the "page jitters when you scroll a little" bug,
-   * and it is not a scroll handler — nothing in the page calls a scroll
-   * method, and the document height never changes. It is the browser doing
-   * its job with bad material.
-   *
-   * Chrome picks a DOM node near the top of the viewport, and if that node
-   * moves or resizes because of layout above it, Chrome shifts the scroll
-   * position to keep it visually still. The streams are the worst possible
-   * candidate: the marquee walks `startOffset`, so the glyphs travel along
-   * the curve and the `text`, `textPath` and `tspan` boxes are re-measured
-   * constantly — 1,966 resize events on the tspans alone in two and a half
-   * seconds. Anchor to one of those and the page is pulled a pixel or two
-   * back and forth forever.
-   *
-   * The marquee has since been capped to about 24 writes a second on a
-   * coarse pointer and stopped entirely while the hero is off screen, which
-   * thins that stream of resizes but does not end it. This stays.
-   *
-   * `overflow-anchor: none` takes an element and its subtree out of the
-   * candidate set. It belongs here rather than on `html`, which would turn
-   * anchoring off for the whole document and lose the thing it is good at —
-   * holding your place when something above you loads. These curves are
-   * `aria-hidden` decoration; they should never have been holding anybody's
-   * place to begin with. */
-  overflow-anchor: none;
-  /* Only the arrival. The motion belongs to the words now — the marquee
-     slides them along their paths — and a transform drift on top of that
-     made the whole drawing swim. */
-  animation: lp-flow-in 900ms var(--ease-enter) both;
-}
-
-/* One drawing, at every width.
- *
- * There were two here, and a breakpoint choosing between them, and both of
- * those were mistakes. The streams were switched off below `lg` on the
- * reasoning that a curve needing 60% of the viewport cannot have it on a
- * phone; then a second, portrait drawing was written to fill the gap, and
- * the page became two products with a seam in the middle of it — the
- * handover landing on any half-screen desktop window, which is where "this
- * looks bad when the window gets smaller" came from.
- *
- * What a narrow frame needs is not a different drawing. It is the same one,
- * smaller — which is what every other site with artwork in its hero does, and
- * what `preserveAspectRatio` cannot give you, because it scales the type
- * along with the geometry and four-pixel type is not type. `scaleFlow` in
- * `landing-redesign.tsx` does it instead: the shapes are scaled by the
- * width, the type is left at the size it reads at, and the slack goes into
- * the gap between the top curves and the bottom one, which is empty by
- * design and is where the headline sits. */
-.lp-v2 .lp-flow path {
-  fill: none;
-  stroke: none;
-}
-
-.lp-v2 .lp-flow text {
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.005em;
-  fill: color-mix(in oklab, var(--muted-foreground) 46%, transparent);
-}
-
-/* Bleeding off the edges on purpose: a take that stops inside the frame is a
-   caption, and one that runs off the page is a take. */
-/* Both live in the margins either side of the centred column and never reach
-   into it. The first pass gave them 60% of the width each and the two curves
-   ran straight through the headline and the buttons. */
-/* Three streams, drawn from a sketch, with the words in motion.
- *
- * One S climbing off the top edge on the left, one arc falling from the top
- * edge to the right edge, one big wave running the whole foot of the page.
- * All three share one 1440x900 coordinate space so they are composed against
- * each other, and each SVG covers the whole hero — `slice` keeps the drawing
- * pinned to the edges at any aspect ratio.
- *
- * The words travel their curves — see the marquee in the component — so the
- * only CSS motion left here is the arrival fade. The fade level stays: at
- * full strength a moving stream reads as a stock ticker to be read; at ~45%
- * it is weather, and the verdict colours do the telling.
- *
- * **The fade is applied once.** It used to be applied twice: an `opacity` on
- * each SVG *and* an alpha in the text's `fill`, which multiply — 0.45 of 0.42
- * is 0.19, so the streams were drawn at less than half the strength this
- * paragraph claims and the hero read as having no curves at all. Worse, an
- * element `opacity` cannot tell a faded stream from a verdict: it took the
- * same half out of `--ok`, `--vague` and `--miss`, so the three colours that
- * are supposed to mean exactly one thing everywhere in the product were
- * quietly weaker here than anywhere else. The level now lives in the fill
- * alone, where it applies to the grey and leaves a mark at full strength.
- * ------------------------------------------------------------------------ */
-.lp-v2 .lp-flow {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.lp-v2 .lp-flow-tl {
-  opacity: 1;
-}
-
-.lp-v2 .lp-flow-tl text {
-  font-size: 17px;
-  fill: color-mix(in oklab, var(--muted-foreground) 44%, transparent);
-}
-
-.lp-v2 .lp-flow-tr {
-  opacity: 1;
-}
-
-.lp-v2 .lp-flow-tr text {
-  font-size: 18px;
-  font-weight: 550;
-  fill: color-mix(in oklab, var(--muted-foreground) 46%, transparent);
-}
-
-/* The wave is the star: the longest path, the marked take, the widest arc of
-   colour. Slightly larger and slightly stronger than the two above. */
-.lp-v2 .lp-flow-bw {
-  opacity: 1;
-}
-
-.lp-v2 .lp-flow-bw text {
-  font-size: 20px;
-  font-weight: 550;
-  fill: color-mix(in oklab, var(--muted-foreground) 52%, transparent);
-}
-
 /* A deeper stop on the page's own ramp: the demo chapter's ground. Mixed
    from tokens rather than written as a hex, and kept far above the floor a
    marked transcript needs — the verdicts inside the console sit on the
@@ -2557,13 +2375,6 @@ html:has(main.lp-v2) {
   background: color-mix(in oklab, var(--panel-deep) 7%, var(--background));
 }
 
-/* ── The steps, held and scrubbed ─────────────────────────────────────────
- *
- * Everything here is behind `.is-live`, which only the script adds and only
- * above `lg` with motion allowed and real travel measured. The resting
- * layout — the three-column staircase — is complete on its own, which is the
- * whole reason the horizontal version is allowed to exist.
- * ------------------------------------------------------------------------ */
 /* Pinned by ScrollTrigger, so no position of its own — just the held
    screen's layout. */
 .lp-v2 .lp-steps-stage.is-live {
@@ -2664,47 +2475,6 @@ html:has(main.lp-v2) {
   margin-top: 1.25rem;
   max-width: 34ch;
   font-size: 1.05rem;
-}
-
-/* No arrival animation on a run any more.
- *
- * This faded each run from grey to its verdict once, on a stagger, at load.
- * The grading is positional now — a gradient fixed to the frame that the
- * words travel through — so a run is grey when it enters and marked once it
- * has moved, every lap rather than only the first. A CSS animation on `fill`
- * would beat the inline gradient for its whole duration and undo that. */
-
-.lp-v2 .lp-flow tspan[data-mark="ok"] {
-  fill: var(--ok);
-}
-
-.lp-v2 .lp-flow tspan[data-mark="vague"] {
-  fill: var(--vague);
-}
-
-.lp-v2 .lp-flow tspan[data-mark="miss"] {
-  fill: var(--miss);
-}
-
-/* `both`, as everywhere on this page: before its delay a run is unmarked,
-   after it, marked, forever. A reader whose animations never run gets the
-   finished take rather than a blank curve. */
-@keyframes lp-flow-in {
-  from {
-    opacity: 0;
-    transform: scale(1.04);
-  }
-}
-
-/* Sideways only. Rotating a row that is ruled against five other rows makes
-   the set look crooked rather than alive; sliding it along its own axis reads
-   as the current moving, which is what it is. */
-@media (prefers-reduced-motion: reduce) {
-  .lp-v2 .lp-flow,
-  .lp-v2 .lp-flow-b,
-  .lp-v2 .lp-flow-e {
-    animation: none;
-  }
 }
 
 /* ── The page's own claims, judged ──────────────────────────────────────
@@ -2959,4 +2729,1243 @@ html:has(main.lp-v2) {
     background-color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
     border-color var(--dur-ui, 180ms) var(--ease-exit, ease-out);
+}
+
+/* ── Landing: night desk ─────────────────────────────────────────────────
+ *
+ * A committed dark surface — this page does not follow the theme toggle,
+ * because the composition is the identity. One blue on the page, and it is
+ * the same cobalt the brand tile is drawn in: --ld-brand paints the logo,
+ * the primary buttons, the headline highlight, the waveform, the stage glow
+ * and the source-boundary field. Green, amber and red stay reserved for
+ * verdicts, exactly as everywhere else in the product.
+ */
+main.lp-desk {
+  --ld-ground: #0a0f1e;
+  --ld-ground-high: #122540;
+  --ld-paper: #0f1730;
+  --ld-ink: #eef2fb;
+  --ld-muted: #97a3bd;
+  --ld-line: rgba(214, 226, 252, 0.13);
+  --ld-brand: #1d3a63;
+  --ld-brand-deep: #16253d;
+  --ld-brand-text: #9cc8f2;
+  --ld-brand-soft: rgba(43, 92, 143, 0.42);
+  --ld-brand-contrast: #f8faff;
+  --ld-ok: #6fd39e;
+  --ld-vague: #eec46a;
+  --ld-vague-soft: rgba(238, 196, 106, 0.22);
+  --ld-missing: #f0949e;
+  --ld-r-control: 12px;
+  --ld-r-surface: 16px;
+  --ld-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --ld-lift-proof:
+    0 40px 90px rgba(2, 6, 18, 0.75), 0 12px 34px rgba(2, 6, 18, 0.5),
+    0 0 0 1px rgba(214, 226, 252, 0.06);
+  --ld-lift-paper: 0 24px 60px rgba(2, 6, 18, 0.6);
+
+  background:
+    radial-gradient(
+      70rem 40rem at 50% -14rem,
+      color-mix(in srgb, var(--ld-ground-high) 70%, transparent),
+      transparent 70%
+    ),
+    var(--ld-ground);
+  color: var(--ld-ink);
+}
+
+html:has(main.lp-desk) {
+  background: #0a0f1e;
+  color-scheme: dark;
+}
+
+.lp-desk .ld-container {
+  width: min(100% - 2.5rem, 78rem);
+  margin-inline: auto;
+}
+
+.lp-desk ::selection {
+  background: var(--ld-brand);
+  color: var(--ld-brand-contrast);
+}
+
+.lp-desk [id] {
+  scroll-margin-top: 5.5rem;
+}
+
+.lp-desk :is(a, button):focus-visible {
+  outline: 2px solid var(--ld-brand-text);
+  outline-offset: 4px;
+  border-radius: 8px;
+}
+
+/* ── Brand ── */
+
+.lp-desk .ld-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 1.2rem;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  color: var(--ld-ink);
+}
+
+.lp-desk .ld-brand-mark {
+  width: 1.9rem;
+  height: 1.9rem;
+  color: var(--ld-brand-text);
+}
+
+/* ── Navigation ── */
+
+.lp-desk .ld-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  z-index: 5;
+  /* A near-opaque wash of the page's own ground instead of backdrop-filter:
+   * a blur on a fixed bar re-filters everything scrolling under it on every
+   * frame. Denser at the top where the bar's content sits, thinning toward
+   * the rule, which is what the blur read as anyway on this dark ground. */
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--ld-ground) 96%, transparent),
+    color-mix(in srgb, var(--ld-ground) 84%, transparent)
+  );
+}
+
+.lp-desk .ld-nav .ld-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 4.75rem;
+  border-bottom: 1px solid var(--ld-line);
+}
+
+.lp-desk .ld-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.lp-desk .ld-nav-link {
+  display: none;
+  min-height: 2.75rem;
+  align-items: center;
+  padding-inline: 0.85rem;
+  font-size: 0.925rem;
+  font-weight: 550;
+  color: var(--ld-muted);
+  white-space: nowrap;
+  transition: color 160ms ease;
+}
+
+.lp-desk .ld-nav-login {
+  display: inline-flex;
+}
+
+@media (min-width: 48rem) {
+  .lp-desk .ld-nav-link {
+    display: inline-flex;
+  }
+}
+
+/* ── Buttons ── */
+
+.lp-desk .ld-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  min-height: 3.25rem;
+  padding-inline: 1.4rem;
+  border-radius: var(--ld-r-control);
+  font-size: 0.96rem;
+  font-weight: 650;
+  white-space: nowrap;
+  transition:
+    transform 160ms var(--ld-ease),
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease;
+}
+
+.lp-desk .ld-button svg {
+  width: 1rem;
+  height: 1rem;
+  stroke-width: 2.25;
+  transition: transform 160ms var(--ld-ease);
+}
+
+.lp-desk .ld-button:active {
+  transform: scale(0.97);
+}
+
+.lp-desk .ld-button-primary {
+  background: var(--ld-ink);
+  color: #0a0f1e;
+  box-shadow: 0 10px 30px rgba(2, 6, 18, 0.5);
+}
+
+.lp-desk .ld-button-nav {
+  min-height: 2.7rem;
+  padding-inline: 1.05rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  box-shadow: none;
+}
+
+.lp-desk .ld-button-ghost {
+  color: var(--ld-ink);
+  border: 1px solid var(--ld-line);
+  background: rgba(214, 226, 252, 0.04);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lp-desk .ld-nav-link:hover {
+    color: var(--ld-ink);
+  }
+
+  .lp-desk :is(.ld-button-primary, .ld-button-nav):hover {
+    background: #ccd9ee;
+  }
+
+  .lp-desk .ld-link-quiet:hover {
+    color: var(--ld-ink);
+  }
+
+  .lp-desk .ld-pill:hover {
+    background: #35699f;
+  }
+
+  .lp-desk .ld-pill:hover svg {
+    transform: translateX(3px);
+  }
+
+  .lp-desk .ld-button:hover svg {
+    transform: translateX(3px);
+  }
+
+  .lp-desk .ld-button-ghost:hover {
+    border-color: rgba(156, 200, 242, 0.45);
+    background: rgba(214, 226, 252, 0.08);
+  }
+}
+
+/* ── Hero ── */
+
+.lp-desk .ld-hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-height: 100dvh;
+  padding-top: 6rem;
+  padding-bottom: 3.5rem;
+}
+
+/* The field: vapor as weather. Dark, desaturated toward steel, fading out
+ * before the type so the words own the bottom of the frame. */
+.lp-desk .ld-hero-field {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.lp-desk .ld-hero-field .ld-vapor {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.55;
+  filter: hue-rotate(-48deg) saturate(0.95) brightness(0.65) contrast(1.05);
+}
+
+/* The still weather: the vapor's tones painted in gradients. It sits under
+ * the video on desktop and is the entire field on touch and small screens,
+ * where the 1.6MB loop never mounts. One paint, no filter, no decode. */
+.lp-desk .ld-vapor-still {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      58rem 36rem at 70% 12%,
+      rgba(58, 96, 148, 0.42),
+      transparent 68%
+    ),
+    radial-gradient(
+      44rem 30rem at 18% 42%,
+      rgba(29, 58, 99, 0.5),
+      transparent 70%
+    ),
+    radial-gradient(
+      36rem 26rem at 50% 78%,
+      rgba(22, 37, 61, 0.55),
+      transparent 72%
+    );
+}
+
+.lp-desk .ld-hero-field::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    color-mix(in srgb, var(--ld-ground) 78%, transparent) 0%,
+    transparent 34%,
+    transparent 48%,
+    var(--ld-ground) 94%
+  );
+}
+
+/* The watermark: the brand mark at architectural scale, hairline stroke,
+ * adrift in the vapor. Identity as atmosphere, not a logo placement. */
+.lp-desk .ld-hero-ghost {
+  position: absolute;
+  top: 4%;
+  right: -6%;
+  z-index: 1;
+  width: min(56vw, 44rem);
+  height: auto;
+  color: color-mix(in srgb, var(--ld-brand-text) 16%, transparent);
+  pointer-events: none;
+}
+
+.lp-desk .ld-hero-ghost {
+  position: absolute;
+  top: 4%;
+  right: -6%;
+  z-index: 1;
+  width: min(56vw, 44rem);
+  height: auto;
+  color: color-mix(in srgb, var(--ld-brand-text) 16%, transparent);
+  pointer-events: none;
+}
+
+/* ── Variant: type. A flat dark room and two enormous words that duck
+ * under the cursor. ── */
+.lp-desk .ld-hero--type .ld-hero-copy h1 {
+  font-size: clamp(4rem, 2rem + 11vw, 12rem);
+  line-height: 0.94;
+  letter-spacing: -0.05em;
+}
+
+.lp-desk .ld-type-l {
+  display: inline-block;
+  font-weight: inherit;
+  will-change: transform;
+}
+
+/* ── Variant: photo. The sunlit desk at full bleed, ink type standing on
+ * it, the page darkening back at the fold. ── */
+.lp-desk .ld-hero-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.lp-desk .ld-hero-photo img {
+  object-fit: cover;
+  object-position: center top;
+}
+
+.lp-desk .ld-hero-photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(244, 247, 253, 0.1) 0%,
+    transparent 40%,
+    rgba(10, 15, 30, 0.08) 78%,
+    var(--ld-ground) 99%
+  );
+}
+
+.lp-desk .ld-hero--photo .ld-hero-copy h1,
+.lp-desk .ld-hero--photo .ld-hero-foot > p {
+  color: #151a27;
+}
+
+.lp-desk .ld-hero--photo .ld-accent {
+  color: #2b5c8f;
+}
+
+.lp-desk .ld-hero--photo .ld-privacy {
+  color: #3c465c;
+}
+
+.lp-desk .ld-hero--photo .ld-link-quiet {
+  color: #3c465c;
+}
+
+.lp-desk .ld-hero-copy {
+  position: relative;
+  z-index: 2;
+}
+
+.lp-desk .ld-hero-copy h1 {
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-size: clamp(3rem, 1.4rem + 7vw, 8rem);
+  font-weight: 750;
+  line-height: 0.96;
+  letter-spacing: -0.045em;
+}
+
+/* No text-wrap: balance here on purpose: the spans are what the entrance
+ * animates, and the balancer re-measuring them as fonts land mid-tween was
+ * a visible re-wrap during the first seconds of the page. */
+.lp-desk .ld-hero-copy h1 > span {
+  display: block;
+}
+
+.lp-desk .ld-accent {
+  font-style: normal;
+  color: var(--ld-brand-text);
+}
+
+/* The foot row: one sentence left, the actions right, both hanging off the
+ * headline's baseline. */
+.lp-desk .ld-hero-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem 3rem;
+  margin-top: 2.2rem;
+}
+
+.lp-desk .ld-hero-foot > p {
+  max-width: 26rem;
+  font-size: clamp(1rem, 0.9rem + 0.4vw, 1.15rem);
+  line-height: 1.55;
+  color: var(--ld-muted);
+  text-wrap: pretty;
+}
+
+.lp-desk .ld-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.lp-desk .ld-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+/* The one loud control on the page: a fat pill in the home-page steel. */
+.lp-desk .ld-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 3.7rem;
+  padding-inline: 2.1rem;
+  border-radius: 999px;
+  background: #2b5c8f;
+  color: #f8faff;
+  font-size: 1.05rem;
+  font-weight: 700;
+  white-space: nowrap;
+  box-shadow: 0 14px 40px rgba(43, 92, 143, 0.45);
+  transition:
+    transform 160ms var(--ld-ease),
+    background-color 160ms ease;
+}
+
+.lp-desk .ld-pill svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  stroke-width: 2.25;
+  transition: transform 160ms var(--ld-ease);
+}
+
+.lp-desk .ld-pill:active {
+  transform: scale(0.97);
+}
+
+.lp-desk .ld-link-quiet {
+  min-height: 3.25rem;
+  display: inline-flex;
+  align-items: center;
+  padding-inline: 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--ld-muted);
+  transition: color 160ms ease;
+}
+
+.lp-desk .ld-privacy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  font-weight: 550;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-privacy svg {
+  width: 0.9rem;
+  height: 0.9rem;
+}
+
+/* ── The stage: glow, wings, live demo ── */
+
+.lp-desk .ld-showcase {
+  padding-block: 4rem 1rem;
+  perspective: 1400px;
+}
+
+.lp-desk .ld-window {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.lp-desk .ld-stage {
+  position: relative;
+  z-index: 1;
+  width: min(100% - 2.5rem, 88rem);
+  margin-inline: auto;
+}
+
+/* The scene: the product window standing on the sunlit study desk. The one
+ * bright surface on the page, so the dark window reads as the object. */
+.lp-desk .ld-scene {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  padding: clamp(1rem, 2rem + 2vw, 4.5rem);
+  padding-bottom: 0;
+}
+
+.lp-desk .ld-scene-photo {
+  object-fit: cover;
+  object-position: center;
+}
+
+.lp-desk .ld-scene .ld-window {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* ── The subject strip under the hero ── */
+
+.lp-desk .ld-strip {
+  padding-block: 1rem 4.5rem;
+}
+
+.lp-desk .ld-strip-lead {
+  max-width: 34rem;
+  margin-bottom: 2rem;
+  font-size: clamp(1.1rem, 1rem + 0.6vw, 1.35rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.45;
+  text-wrap: balance;
+}
+
+.lp-desk .ld-strip-row {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 56rem) {
+  .lp-desk .ld-strip-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.lp-desk .ld-subject {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1.25rem 1.35rem;
+  border: 1px solid var(--ld-line);
+  border-radius: var(--ld-r-surface);
+  background: color-mix(in srgb, var(--ld-paper) 88%, transparent);
+  transition:
+    rotate 220ms var(--ld-ease),
+    translate 220ms var(--ld-ease);
+}
+
+@media (min-width: 56rem) {
+  .lp-desk .ld-subject:nth-child(1) {
+    rotate: -1.2deg;
+  }
+
+  .lp-desk .ld-subject:nth-child(2) {
+    rotate: 1.2deg;
+    translate: 0 0.6rem;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (min-width: 56rem) {
+  .lp-desk .ld-subject:hover {
+    rotate: 0deg;
+    translate: 0 -0.25rem;
+  }
+}
+
+.lp-desk .ld-subject header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.lp-desk .ld-class-code {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 11px;
+  background: var(--ld-brand-soft);
+  color: var(--ld-brand-text);
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.04em;
+}
+
+.lp-desk .ld-subject header h3 {
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.lp-desk .ld-subject header > div > p {
+  font-size: 0.8rem;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-subject header time {
+  margin-left: auto;
+  align-self: flex-start;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.64rem;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-subject blockquote {
+  font-size: 0.93rem;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--ld-ink) 88%, transparent);
+}
+
+.lp-desk .ld-subject footer {
+  display: grid;
+  gap: 0.2rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--ld-line);
+}
+
+.lp-desk .ld-subject footer strong {
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.lp-desk .ld-subject footer[data-kind="vague"] strong {
+  color: var(--ld-vague);
+}
+
+.lp-desk .ld-subject footer[data-kind="missing"] strong {
+  color: var(--ld-missing);
+}
+
+.lp-desk .ld-subject footer span {
+  font-size: 0.85rem;
+  color: var(--ld-muted);
+}
+
+/* ── The product window ── */
+
+.lp-desk .ld-window {
+  position: relative;
+  z-index: 1;
+  width: min(64rem, 100%);
+  margin-inline: auto;
+  border-radius: var(--ld-r-surface);
+  background: var(--ld-paper);
+  box-shadow: var(--ld-lift-proof);
+}
+
+.lp-desk .ld-chrome {
+  display: inline-flex;
+  gap: 6px;
+  margin-right: 0.35rem;
+}
+
+.lp-desk .ld-chrome i {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(214, 226, 252, 0.16);
+}
+
+.lp-desk .ld-demo-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 1rem 1.4rem;
+  border-bottom: 1px solid var(--ld-line);
+}
+
+.lp-desk .ld-demo-course {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.lp-desk .ld-demo-course i {
+  font-style: normal;
+  color: var(--ld-muted);
+  font-weight: 400;
+  margin-inline: 0.15rem;
+}
+
+.lp-desk .ld-demo-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ld-brand-text);
+}
+
+.lp-desk .ld-demo-live time {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  font-weight: 400;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-demo-body {
+  display: grid;
+}
+
+@media (min-width: 40rem) {
+  .lp-desk .ld-demo-body {
+    grid-template-columns: minmax(0, 1fr) 14.5rem;
+  }
+}
+
+.lp-desk .ld-demo-main {
+  padding: 1.4rem;
+}
+
+.lp-desk .ld-demo-kicker {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.35rem 1rem;
+  font-family: var(--font-mono), monospace;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-demo-kicker span {
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.lp-desk .ld-demo-main h2 {
+  margin-top: 0.9rem;
+  font-size: clamp(1.3rem, 1.1rem + 0.8vw, 1.6rem);
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.lp-desk .ld-demo-task {
+  margin-top: 0.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--ld-line);
+  font-size: 0.92rem;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-recorder {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  margin-top: 1.1rem;
+}
+
+.lp-desk .ld-rec-dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 50%;
+  background: var(--ld-brand);
+  color: var(--ld-brand-contrast);
+  box-shadow: 0 0 24px rgba(43, 92, 143, 0.55);
+}
+
+.lp-desk .ld-rec-dot svg {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+.lp-desk .ld-wave {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 3px;
+  height: 2rem;
+}
+
+.lp-desk .ld-wave i {
+  flex: 1;
+  min-width: 2px;
+  max-width: 5px;
+  border-radius: 99px;
+  background: var(--ld-brand-text);
+  animation: ld-eq 1.15s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+
+@keyframes ld-eq {
+  from {
+    transform: scaleY(0.45);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+
+.lp-desk .ld-recorder > time {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.72rem;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-transcript {
+  margin-top: 0.9rem;
+}
+
+.lp-desk .ld-transcript li {
+  padding-block: 0.7rem;
+  font-size: 0.97rem;
+  line-height: 1.5;
+}
+
+.lp-desk .ld-transcript li + li {
+  border-top: 1px solid var(--ld-line);
+}
+
+/* Each spoken line paints its verdict as --sweep goes 0 to 1. Defaults sit
+ * at 1: at rest, and without JavaScript, the session is simply finished. */
+.lp-desk .ld-tr {
+  --sweep: 1;
+  background-repeat: no-repeat;
+}
+
+.lp-desk .ld-tr[data-verdict="correct"] {
+  background-image: linear-gradient(to right, var(--ld-ok), var(--ld-ok));
+  background-position: 0 96%;
+  background-size: calc(var(--sweep) * 100%) 2px;
+}
+
+.lp-desk .ld-tr[data-verdict="vague"] {
+  background-image: linear-gradient(
+    to right,
+    var(--ld-vague-soft),
+    var(--ld-vague-soft)
+  );
+  background-position: 0 50%;
+  background-size: calc(var(--sweep) * 100%) 92%;
+  border-radius: 6px;
+}
+
+/* ── Verdict rail ── */
+
+.lp-desk .ld-verdict-rail {
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+  padding: 1.4rem;
+  border-top: 1px solid var(--ld-line);
+}
+
+@media (min-width: 40rem) {
+  .lp-desk .ld-verdict-rail {
+    border-top: 0;
+    border-left: 1px solid var(--ld-line);
+  }
+}
+
+.lp-desk .ld-rail-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--ld-line);
+}
+
+.lp-desk .ld-verdict-rail > div {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.lp-desk .ld-verdict-rail > div + div {
+  padding-top: 1rem;
+  border-top: 1px solid var(--ld-line);
+}
+
+.lp-desk .ld-verdict-rail strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.lp-desk .ld-verdict-rail strong svg {
+  width: 0.8rem;
+  height: 0.8rem;
+  stroke-width: 3;
+}
+
+.lp-desk .ld-verdict-rail [data-kind="correct"] strong {
+  color: var(--ld-ok);
+}
+
+.lp-desk .ld-verdict-rail [data-kind="vague"] strong {
+  color: var(--ld-vague);
+}
+
+.lp-desk .ld-verdict-rail [data-kind="missing"] strong {
+  color: var(--ld-missing);
+}
+
+.lp-desk .ld-verdict-rail span {
+  font-size: 0.86rem;
+  line-height: 1.45;
+  color: var(--ld-muted);
+}
+
+/* ── How it works ── */
+
+.lp-desk .ld-how {
+  border-top: 1px solid var(--ld-line);
+  padding-block: 5.5rem;
+}
+
+.lp-desk .ld-how-head {
+  display: grid;
+  gap: 1rem;
+  max-width: 46rem;
+  margin-bottom: 3rem;
+}
+
+.lp-desk .ld-how h2 {
+  font-size: clamp(2rem, 1.5rem + 2vw, 3.4rem);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.lp-desk .ld-how-head p {
+  font-size: clamp(1.05rem, 1rem + 0.5vw, 1.3rem);
+  font-weight: 550;
+  line-height: 1.5;
+  color: var(--ld-muted);
+  text-wrap: pretty;
+}
+
+.lp-desk .ld-how-cols {
+  display: grid;
+  gap: 2.5rem 2rem;
+}
+
+@media (min-width: 56rem) {
+  .lp-desk .ld-how-cols {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.lp-desk .ld-how-cols li {
+  position: relative;
+  padding-top: 4.6rem;
+}
+
+/* The chapter numeral: enormous, hollow, behind the step. */
+.lp-desk .ld-ghost-num {
+  position: absolute;
+  top: -1.4rem;
+  left: -0.35rem;
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-size: 7rem;
+  font-weight: 800;
+  letter-spacing: -0.05em;
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px
+    color-mix(in srgb, var(--ld-brand-text) 38%, transparent);
+  pointer-events: none;
+}
+
+.lp-desk .ld-how-cols h3 {
+  position: relative;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.lp-desk .ld-how-cols li p {
+  position: relative;
+  margin-top: 0.4rem;
+  font-size: 0.95rem;
+  line-height: 1.55;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-how-note {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 3rem;
+  font-size: 0.9rem;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-how-note svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: var(--ld-brand-text);
+}
+
+/* ── Source boundary ── */ /* ── Source boundary ── */
+
+.lp-desk .ld-boundary {
+  background: linear-gradient(180deg, var(--ld-brand-deep), var(--ld-brand));
+  color: var(--ld-brand-contrast);
+  padding-block: 5.5rem;
+}
+
+.lp-desk .ld-boundary-grid {
+  display: grid;
+  gap: 2.5rem;
+  align-items: center;
+}
+
+@media (min-width: 56rem) {
+  .lp-desk .ld-boundary-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    gap: 5rem;
+  }
+}
+
+.lp-desk .ld-boundary h2 {
+  font-size: clamp(2rem, 1.5rem + 2vw, 3.4rem);
+  font-weight: 750;
+  letter-spacing: -0.03em;
+}
+
+.lp-desk .ld-boundary p {
+  margin-top: 1rem;
+  max-width: 30rem;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: #c9dcef;
+}
+
+.lp-desk .ld-boundary-note {
+  padding: 1.6rem;
+  border: 1px solid rgba(248, 250, 255, 0.24);
+  border-radius: var(--ld-r-surface);
+  background: rgba(5, 12, 22, 0.3);
+}
+
+.lp-desk .ld-boundary-note span {
+  font-size: 0.78rem;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #9cc8f2;
+}
+
+.lp-desk .ld-boundary-note p {
+  margin-top: 0.5rem;
+  max-width: none;
+  font-size: clamp(1.8rem, 1.4rem + 1.6vw, 2.8rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--ld-brand-contrast);
+}
+
+.lp-desk .ld-boundary-note small {
+  display: block;
+  margin-top: 0.4rem;
+  font-size: 0.88rem;
+  color: #c9dcef;
+}
+
+/* ── The close ── */
+
+.lp-desk .ld-close {
+  padding-top: 6rem;
+}
+
+.lp-desk .ld-close-cta {
+  text-align: center;
+  padding-bottom: 5rem;
+}
+
+.lp-desk .ld-close-cta h2 {
+  font-size: clamp(2.2rem, 1.6rem + 2.6vw, 4rem);
+  font-weight: 760;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.lp-desk .ld-close-cta p {
+  margin-top: 0.8rem;
+  font-size: 1.05rem;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-close-cta .ld-button {
+  margin-top: 2rem;
+}
+
+.lp-desk .ld-partner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding-block: 2.2rem;
+  border-top: 1px solid var(--ld-line);
+}
+
+.lp-desk .ld-partner > p {
+  font-size: 0.95rem;
+  color: var(--ld-muted);
+}
+
+.lp-desk .ld-partner a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.lp-desk .ld-partner img {
+  width: min(18rem, 60vw);
+  height: auto;
+}
+
+.lp-desk .ld-partner svg {
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--ld-muted);
+  transition: transform 160ms var(--ld-ease);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lp-desk .ld-partner a:hover svg {
+    transform: translate(2px, -2px);
+  }
+}
+
+.lp-desk .ld-footer {
+  padding-block: 1.8rem 0;
+  border-top: 1px solid var(--ld-line);
+}
+
+.lp-desk .ld-footer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+/* The sign-off: the wordmark at architectural scale, fading into the
+ * bottom edge. */
+.lp-desk .ld-footer-giant {
+  margin-top: 1.5rem;
+  margin-bottom: -0.18em;
+  font-family: var(--font-display), var(--font-sans), sans-serif;
+  font-size: clamp(3.4rem, 13.5vw, 12rem);
+  font-weight: 800;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--ld-ink) 42%, transparent),
+    transparent 96%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  pointer-events: none;
+}
+
+.lp-desk .ld-brand-inverse {
+  font-size: 1.05rem;
+}
+
+.lp-desk .ld-footer div {
+  display: flex;
+  gap: 1.4rem;
+}
+
+.lp-desk .ld-footer div a {
+  font-size: 0.88rem;
+  color: var(--ld-muted);
+  transition: color 160ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lp-desk .ld-footer div a:hover {
+    color: var(--ld-ink);
+  }
+}
+
+/* ── Motion guards ── */
+
+/* Everything the scroll scrubs move by transform gets its own layer, so a
+ * scrub tick is a composite rather than a repaint of the section under it. */
+.lp-desk
+:is(
+  .ld-hero-field,
+  .ld-vapor,
+  .ld-hero-copy,
+  .ld-ghost-num,
+  .ld-footer-giant,
+  .ld-scene-photo
+) {
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-desk .ld-wave i {
+    animation: none;
+  }
+
+  .lp-desk .ld-button,
+  .lp-desk .ld-button svg {
+    transition: none;
+  }
 }

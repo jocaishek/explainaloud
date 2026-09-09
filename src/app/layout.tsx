@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Geist, Inter, Martian_Mono } from "next/font/google";
 import { AuthHashRescue } from "~/components/auth-hash-rescue";
 import { siteUrl } from "~/lib/site";
+import { LenisProvider } from "./lenis-provider";
 import { ThemeProvider } from "./theme-provider";
 import "./globals.css";
 
@@ -87,31 +88,22 @@ const inter = Inter({
 });
 
 const DIRECTION_CONTRACT = `<!--
-seed 8e7cc5c5
+seed night-desk-01
 
-THESIS: this product marks you while you are still talking, so the page marks
-you while you are still reading it. It refuses the category arrangement — hero
-claim, three feature cards, a screenshot — because a screenshot of live
-marking is the one thing that cannot show live marking.
+THESIS: the desk the night before the exam. One cobalt lamp, and the
+learner's own words being graded in the pool of light.
 
-OWN-WORLD: the as-live broadcast script. Photocopy-grey stock, hard black
-hairlines and no card edges anywhere, a monospaced timecode gutter running the
-full height, Archivo condensed and heavy for display against Archivo light for
-running text, ultramarine at page scale rather than as an accent, and green /
-red / grey reserved for what they mean inside a transcript.
+OWN-WORLD: committed dark ink-navy, one radial cobalt glow, paper cards on
+hairlines, a single grotesk family. Green, amber and red appear only as
+transcript verdicts.
 
-STORY: you arrive mid-transmission. Something is being said and marked in
-front of you before you have read a word of copy. You understand that speaking
-is the input and that the marking is claim by claim, you believe it because you
-watched it happen rather than being told, and you cue your own.
+STORY: the visitor reads the promise, watches a spoken answer graded in the
+light, learns the three-step loop, trusts the source boundary, meets the YRI
+partner, and starts.
 
-FIRST VIEWPORT: full-bleed script. Timecode column hard left, spoken lines
-arriving right of it at display scale and being wiped green, red or grey as
-they land. The product name sits small in the masthead rule; the primary
-action is an ultramarine cue block inline in the script, not floating above it.
-
-FORM: the as-live transmission script, candidate 3 of the grounded list,
-seed key 8e7cc5c5.
+FIRST VIEWPORT: centered two-line promise with the cobalt wash on "explain
+it.", then the stage — the live demo forward, two subject wings fanned
+behind it. The primary action is visible before any scroll.
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the
 finish review, the verdict, and DESIGN.md
@@ -156,7 +148,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" suppressHydrationWarning data-scroll-behavior="smooth">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geist.variable} ${martianMono.variable} ${geistDisplay.variable} ${inter.variable} font-sans`}
       >
@@ -169,7 +161,9 @@ export default function RootLayout({
             string constant with no interpolation, and the only way React
             renders a comment node at all. */}
         <div hidden dangerouslySetInnerHTML={{ __html: DIRECTION_CONTRACT }} />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <LenisProvider>{children}</LenisProvider>
+        </ThemeProvider>
         {/* At the root because an emailed link lands wherever the project's
             Site URL points, and a session in the URL fragment is invisible to
             every server route. Renders nothing. */}

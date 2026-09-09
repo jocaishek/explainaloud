@@ -61,8 +61,13 @@ function reportCoversConcept(report: CoachingReport, keyPoint: string) {
  * and it is essentially never true of someone who showed up and explained
  * something. Being wrong still costs more than being incomplete, which is why
  * this is a multiplier at all; it just no longer erases the rest.
+ *
+ * 0.55, up from 0.45: at the old floor a take with a couple of marked gaps
+ * was losing a third of an otherwise complete score, which read as harsher
+ * than the report sitting next to it. Being wrong still costs — it just costs
+ * a slice, not the explanation.
  */
-const ACCURACY_FLOOR = 0.45;
+const ACCURACY_FLOOR = 0.55;
 
 const SCORE_BASE = 0.3;
 const SCORE_COVERAGE = 0.4;
@@ -77,8 +82,12 @@ const SCORE_DEPTH = 0.3;
  * someone who never mentioned it, and scoring both at nothing for depth is
  * what made an accurate three-minute answer land in the fifties. Full marks
  * still need real explanation; this only stops the axis collapsing.
+ *
+ * 0.45, up from 0.35, for the same reason the accuracy floor moved: correctly
+ * stating a point is most of the work, and the old floor still let the depth
+ * axis drag an accurate answer further than the verdict text implied.
  */
-const DEPTH_FLOOR = 0.35;
+const DEPTH_FLOOR = 0.45;
 
 /**
  * How much of a key point's substance has to appear in what was said before
