@@ -89,90 +89,93 @@ export function StandingPanel({
         Where you stand
       </h2>
 
-      {/* The streak keeps its scale relative to everything else here.
+      {/* Wide and short, not narrow and tall.
        *
-       * It was the loudest thing on the page and it is still the loudest
-       * thing in this panel, which is the property that mattered: it is the
-       * one number that changes today. It is no longer the loudest thing on
-       * the dashboard, because the dashboard is the topics. */}
-      <div className="flex items-center gap-3.5">
-        <StreakFlame
-          size="lg"
-          className={cn("shrink-0", streak === 0 && "opacity-30 saturate-0")}
-        />
-        <p className="flex min-w-0 items-baseline gap-2">
-          <SlidingNumber
-            value={streak}
-            /* No line-height override. `SlidingNumber` sizes its digit
-               windows off the line box, so tightening the leading here crops
-               the numeral's own baseline — the component sets `leading-none`
-               itself. */
-            className="font-display text-[2.25rem] text-strong tracking-[-0.045em]"
+       * The first version of this panel stacked its four blocks down a 22rem
+       * column and came out 400px deep beside a 92px greeting — which put
+       * three hundred pixels of nothing between the lede and the topics, and
+       * read as a layout that had lost a block rather than one that had been
+       * compacted. A summary in the corner has to be about as tall as the
+       * thing it sits next to, so the streak and the week share a row and the
+       * panel is a band rather than a card standing on its end. */}
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4">
+        {/* The streak keeps its scale relative to everything else here. It
+            was the loudest thing on the page and it is still the loudest
+            thing in this panel, which is the property that mattered: it is
+            the one number that changes today. It is no longer the loudest
+            thing on the dashboard, because the dashboard is the topics. */}
+        <div className="flex items-center gap-3.5">
+          <StreakFlame
+            size="lg"
+            className={cn("shrink-0", streak === 0 && "opacity-30 saturate-0")}
           />
-          <span className="font-medium text-[0.85rem] text-subtle">
-            {streak === 1 ? "day in a row" : "days in a row"}
-          </span>
-        </p>
-      </div>
+          <p className="flex min-w-0 items-baseline gap-2">
+            <SlidingNumber
+              value={streak}
+              /* No line-height override. `SlidingNumber` sizes its digit
+                 windows off the line box, so tightening the leading here
+                 crops the numeral's own baseline — the component sets
+                 `leading-none` itself. */
+              className="font-display text-[2.25rem] text-strong tracking-[-0.045em]"
+            />
+            <span className="font-medium text-[0.85rem] text-subtle">
+              {streak === 1 ? "day in a row" : "days in a row"}
+            </span>
+          </p>
+        </div>
 
-      {/* Sunday to Saturday, fixed, and days after today are drawn empty.
-       *
-       * A rolling seven days is the more defensible window and the wrong one
-       * to draw: people know where they are in a week, and a grid whose first
-       * column means a different day each time they look is a grid whose
-       * labels have to be read every time. Hiding the days still to come
-       * would make the row change width as the week goes on, and a Wednesday
-       * showing four cells reads as a week that ended badly rather than one
-       * that is half done.
-       *
-       * `justify-between` rather than a fixed gap: the row is the width of
-       * the panel and the circles should meet both edges of it, so the week
-       * reads as a measure rather than as seven buttons that stopped early. */}
-      <ol
-        className={cn(
-          "flex items-center justify-between gap-1",
-          // Nothing to draw if the week RPC failed, and an empty list should
-          // not leave its own margin behind.
-          week.length > 0 && "mt-4",
-        )}
-      >
-        {week.map((day, index) => {
-          const label = WEEK_DAYS[index];
-          const recorded = day.sessions > 0;
-          const ahead = todayIndex >= 0 && index > todayIndex;
+        {/* Sunday to Saturday, fixed, and days after today are drawn empty.
+         *
+         * A rolling seven days is the more defensible window and the wrong one
+         * to draw: people know where they are in a week, and a grid whose first
+         * column means a different day each time they look is a grid whose
+         * labels have to be read every time. Hiding the days still to come
+         * would make the row change width as the week goes on, and a Wednesday
+         * showing four cells reads as a week that ended badly rather than one
+         * that is half done.
+         *
+         * A fixed gap rather than `justify-between`: the week now shares its
+         * row with the streak, so it is a cluster sitting at the right-hand end
+         * of the band rather than a rule spanning it. */}
+        <ol className="flex items-center gap-1.5">
+          {week.map((day, index) => {
+            const label = WEEK_DAYS[index];
+            const recorded = day.sessions > 0;
+            const ahead = todayIndex >= 0 && index > todayIndex;
 
-          return (
-            <li key={day.day}>
-              <span
-                title={`${label?.full ?? ""}: ${
-                  recorded
-                    ? `${day.sessions} ${day.sessions === 1 ? "recording" : "recordings"}`
-                    : ahead
-                      ? "still to come"
-                      : "nothing recorded"
-                }`}
-                className={cn(
-                  /* Circles, still. Squares at the control radius read as
+            return (
+              <li key={day.day}>
+                <span
+                  title={`${label?.full ?? ""}: ${
+                    recorded
+                      ? `${day.sessions} ${day.sessions === 1 ? "recording" : "recordings"}`
+                      : ahead
+                        ? "still to come"
+                        : "nothing recorded"
+                  }`}
+                  className={cn(
+                    /* Circles, still. Squares at the control radius read as
                      seven cells of a table, which is what a week is not. */
-                  "streak-day flex size-7 items-center justify-center rounded-pill border font-medium text-[0.72rem]",
-                  recorded
-                    ? "border-transparent bg-accent-solid text-accent-contrast"
-                    : "border-border bg-surface text-subtle",
-                  ahead && !recorded && "opacity-40",
-                  day.is_today &&
-                    "ring-2 ring-[color:var(--accent-ring)] ring-offset-2 ring-offset-card",
-                )}
-              >
-                <span aria-hidden>{label?.letter}</span>
-                <span className="sr-only">
-                  {label?.full}
-                  {recorded ? ", recorded" : ""}
+                    "streak-day flex size-7 items-center justify-center rounded-pill border font-medium text-[0.72rem]",
+                    recorded
+                      ? "border-transparent bg-accent-solid text-accent-contrast"
+                      : "border-border bg-surface text-subtle",
+                    ahead && !recorded && "opacity-40",
+                    day.is_today &&
+                      "ring-2 ring-[color:var(--accent-ring)] ring-offset-2 ring-offset-card",
+                  )}
+                >
+                  <span aria-hidden>{label?.letter}</span>
+                  <span className="sr-only">
+                    {label?.full}
+                    {recorded ? ", recorded" : ""}
+                  </span>
                 </span>
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
 
       {/* No milestone rail here, and the omission is the compaction.
        *

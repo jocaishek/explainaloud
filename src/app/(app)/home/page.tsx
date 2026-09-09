@@ -211,7 +211,7 @@ export default async function DashboardPage() {
           streak={currentStreak}
           week={weekDays}
           figures={figures}
-          className="order-2 xl:order-none xl:w-[22rem] xl:shrink-0"
+          className="order-2 xl:order-none xl:w-[34rem] xl:shrink-0"
         />
       </div>
 
