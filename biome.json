@@ -5,8 +5,10 @@
       "**",
       "!.next",
       "!.agents",
+      "!.impeccable",
       "!.claude/worktrees",
-      "!supabase/.temp"
+      "!supabase/.temp",
+      "!fluid"
     ]
   },
   "assist": {
