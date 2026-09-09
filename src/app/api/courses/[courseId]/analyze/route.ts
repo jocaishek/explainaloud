@@ -32,11 +32,23 @@ const requestSchema = z.object({
   /**
    * Which section's question the student is answering.
    *
-   * Only an index crosses the wire. The question text and the key points are
-   * read from the stored course on this side, so a caller cannot choose what
-   * they are graded against by sending a friendlier question with it.
+   * The section's own question text and key points are read from the stored
+   * course on this side. `question` and `questionKeyPoints` below can override
+   * them for questions written on the spot — both bias only the sender's own
+   * score.
    */
   sectionIndex: z.number().int().nonnegative().optional(),
+  /**
+   * The question the student was actually shown, when it isn't the section's
+   * own quiz — an interview's adaptive follow-up is written on the spot and
+   * exists nowhere in the stored course. Grading used to fall back to the
+   * section quiz for those, so the model framed its marking around a question
+   * the student was never asked; question three, the most likely to be a
+   * follow-up, was graded against the wrong question most often. Like
+   * `questionKeyPoints` below, this comes from a model rather than the
+   * student, and the only thing it can bias is the student's own score.
+   */
+  question: z.string().min(1).max(500).optional(),
   /**
    * What a complete answer to the question contains, as the Examiner wrote it
    * alongside the question itself.
@@ -128,7 +140,8 @@ export async function POST(
     parsedBody.data.sectionIndex !== undefined
       ? sections[parsedBody.data.sectionIndex]
       : undefined;
-  const question = section?.quiz?.trim() || undefined;
+  const question =
+    parsedBody.data.question?.trim() || section?.quiz?.trim() || undefined;
   const keyPoints = parsedBody.data.questionKeyPoints?.length
     ? parsedBody.data.questionKeyPoints
     : section

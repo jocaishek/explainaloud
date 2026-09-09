@@ -324,14 +324,51 @@ function extractJson(raw: string): unknown {
   try {
     return JSON.parse(unfenced);
   } catch {
-    // Fall back to the outermost balanced braces.
+    // Fall back to the first balanced object. Walked rather than sliced
+    // between `indexOf("{")` and `lastIndexOf("}")`: a model that reasons
+    // before answering can emit a brace inside its prose, and the naive slice
+    // grabbed from the first prose `{` to the last prose `}` and died on what
+    // was in between — turning an answer that contained perfectly good JSON
+    // into a provider failure.
     const start = unfenced.indexOf("{");
-    const end = unfenced.lastIndexOf("}");
-    if (start === -1 || end <= start) {
-      throw new Error("Model returned no parseable JSON");
+    if (start === -1) throw new Error("Model returned no parseable JSON");
+    for (let i = start; i !== -1; i = unfenced.indexOf("{", i + 1)) {
+      const slice = balancedObjectAt(unfenced, i);
+      if (slice === null) continue;
+      try {
+        return JSON.parse(slice);
+      } catch {
+        // A balanced but invalid candidate; try the next opening brace.
+      }
     }
-    return JSON.parse(unfenced.slice(start, end + 1));
+    throw new Error("Model returned no parseable JSON");
   }
+}
+
+/**
+ * The balanced `{…}` starting at `start`, or null if it never closes —
+ * string-aware, so braces inside JSON string values do not miscount.
+ */
+function balancedObjectAt(text: string, start: number): string | null {
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i++) {
+    const ch = text[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') inString = true;
+    else if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return text.slice(start, i + 1);
+    }
+  }
+  return null;
 }
 
 async function withTimeout<T>(fn: (signal: AbortSignal) => Promise<T>) {
@@ -524,9 +561,18 @@ async function callOpenAiCompatible(
   }
 
   const json = await response.json();
-  const text = json?.choices?.[0]?.message?.content;
+  const choice = json?.choices?.[0];
+  const text = choice?.message?.content;
   if (typeof text !== "string" || !text.trim()) {
     throw new Error(`${config.label} returned an empty completion`);
+  }
+  // Gemini's MAX_TOKENS gets thrown by name; the OpenAI-shaped rungs used to
+  // let a truncated completion sail on to `extractJson` and die as a cryptic
+  // syntax error. Same condition, same explicit failure.
+  if (choice?.finish_reason === "length") {
+    throw new Error(
+      `${config.label} truncated the completion (finish_reason: length)`,
+    );
   }
   return text;
 }

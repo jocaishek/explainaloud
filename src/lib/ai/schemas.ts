@@ -208,7 +208,13 @@ export const spansSchema = z.object({
         issue: z.string().nullish(),
       }),
     )
-    .min(1),
+    // No minimum. This was `.min(1)`, which made "this short answer contains
+    // no gradeable claim" — a perfectly reasonable model response of
+    // `{"spans": []}` — a schema failure, which burned every provider in the
+    // chain and surfaced as the service being down. `reconcileSpans` renders
+    // an empty list as the whole transcript in neutral, which is the honest
+    // answer.
+    .default([]),
   covered_key_points: z.array(z.number().int().nonnegative()).default([]),
   /**
    * Points where the student got the substance but not all of it.

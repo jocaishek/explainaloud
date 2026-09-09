@@ -85,8 +85,13 @@ const SILENCE_STOP_MS = 10_000;
  * service went down would be strictly worse than the problem being solved.
  * Room tone sits near 0.002; speech at a normal distance is an order of
  * magnitude above this.
+ *
+ * 0.006, down from 0.012. The higher figure sat close enough to a quiet
+ * speaker on a laptop mic — soft voice, browser AGC pulling the gain down —
+ * that real explanations were being auto-stopped mid-take and reported as
+ * "it didn't hear me". Room tone is still three times below this line.
  */
-const SILENCE_RMS = 0.012;
+const SILENCE_RMS = 0.006;
 
 /**
  * How long the adaptive follow-up gets before the banked question is shown.
@@ -95,8 +100,15 @@ const SILENCE_RMS = 0.012;
  * does, and it is worth a short wait. It is not worth the ten to fifteen
  * seconds two chained model calls actually took, mid-interview, on a clock the
  * student is being marked against.
+ *
+ * Eight seconds, up from three. At three the adaptive follow-up essentially
+ * never won the race — grading the previous answer plus writing a question in
+ * series takes longer than that — so question 3 was the banked question every
+ * time and the feature may as well not have existed. Eight fits inside the
+ * between-answers grace plus a beat of reading time, and the banked question
+ * is still revealed the moment the budget runs out.
  */
-const FOLLOW_UP_BUDGET_MS = 3_000;
+const FOLLOW_UP_BUDGET_MS = 8_000;
 
 /**
  * How long to wait for the Examiner before falling back.
@@ -183,8 +195,16 @@ type Mode = "topic" | "interview";
  * and `provider.ts` is the second.
  */
 const LIVE_GRADE_TICK_MS = 1200;
-/** Server caption fallback cadence; stays below the transcription RPM limit. */
-const LIVE_TRANSCRIBE_MS = 4000;
+/**
+ * Server caption fallback cadence; stays below the transcription RPM limit.
+ *
+ * 6s, up from 4s. Live captions draw from the same daily `transcribe` bucket
+ * as the final full-quality pass, and at 4s a three-minute recording spent ~45
+ * calls — twenty recordings exhausted the day and the *final* pass started
+ * 429ing, leaving the truncated live text as the stored transcript. Captions
+ * arrive a beat later; the transcript of record stops losing its ending.
+ */
+const LIVE_TRANSCRIBE_MS = 6000;
 /**
  * Shortest utterance worth grading. Below this there isn't enough of a claim to
  * judge, and a request per syllable would burn the minute's token budget.
@@ -1692,7 +1712,8 @@ export function RecordConsole({
       .map((segment, at) => ({ segment, at }))
       .filter(
         ({ segment }) =>
-          segment.score === null && segment.transcript.length >= 24,
+          segment.score === null &&
+          segment.transcript.length >= LIVE_GRADE_MIN_CHARS,
       );
 
     if (ungraded.length > 0) {
@@ -2416,10 +2437,21 @@ export function RecordConsole({
         .then((written) => reveal(written[0] ?? null))
         .catch(() => reveal(null));
 
-      // With nothing banked there is nothing to fall back to, so the wait is
-      // the only option — a slow question beats an empty card.
       if (banked) {
         window.setTimeout(() => reveal(null), FOLLOW_UP_BUDGET_MS);
+      } else {
+        // With nothing banked, the promise chain above used to be the only
+        // path to `reveal` — and it starts with grading, whose timeout alone
+        // is a minute. A student sat on "Choosing your question…" for up to
+        // 72 seconds. Cap the wait and fall back to the course's own
+        // questions, which is what `writeQuestion` would have handed back on
+        // failure anyway.
+        window.setTimeout(() => {
+          const asked = askingRef.current.map((item) => item.question);
+          const fallback =
+            questions.find((item) => !asked.includes(item.question)) ?? null;
+          reveal(fallback);
+        }, FOLLOW_UP_BUDGET_MS + QUESTION_TIMEOUT_MS);
       }
     } else {
       void gradeSegment(at, answer, current.index, current.keyPoints);
@@ -2471,7 +2503,16 @@ export function RecordConsole({
     sectionIndex: number,
     questionKeyPoints?: string[],
   ): Promise<string | undefined> {
-    if (answer.length < 24 || !courseReady) return undefined;
+    // The same floor the server holds (`transcript.length < 12` → tooShort).
+    // This was 24 while the server said 12 and the report's retry pass said
+    // 24: an answer of 12–23 characters was queued for grading, refused here,
+    // and kept `score: null` forever — which then held the whole interview
+    // report hostage. One number, the shared one.
+    if (answer.length < LIVE_GRADE_MIN_CHARS || !courseReady) return undefined;
+    // The question this answer was actually given. Grading used to see only
+    // the section's own quiz text, which for an adaptive follow-up is a
+    // different question than the one on screen — worst on question 3.
+    const asked = askingRef.current[at]?.question?.trim();
     try {
       const { response, json } = await fetchJson(
         `/api/courses/${courseId}/analyze`,
@@ -2482,6 +2523,7 @@ export function RecordConsole({
             transcript: answer,
             mode: "final",
             sectionIndex,
+            ...(asked ? { question: asked } : {}),
             ...(questionKeyPoints?.length ? { questionKeyPoints } : {}),
           }),
         },
@@ -2928,7 +2970,17 @@ export function RecordConsole({
       status !== "saving" &&
       status !== "analyzing" &&
       segments.length >= Math.min(INTERVIEW_QUESTIONS, asking.length) &&
-      segments.every((segment) => segment.score !== null));
+      // A segment with no score is only "still being marked" if it has enough
+      // transcript to ever be marked. The empty placeholder a silent question
+      // three leaves behind — pushed deliberately, so the report can say it
+      // was not captured — used to fail this check forever, which hid the
+      // entire report and recap behind it. That was most of "it doesn't
+      // register q3".
+      segments.every(
+        (segment) =>
+          segment.score !== null ||
+          segment.transcript.length < LIVE_GRADE_MIN_CHARS,
+      ));
   // The last question ends the whole recording; the others just end an answer.
   const lastQuestion =
     !interviewRef.current || segmentIndex >= asking.length - 1;

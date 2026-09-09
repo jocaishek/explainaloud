@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * The hero's ground: water, simulated rather than drawn.
@@ -588,7 +588,27 @@ function makeTarget(
 export function FlowField({ className }: { className?: string }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  /* Boot the field once the browser has an idle moment, not on mount.
+   *
+   * Compiling two shader programs is a main-thread stall, and on mount it
+   * lands in the exact window where the page is also hydrating and animating
+   * the headline in — which is what made the first seconds of text motion
+   * visibly choppy, worst on phones. The CSS field underneath is the designed
+   * ground until then, so deferring costs nothing anyone can see. */
+  const [ready, setReady] = useState(false);
   useEffect(() => {
+    if (typeof window.requestIdleCallback === "function") {
+      const id = window.requestIdleCallback(() => setReady(true), {
+        timeout: 800,
+      });
+      return () => window.cancelIdleCallback(id);
+    }
+    const id = window.setTimeout(() => setReady(true), 350);
+    return () => window.clearTimeout(id);
+  }, []);
+
+  useEffect(() => {
+    if (!ready) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -942,7 +962,7 @@ export function FlowField({ className }: { className?: string }) {
       gl.deleteProgram(drawProgram);
       gl.deleteBuffer(buffer);
     };
-  }, []);
+  }, [ready]);
 
   return (
     <div aria-hidden="true" className={className}>

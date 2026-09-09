@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { AuthCard, type AuthMode } from "~/components/auth-card";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
-import { FlowField } from "~/components/landing/flow-field";
 
 /**
  * The shell around the sign-in form: a way back to the landing page, the
@@ -30,18 +29,19 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
      * one screen before the password field. That is every sign-in page ever
      * made, and it was the loudest seam in the product.
      *
-     * The water behind it is the same field the hero runs, which is what
-     * makes arriving here read as the next page of one document rather than
-     * as being handed to a different company. */
+     * The ground is `lp-atmosphere`'s own gradient — the deliberate static
+     * frame that block was designed to fall back to. The WebGL water that
+     * used to run behind this form is gone: a shader booting, compiling and
+     * ping-ponging framebuffers behind a password field bought atmosphere at
+     * the cost of the one screen where nothing should move, and on a phone it
+     * bought jank. A still gradient in the same palette keeps the room. */
     <main className="lp-v2 lp-atmosphere relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden px-6 py-16 text-primary-foreground">
-      <FlowField className="absolute inset-0 z-0 h-full w-full" />
-      {/* Heavier than the hero's scrim. There is a form here and every label
-          in it has to clear contrast against whatever frame of the water
-          happens to be behind it, which a headline can afford to be relaxed
-          about and an input cannot. */}
+      {/* A soft vertical scrim so labels clear contrast where the gradient is
+          brightest. Far lighter than the one the water needed — the ground no
+          longer changes frame to frame. */}
       <div
         aria-hidden="true"
-        className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(4,12,26,0.78),rgba(3,9,20,0.88))]"
+        className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(4,12,26,0.3),rgba(3,9,20,0.55))]"
       />
 
       <Link

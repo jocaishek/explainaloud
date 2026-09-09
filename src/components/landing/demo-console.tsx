@@ -293,12 +293,20 @@ export function DemoConsole() {
      instead of something that finishes and waits to be asked again. */
   useEffect(() => {
     if (!running || reduceMotion) return;
+    /* Every commit here is a React render of the whole panel. At 60 a second
+       on a phone that render was a real slice of the scroll jank, so touch
+       devices commit at ~30fps instead — the cycle is minutes long, and half
+       the frames of a slow cursor are indistinguishable. Time still advances
+       by real elapsed delta, so nothing slows down, only the commit rate. */
+    const minCommitMs = window.matchMedia("(pointer: coarse)").matches ? 33 : 0;
     let frame = 0;
     let last = performance.now();
     const tick = (now: number) => {
       const delta = now - last;
-      last = now;
-      setProgress((current) => (current + delta / CYCLE_MS) % 1);
+      if (delta >= minCommitMs) {
+        last = now;
+        setProgress((current) => (current + delta / CYCLE_MS) % 1);
+      }
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);

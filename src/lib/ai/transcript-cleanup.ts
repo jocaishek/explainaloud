@@ -114,6 +114,25 @@ const ECHO_WORDS = 6;
  */
 const PHRASE_WINDOW = 8;
 
+/**
+ * How far back, in words, an earlier occurrence still counts as an echo.
+ *
+ * The echo and phrase rules used to compare against everything said since the
+ * start of the recording, and that is what turned them from a hallucination
+ * filter into a speech filter. A decoder loop repeats within seconds — the
+ * copies sit next to each other, or one transcription window apart. A person
+ * repeats across minutes: they restate the definition they opened with, they
+ * recap at the end, they read a term-heavy sentence back to themselves — and
+ * every one of those was being deleted as "already said", which is precisely
+ * the "the transcript didn't hear me" report.
+ *
+ * Eighty words is roughly half a minute of speech. A loop's copies land well
+ * inside it; a recap of the opening lands well outside. Runs of three
+ * identical clauses and whole-clause caption artefacts are still removed
+ * regardless of distance — those are never speech.
+ */
+const RECENT_WORDS = 80;
+
 /** Lowercased, stripped of punctuation and collapsed whitespace. */
 function normalize(sentence: string) {
   return sentence
@@ -240,7 +259,15 @@ export function dropEchoedClauses(existing: string, addition: string): string {
   const clauses = splitClauses(addition);
   if (clauses.length === 0) return addition.trim();
 
-  const previousClauses = splitClauses(existing).map(normalize);
+  // Only the recent tail of what has already been said. A window's echo of the
+  // previous window is what this seam check exists for; a clause that repeats
+  // something from two minutes ago is a person circling back, and comparing
+  // against the whole transcript was deleting exactly that.
+  const recentTail = (text: string) => {
+    const words = text.split(/\s+/).filter(Boolean);
+    return words.slice(Math.max(0, words.length - RECENT_WORDS)).join(" ");
+  };
+  const previousClauses = splitClauses(recentTail(existing)).map(normalize);
   const seen = new Set(
     previousClauses.filter((clause) => wordCount(clause) >= ECHO_WORDS),
   );
@@ -312,32 +339,45 @@ export function stripHallucinations(
      rule because a loop rarely repeats back to back — it wanders through two
      or three phrases and comes round again, which no count of consecutive
      matches will ever see. The first occurrence is kept; only later copies of
-     something already said go. */
-  const seen = new Set<string>();
+     something *recently* said go — see `RECENT_WORDS`. Each entry records the
+     word position it was last seen at, so an honest recap of the opening,
+     minutes later, is out of range and survives. */
+  const seen = new Map<string, number>();
   /* And clauses that are not repeats themselves but are built out of one.
      A loop spliced at a transcription-window boundary produces clauses that
      are each unique as strings — every one starts at a different point in the
      cycle — while plainly saying the same thing. Matching on a phrase inside
      them is what sees that; see `phrasesIn`. */
-  const seenPhrases = new Set<string>();
+  const seenPhrases = new Map<string, number>();
+  let wordPos = 0;
   for (const [i, phrase] of normalized.entries()) {
-    if (looping[i]) continue;
     const clause = phrase as string;
+    const clauseWords = wordCount(clause);
+    const at = wordPos;
+    wordPos += clauseWords;
+    if (looping[i]) continue;
 
-    if (wordCount(clause) >= ECHO_WORDS) {
-      if (seen.has(clause)) {
+    const recent = (last: number | undefined) =>
+      last !== undefined && at - last <= RECENT_WORDS;
+
+    if (clauseWords >= ECHO_WORDS) {
+      if (recent(seen.get(clause))) {
+        // Refresh the position even though the copy is dropped, so a loop that
+        // runs on past the window keeps matching its own most recent copy.
+        seen.set(clause, at);
         looping[i] = true;
         continue;
       }
-      seen.add(clause);
+      seen.set(clause, at);
     }
 
     const phrases = phrasesIn(clause);
-    if (phrases.some((candidate) => seenPhrases.has(candidate))) {
+    if (phrases.some((candidate) => recent(seenPhrases.get(candidate)))) {
+      for (const candidate of phrases) seenPhrases.set(candidate, at);
       looping[i] = true;
       continue;
     }
-    for (const candidate of phrases) seenPhrases.add(candidate);
+    for (const candidate of phrases) seenPhrases.set(candidate, at);
   }
 
   const keptSentences: string[] = [];
