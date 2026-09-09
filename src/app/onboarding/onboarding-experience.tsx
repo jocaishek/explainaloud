@@ -50,29 +50,36 @@ export function OnboardingExperience({ email }: { email: string }) {
         </header>
 
         <div className="grid overflow-hidden rounded-card border border-border bg-card shadow-rest lg:grid-cols-[0.82fr_1.18fr]">
-          <aside className="flex flex-col justify-between gap-10 bg-[color:var(--panel-deep)] p-7 text-[color:var(--brand-foreground)] sm:p-9 lg:min-h-[640px]">
+          {/* `--panel-deep` only exists inside the landing's `lp-v2` scope, so
+              referencing it here left the panel with no background at all —
+              light ink on a white card. `brand-deep`/`brand-foreground` are
+              this register's fill-and-label pair and flip together in dark
+              mode. */}
+          <aside className="flex flex-col justify-between gap-10 bg-brand-deep p-7 text-[color:var(--brand-foreground)] sm:p-9 lg:min-h-[640px]">
             <div>
-              <span className="font-mono text-[0.6rem] uppercase tracking-[0.14em] opacity-60">
+              <span className="font-mono text-[0.6rem] uppercase tracking-[0.14em] opacity-70">
                 About one minute
               </span>
               <h1 className="mt-5 max-w-sm text-balance font-display text-[clamp(1.6rem,2.6vw,2.1rem)] leading-[1.08] tracking-[-0.035em]">
                 Built around what you can explain.
               </h1>
-              <p className="mt-3 max-w-sm text-[0.9rem] leading-6 opacity-70">
+              <p className="mt-3 max-w-sm text-[0.9rem] leading-6 opacity-80">
                 Five short questions, then your first topic.
               </p>
 
-              <ol className="mt-10 flex flex-col divide-y divide-white/10 border-white/10 border-t">
+              {/* Hairlines in the panel's own ink, not white — the panel is
+                  light blue in dark mode, where white/10 vanished. */}
+              <ol className="mt-10 flex flex-col divide-y divide-current/15 border-current/15 border-t">
                 {LOOP.map((step) => (
                   <li key={step.n} className="flex gap-4 py-4">
-                    <span className="pt-0.5 font-mono text-[0.66rem] tabular-nums opacity-50">
+                    <span className="pt-0.5 font-mono text-[0.66rem] tabular-nums opacity-60">
                       {step.n}
                     </span>
                     <span className="min-w-0">
                       <span className="block font-medium text-[0.92rem]">
                         {step.title}
                       </span>
-                      <span className="mt-1 block max-w-xs text-[0.8rem] leading-5 opacity-60">
+                      <span className="mt-1 block max-w-xs text-[0.8rem] leading-5 opacity-75">
                         {step.body}
                       </span>
                     </span>
@@ -86,7 +93,7 @@ export function OnboardingExperience({ email }: { email: string }) {
                 you and the date of birth is what the age check reads, so both
                 are set once. Saying otherwise in the moment somebody is
                 choosing them is the worst possible place to be wrong. */}
-            <p className="text-[0.78rem] leading-5 opacity-55">
+            <p className="text-[0.78rem] leading-5 opacity-70">
               Your username and date of birth are permanent. Everything else you
               can change later in Settings.
             </p>

@@ -43,7 +43,14 @@ export default async function EmailConfirmedPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-[#0b0f14] px-6 py-16 text-white">
+    /* The auth screens' room. This page was a hardcoded near-black one-off —
+       neither the landing's navy nor the app's stock — so the click out of the
+       confirmation email landed somewhere that looked like a third product.
+       The content block below carries `register-app` for the same reason the
+       auth card does: the accent tokens the button reads take their
+       lit-on-navy polarity from the `.lp-v2 .register-app` override, which is
+       a descendant selector. */
+    <main className="lp-v2 lp-atmosphere flex min-h-screen w-full flex-col items-center justify-center px-6 py-16 text-white">
       <Link
         href="/"
         className="flex items-center gap-2 text-base font-semibold tracking-tight text-white transition-opacity hover:opacity-80"
@@ -52,7 +59,7 @@ export default async function EmailConfirmedPage() {
         Explainaloud
       </Link>
 
-      <div className="mt-10 flex w-full max-w-md flex-col items-center text-center">
+      <div className="register-app mt-10 flex w-full max-w-md flex-col items-center bg-transparent text-center">
         <span className="flex size-14 items-center justify-center rounded-full bg-brand/10">
           <CheckCircle2 className="size-7 text-brand-ink" aria-hidden />
         </span>

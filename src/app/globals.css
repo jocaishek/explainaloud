@@ -106,7 +106,11 @@ main.lp-v2 {
  * artifacts off — more than that destroys the specular bands, which are the
  * only reason the image is worth having.
  */
-.lp-v2 .lp-atmosphere {
+/* Both the descendant shape the landing uses and the same-element shape the
+   auth screens use (`main.lp-v2.lp-atmosphere`) — the latter got no ground at
+   all under the descendant-only selector, which the water shader used to
+   paper over. */
+:is(.lp-v2 .lp-atmosphere, .lp-v2.lp-atmosphere) {
   isolation: isolate;
   /* The ground under the generated field, and the whole picture when the
      field cannot run. Not the WebP any more: a still image behind this
@@ -265,6 +269,18 @@ html:has(main.lp-v2) {
   color: var(--strong);
 }
 
+/* On touch devices the blur goes: re-filtering the strip under a fixed bar on
+ * every scroll frame is a measurable slice of mobile scroll jank, and behind
+ * 94% opaque white the blur is doing almost nothing a slightly denser white
+ * doesn't. Desktop keeps the glass. */
+@media (pointer: coarse) {
+  .lp-v2 .lp-sky-nav.is-light {
+    background: rgba(255, 255, 255, 0.97);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
 .lp-v2 .lp-sky-nav.is-light .lp-nav-link {
   color: var(--muted-foreground);
 }
@@ -292,7 +308,7 @@ html:has(main.lp-v2) {
   }
 }
 
-.lp-v2 .lp-atmosphere::before {
+:is(.lp-v2 .lp-atmosphere, .lp-v2.lp-atmosphere)::before {
   position: absolute;
   inset: 0;
   z-index: 0;
