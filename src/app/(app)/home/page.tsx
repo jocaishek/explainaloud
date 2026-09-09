@@ -4,9 +4,8 @@ import { requireProfile } from "~/lib/supabase/server";
 import { TopicGrid } from "../topic-grid";
 import { FirstRunTour } from "./first-run";
 import { HomeHeader } from "./home-header";
-import { PacePanel, type PaceSession } from "./pace-panel";
-import { StatCards } from "./stat-cards";
-import { StreakStrip, type WeekDay } from "./streak-strip";
+import { PacePanel, type PaceSession, paceStanding } from "./pace-panel";
+import { StandingPanel, type WeekDay } from "./standing-panel";
 
 /**
  * How many bars the pace chart draws, and how many rows it reads to find them.
@@ -146,27 +145,31 @@ export default async function DashboardPage() {
   const topicCount = courses?.length ?? 0;
   const recorded = sessionCount ?? 0;
 
-  const stats = [
+  /* Three totals, and their labels are the whole caption now.
+   *
+   * These used to be a ruled row across the page, each figure carrying a line
+   * saying what it counted. In the corner there is no room for that line, and
+   * two of the three only ever restated the label. The one that carried
+   * something real — that the rate has the pauses taken out — is said by the
+   * pace chart, which is the only place the rate is worth reading in detail. */
+  const figures = [
+    { label: "Explanations", value: recorded, measured: recorded > 0 },
     {
-      label: "Explanations recorded",
-      value: recorded,
-      caption: "Across every topic you have started.",
-      empty: "None yet — your first one is three minutes away.",
-    },
-    {
-      label: "Your speaking pace",
+      label: "Pace",
       value: baselineWpm ?? 0,
       unit: "wpm",
-      caption: "Your own baseline, with the pauses left out.",
-      empty: "Measured on your first take.",
+      measured: (baselineWpm ?? 0) > 0,
     },
-    {
-      label: "Topics",
-      value: topicCount,
-      caption: "Courses built from your own material.",
-      empty: "Upload something to start one.",
-    },
+    { label: "Topics", value: topicCount, measured: topicCount > 0 },
   ];
+
+  /* Whether there is a chart to draw, and the one line that stands in for it
+     when there is not. */
+  const pace = paceStanding({
+    baselineWpm,
+    plotted: paceSessions.length,
+    recorded,
+  });
 
   /* Where this account stands, in one line, said from the numbers rather than
      from a copy deck. The three states are the three shapes an account can be
@@ -184,7 +187,33 @@ export default async function DashboardPage() {
        topic list. The rail down the left is the app's frame; everything in
        here is the screen. */
     <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-8 pb-14 sm:px-6 lg:px-10 lg:py-10 lg:pb-16">
-      <HomeHeader firstName={profile.first_name} lede={lede} />
+      {/* The greeting and the summary share a row, and only where there is a
+          row to share.
+       *
+       * `display: contents` until `xl`, which is what lets the summary be in
+       * two places at once without being rendered twice. On a narrow screen
+       * the wrapper vanishes from layout, its two children become direct
+       * items of this column, and `order` drops the summary *below* the
+       * topics — because on a phone there is no corner to put it in, and the
+       * one thing on this page that belongs to the reader should not be
+       * pushed down the screen by a readout of it. At `xl` the wrapper
+       * becomes a row again and the panel takes the space the lede was never
+       * going to use.
+       *
+       * `xl`, not `lg`, and the difference is the rail: the content column is
+       * the viewport minus 256px of navigation and its own padding, so at
+       * `lg` this row would be fitting a 22rem panel and a sentence into
+       * about 688px. The breakpoint has to be read against the column rather
+       * than the window. */}
+      <div className="contents xl:flex xl:items-start xl:justify-between xl:gap-10">
+        <HomeHeader firstName={profile.first_name} lede={lede} />
+        <StandingPanel
+          streak={currentStreak}
+          week={weekDays}
+          figures={figures}
+          className="order-2 xl:order-none xl:w-[22rem] xl:shrink-0"
+        />
+      </div>
 
       {/* Your topics, immediately.
        *
@@ -201,33 +230,34 @@ export default async function DashboardPage() {
        * still one click away: the grid's own new-topic tile is `/new`, and
        * Record sits in the rail. The first-run tour still teaches the loop,
        * once, to the only people who need telling. */}
-      <div data-rise="" data-tour="topics">
+      <div data-rise="" data-tour="topics" className="order-1 xl:order-none">
         <TopicGrid folders={folders ?? []} courses={courses ?? []} />
       </div>
 
-      {/* The streak band goes the full measure, and has to.
+      {/* The chart, or the reason there is not one yet.
        *
-       * It was briefly put in a `1fr` column beside the pace panel, on the
-       * arithmetic that the measure is 72rem and 1fr would therefore be
-       * about 720px. That forgot the 256px rail: the content column is the
-       * viewport minus the rail, so at 1280px the band actually got 592px.
-       * Its three tracks need ~530px between the number and the seven day
-       * circles, which left the sentence sixty pixels to wrap in and pushed
-       * the last day off the card. A band whose own week does not fit is not
-       * a band. */}
-      {weekDays.length > 0 && (
-        <StreakStrip streak={currentStreak} week={weekDays} />
+       * The panel used to carry its own empty state, and it had to: it sat in
+       * a row, so rendering nothing left a hole and told nobody why the thing
+       * they had been promised was missing. The answer then was a full-height
+       * card of dashed ghost bars — about 370px to say "not yet".
+       *
+       * Out of that row nothing is left behind, so the reason can be what it
+       * always was in substance: one sentence, in the place the chart will
+       * appear. The principle survives and the furniture does not. */}
+      {pace.charted ? (
+        <div data-rise="" className="order-3 xl:order-none">
+          <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
+        </div>
+      ) : (
+        pace.note && (
+          <p
+            data-rise=""
+            className="order-3 border-border border-t pt-4 text-[0.85rem] text-subtle leading-relaxed xl:order-none"
+          >
+            {pace.note}
+          </p>
+        )
       )}
-
-      <StatCards stats={stats} />
-
-      <div data-rise="">
-        <PacePanel
-          sessions={paceSessions}
-          baselineWpm={baselineWpm}
-          recorded={recorded}
-        />
-      </div>
 
       {/* Three steps, once, for somebody who has just arrived. Renders
           nothing at all for everybody else. */}

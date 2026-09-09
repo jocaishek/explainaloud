@@ -25,26 +25,16 @@ import Link from "next/link";
  *
  * Every number here is measured. Nothing is drawn when there is nothing to
  * draw: two sessions is not a trend, and a chart of one bar is a claim the data
- * cannot support. What is drawn instead is a panel saying so — this used to
- * render nothing at all, which left a hole in the dashboard's second row for
- * everybody who had not recorded three times yet, and told them nothing about
- * why the thing they were promised was missing.
+ * cannot support.
  *
- * **The empty state has to know why it is empty.** It used to receive only the
- * plottable sessions, so it inferred everything from that one number — and got
- * it wrong in both directions. With nothing recorded it said "3 more
- * recordings", where "more" is more than a nothing nobody had done. And it
- * finished every version of the sentence with "Two sessions is not a trend",
- * which is a reason that only applies if you have two, so somebody with none
- * was told about sessions they had never made.
- *
- * Worse, a session can be recorded and still not be plottable: a delivery with
- * under seven seconds of actual speech is `reliable: false`, and one whose
- * course has no slug has nowhere for its bar to link to. Both are dropped
- * before this component sees them. Given only the survivors, a person with six
- * recordings and no usable rate was told to go and record three, forever. So
- * the total is passed in as well, and the panel says which of the three
- * situations it is actually in.
+ * **This panel used to carry its own empty state, and no longer needs one.**
+ * It sat in a row on the dashboard, so rendering nothing left a hole and told
+ * nobody why the thing they had been promised was missing — a full-height
+ * panel of dashed ghost bars was the answer, and it cost about 370px to say
+ * "not yet". The summary has since moved into `StandingPanel` beside the
+ * greeting, and this is now the last thing on the page rather than a cell in a
+ * grid, so absence leaves nothing behind. The reason moves with the summary:
+ * `paceStanding` below owns that sentence, and the panel is only ever a chart.
  */
 
 /** Above this multiple of the baseline, a delivery counts as racing. */
@@ -52,6 +42,71 @@ const RACING = 1.15;
 
 /** Fewer than this and there is no shape to look at yet. */
 const MINIMUM_SESSIONS = 3;
+
+/**
+ * Whether there is a chart to draw, and what to say when there is not.
+ *
+ * **The reason has to know why it is empty.** An earlier version inferred
+ * everything from the plottable count alone and got it wrong in both
+ * directions. With nothing recorded it said "3 more recordings", where "more"
+ * is more than a nothing nobody had done. And every version of the sentence
+ * ended with "Two sessions is not a trend", a reason that only applies if you
+ * have two — so somebody with none was told about sessions they had never
+ * made.
+ *
+ * Worse, a session can be recorded and still not be plottable: a delivery with
+ * under seven seconds of actual speech is `reliable: false`, and one whose
+ * course has no slug has nowhere for its bar to link to. Both are dropped
+ * before the chart sees them, so a person with six recordings and no usable
+ * rate was told to go and record three, forever. The total is therefore read
+ * alongside the plottable count, and the sentence says which of the four
+ * situations this account is actually in.
+ */
+export function paceStanding({
+  baselineWpm,
+  plotted,
+  recorded,
+}: {
+  baselineWpm: number | null;
+  /** Sessions that survived filtering — the ones a bar can be drawn for. */
+  plotted: number;
+  /** Every session on the account, including the ones that cannot be plotted. */
+  recorded: number;
+}): { charted: boolean; note: string | null } {
+  if (baselineWpm && plotted >= MINIMUM_SESSIONS) {
+    return { charted: true, note: null };
+  }
+
+  // Recorded, but nothing usable came back from them.
+  const unusable = recorded - plotted;
+  const remaining = MINIMUM_SESSIONS - plotted;
+
+  if (!baselineWpm) {
+    return {
+      charted: false,
+      note: "Your speaking pace is measured on your first recording, then charted against it.",
+    };
+  }
+  if (plotted === 0 && unusable > 0) {
+    /* Says what is true — no rate came back — rather than why, because there
+       is more than one reason a session is not plottable and this cannot tell
+       them apart. Naming the seven-second floor gives the likeliest one
+       without asserting it. */
+    return {
+      charted: false,
+      note: `No pace measured from your ${
+        unusable === 1 ? "recording" : `${unusable} recordings`
+      } yet. A take needs about seven seconds of speech, with the pauses taken out.`,
+    };
+  }
+  return {
+    charted: false,
+    note:
+      recorded === 0
+        ? "Three recordings and your pace is charted against your baseline."
+        : `${remaining} more ${remaining === 1 ? "recording" : "recordings"} and your pace is charted against your baseline.`,
+  };
+}
 
 export type PaceSession = {
   id: string;
@@ -99,65 +154,15 @@ function Heading({ baselineWpm }: { baselineWpm: number | null }) {
 export function PacePanel({
   sessions,
   baselineWpm,
-  recorded,
 }: {
   /** Oldest first, so the chart reads left to right in time. */
   sessions: PaceSession[];
   baselineWpm: number | null;
-  /** Every session on the account, including the ones that cannot be plotted. */
-  recorded: number;
 }) {
-  if (!baselineWpm || sessions.length < MINIMUM_SESSIONS) {
-    const remaining = MINIMUM_SESSIONS - sessions.length;
-    // Recorded, but nothing usable came back from them.
-    const unusable = recorded - sessions.length;
-    return (
-      <Panel>
-        <Heading baselineWpm={baselineWpm} />
-        {/* Three marks standing in for the three bars, so the shape of what is
-            coming is visible before there is anything to plot. */}
-        <div className="mt-6 flex flex-col gap-5 lg:flex-row lg:items-center lg:gap-9">
-          <div
-            aria-hidden
-            className="flex h-24 w-full items-end gap-2 opacity-60 sm:h-28 lg:max-w-[26rem]"
-          >
-            {[0.55, 0.8, 0.42].map((h, i) => (
-              <span
-                key={h}
-                className="flex-1 rounded-t-[4px] border-border border-x border-t border-dashed"
-                style={{
-                  height: `${h * 100}%`,
-                  // Only the ones already recorded are filled in.
-                  background:
-                    i < sessions.length ? "var(--surface)" : undefined,
-                }}
-              />
-            ))}
-          </div>
-          <p className="text-[0.88rem] text-subtle leading-relaxed lg:flex-1">
-            {!baselineWpm ? (
-              "Your speaking pace is measured on your first recording, then charted here against it."
-            ) : sessions.length === 0 && unusable > 0 ? (
-              /* Says what is true — no rate came back — rather than why, because
-               there is more than one reason a session is not plottable and this
-               component cannot tell them apart. Naming the seven-second floor
-               gives the likeliest one without asserting it. */
-              <>
-                No pace measured from your{" "}
-                {unusable === 1 ? "recording" : `${unusable} recordings`} yet. A
-                take needs about seven seconds of speech, with the pauses taken
-                out.
-              </>
-            ) : recorded === 0 ? (
-              "Three recordings and your pace is charted here against your baseline."
-            ) : (
-              `${remaining} more ${remaining === 1 ? "recording" : "recordings"} and your pace is charted here against your baseline.`
-            )}
-          </p>
-        </div>
-      </Panel>
-    );
-  }
+  /* The page asks `paceStanding` before it renders this, so the guard is a
+     belt rather than a branch — it keeps the component true on its own terms,
+     and stops `Math.max` over an empty list resolving to -Infinity. */
+  if (!baselineWpm || sessions.length < MINIMUM_SESSIONS) return null;
 
   const peak = Math.max(...sessions.map((s) => s.wpm), baselineWpm) * 1.15;
   const latest = sessions[sessions.length - 1];
