@@ -155,9 +155,8 @@ export default async function DashboardPage() {
   const figures = [
     { label: "Explanations", value: recorded, measured: recorded > 0 },
     {
-      label: "Pace",
+      label: "Pace (wpm)",
       value: baselineWpm ?? 0,
-      unit: "wpm",
       measured: (baselineWpm ?? 0) > 0,
     },
     { label: "Topics", value: topicCount, measured: topicCount > 0 },
