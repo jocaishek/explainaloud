@@ -99,13 +99,37 @@ export function paceStanding({
       } yet. A take needs about seven seconds of speech, with the pauses taken out.`,
     };
   }
-  return {
-    charted: false,
-    note:
-      recorded === 0
-        ? "Three recordings and your pace is charted against your baseline."
-        : `${remaining} more ${remaining === 1 ? "recording" : "recordings"} and your pace is charted against your baseline.`,
-  };
+  if (recorded === 0) {
+    return {
+      charted: false,
+      note: "Three recordings and your pace is charted against your baseline.",
+    };
+  }
+
+  const ask = `${remaining} more ${remaining === 1 ? "recording" : "recordings"} and your pace is charted against your baseline.`;
+
+  /* Some measured, some not — and this is the case the sentence used to lie
+     about by omission.
+     *
+     * Somebody with three recordings, one of which was too short to rate, was
+     * told "1 more recording and your pace is charted", which does not add up
+     * against the "3" printed directly above it in the same panel. They count
+     * three, the sentence asks for a fourth, and nothing on the page explains
+     * the gap — so the number reads as broken rather than as a threshold not
+     * yet met. The earlier branch covers nothing being measurable at all; this
+     * one covers the mix, which is the commoner case and the confusing one. */
+  if (unusable > 0) {
+    return {
+      charted: false,
+      note: `${ask} ${
+        unusable === 1
+          ? "One of the ones you have"
+          : `${unusable} of the ones you have`
+      } had too little speech to measure — a take needs about seven seconds, with the pauses taken out.`,
+    };
+  }
+
+  return { charted: false, note: ask };
 }
 
 export type PaceSession = {

@@ -168,10 +168,114 @@ function evidenceWords(value: string) {
   );
 }
 
+/** The bounds of a usable excerpt: long enough to mean something on its own,
+    short enough to read as a quotation rather than as a page. */
+const EVIDENCE_MIN_CHARS = 24;
+const EVIDENCE_MAX_CHARS = 360;
+
+/** Strips the markup a line of notes wears, leaving the sentence under it. */
+function unmarkLine(line: string) {
+  return line
+    .replace(/^\s*(?:[>*+\u2022\u2013\u2014-]|\d+[.)])\s+/u, "")
+    .replace(/[`*_]+/gu, "")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+/** Cuts an over-long run of text at word boundaries rather than mid-word. */
+function windowed(fragment: string) {
+  const parts: string[] = [];
+  let rest = fragment;
+
+  while (rest.length > EVIDENCE_MAX_CHARS) {
+    const head = rest.slice(0, EVIDENCE_MAX_CHARS);
+    const cut = head.lastIndexOf(" ");
+    const take = cut > EVIDENCE_MIN_CHARS ? cut : EVIDENCE_MAX_CHARS;
+    parts.push(rest.slice(0, take).trim());
+    rest = rest.slice(take).trim();
+  }
+  if (rest.length >= EVIDENCE_MIN_CHARS) parts.push(rest);
+
+  return parts;
+}
+
+/**
+ * Every passage of a source that could stand as a quotation.
+ *
+ * **This used to be one line — split on `.!?`, keep what is 24 to 360
+ * characters and contains no `#` or backtick — and that line is most of
+ * "building a course from my own files does not work".** It assumes an upload
+ * is prose. Half of them are not:
+ *
+ * - **Notes and slide exports have no sentence punctuation.** A deck of
+ *   bullets is one "sentence" thousands of characters long, so it fails the
+ *   360 ceiling and the file yields nothing at all.
+ * - **A bullet is shorter than 24 characters.** "Occurs in the cytosol" is
+ *   twenty-one, so even split correctly each line was thrown away.
+ * - **A markdown heading anywhere in the file** put a `#` in that one giant
+ *   sentence, which disqualified the entire document in one test.
+ *
+ * With no passage to quote, every section lost its citation, `hasCitationCoverage`
+ * failed, and a complete course was thrown away with "couldn't verify every
+ * citation against your sources. Try rebuilding" — advice that could not work,
+ * because the second build hit the same arithmetic as the first.
+ *
+ * So: blocks before sentences, markup stripped rather than treated as poison,
+ * short lines packed with their neighbours until they are worth quoting, and a
+ * block with no punctuation at all cut into readable windows instead of
+ * dropped. Nothing here invents text; every candidate is a verbatim run of the
+ * file with its bullet markers taken off.
+ */
+function evidenceFragments(content: string): string[] {
+  const fragments: string[] = [];
+  let buffer = "";
+
+  const flush = () => {
+    const packed = buffer.trim();
+    buffer = "";
+    if (packed.length < EVIDENCE_MIN_CHARS) return;
+    if (packed.length <= EVIDENCE_MAX_CHARS) {
+      fragments.push(packed);
+      return;
+    }
+    fragments.push(...windowed(packed));
+  };
+
+  for (const rawLine of content.split(/\r?\n/u)) {
+    // A blank line ends a block, and so does a heading: packing a bullet onto
+    // the title above it would quote a sentence the file does not contain.
+    if (!rawLine.trim() || /^\s*#{1,6}\s/u.test(rawLine)) {
+      flush();
+      continue;
+    }
+
+    const line = unmarkLine(rawLine);
+    if (!line || line.includes("[...]")) continue;
+
+    for (const sentence of line.split(/(?<=[.!?])\s+/u)) {
+      const piece = sentence.trim();
+      if (!piece) continue;
+
+      buffer = buffer
+        ? /[.!?:;]$/u.test(buffer)
+          ? `${buffer} ${piece}`
+          : `${buffer}; ${piece}`
+        : piece;
+
+      // Packed far enough to be quotable, and every further line would only
+      // make it a page. Sentences flush on their own; short bullets gather.
+      if (buffer.length >= EVIDENCE_MIN_CHARS) flush();
+    }
+  }
+  flush();
+
+  return fragments;
+}
+
 /**
  * Models sometimes identify the right source but paraphrase its quote. Repair
  * that formatting error without trusting the paraphrase: select the exact
- * source sentence with the strongest lexical match to the generated claim.
+ * source passage with the strongest lexical match to the generated claim.
  */
 function bestExactCitation(
   claim: string,
@@ -186,28 +290,16 @@ function bestExactCitation(
     | undefined;
 
   for (const source of sources) {
-    const sentences = source.content
-      .replace(/\s+/gu, " ")
-      .split(/(?<=[.!?])\s+/u)
-      .map((sentence) => sentence.trim())
-      .filter(
-        (sentence) =>
-          sentence.length >= 24 &&
-          sentence.length <= 360 &&
-          !/[#`]/u.test(sentence) &&
-          !sentence.includes("[...]"),
-      );
-
-    for (const sentence of sentences) {
-      const sentenceWords = evidenceWords(sentence);
+    for (const fragment of evidenceFragments(source.content)) {
+      const fragmentWords = evidenceWords(fragment);
       const score = [...claimWords].filter((word) =>
-        sentenceWords.has(word),
+        fragmentWords.has(word),
       ).length;
       if (score < 2 || (best && score <= best.score)) continue;
       best = {
         citation: {
           source: source.filename,
-          quote: sentence,
+          quote: fragment,
           url: source.url,
         },
         score,
@@ -776,10 +868,29 @@ ${renderSources(evidenceSources, SOURCE_BUDGET.course)}`,
     course = {
       ...course,
       videos: videoDiscovery.videos,
+      /* A link is a searched link, or it is not a link.
+       *
+       * The fallback when the search came back empty used to be
+       * `course.resources` as the Architect wrote it — and the prompt asks for
+       * labels rather than addresses, but the schema still allows a `url` and
+       * models still volunteer one. A generated URL is a real host with an
+       * invented path: it resolves to a 404 on a site the student recognises,
+       * which is the most convincing way to be wrong. Nothing downstream can
+       * catch it either — `directLearningWebsite` reads the shape of a URL and
+       * cannot tell whether a page is behind it.
+       *
+       * And it fired exactly when it was least safe. An empty search result is
+       * usually a missing or spent Tavily key, so the deployment with no
+       * working search was the one filling the panel with invented links.
+       *
+       * The labels survive, because "look up X next" is honest and useful
+       * without an address. Only the addresses are dropped. */
       resources:
         resourceDiscovery.resources.length > 0
           ? resourceDiscovery.resources
-          : course.resources,
+          : course.resources.map(
+              ({ url: _generated, ...resource }) => resource,
+            ),
     };
     agents.push(
       agentStep(
