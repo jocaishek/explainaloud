@@ -4,9 +4,18 @@ import { orchestrateExplanation } from "~/lib/ai/orchestrator";
 import { AiUnavailableError } from "~/lib/ai/provider";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import type { SourceRow } from "~/lib/ai/sources";
+
+/** What the grading pass reads: the budget's worth, plus how long the real
+    document is, so the prompt can say truthfully that it was cut. */
+type SourceExcerptRow = {
+  filename: string;
+  content_excerpt: string;
+  content_length: number;
+};
+
 import { toPurpose } from "~/lib/purpose";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
-import { createClient } from "~/lib/supabase/server";
+import { sessionUser } from "~/lib/supabase/server";
 
 export const maxDuration = 120;
 
@@ -19,6 +28,10 @@ export const maxDuration = 120;
  * single crafted POST spends the token budget for every other student.
  */
 const MAX_TRANSCRIPT_CHARS = 20_000;
+/** Mirrors `content_excerpt`'s `left(content, 8000)`, for the fallback path
+    below and for nothing else — `SOURCE_BUDGET.grading` still owns the real
+    decision, and the database column is generated from the same number. */
+const GRADING_EXCERPT_CHARS = 8_000;
 const MAX_CONTEXT_CHARS = 2_000;
 
 const requestSchema = z.object({
@@ -77,11 +90,14 @@ export async function POST(
   { params }: { params: Promise<{ courseId: string }> },
 ) {
   const { courseId } = await params;
-  const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  /* Claims, not `auth.getUser()`, and on this route the difference is
+     measurable: a live pass runs about once a second while somebody is still
+     speaking, and `getUser()` spends an Auth-server round trip on each one to
+     re-learn what the signed token already says. Every query below is
+     owner-scoped and sits behind RLS, which checks the same token again at the
+     database. */
+  const { supabase, user } = await sessionUser();
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
@@ -116,17 +132,39 @@ export async function POST(
     return NextResponse.json({ spans: [], covered: [], tooShort: true });
   }
 
-  const { data: course } = await supabase
-    .from("courses")
-    .select("id, topic, generated, purpose")
-    .eq("id", courseId)
-    .eq("user_id", user.id)
-    .maybeSingle<{
-      id: string;
-      topic: string;
-      generated: GeneratedCourse | null;
-      purpose: string | null;
-    }>();
+  /* Both reads at once. They do not depend on each other, and this route is
+     on a one-second clock: run in series, the sources wait out the course
+     lookup for no reason. The ownership filter is on both, so the sources
+     query is not trusting the course query's result — it never was. */
+  const [{ data: course }, { data: sources, error: sourcesError }] =
+    await Promise.all([
+      supabase
+        .from("courses")
+        .select("id, topic, generated, purpose")
+        .eq("id", courseId)
+        .eq("user_id", user.id)
+        .maybeSingle<{
+          id: string;
+          topic: string;
+          generated: GeneratedCourse | null;
+          purpose: string | null;
+        }>(),
+      /* The opening of each source, not the document.
+       *
+       * Grading's budget is 8,000 characters across every source and always has
+       * been — the sources are here to catch a contradiction, not to be taught
+       * from. This query used to select `content` whole and then discard all but
+       * that budget in JavaScript, which on a 5 MB upload is several megabytes
+       * over the wire, once a second, to use two per cent of it.
+       *
+       * `content_excerpt` is that budget's worth, computed by the database. */
+      supabase
+        .from("course_sources")
+        .select("filename, content_excerpt, content_length")
+        .eq("course_id", courseId)
+        .eq("user_id", user.id)
+        .returns<SourceExcerptRow[]>(),
+    ]);
 
   if (!course) {
     return NextResponse.json({ error: "Topic not found." }, { status: 404 });
@@ -157,14 +195,50 @@ export async function POST(
     );
   }
 
-  const { data: sources } = await supabase
-    .from("course_sources")
-    .select("filename, content")
-    .eq("course_id", courseId)
-    .eq("user_id", user.id)
-    .returns<SourceRow[]>();
+  /* A deployment that arrived before its migration still grades grounded.
+   *
+   * Migrations here are applied by hand and the deploy happens on merge, so
+   * there is a window where this code is live and `content_excerpt` does not
+   * exist yet. PostgREST fails the whole select on an unknown column, which
+   * would read as "this course has no sources" — grading would quietly stop
+   * being grounded for exactly the people who uploaded something, and nothing
+   * on screen would say so. One extra query during that window is cheap; the
+   * silence is not. */
+  let excerpts = sources;
+  if (sourcesError) {
+    console.error(
+      "Falling back to full source content — has the excerpt migration been applied?",
+      sourcesError.message,
+    );
+    const { data: whole } = await supabase
+      .from("course_sources")
+      .select("filename, content")
+      .eq("course_id", courseId)
+      .eq("user_id", user.id)
+      .returns<Array<{ filename: string; content: string }>>();
+    excerpts = (whole ?? []).map((row) => ({
+      filename: row.filename,
+      content_excerpt: row.content.slice(0, GRADING_EXCERPT_CHARS),
+      content_length: row.content.length,
+    }));
+  }
 
-  const grounded = (sources?.length ?? 0) > 0;
+  /* Marked where it was cut, in the text itself.
+   *
+   * `renderSources` says which documents it trimmed, because a model that
+   * cannot tell it is reading part of one is the model that fills in the rest
+   * from general knowledge. It works that out by comparing what it rendered
+   * against what it was handed — and what it is handed here is already an
+   * excerpt, so the cut has to be declared here or it is invisible. */
+  const gradingSources: SourceRow[] = (excerpts ?? []).map((row) => ({
+    filename: row.filename,
+    content:
+      row.content_length > row.content_excerpt.length
+        ? `${row.content_excerpt}\n\n[This document is longer than one grading pass reads. Judge only what is above.]`
+        : row.content_excerpt,
+  }));
+
+  const grounded = gradingSources.length > 0;
   try {
     const result = await orchestrateExplanation({
       topic: course.topic,
@@ -173,7 +247,7 @@ export async function POST(
       question,
       transcript,
       grounded,
-      sources: sources ?? [],
+      sources: gradingSources,
       mode,
       context,
     });
