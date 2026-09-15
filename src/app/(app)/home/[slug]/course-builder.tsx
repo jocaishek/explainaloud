@@ -394,7 +394,7 @@ export function CourseBuilder({
                     </Button>
                   </div>
                 </motion.section>
-              ) : course.video_searches.length > 0 ? (
+              ) : (
                 <motion.section
                   variants={ITEM}
                   className={cn(PANEL, "flex flex-col items-start gap-2 p-5")}
@@ -402,6 +402,29 @@ export function CourseBuilder({
                   <h2 className="font-medium text-[0.95rem] text-strong">
                     Watch
                   </h2>
+                  {/* Offered whatever the course says, and that is the fix.
+                   *
+                   * This panel used to be gated on `course.video_searches`
+                   * being non-empty — the queries the model wrote at build
+                   * time. Sources-only mode is instructed in as many words to
+                   * return an empty `video_searches`, because while the course
+                   * is being written the files are the world and it must not
+                   * point away from them. So every course built from uploaded
+                   * material rendered `null` here: no panel, no button, no way
+                   * to ask.
+                   *
+                   * `discoverCourseVideos` and the route behind this button
+                   * were both fixed to handle exactly that case — searching
+                   * the topic and the course's own key points when the model
+                   * wrote no queries — and neither fix could ever run, because
+                   * nothing on the screen could reach them. That is the whole
+                   * of "YouTube still doesn't work" surviving a fix to the
+                   * YouTube code.
+                   *
+                   * The grounding rule is untouched: nothing is searched on
+                   * its own here. A student presses a button labelled *Find
+                   * videos*, which is a request, and the material they
+                   * uploaded cannot answer it. */}
                   {/* Two different situations, and they used to read the same.
                       A search that ran and found nothing showed this identical
                       panel, so the credit was spent and the only evidence was
@@ -425,7 +448,7 @@ export function CourseBuilder({
                         : "Find videos & websites"}
                   </Button>
                 </motion.section>
-              ) : null}
+              )}
 
               {directResources.length > 0 ? (
                 <motion.section
