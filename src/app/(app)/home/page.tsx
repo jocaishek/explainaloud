@@ -187,33 +187,26 @@ export default async function DashboardPage() {
        topic list. The rail down the left is the app's frame; everything in
        here is the screen. */
     <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-8 pb-14 sm:px-6 lg:px-10 lg:py-10 lg:pb-16">
-      {/* The greeting and the summary share a row, and only where there is a
-          row to share.
+      <HomeHeader firstName={profile.first_name} lede={lede} />
+
+      {/* Where this account stands, one line under the greeting.
        *
-       * `display: contents` until `xl`, which is what lets the summary be in
-       * two places at once without being rendered twice. On a narrow screen
-       * the wrapper vanishes from layout, its two children become direct
-       * items of this column, and `order` drops the summary *below* the
-       * topics — because on a phone there is no corner to put it in, and the
-       * one thing on this page that belongs to the reader should not be
-       * pushed down the screen by a readout of it. At `xl` the wrapper
-       * becomes a row again and the panel takes the space the lede was never
-       * going to use.
+       * It sat in the corner beside the header for one release and the corner
+       * is the wrong shape: a greeting and a sentence are about 70px tall, no
+       * honest arrangement of a streak, a week and three totals is, and the
+       * difference showed up as an empty column under the lede. Full width it
+       * is a single row, so nothing is left hanging next to it.
        *
-       * `xl`, not `lg`, and the difference is the rail: the content column is
-       * the viewport minus 256px of navigation and its own padding, so at
-       * `lg` this row would be fitting a 22rem panel and a sentence into
-       * about 688px. The breakpoint has to be read against the column rather
-       * than the window. */}
-      <div className="contents xl:flex xl:items-start xl:justify-between xl:gap-10">
-        <HomeHeader firstName={profile.first_name} lede={lede} />
-        <StandingPanel
-          streak={currentStreak}
-          week={weekDays}
-          figures={figures}
-          className="order-2 xl:order-none xl:w-[22rem] xl:shrink-0"
-        />
-      </div>
+       * `order-2` until `md`, because on a phone the strip has to stack into
+       * three parts and that is a screen of readout between somebody and the
+       * only thing on this page that is theirs. There it goes below the
+       * topics; there is no corner to put it in and no row to share. */}
+      <StandingPanel
+        streak={currentStreak}
+        week={weekDays}
+        figures={figures}
+        className="order-2 md:order-none"
+      />
 
       {/* Your topics, immediately.
        *
@@ -230,7 +223,7 @@ export default async function DashboardPage() {
        * still one click away: the grid's own new-topic tile is `/new`, and
        * Record sits in the rail. The first-run tour still teaches the loop,
        * once, to the only people who need telling. */}
-      <div data-rise="" data-tour="topics" className="order-1 xl:order-none">
+      <div data-rise="" data-tour="topics" className="order-1 md:order-none">
         <TopicGrid folders={folders ?? []} courses={courses ?? []} />
       </div>
 
@@ -245,14 +238,14 @@ export default async function DashboardPage() {
        * always was in substance: one sentence, in the place the chart will
        * appear. The principle survives and the furniture does not. */}
       {pace.charted ? (
-        <div data-rise="" className="order-3 xl:order-none">
+        <div data-rise="" className="order-3 md:order-none">
           <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
         </div>
       ) : (
         pace.note && (
           <p
             data-rise=""
-            className="order-3 border-border border-t pt-4 text-[0.85rem] text-subtle leading-relaxed xl:order-none"
+            className="order-3 border-border border-t pt-4 text-[0.85rem] text-subtle leading-relaxed md:order-none"
           >
             {pace.note}
           </p>
