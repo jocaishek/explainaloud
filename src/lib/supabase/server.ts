@@ -66,6 +66,30 @@ const getCachedUser = cache(async () => {
 });
 
 /**
+ * The signed-in identity for an API route, or null.
+ *
+ * The same verified claims `requireUser` reads, without the redirect — a route
+ * owes a JSON 401, not a `Location` header.
+ *
+ * **Use this rather than `auth.getUser()` on anything called repeatedly.**
+ * `getUser()` asks the Auth server on every single call; `getClaims()`
+ * verifies the token's signature locally against the project's cached public
+ * key. On the grading route, which fires about once a second while somebody is
+ * still speaking, that difference is a network round trip per second per
+ * speaker, in front of a model call that is already the slow part.
+ *
+ * What is given up is narrow and already given up everywhere else in the app:
+ * a token revoked in the last few minutes of its life still verifies. Nothing
+ * is authorised by this identity on its own — every query it reaches is
+ * owner-scoped and sits behind RLS, which re-checks the same token at the
+ * database.
+ */
+export async function sessionUser() {
+  const { supabase, user } = await getCachedUser();
+  return { supabase, user };
+}
+
+/**
  * For dashboard server components/actions. proxy.ts already redirects
  * unauthenticated `/home/*` requests, but that's not a substitute for
  * checking here too - defense in depth per Supabase's SSR auth guidance.
