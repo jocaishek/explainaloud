@@ -46,10 +46,9 @@ export type WeekDay = {
 };
 
 export type Figure = {
+  /** Carries the unit where there is one: "Pace (wpm)", not "Pace" + "wpm". */
   label: string;
   value: number;
-  /** Rendered after the number, at label size. */
-  unit?: string;
   /** False before there is anything to count, which draws a dash instead. */
   measured: boolean;
 };
@@ -98,24 +97,35 @@ export function StandingPanel({
         Where you stand
       </h2>
 
-      {/* One row, the width of the page.
+      {/* Three columns, declared, rather than one row left to wrap.
        *
-       * Two earlier shapes failed for the same reason, from opposite ends: a
-       * 22rem column in the corner stood four blocks tall beside a 70px
-       * greeting, and widening it to 34rem only shortened the hole it left
-       * rather than closing it. A summary parked next to a two-line header has
-       * to be about as tall as that header, and this one cannot be.
+       * `flex-wrap` put this in the hands of whatever the widths happened to
+       * add up to, and at a common one they added up badly: the run and the
+       * week held the first line, the sentence sat beside them, and the three
+       * totals were pushed onto a second line at the right — leaving a block
+       * of empty card under the streak and a strip half again as tall as it
+       * needed to be. A layout that is correct at two widths and ugly at a
+       * third is not a layout, it is an average.
        *
-       * So it spans the measure and reads left to right: where the run stands,
-       * what to do about it, and the three totals ruled off at the end. On a
-       * narrow screen it wraps into those same three parts stacked, which is
-       * the only arrangement that fits and is still the order somebody reads
-       * them in. */}
-      <div className="flex flex-wrap items-center gap-x-8 gap-y-4">
+       * So the three parts are named: the run as wide as it is, the sentence
+       * taking whatever is left, the totals as wide as they are. Nothing
+       * leaves its line — when the middle runs short the sentence wraps
+       * inside its own column, which is what a sentence is supposed to do.
+       * Below `lg` the columns stack in reading order.
+       *
+       * `xl`, not `lg`, and the difference is the rail. The columns have the
+       * viewport minus 256px of navigation and the page's own padding to lay
+       * out in — about 690px at `lg`, which crushes the sentence to six lines
+       * and breaks "days in a row" across three. The breakpoint has to be
+       * read against the content column rather than against the window. */}
+      <div className="grid gap-x-8 gap-y-4 xl:grid-cols-[auto_1fr_auto] xl:items-center">
         {/* The run and the week stay together whatever wraps around them —
             the seven circles are what the figure beside them is counted
             from, and a break between the two would separate a number from
             its own evidence. */}
+        {/* Wrapping only where there is no row to hold: on a phone the week
+            drops under the figure rather than running off the card, and the
+            label never breaks "days in a row" across three lines. */}
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           {/* The streak keeps its scale relative to everything else here. It
               was the loudest thing on the page and it is still the loudest
@@ -130,7 +140,7 @@ export function StandingPanel({
                 streak === 0 && "opacity-30 saturate-0",
               )}
             />
-            <p className="flex min-w-0 items-baseline gap-2">
+            <p className="flex items-baseline gap-2 whitespace-nowrap">
               <SlidingNumber
                 value={streak}
                 /* No line-height override. `SlidingNumber` sizes its digit
@@ -205,7 +215,7 @@ export function StandingPanel({
          * a "3 of 7" beside it — and seven circles already draw where the
          * week stands, so a second bar is the same fact in a different visual
          * language. The distance to the next stop survives here, in words. */}
-        <p className="flex min-w-0 flex-1 basis-[24ch] flex-wrap items-center gap-x-2 gap-y-1 text-[0.82rem] text-subtle leading-relaxed">
+        <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-[0.82rem] text-subtle leading-relaxed">
           {caption}
           {/* Only while today is still open. An action offered after it has
               been taken is an action that does nothing, and this line is the
@@ -228,36 +238,37 @@ export function StandingPanel({
          *
          * No rule down their left edge, and the reason is the wrap. A vertical
          * divider only divides while the things on either side of it are on
-         * the same line, and where this row breaks depends on the rail rather
-         * than on the window — so at some widths the rule arrived at the start
-         * of the second line as a tick attached to nothing. `ml-auto` does the
-         * separating instead, and it survives the break.
+         * the same line, and this row used to break wherever the widths said —
+         * so at some of them the rule arrived at the start of the second line
+         * as a tick attached to nothing. The columns do the separating now.
          *
          * `flex-col-reverse` so the figure reads above its label while the
          * markup keeps the `dt`/`dd` order a description list requires: the
          * label is what names the number, and a screen reader should reach it
          * first whatever the paint order is. */}
-        <dl className="ml-auto flex shrink-0 items-end gap-x-7">
+        <dl className="flex shrink-0 items-end gap-x-7 xl:justify-self-end">
           {figures.map((figure) => (
             <div key={figure.label} className="flex flex-col-reverse gap-1">
               <dt className="text-[0.75rem] text-subtle">{figure.label}</dt>
-              <dd className="flex items-baseline gap-1">
-                <span
-                  className={cn(
-                    "font-medium text-[1.5rem] leading-none tracking-[-0.04em] tabular-nums",
-                    figure.measured ? "text-strong" : "text-subtle",
-                  )}
-                >
-                  {/* Not a zero. A big 0 reads as a score, and somebody who has
-                      not recorded yet has not scored badly — they have not
-                      started. */}
-                  {figure.measured ? figure.value : "—"}
-                </span>
-                {figure.measured && figure.unit && (
-                  <span className="text-[0.72rem] text-subtle">
-                    {figure.unit}
-                  </span>
+              {/* The unit lives in the label, not beside the number.
+               *
+               * It used to be set at 0.72rem hard against a 1.5rem numeral,
+               * so "114 wpm" read as a figure with something stuck to it —
+               * three sizes and two colours across two words, in a row whose
+               * whole job is three numbers that scan at a glance. The label
+               * under it is already where a unit belongs, and moving it there
+               * costs nothing: "Pace (wpm)" is one line of the same small
+               * grey text as "Explanations". */}
+              <dd
+                className={cn(
+                  "font-medium text-[1.5rem] leading-none tracking-[-0.04em] tabular-nums",
+                  figure.measured ? "text-strong" : "text-subtle",
                 )}
+              >
+                {/* Not a zero. A big 0 reads as a score, and somebody who has
+                    not recorded yet has not scored badly — they have not
+                    started. */}
+                {figure.measured ? figure.value : "—"}
               </dd>
             </div>
           ))}
