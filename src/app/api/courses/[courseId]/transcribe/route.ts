@@ -3,6 +3,7 @@ import { NoSpeechDetectedError, transcribeAudio } from "~/lib/ai/provider";
 import type { GeneratedCourse } from "~/lib/ai/schemas";
 import { transcriptionVocabulary } from "~/lib/ai/vocabulary";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
+import { declaredLengthWithin } from "~/lib/request-size";
 import { speechMetrics } from "~/lib/speech-metrics";
 import { createClient } from "~/lib/supabase/server";
 
@@ -49,6 +50,19 @@ export async function POST(
 
   if (!course) {
     return NextResponse.json({ error: "Topic not found." }, { status: 404 });
+  }
+
+  /* Refused before the audio is buffered. `formData()` reads the whole body
+     first, so the `audio.size` ceiling below — which is the one that actually
+     holds — cannot run until the bytes have already been paid for. A recording
+     is the largest thing anyone uploads here, so this is the route where that
+     matters most. */
+  const declared = declaredLengthWithin(request, MAX_AUDIO_BYTES);
+  if (!declared.ok) {
+    return NextResponse.json(
+      { error: "That recording is too large." },
+      { status: 413 },
+    );
   }
 
   let formData: FormData;

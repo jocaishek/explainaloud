@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { extractText } from "~/lib/ai/sources";
 import { claimApiCall, RATE_LIMITED_MESSAGE } from "~/lib/rate-limit";
+import { declaredLengthWithin } from "~/lib/request-size";
 import { createClient } from "~/lib/supabase/server";
 import {
   FREE_SOURCES_PER_COURSE,
@@ -56,6 +57,21 @@ export async function POST(
         error: `A topic can hold ${FREE_SOURCES_PER_COURSE} sources. Delete one to add another.`,
       },
       { status: 422 },
+    );
+  }
+
+  /* Declined before the bytes are read, where that is possible.
+   *
+   * The `file.size` check below is the real ceiling and stays, but it runs
+   * after `formData()` has buffered the whole upload — so without this, a
+   * request twenty times over the limit is paid for in full and then refused.
+   * See `declaredLengthWithin`: the header is a courtesy, not a guarantee, and
+   * both checks are kept for that reason. */
+  const declared = declaredLengthWithin(request, MAX_SOURCE_BYTES);
+  if (!declared.ok) {
+    return NextResponse.json(
+      { error: "That file is over the 5 MB limit." },
+      { status: 413 },
     );
   }
 
