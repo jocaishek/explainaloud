@@ -57,14 +57,23 @@ export type CourseResource = {
   url: string;
 };
 
+/* `failed` is why a search that was attempted did not come back.
+ *
+ * Without it a rejected key or a spent monthly quota returned `searched: true`
+ * with nothing in it, the route stamped the course as searched, and the panel
+ * said "nothing came back that was clearly on this topic" — a claim about
+ * YouTube, made about an outage. That is how "no videos ever appear" looked
+ * from the outside. Operator-facing: it names the vendor and the status. */
 export type VideoDiscovery = {
   videos: CourseVideo[];
   searched: boolean;
+  failed?: string;
 };
 
 export type ResourceDiscovery = {
   resources: CourseResource[];
   searched: boolean;
+  failed?: string;
 };
 
 export type CourseEvidenceDiscovery = ResourceDiscovery & {
@@ -151,10 +160,6 @@ function directYouTubeUrl(value: string) {
 }
 
 /**
- * One explicit basic search finds and ranks direct videos for the whole
- * course. Search depth is never automatic, so this remains a one-credit call.
- */
-/**
  * Whether the search key is configured, and whether it actually works.
  *
  * Written because "YouTube doesn't work" survived a fix to the YouTube code.
@@ -227,6 +232,11 @@ export async function probeSearch(deep = false): Promise<SearchHealth> {
   }
 }
 
+/**
+ * Basic searches find and rank direct videos for the whole course: one credit,
+ * or two when the topic alone comes back empty. Search depth is never
+ * automatic.
+ */
 export async function discoverCourseVideos(
   topic: string,
   queries: string[],
@@ -255,6 +265,22 @@ export async function discoverCourseVideos(
     return { videos: [], searched: false };
   }
 
+  const first = await searchYouTube(`${topic} explained`, topic);
+  if (first.failed || first.videos.length > 0) return first;
+
+  /* The topic is what somebody would type into YouTube, and it is nearly
+     always enough. When it is not, a narrow topic name the search could not
+     place, the model's own first query is tried on its own: one more credit,
+     spent only when the first came back empty. */
+  const fallback = queries.map(searchTerm).find(Boolean);
+  return fallback ? searchYouTube(fallback, topic) : first;
+}
+
+/** One YouTube-only search, with the result filtering every caller shares. */
+async function searchYouTube(
+  query: string,
+  topic: string,
+): Promise<VideoDiscovery> {
   try {
     const response = await fetch(TAVILY_SEARCH_URL, {
       method: "POST",
@@ -264,23 +290,20 @@ export async function discoverCourseVideos(
         authorization: `Bearer ${env.TAVILY_API_KEY}`,
       },
       body: JSON.stringify({
-        // Keywords, not instructions. The previous version read as a brief to
-        // a human researcher — "Every video must be spoken in English and have
-        // an English title" — which is not text that appears on any page, so
-        // it only diluted the terms that do. Stated as prose it also ran past
-        // Tavily's 400-character ceiling and 400'd outright. Searching the
-        // topic plus the two strongest generated queries returns actual
-        // results; `include_domains` already restricts this to YouTube.
-        /* Each term clipped, not just the whole. The two strongest queries used
-           to be phrases the model wrote for exactly this purpose; when there
-           are none, the caller passes the course's key points instead, and a
-           key point is a full sentence. Two of those bury the topic in the
-           middle of a paragraph of prose and the results drift off it. */
-        query: tavilyQuery(
-          [topic, "explained", ...queries.slice(0, 2).map(searchTerm)].join(
-            " ",
-          ),
-        ),
+        /* One term per request, never the topic and the generated queries
+         * joined into one.
+         *
+         * They used to be joined: the topic, "explained", and the model's two
+         * strongest `video_searches`. Restricted to YouTube, a query that long
+         * returns nothing at all, not weaker results. "Photosynthesis
+         * explained" brings back eight videos; the same plus "light-dependent
+         * reactions in the thylakoid membrane Calvin cycle carbon fixation
+         * steps" brings back zero. Every course build passes those queries,
+         * so every course was built with an empty Watch panel, on a working
+         * key, with nothing in any log, because an empty result is not an
+         * error. `discoverCourseVideos` falls back to one generated query on
+         * its own instead. */
+        query: tavilyQuery(query),
         topic: "general",
         country: "united states",
         search_depth: "basic",
@@ -305,8 +328,9 @@ export async function discoverCourseVideos(
           : response.status === 429 || response.status === 432
             ? " — out of Tavily credits"
             : "";
-      console.error(`Video search failed: Tavily ${response.status}${meaning}`);
-      return { videos: [], searched: true };
+      const failed = `Tavily ${response.status}${meaning}`;
+      console.error(`Video search failed: ${failed}`);
+      return { videos: [], searched: true, failed };
     }
 
     const payload = (await response.json()) as {
@@ -364,7 +388,11 @@ export async function discoverCourseVideos(
     return { videos, searched: true };
   } catch (error) {
     console.error("Video search failed:", error);
-    return { videos: [], searched: true };
+    return {
+      videos: [],
+      searched: true,
+      failed: error instanceof Error ? error.message : String(error),
+    };
   }
 }
 
@@ -564,7 +592,11 @@ export async function discoverCourseResources(
 
     if (!response.ok) {
       console.error(`Resource search failed: Tavily ${response.status}`);
-      return { resources: [], searched: true };
+      return {
+        resources: [],
+        searched: true,
+        failed: `Tavily ${response.status}`,
+      };
     }
 
     const payload = (await response.json()) as {
@@ -616,6 +648,10 @@ export async function discoverCourseResources(
     return { resources, searched: true };
   } catch (error) {
     console.error("Resource search failed:", error);
-    return { resources: [], searched: true };
+    return {
+      resources: [],
+      searched: true,
+      failed: error instanceof Error ? error.message : String(error),
+    };
   }
 }

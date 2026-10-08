@@ -3155,9 +3155,9 @@ export function RecordConsole({
           <div
             role="alert"
             aria-live="assertive"
-            className="flex max-w-sm flex-col items-center gap-1 rounded-control border border-amber-500/30 bg-amber-500/10 px-4 py-3"
+            className="flex max-w-sm flex-col items-center gap-1 rounded-control border border-brand/25 bg-brand/10 px-4 py-3"
           >
-            <p className="text-sm font-semibold text-amber-600 dark:text-amber-400">
+            <p className="text-sm font-semibold text-brand-ink">
               We can&apos;t hear you
             </p>
             <p className="text-xs leading-5 text-foreground">
@@ -3341,10 +3341,10 @@ export function RecordConsole({
                 key={gap.phrase}
                 id={`record-gap-${index}`}
                 tabIndex={-1}
-                className="scroll-mt-24 rounded-control border border-red-500/30 bg-red-500/[0.06] p-4"
+                className="scroll-mt-24 rounded-control border border-miss/30 bg-miss/[0.06] p-4"
               >
-                <p className="font-mono text-[10px] tracking-[0.14em] text-red-500 uppercase">
-                  {gap.category.replace("_", " ")}
+                <p className="font-medium text-miss text-xs first-letter:uppercase">
+                  {gap.category.replace(/_/g, " ")}
                 </p>
                 {/* The phrase only. Teaching lives in Re-Teach: putting the
                     explanation here hands over the answer at the moment the
@@ -3737,7 +3737,7 @@ function ModeChooser({
 function InterviewRecap({ segments }: { segments: Segment[] }) {
   return (
     <div className="flex w-full max-w-2xl flex-col gap-3 rounded-card border border-border bg-surface p-5">
-      <h2 className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+      <h2 className="font-medium text-strong text-xs">
         This recording · {segments.length} answered
       </h2>
 
@@ -3762,10 +3762,13 @@ function InterviewRecap({ segments }: { segments: Segment[] }) {
                 turn.score === null
                   ? "text-subtle"
                   : turn.score >= 70
-                    ? "text-green-500"
+                    ? "text-ok"
                     : turn.score >= 40
-                      ? "text-amber-500"
-                      : "text-red-500",
+                      ? // A middling score, not a vague claim: the verdict
+                        // tan means "said but not checkably" and is not a
+                        // grade band.
+                        "text-brand-ink"
+                      : "text-miss",
               )}
             >
               {turn.score ?? "—"}
@@ -3894,9 +3897,8 @@ function ColouredTranscript({
               : -1;
         const className = cn(
           "transition-colors duration-500",
-          span.status === "correct" && "text-green-500",
-          span.status === "gap" &&
-            "rounded bg-red-500/10 font-medium text-red-500",
+          span.status === "correct" && "text-ok",
+          span.status === "gap" && "rounded bg-miss/10 font-medium text-miss",
           // Vague shares the grey of speech that made no claim, because to a
           // reader they mean the same thing: nothing was established here.
           (span.status === "vague" || span.status === "neutral") &&
@@ -3911,7 +3913,7 @@ function ColouredTranscript({
             title={span.issue ?? "Jump to this explanation"}
             className={cn(
               className,
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miss/50",
             )}
           >
             {span.text}

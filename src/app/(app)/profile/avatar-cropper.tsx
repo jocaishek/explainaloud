@@ -184,10 +184,7 @@ export function AvatarCropper({
       </div>
 
       <div className="flex w-full max-w-[264px] flex-col gap-1.5">
-        <label
-          htmlFor={zoomId}
-          className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.14em]"
-        >
+        <label htmlFor={zoomId} className="font-medium text-strong text-xs">
           Zoom
         </label>
         <input

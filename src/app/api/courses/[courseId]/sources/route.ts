@@ -6,6 +6,7 @@ import { createClient } from "~/lib/supabase/server";
 import {
   FREE_SOURCES_PER_COURSE,
   MAX_SOURCE_BYTES,
+  MAX_SOURCE_LABEL,
   sourceLimitFor,
 } from "~/lib/uploads";
 
@@ -23,7 +24,7 @@ export async function POST(
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
 
-  // A 5 MB PDF parse is the most CPU a single request here can
+  // A 4 MB PDF parse is the most CPU a single request here can
   // ask for, and this function is billed by active CPU.
   if (!(await claimApiCall(supabase, "upload"))) {
     return NextResponse.json({ error: RATE_LIMITED_MESSAGE }, { status: 429 });
@@ -70,7 +71,7 @@ export async function POST(
   const declared = declaredLengthWithin(request, MAX_SOURCE_BYTES);
   if (!declared.ok) {
     return NextResponse.json(
-      { error: "That file is over the 5 MB limit." },
+      { error: `That file is over the ${MAX_SOURCE_LABEL} limit.` },
       { status: 413 },
     );
   }
@@ -83,7 +84,7 @@ export async function POST(
   }
   if (file.size > MAX_SOURCE_BYTES) {
     return NextResponse.json(
-      { error: "That file is over the 5 MB limit." },
+      { error: `That file is over the ${MAX_SOURCE_LABEL} limit.` },
       { status: 413 },
     );
   }

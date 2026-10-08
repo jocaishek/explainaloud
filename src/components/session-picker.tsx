@@ -48,7 +48,7 @@ export function SessionPicker({
     <div className="flex flex-wrap items-center gap-3">
       <label
         htmlFor="session-picker"
-        className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase"
+        className="font-medium text-strong text-xs"
       >
         Recording
       </label>

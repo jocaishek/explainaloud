@@ -48,7 +48,7 @@ Two mechanisms a neighbouring product could not truthfully copy:
 ## Operating Context
 
 The material is real course material: PDF, Word, Markdown, HTML, CSV, LaTeX
-or plain text, up to 5 MB a file. Lecture slides, textbook chapters, notes.
+or plain text, up to 4 MB a file. Lecture slides, textbook chapters, notes.
 
 Using it is speaking out loud, so it happens somewhere the person can talk:
 a desk, a bedroom, a library carrel with headphones. Sessions are short,

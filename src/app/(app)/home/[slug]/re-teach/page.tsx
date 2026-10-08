@@ -132,7 +132,7 @@ export default async function ReTeachPage({
               tabIndex={-1}
               className="flex scroll-mt-24 flex-col gap-3 rounded-card border border-border bg-surface p-4"
             >
-              <p className="font-mono text-[10px] tracking-[0.14em] text-brand-ink uppercase">
+              <p className="font-medium text-brand-ink text-xs first-letter:uppercase">
                 {gap.category.replace(/_/g, " ")}
               </p>
 

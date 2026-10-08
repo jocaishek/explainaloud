@@ -154,7 +154,7 @@ export async function POST(
        * Grading's budget is 8,000 characters across every source and always has
        * been — the sources are here to catch a contradiction, not to be taught
        * from. This query used to select `content` whole and then discard all but
-       * that budget in JavaScript, which on a 5 MB upload is several megabytes
+       * that budget in JavaScript, which on a 4 MB upload is several megabytes
        * over the wire, once a second, to use two per cent of it.
        *
        * `content_excerpt` is that budget's worth, computed by the database. */

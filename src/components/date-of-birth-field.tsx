@@ -104,10 +104,7 @@ export function DateOfBirthField({
       {name && <input type="hidden" name={name} value={value} readOnly />}
 
       <div className="flex w-[4.5rem] flex-col gap-1.5">
-        <label
-          htmlFor={dayId}
-          className="font-mono text-[0.62rem] text-subtle uppercase tracking-[0.09em]"
-        >
+        <label htmlFor={dayId} className="font-medium text-strong text-xs">
           Day
         </label>
         <Input
@@ -131,10 +128,7 @@ export function DateOfBirthField({
       </div>
 
       <div className="flex min-w-[8rem] flex-1 flex-col gap-1.5">
-        <label
-          htmlFor={monthId}
-          className="font-mono text-[0.62rem] text-subtle uppercase tracking-[0.09em]"
-        >
+        <label htmlFor={monthId} className="font-medium text-strong text-xs">
           Month
         </label>
         <select
@@ -156,10 +150,7 @@ export function DateOfBirthField({
       </div>
 
       <div className="flex w-[6rem] flex-col gap-1.5">
-        <label
-          htmlFor={yearId}
-          className="font-mono text-[0.62rem] text-subtle uppercase tracking-[0.09em]"
-        >
+        <label htmlFor={yearId} className="font-medium text-strong text-xs">
           Year
         </label>
         <Input

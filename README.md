@@ -23,7 +23,7 @@ This file is how to run it.
 ## What it does
 
 - **Builds a course from your material.** Drop in PDF, Word, Markdown, HTML,
-  CSV, LaTeX, or plain text, up to 5 MB a file. A chain of agents researches,
+  CSV, LaTeX, or plain text, up to 4 MB a file. A chain of agents researches,
   drafts, independently audits, and revises
   before you see anything, and every claim is tied to an exact quote from your
   sources.

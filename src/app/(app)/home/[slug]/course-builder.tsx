@@ -148,35 +148,32 @@ export function CourseBuilder({
   async function findLearningLinks(refresh = false) {
     setFindingLinks(true);
     setError(null);
-    try {
-      const response = await fetch(
-        `/api/courses/${courseId}/videos${refresh ? "?refresh=1" : ""}`,
-        { method: "POST" },
+    const result = await requestJson<{
+      videos?: unknown;
+      resources?: unknown;
+      searched_at?: GeneratedCourse["searched_at"];
+    }>(`/api/courses/${courseId}/videos${refresh ? "?refresh=1" : ""}`, {
+      method: "POST",
+    });
+    if (!result.ok) {
+      setError(result.error);
+    } else {
+      const json = result.data;
+      setCourse((current) =>
+        current
+          ? {
+              ...current,
+              videos: Array.isArray(json.videos) ? json.videos : current.videos,
+              resources: Array.isArray(json.resources)
+                ? json.resources
+                : current.resources,
+              // Carried through so the panels can say "searched, nothing
+              // usable" without waiting for a reload to learn it.
+              searched_at: json.searched_at ?? current.searched_at,
+            }
+          : current,
       );
-      const json = await response.json();
-      if (!response.ok) {
-        setError(json.error ?? "Couldn't find direct learning links.");
-      } else {
-        setCourse((current) =>
-          current
-            ? {
-                ...current,
-                videos: Array.isArray(json.videos)
-                  ? json.videos
-                  : current.videos,
-                resources: Array.isArray(json.resources)
-                  ? json.resources
-                  : current.resources,
-                // Carried through so the panels can say "searched, nothing
-                // usable" without waiting for a reload to learn it.
-                searched_at: json.searched_at ?? current.searched_at,
-              }
-            : current,
-        );
-        router.refresh();
-      }
-    } catch {
-      setError("Couldn't reach learning-link search.");
+      router.refresh();
     }
     setFindingLinks(false);
   }
@@ -239,10 +236,7 @@ export function CourseBuilder({
               {course.scope_note && (
                 <motion.aside
                   variants={ITEM}
-                  className={cn(
-                    PANEL,
-                    "border-amber-500/30 bg-amber-500/[0.06] p-5",
-                  )}
+                  className={cn(PANEL, "border-brand/25 bg-brand/[0.06] p-5")}
                 >
                   <p className="font-semibold text-sm text-strong">
                     This topic is quite broad
@@ -808,7 +802,7 @@ function CitationList({ citations }: { citations: CourseCitation[] }) {
       <div>
         <h2
           id="course-citations-heading"
-          className="font-mono text-[11px] tracking-[0.18em] text-brand-ink uppercase"
+          className="font-medium text-[0.95rem] text-strong"
         >
           Sources & citations
         </h2>
@@ -859,10 +853,11 @@ function CitationList({ citations }: { citations: CourseCitation[] }) {
 function Field({ label, body }: { label: string; body: string }) {
   return (
     <p className="text-sm text-foreground">
-      <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+      {/* Names the region, so it is set as a word rather than announced: the
+          tracked mono capitals are for timecodes and counts. */}
+      <span className="mb-1 block font-medium text-strong text-xs">
         {label}
       </span>
-      <br />
       {body}
     </p>
   );

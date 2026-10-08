@@ -11,6 +11,7 @@ import {
 } from "~/components/source-scope-choice";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
+import { requestJson } from "~/lib/api-client";
 import {
   HOMEWORK_MESSAGE,
   looksLikeHomework,
@@ -23,6 +24,7 @@ import {
   ACCEPTED_EXTENSIONS,
   MAX_NOTES_CHARS,
   MAX_SOURCE_BYTES,
+  MAX_SOURCE_LABEL,
   sourceLimitFor,
 } from "~/lib/uploads";
 import { cn } from "~/lib/utils";
@@ -105,7 +107,7 @@ export function NewTopicForm({
         break;
       }
       if (file.size > MAX_SOURCE_BYTES) {
-        rejected.push(`${file.name} is over the 5 MB limit.`);
+        rejected.push(`${file.name} is over the ${MAX_SOURCE_LABEL} limit.`);
         continue;
       }
       const lowerName = file.name.toLowerCase();
@@ -141,19 +143,13 @@ export function NewTopicForm({
       const body = new FormData();
       body.set("file", file);
 
-      try {
-        const response = await fetch(`/api/courses/${courseId}/sources`, {
-          method: "POST",
-          body,
-        });
-        const json = await response.json();
-        if (!response.ok) {
-          failures.push(file);
-          messages.push(`${file.name}: ${json.error ?? "upload failed"}`);
-        }
-      } catch {
+      const result = await requestJson(`/api/courses/${courseId}/sources`, {
+        method: "POST",
+        body,
+      });
+      if (!result.ok) {
         failures.push(file);
-        messages.push(`${file.name}: couldn't reach the server`);
+        messages.push(`${file.name}: ${result.error}`);
       }
     }
 
@@ -360,7 +356,8 @@ export function NewTopicForm({
             {dragActive ? "Drop to queue sources" : "Drag sources here"}
           </p>
           <p className="text-xs text-subtle">
-            Up to 5 MB each · {unlimited ? "unlimited" : sourceLimit} files
+            Up to {MAX_SOURCE_LABEL} each ·{" "}
+            {unlimited ? "unlimited" : sourceLimit} files
           </p>
           <Button
             type="button"
@@ -444,7 +441,7 @@ export function NewTopicForm({
                       current.filter((item) => fileKey(item) !== fileKey(file)),
                     )
                   }
-                  className="shrink-0 rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:bg-destructive/10 disabled:opacity-50"
+                  className="shrink-0 rounded-control px-1.5 py-0.5 font-medium text-xs text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
                 >
                   Remove
                 </button>

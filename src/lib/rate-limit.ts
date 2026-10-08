@@ -20,7 +20,7 @@ export const RATE_BUCKETS = [
   "generate",
   /** `/videos` — every call is a paid Tavily credit. */
   "search",
-  /** `/sources` — a 5 MB PDF parse is the most CPU one request can ask for. */
+  /** `/sources` — a 4 MB PDF parse is the most CPU one request can ask for. */
   "upload",
   /** `/speech/baseline` — transcription on the shared key. */
   "baseline",
