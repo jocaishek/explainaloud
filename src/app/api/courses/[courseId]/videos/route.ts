@@ -82,6 +82,23 @@ export async function POST(
       { status: 503 },
     );
   }
+  /* A video search that errored is reported, not saved.
+   *
+   * Saving it stamped `searched_at.videos`, and the panel then told the
+   * student that YouTube had nothing on their topic, when the search had never
+   * returned at all. Nothing is written here, so the course still offers the
+   * button and the next press is a real attempt. The vendor and status go to
+   * admins only, the same as the course builder's failures. */
+  if (videoDiscovery.failed) {
+    const { data: isAdmin } = await supabase.rpc("is_explainaloud_admin");
+    return NextResponse.json(
+      {
+        error: "Video search isn't working right now. Try again later.",
+        detail: isAdmin === true ? videoDiscovery.failed : undefined,
+      },
+      { status: 502 },
+    );
+  }
   const videos =
     videoDiscovery.videos.length > 0 ? videoDiscovery.videos : generated.videos;
   const resources =
@@ -104,7 +121,9 @@ export async function POST(
   const searched_at = {
     ...generated.searched_at,
     ...(videoDiscovery.searched ? { videos: now } : {}),
-    ...(resourceDiscovery.searched ? { resources: now } : {}),
+    ...(resourceDiscovery.searched && !resourceDiscovery.failed
+      ? { resources: now }
+      : {}),
   };
 
   const enriched = { ...generated, videos, resources, searched_at };

@@ -43,7 +43,17 @@ export const ACCEPTED_EXTENSIONS = [
 
 export const ACCEPT_ATTRIBUTE = ACCEPTED_EXTENSIONS.join(",");
 
-export const MAX_SOURCE_BYTES = 5 * 1024 * 1024;
+/**
+ * Kept under the hosting platform's 4.5 MB request-body cap, with room for the
+ * multipart envelope. Above that cap the request never reaches the route: the
+ * platform answers with its own plain-text 413, which a client parsing JSON
+ * reads as "couldn't reach the server". 4 MB is the largest round number that
+ * the route, not the platform, gets to refuse.
+ */
+export const MAX_SOURCE_BYTES = 4 * 1024 * 1024;
+
+/** The limit as a person reads it, so no message can drift from the number. */
+export const MAX_SOURCE_LABEL = `${MAX_SOURCE_BYTES / (1024 * 1024)} MB`;
 
 /**
  * Sources one topic can hold on the free tier. Each upload is a parse plus a

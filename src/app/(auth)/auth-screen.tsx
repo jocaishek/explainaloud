@@ -46,10 +46,13 @@ export function AuthScreen({ mode }: { mode: AuthMode }) {
 
       <Link
         href="/"
-        className="press relative z-[2] flex items-center gap-2.5 font-semibold text-[0.92rem] text-primary-foreground uppercase tracking-[0.04em] transition-opacity hover:opacity-80"
+        className="press relative z-[2] flex items-center gap-3 font-semibold text-[1.05rem] text-primary-foreground tracking-[-0.025em] transition-opacity hover:opacity-80"
       >
-        <ExplainaloudMark className="size-8 shrink-0" />
-        Explainaloud
+        {/* The landing masthead's mark and wordmark, at its size and tracking.
+            This was the one door that set the name in tracked capitals, so
+            the brand changed shape between the page and the sign-in. */}
+        <ExplainaloudMark className="h-[1.35rem] w-[1.35rem] shrink-0" />
+        explainaloud
       </Link>
 
       <div

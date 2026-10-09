@@ -221,7 +221,7 @@ export function FirstRunTour({ seen }: { seen: boolean }) {
           <button
             type="button"
             onClick={close}
-            className="press font-mono text-[0.62rem] text-subtle uppercase tracking-[0.09em] transition-colors hover:text-strong"
+            className="press font-medium text-subtle text-xs transition-colors hover:text-strong"
           >
             Skip
           </button>

@@ -89,7 +89,7 @@ export function FriendsAndStreaks() {
     <section
       ref={ref}
       data-scroll-reveal
-      className="border-border border-y bg-card px-5 py-24 md:px-8 md:py-28"
+      className="border-border border-y bg-card px-5 py-16 md:px-8 md:py-28"
     >
       <div className="mx-auto grid max-w-[76rem] items-center gap-12 lg:grid-cols-[1fr_0.68fr] lg:gap-20">
         <div>

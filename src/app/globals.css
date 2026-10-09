@@ -857,6 +857,13 @@ html:has(main.lp-v2) {
   --color-brand-high: var(--brand-high);
   --color-brand-ink: var(--brand-ink);
   --color-brand-foreground: var(--brand-foreground);
+  /* The verdicts as utilities, so a grade screen can ask for `text-ok` and
+     get the green the landing demonstrates, in both themes. Without these the
+     app reached for Tailwind's stock green-500 and red-500, which are neither
+     value and needed a hand-written `dark:` partner on every use. */
+  --color-ok: var(--ok);
+  --color-miss: var(--miss);
+  --color-vague: var(--vague);
   --radius-sm: 0.25rem;
   --radius-md: 0.375rem;
   --radius-lg: 0.5rem;
@@ -2622,7 +2629,9 @@ html:has(main.lp-v2) {
 
 .lp-v2 .lp-steps-track.is-live > .lp-step {
   width: min(34rem, 40vw);
-  min-height: min(28rem, 56svh);
+  /* Sized to its words. At 28rem each panel was two thirds empty card under
+     three lines of copy, which read as unfinished rather than as calm. */
+  min-height: min(18rem, 40svh);
   flex: 0 0 auto;
   /* The staircase is a vertical idea; the travel is the order now. This
      out-specifies the `lg:mt-*` utilities, which is what kept the staircase
@@ -2637,20 +2646,12 @@ html:has(main.lp-v2) {
     transform 520ms var(--ease-enter);
 }
 
-/* Each panel takes a tint of its own verdict — the same three colours the
-   rules above the steps already assign, extended to the ground, so panel
-   one is unmistakably not panel two. Tints, not fills: every verdict has
-   to stay legible on a light ground, and these stay far above the floor. */
-.lp-v2 .lp-steps-track.is-live > .lp-step:nth-child(1) {
-  background: color-mix(in oklab, var(--ok) 9%, var(--card));
-}
-
-.lp-v2 .lp-steps-track.is-live > .lp-step:nth-child(2) {
-  background: color-mix(in oklab, var(--vague) 10%, var(--card));
-}
-
-.lp-v2 .lp-steps-track.is-live > .lp-step:nth-child(3) {
-  background: color-mix(in oklab, var(--miss) 8%, var(--card));
+/* One ground for all three. These were tinted green, tan and red, and those
+   are the verdict colours — reserved for marking an explanation, so a step
+   card painted red read as a step somebody had got wrong. The rule above
+   each panel still carries the colour; the panel no longer does. */
+.lp-v2 .lp-steps-track.is-live > .lp-step {
+  background: var(--card);
 }
 
 .lp-v2 .lp-steps-track.is-live > .lp-step[data-lit="1"] {

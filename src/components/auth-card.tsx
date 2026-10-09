@@ -429,7 +429,7 @@ export function AuthCard({
             )}
           </div>
 
-          <div className="flex items-center gap-3 font-mono text-[0.62rem] uppercase tracking-[0.09em] text-subtle">
+          <div className="flex items-center gap-3 text-subtle text-xs">
             {/* `bg-white/10` — a leftover from when this card was dark, and
                 invisible on a light one. */}
             <span className="h-px flex-1 bg-border" />

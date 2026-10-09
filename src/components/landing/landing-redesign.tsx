@@ -14,7 +14,6 @@ import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { DemoConsole } from "~/components/landing/demo-console";
 import { FlowField } from "~/components/landing/flow-field";
 import { FriendsAndStreaks } from "~/components/landing/friends-streaks";
-import { SignupNudge } from "~/components/landing/signup-nudge";
 
 const steps = [
   {
@@ -484,16 +483,13 @@ function SteppedEdge() {
       preserveAspectRatio="none"
       className="absolute inset-x-0 top-0 z-[3] h-[clamp(2.5rem,5vw,6rem)] w-full"
     >
-      {/* Painted back to front: the deeper stock is the lower flight, so the
-          lighter one lands on top of it and each tread shows one stop of the
-          ramp. Two treads, three tones counting the night underneath. */}
+      {/* One flight, in the ground of the section above it. A second, lighter
+          flight used to land on top of this one in `--card`, which is white —
+          and the section above is not, so it read as a stray strip of paper
+          between the partners block and the close rather than as a step. */}
       <path
-        d="M0,0 H1440 V36 H1200 V48 H960 V60 H720 V72 H480 V84 H240 V96 H0 Z"
+        d="M0,0 H1440 V24 H1200 V36 H960 V48 H720 V60 H480 V72 H240 V84 H0 Z"
         fill="var(--background)"
-      />
-      <path
-        d="M0,0 H1440 V12 H1200 V24 H960 V36 H720 V48 H480 V60 H240 V72 H0 Z"
-        fill="var(--card)"
       />
     </svg>
   );
@@ -720,7 +716,7 @@ function ResultsCarousel() {
     <section
       id="results"
       ref={sectionRef}
-      className="relative border-border border-y bg-background px-5 py-24 md:px-8 md:py-28"
+      className="relative border-border border-y bg-background px-5 py-16 md:px-8 md:py-28"
     >
       <div
         data-scroll-reveal
@@ -867,9 +863,6 @@ export function LandingRedesign() {
   const heroRef = useRef<HTMLElement>(null);
   const navRef = useRef<HTMLElement>(null);
   const navSentinelRef = useRef<HTMLDivElement>(null);
-  const flyerRef = useRef<HTMLDivElement>(null);
-  const flyerSpinRef = useRef<HTMLDivElement>(null);
-  const navSlotRef = useRef<HTMLSpanElement>(null);
 
   /**
    * The bar turns to glass once it is off the hero.
@@ -892,21 +885,6 @@ export function LandingRedesign() {
    * arrive. It cannot be skipped over, because scrolling and painting are the
    * same loop.
    */
-  /**
-   * The mark flies to the nav as the first screen scrolls away.
-   *
-   * Deliberately not a tween. The previous version was a GSAP timeline that
-   * animated a `fixed` element toward a landing pad by computing viewport
-   * offsets, and when that arithmetic did not land there was nothing to catch
-   * it: the mark stayed at full size in the middle of the page for the entire
-   * document. A tween is a promise about the future, and it can be broken by a
-   * stalled ticker, a refresh that never fires, or a bad number.
-   *
-   * This reads scroll position and sets a transform, every frame, from
-   * scratch. There is no state to get stuck in — whatever the last frame did,
-   * this one recomputes the answer from where the page actually is. Scroll to
-   * the bottom in one flick and it is simply at the end.
-   */
   useEffect(() => {
     const sentinel = navSentinelRef.current;
     const nav = navRef.current;
@@ -915,7 +893,7 @@ export function LandingRedesign() {
     let frame = 0;
     let running = true;
     /* Last scroll position this actually did work for.
-       `sync` reads three `getBoundingClientRect`s, and a rect read after any
+       `sync` reads a `getBoundingClientRect`, and a rect read after any
        style change forces the browser to flush layout. Running that
        unconditionally every frame means the page pays for a forced synchronous
        layout sixty times a second forever, including while the reader is
@@ -933,73 +911,19 @@ export function LandingRedesign() {
         "is-light",
         sentinel.getBoundingClientRect().top <= 64,
       );
-
-      const flyer = flyerRef.current;
-      const spin = flyerSpinRef.current;
-      const slot = navSlotRef.current;
-      const hero = heroRef.current;
-      if (!flyer || !spin || !slot || !hero) return;
-
-      // Below `lg` the flyer is not rendered at all; nothing to place.
-      if (flyer.offsetWidth === 0) return;
-
-      const heroRect = hero.getBoundingClientRect();
-      const slotRect = slot.getBoundingClientRect();
-      const size = flyer.offsetWidth;
-
-      /* The journey is the first screen. It is complete by the time the hero
-         has scrolled away, so the mark is already the nav mark before any of
-         the light sections arrive — which is what stops it from ever being an
-         object floating over a paragraph. */
-      const travel = Math.max(1, heroRect.height * 0.72);
-      const raw = -heroRect.top / travel;
-      const t = raw < 0 ? 0 : raw > 1 ? 1 : raw;
-      // ease-in-out, so it leaves and arrives calmly rather than linearly
-      const e = t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
-
-      /* Centred in the right half, on the hero's own centre line.
-         Every previous position was a number picked to avoid something: away
-         from the headline, out of the bright part of the water, lower so it
-         stopped colliding. Avoiding things is why it kept reading as awkward,
-         because a mark placed by exclusion is not placed at all, and the eye
-         can tell.
-
-         This is placed by the layout instead. The hero is a headline column
-         on the left and open water on the right; the centre of that right
-         half is a real position in the composition, and sitting on the hero's
-         vertical centre line puts it in the same optical row as the headline
-         it belongs to. It reads as deliberate because it is. */
-      const startX = heroRect.left + heroRect.width * 0.75 - size / 2;
-      const startY = heroRect.top + heroRect.height * 0.46 - size / 2;
-      const endScale = slotRect.width / size;
-
-      const x = startX + (slotRect.left - startX) * e;
-      const y = startY + (slotRect.top - startY) * e;
-      const scale = 1 + (endScale - 1) * e;
-
-      flyer.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-      flyer.style.opacity = String(0.82 + 0.18 * e);
-      spin.style.transform = reduceMotion
-        ? "none"
-        : `rotateY(${(e * 360).toFixed(2)}deg)`;
-
-      /* The static nav mark only appears once the flyer is on top of it, so
-         the two are never both visible and never both absent. */
-      slot.style.opacity = e > 0.995 ? "1" : "0";
-      flyer.style.visibility = e > 0.995 ? "hidden" : "visible";
     };
     /* A frame loop, not a scroll listener.
        Scroll events are the obvious input here and they are not dependable
-       enough for something that positions an object: they are coalesced under
+       enough for something the reader can see go wrong: they are coalesced under
        load, they do not fire at all in some embedded viewers, and anything
        that misses one is left holding a stale transform. Measured in one such
        viewer: `scrollY` reported 900 and zero scroll events had been
-       delivered, so both the bar and the mark were reading a position from
+       delivered, so the bar was reading a position from
        several seconds earlier.
 
        Reading the page's own geometry once per painted frame cannot miss
        anything, because painting is the thing being kept in step with. The
-       body is two `getBoundingClientRect` calls and some arithmetic — cheap
+       body is one `getBoundingClientRect` call and a class toggle — cheap
        enough to be the boring, correct answer. */
     const tick = () => {
       if (!running) return;
@@ -1032,7 +956,7 @@ export function LandingRedesign() {
       window.removeEventListener("resize", forceSync);
       document.removeEventListener("visibilitychange", forceSync);
     };
-  }, [reduceMotion]);
+  }, []);
 
   /* The drawing is sized to the hero before anything else happens to it.
    *
@@ -1874,32 +1798,26 @@ export function LandingRedesign() {
             ))}
           </div>
         </div>
-        <div className="mx-auto grid h-16 max-w-[76rem] grid-cols-[1fr_auto_1fr] items-center px-5 md:px-8">
-          {/* The cell stays, its links go.
-           *
-           * This was `hidden lg:flex`, and `display: none` takes an element
-           * out of grid flow altogether — so below `lg` the two survivors
-           * slid into tracks one and two, the brand landed in the *left*
-           * track and the third track sat empty. The masthead was only
-           * centred at `lg` and above; everywhere between there and the
-           * phone it was bunched against the left edge with a hole beside
-           * it. Hiding the anchors instead leaves an empty cell holding the
-           * left track open, which is what a three-track grid needs to put
-           * its middle track in the middle. */}
-          <div className="flex items-center gap-5 text-[0.78rem]">
-            <a href="#live-demo" className="lp-nav-link hidden lg:inline">
+        <div className="mx-auto flex h-16 max-w-[76rem] items-center justify-between gap-3 px-5 md:px-8 lg:grid lg:grid-cols-[1fr_auto_1fr]">
+          {/* Three tracks only at `lg`, where there are links to fill the
+           * first. Below it the row is the brand and the two actions, ends
+           * out: an empty first track kept the brand centred, and on a phone
+           * the cost of that was the "Start free" button pushed past the
+           * right edge of the screen. */}
+          <div className="hidden items-center gap-5 text-[0.78rem] lg:flex">
+            <a href="#live-demo" className="lp-nav-link">
               Live demo
             </a>
-            <a href="#results" className="lp-nav-link hidden lg:inline">
+            <a href="#results" className="lp-nav-link">
               Results
             </a>
-            <a href="#how-it-works" className="lp-nav-link hidden lg:inline">
+            <a href="#how-it-works" className="lp-nav-link">
               How it works
             </a>
           </div>
           <Link
             href="/"
-            className="lp-nav-brand flex h-10 items-center justify-center gap-3 whitespace-nowrap text-primary-foreground sm:min-w-52"
+            className="lp-nav-brand flex h-10 items-center gap-3 whitespace-nowrap text-primary-foreground lg:min-w-52 lg:justify-center"
             aria-label="Explainaloud home"
           >
             {/* The mark, then the word. The masthead was the one place in the
@@ -1910,19 +1828,11 @@ export function LandingRedesign() {
             <span className="lp-nav-brand-copy font-sans font-semibold text-[1.05rem] tracking-[-0.025em]">
               explainaloud
             </span>
-            {/* The flyer lands here. Hidden until it arrives, so the mark is
-                never doubled and never missing. */}
-            <span
-              ref={navSlotRef}
-              className="block h-9 w-9 shrink-0 opacity-0 transition-opacity duration-150"
-            >
-              <ExplainaloudMark className="h-9 w-9" />
-            </span>
           </Link>
-          <div className="flex items-center justify-self-end gap-2">
+          <div className="flex items-center justify-self-end gap-1 sm:gap-2">
             <Link
               href="/login"
-              className="lp-nav-login whitespace-nowrap px-3 py-2 text-sm sm:px-4"
+              className="lp-nav-login whitespace-nowrap px-2 py-2 text-sm sm:px-4"
             >
               Log in
             </Link>
@@ -2110,7 +2020,7 @@ export function LandingRedesign() {
           claim that cannot be checked by thinking about it. */}
       <section
         data-scroll-reveal
-        className="border-border border-y bg-card px-5 py-20 md:px-8 md:py-24"
+        className="border-border border-y bg-card px-5 py-16 md:px-8 md:py-24"
       >
         <div className="mx-auto max-w-[76rem]">
           <p className="font-mono text-[0.67rem] text-brand-ink uppercase tracking-[0.14em]">
@@ -2290,7 +2200,7 @@ export function LandingRedesign() {
         </div>
       </section>
 
-      <section className="px-5 py-24 md:px-8 md:py-32">
+      <section className="px-5 py-16 md:px-8 md:py-32">
         <div className="mx-auto max-w-[76rem] border-border border-y">
           <div className="grid lg:grid-cols-[1.15fr_0.85fr]">
             <article
@@ -2371,7 +2281,7 @@ export function LandingRedesign() {
        * position is different. */}
       <section
         data-scroll-reveal
-        className="px-5 pb-24 md:px-8 md:pb-32"
+        className="px-5 pb-16 md:px-8 md:pb-32"
         aria-labelledby="partners-heading"
       >
         <div className="mx-auto max-w-[76rem] border-border border-y">
@@ -2393,7 +2303,7 @@ export function LandingRedesign() {
             </a>
           </div>
 
-          <div className="flex flex-col items-center py-14 text-center md:py-16">
+          <div className="flex flex-col items-center py-10 text-center md:py-12">
             <p className="text-[1.05rem] text-muted-foreground">
               Explainaloud is a partner of
             </p>
@@ -2417,7 +2327,7 @@ export function LandingRedesign() {
             </a>
             <span
               aria-hidden="true"
-              className="mt-9 h-[2px] w-28"
+              className="mt-7 h-[2px] w-28"
               style={{ backgroundColor: YRI_GOLD }}
             />
           </div>
@@ -2432,16 +2342,21 @@ export function LandingRedesign() {
           field, same scrim. It is also the page's one sanctioned inversion
           back into dark, and arriving somewhere the reader has already been
           is what makes that read as a close rather than as a sixth section. */}
-      <section className="lp-atmosphere relative overflow-hidden px-5 pt-28 pb-20 md:px-8 md:pt-36 md:pb-28">
+      <section className="lp-atmosphere relative overflow-hidden px-5 pt-24 pb-16 md:px-8 md:pt-36 md:pb-28">
         <FlowField className="absolute inset-0 z-0 h-full w-full" />
         <SteppedEdge />
         <div
           aria-hidden="true"
           className="absolute inset-0 z-[1] bg-[linear-gradient(180deg,rgba(4,12,26,0.62),rgba(3,9,20,0.78))]"
         />
+        {/* On the page's own grid, and straight onto the field. This was a
+            bordered panel at a narrower width than every section above it,
+            so the last thing on the page started at a left edge nothing else
+            used — and the headline, `mx-auto` inside a left-aligned block,
+            started at a third. The scrim already carries the contrast. */}
         <div
           data-scroll-reveal
-          className="relative z-[2] mx-auto max-w-[68rem] border border-white/15 bg-[var(--panel-deep)] px-6 py-16 text-left text-primary-foreground md:px-12 md:py-24"
+          className="relative z-[2] mx-auto max-w-[76rem] py-10 text-left text-primary-foreground md:py-16"
         >
           {/* A sparkle icon rocking back and forth on a four-second loop
               lived here. Sparkles are the universal badge for "an AI did
@@ -2463,7 +2378,7 @@ export function LandingRedesign() {
               `i` and the `t`. Display type wants tight leading right up until
               something has to be drawn between the lines, and then the leading
               is what has to give. */}
-          <h2 className="mx-auto mt-5 max-w-[17ch] font-display text-[clamp(1.9rem,4.6vw,4.4rem)] leading-[1.28] tracking-[-0.045em]">
+          <h2 className="mt-5 max-w-[17ch] font-display text-[clamp(1.9rem,4.6vw,4.4rem)] leading-[1.28] tracking-[-0.045em]">
             Turn{" "}
             <span data-verdict="vague" className="lp-verdict whitespace-nowrap">
               “I think I know it”
@@ -2483,8 +2398,6 @@ export function LandingRedesign() {
           </p>
         </div>
       </section>
-
-      <SignupNudge />
 
       <footer className="mx-auto flex max-w-[76rem] flex-wrap items-center gap-5 px-5 py-8 text-muted-foreground text-sm md:px-8">
         <span className="flex items-center gap-2 text-foreground">

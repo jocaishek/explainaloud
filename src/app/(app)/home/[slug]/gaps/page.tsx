@@ -359,7 +359,7 @@ export default async function GapReportPage({
        * than the bug. The picker above is a client component and dates every
        * session in the reader's own zone. */}
       {!wanted && ungraded && (
-        <p className="rounded-card border border-amber-500/30 bg-amber-500/[0.06] px-4 py-3 text-sm text-strong">
+        <p className="rounded-card border border-brand/25 bg-brand/[0.06] px-4 py-3 text-sm text-strong">
           Your most recent recording was never graded, so this is the last one
           that was.{" "}
           <Link
@@ -385,7 +385,7 @@ export default async function GapReportPage({
           because it is the thing the rest of the page is about. */}
       {session.question && segments.length === 0 && (
         <div className={cn(PANEL, "flex flex-col gap-1.5 p-5")}>
-          <span className="font-mono text-[10px] tracking-[0.14em] text-brand-ink uppercase">
+          <span className="font-medium text-brand-ink text-xs">
             You were asked
           </span>
           <p className="text-base leading-relaxed font-medium text-strong">
@@ -480,7 +480,7 @@ export default async function GapReportPage({
                 <ul className="flex flex-col gap-3">
                   {focused.gaps.map((gap) => (
                     <li key={gap.phrase} className={cn(PANEL, "p-4")}>
-                      <span className="font-mono text-[0.6rem] text-subtle uppercase tracking-[0.12em]">
+                      <span className="block font-medium text-subtle text-xs first-letter:uppercase">
                         {gap.category.replace(/_/g, " ")}
                       </span>
                       <p className="mt-1.5 font-medium text-sm text-strong">
@@ -579,11 +579,11 @@ export default async function GapReportPage({
                 </h2>
                 <div className="flex items-center gap-3 text-xs text-subtle">
                   <span className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-green-500" />
+                    <span className="size-2 rounded-full bg-ok" />
                     Accurate
                   </span>
                   <span className="flex items-center gap-1.5">
-                    <span className="size-2 rounded-full bg-red-500" />
+                    <span className="size-2 rounded-full bg-miss" />
                     Needs work
                   </span>
                 </div>
@@ -609,7 +609,7 @@ export default async function GapReportPage({
                         key={`${index}-${span.text.slice(0, 16)}`}
                         targetId={`weakness-${weakness.id}`}
                         title={span.issue ?? "Jump to this weakness"}
-                        className="rounded bg-red-500/10 text-red-600 transition-colors hover:bg-red-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500/50 dark:text-red-400"
+                        className="rounded bg-miss/10 text-miss transition-colors hover:bg-miss/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-miss/50"
                       >
                         {span.text}
                       </ScrollToTargetLink>
@@ -621,8 +621,7 @@ export default async function GapReportPage({
                       // biome-ignore lint/suspicious/noArrayIndexKey: transcript spans are positional
                       key={`${index}-${span.text.slice(0, 16)}`}
                       className={cn(
-                        status === "correct" &&
-                          "text-green-600 dark:text-green-400",
+                        status === "correct" && "text-ok",
                         // Vague is grey, not red: too woolly to check is not the
                         // same as wrong, and colouring it red says it is.
                         (status === "vague" || status === "neutral") &&
@@ -662,7 +661,7 @@ export default async function GapReportPage({
                   >
                     <span
                       aria-hidden
-                      className="mt-2 size-2 shrink-0 rounded-full bg-green-500"
+                      className="mt-2 size-2 shrink-0 rounded-full bg-ok"
                     />
                     {strength}
                   </li>
@@ -790,7 +789,7 @@ function WeaknessList({
                 // to find at a glance from the other side of the screen —
                 // the point of the click is "that phrase, this miss".
                 tone === "error" &&
-                  "data-highlighted:bg-red-500/[0.09] data-highlighted:ring-1 data-highlighted:ring-red-500/30",
+                  "data-highlighted:bg-miss/[0.09] data-highlighted:ring-1 data-highlighted:ring-miss/30",
                 tone !== "error" &&
                   "data-highlighted:bg-brand/[0.08] data-highlighted:ring-1 data-highlighted:ring-brand/25",
               )}
@@ -799,7 +798,7 @@ function WeaknessList({
                   a label reading "Missing Step" restates the heading and
                   reintroduces the tone the split exists to remove. */}
               {tone === "error" && (
-                <p className="text-xs font-medium text-red-600 capitalize dark:text-red-400">
+                <p className="text-xs font-medium text-miss first-letter:uppercase">
                   {item.category.replace(/_/g, " ")}
                 </p>
               )}
@@ -852,7 +851,7 @@ function QuestionTabs({
       aria-label="Questions in this interview"
       className="flex flex-col gap-2"
     >
-      <span className="font-mono text-[10px] tracking-[0.14em] text-subtle uppercase">
+      <span className="font-medium text-strong text-xs">
         This interview · {segments.length} questions
       </span>
       <div className="flex flex-wrap gap-2">

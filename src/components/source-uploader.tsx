@@ -3,7 +3,12 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { useRef, useState } from "react";
 import { requestJson } from "~/lib/api-client";
-import { ACCEPT_ATTRIBUTE, sourceLimitFor } from "~/lib/uploads";
+import {
+  ACCEPT_ATTRIBUTE,
+  MAX_SOURCE_BYTES,
+  MAX_SOURCE_LABEL,
+  sourceLimitFor,
+} from "~/lib/uploads";
 import { cn } from "~/lib/utils";
 
 const EASE = [0.23, 1, 0.32, 1] as const;
@@ -79,24 +84,25 @@ export function SourceUploader({
         );
         break;
       }
+      // Refused here rather than sent: past the platform's body cap the route
+      // never sees the request, and the platform's answer is not ours to word.
+      if (file.size > MAX_SOURCE_BYTES) {
+        failures.push(`${file.name} is over the ${MAX_SOURCE_LABEL} limit.`);
+        continue;
+      }
       setBusy(file.name);
       const body = new FormData();
       body.set("file", file);
 
-      try {
-        const response = await fetch(`/api/courses/${courseId}/sources`, {
-          method: "POST",
-          body,
-        });
-        const json = await response.json();
-        if (!response.ok) {
-          failures.push(`${file.name}: ${json.error ?? "upload failed"}`);
-        } else {
-          current = [...current, json.source];
-          publish(current);
-        }
-      } catch {
-        failures.push(`${file.name}: couldn't reach the server`);
+      const result = await requestJson<{ source: SourceItem }>(
+        `/api/courses/${courseId}/sources`,
+        { method: "POST", body },
+      );
+      if (result.ok) {
+        current = [...current, result.data.source];
+        publish(current);
+      } else {
+        failures.push(`${file.name}: ${result.error}`);
       }
     }
 
@@ -180,8 +186,8 @@ export function SourceUploader({
             {atLimit
               ? "Delete a source to add another."
               : unlimited
-                ? "PDF, Word, or text. Up to 5 MB each"
-                : `PDF, Word, or text. Up to 5 MB each · ${sources.length} of ${sourceLimit} used`}
+                ? `PDF, Word, or text. Up to ${MAX_SOURCE_LABEL} each`
+                : `PDF, Word, or text. Up to ${MAX_SOURCE_LABEL} each · ${sources.length} of ${sourceLimit} used`}
           </p>
         </div>
 
@@ -231,7 +237,7 @@ export function SourceUploader({
               aria-label={`Preview ${source.filename}`}
               onClick={() => void openPreview(source.id)}
               disabled={previewing === source.id}
-              className="shrink-0 rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase transition-colors hover:bg-surface hover:text-strong disabled:opacity-50"
+              className="shrink-0 rounded-control px-1.5 py-0.5 font-medium text-xs text-subtle transition-colors hover:bg-surface hover:text-strong disabled:opacity-50"
             >
               {previewing === source.id ? "Opening…" : "Preview"}
             </button>
@@ -263,7 +269,7 @@ export function SourceUploader({
                 type="button"
                 aria-label={`Remove ${source.filename}`}
                 onClick={() => setConfirmRemoveId(source.id)}
-                className="shrink-0 rounded-control px-1.5 py-0.5 font-mono text-[10px] tracking-[0.1em] text-destructive uppercase transition-colors hover:bg-destructive/10"
+                className="shrink-0 rounded-control px-1.5 py-0.5 font-medium text-xs text-destructive transition-colors hover:bg-destructive/10"
               >
                 Remove
               </button>
@@ -305,7 +311,7 @@ export function SourceUploader({
                 <button
                   type="button"
                   onClick={() => setPreview(null)}
-                  className="shrink-0 rounded-control px-2 py-1 font-mono text-[10px] tracking-[0.1em] text-subtle uppercase hover:text-strong"
+                  className="shrink-0 rounded-control px-2 py-1 font-medium text-xs text-subtle hover:text-strong"
                 >
                   Close
                 </button>
