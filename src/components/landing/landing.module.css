@@ -61,9 +61,12 @@
   transition: width 600ms var(--ease);
 }
 .spin > span {
+  /* Shrunk only when the topic is wider than the line (see topic-spinner). */
+  font-size: calc(1em * var(--fit, 1));
+  line-height: 1.12;
   position: absolute;
   left: 50%;
-  top: 0;
+  bottom: 0;
   translate: -50% 0;
   white-space: nowrap;
   transition:
@@ -78,8 +81,15 @@
   transform: translateY(-72%);
   opacity: 0;
 }
+/* Measures a topic at headline size. Fixed and parked off the left edge:
+   an absolutely positioned ruler holding "the French Revolution" at 44px
+   reached past the right edge of a phone and made the whole page scroll
+   sideways, and an element off the left edge adds no scrollable area. */
 .ruler {
-  position: absolute;
+  position: fixed;
+  top: 0;
+  left: 0;
+  transform: translateX(-100%);
   visibility: hidden;
   white-space: pre;
   font: inherit;
