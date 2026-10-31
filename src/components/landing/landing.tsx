@@ -164,6 +164,41 @@ export function Landing() {
             />
           </a>
         </section>
+
+        {/* The close: one question and the one action, after everything the
+            page has to show. Light like the rest of the page; the card is
+            the only thing that marks it as an ending. */}
+        <section
+          aria-labelledby="close-heading"
+          className="mx-auto mb-24 max-w-[1240px] px-6 max-[820px]:mb-16"
+        >
+          <div className="flex flex-col items-center rounded-card border border-border bg-card px-6 py-16 text-center shadow-rest max-[820px]:py-12">
+            <h2
+              id="close-heading"
+              className="max-w-[18ch] font-normal text-[clamp(32px,4.4vw,56px)] text-foreground leading-[1.08] tracking-[-0.035em]"
+            >
+              What are you explaining tonight?
+            </h2>
+            <p className="mt-4 max-w-[34ch] text-base text-muted-foreground leading-6">
+              Upload your notes, say it out loud, and see what you missed
+            </p>
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-6">
+              <Link
+                href="/signup"
+                className="inline-flex h-12 items-center gap-2 rounded-pill bg-accent-solid px-5 font-medium text-accent-contrast text-base transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-accent-solid-hover active:scale-[0.98]"
+              >
+                Start explaining
+                <ArrowUpRight aria-hidden="true" className="size-4" />
+              </Link>
+              <Link
+                href="/login"
+                className="text-base text-foreground transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-muted-foreground"
+              >
+                Log in
+              </Link>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer className="mx-auto max-w-[1240px] px-6 pb-10">
