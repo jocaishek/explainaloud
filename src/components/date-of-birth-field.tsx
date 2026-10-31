@@ -1,36 +1,31 @@
 "use client";
 
+import { ChevronDown } from "lucide-react";
 import { useId, useState } from "react";
-import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { cn } from "~/lib/utils";
 
 /**
- * Day, month and year as three fields — not a calendar.
+ * Month, day and year as three dropdowns — not a calendar, and no typing.
  *
  * **Why the calendar went.** Both date-of-birth inputs were
  * `<input type="date">`, whose native picker opens on today and steps a month
  * at a time. Reaching a birthday twenty years back is roughly 240 presses of
- * the same arrow, and the reported symptom — "it can only move between
- * months" — is that arrow being the only obvious control. Some pickers hide
- * year selection behind the header, some behind a spinner, and on a phone it
- * varies by OS. Adding a `min` improves the range but does not change the
- * shape of the problem.
+ * the same arrow. A calendar is for *choosing* a date; nobody browses for
+ * their own birthday.
  *
- * The deeper point is that a calendar is the wrong control for this question.
- * A calendar is for *choosing* a date — browsing, comparing, seeing which day
- * of the week something falls on. Nobody browses for their own birthday. They
- * know it, and the fastest input is the one that lets them type it, which is
- * what this is. It is also why every well-tested government form does it this
- * way rather than with a picker.
+ * **Why the typed fields went.** The version after that typed the day and the
+ * year, which invited "3" vs "03", a two-digit year, and a numeric keypad that
+ * hides the Continue button on a phone. Three selects answer the same question
+ * with nothing to mistype, and on a phone each one opens the OS's own wheel.
  *
- * Month is a select of names rather than a number, which removes the other
- * quiet failure here: `03/04` is March the fourth to an American and the third
- * of April to almost everybody else, and this app has no way to know which the
- * reader meant.
+ * Month is a list of names rather than numbers: `03/04` is March the fourth to
+ * an American and the third of April to almost everybody else.
  *
- * Emits the same `yyyy-mm-dd` string the old input did, so `dateOfBirthError`
- * and the `date_of_birth` column are untouched. Incomplete input emits `""`,
- * which that validator already reports as "Enter your date of birth."
+ * Emits the same `yyyy-mm-dd` string as before, so `dateOfBirthError` and the
+ * `date_of_birth` column are untouched. Incomplete input emits `""`, which that
+ * validator reports as "Enter your date of birth." An impossible day for the
+ * month (31 February) is emitted as typed and left to the validator to name.
  */
 
 const MONTHS = [
@@ -48,12 +43,35 @@ const MONTHS = [
   "December",
 ] as const;
 
+const DAYS = Array.from({ length: 31 }, (_, i) =>
+  String(i + 1).padStart(2, "0"),
+);
+
+/** Nobody younger than this is signing up; the validator enforces the real floor. */
+const YOUNGEST_YEARS = 10;
+const YEAR_SPAN = 100;
+
 /** Split a stored `yyyy-mm-dd` back into its three fields. */
 function partsOf(iso: string | undefined) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? "");
   if (!match) return { year: "", month: "", day: "" };
   return { year: match[1], month: match[2], day: match[3] };
 }
+
+function yearOptions(keep: string) {
+  const newest = new Date().getFullYear() - YOUNGEST_YEARS;
+  const years = Array.from({ length: YEAR_SPAN }, (_, i) => String(newest - i));
+  /* A stored date outside the window still has to show as selected, or the
+     field would silently read as empty when editing an existing profile. */
+  if (keep && !years.includes(keep)) {
+    years.push(keep);
+    years.sort((a, b) => Number(b) - Number(a));
+  }
+  return years;
+}
+
+const SELECT_CLASS =
+  "h-12 w-full min-w-0 cursor-pointer appearance-none rounded-control border border-input bg-card pr-10 pl-3.5 text-base text-foreground outline-none transition-[border-color,box-shadow] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:border-accent-solid focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] aria-invalid:border-destructive motion-reduce:transition-none dark:bg-input/30";
 
 export function DateOfBirthField({
   name,
@@ -74,100 +92,99 @@ export function DateOfBirthField({
   className?: string;
 }) {
   const [parts, setParts] = useState(() => partsOf(defaultValue));
+  const [years] = useState(() => yearOptions(parts.year));
   const dayId = useId();
   const monthId = useId();
   const yearId = useId();
 
+  function emit(p: typeof parts) {
+    return p.year && p.month && p.day ? `${p.year}-${p.month}-${p.day}` : "";
+  }
+
   function update(next: Partial<typeof parts>) {
     const merged = { ...parts, ...next };
     setParts(merged);
-    /* Zero-padded on the way out, so a typed "3" becomes "03" and the
-       validator's strict `\d{2}` pattern matches. Only a complete date is
-       emitted; anything partial is "" rather than a half-built string that
-       would read as a real but wrong date. */
-    const complete =
-      merged.year.length === 4 && merged.month !== "" && merged.day !== "";
-    onChange?.(
-      complete
-        ? `${merged.year}-${merged.month}-${merged.day.padStart(2, "0")}`
-        : "",
-    );
+    // Only a complete date is emitted; anything partial is "" rather than a
+    // half-built string that would read as a real but wrong date.
+    onChange?.(emit(merged));
   }
 
-  const value =
-    parts.year.length === 4 && parts.month && parts.day
-      ? `${parts.year}-${parts.month}-${parts.day.padStart(2, "0")}`
-      : "";
+  const value = emit(parts);
+
+  const fields = [
+    {
+      id: monthId,
+      label: "Month",
+      key: "month" as const,
+      autoComplete: "bday-month",
+      options: MONTHS.map((label, i) => ({
+        value: String(i + 1).padStart(2, "0"),
+        label,
+      })),
+    },
+    {
+      id: dayId,
+      label: "Day",
+      key: "day" as const,
+      autoComplete: "bday-day",
+      options: DAYS.map((d) => ({ value: d, label: String(Number(d)) })),
+    },
+    {
+      id: yearId,
+      label: "Year",
+      key: "year" as const,
+      autoComplete: "bday-year",
+      options: years.map((y) => ({ value: y, label: y })),
+    },
+  ];
 
   return (
-    <div className={cn("flex flex-wrap gap-3", className)}>
+    <div
+      className={cn(
+        "grid grid-cols-[1.4fr_1fr_1fr] gap-3 max-sm:grid-cols-[1.3fr_1fr_1.1fr] max-sm:gap-2",
+        className,
+      )}
+    >
       {name && <input type="hidden" name={name} value={value} readOnly />}
 
-      <div className="flex w-[4.5rem] flex-col gap-1.5">
-        <label htmlFor={dayId} className="font-medium text-strong text-xs">
-          Day
-        </label>
-        <Input
-          id={dayId}
-          /* `inputMode` rather than `type="number"`: a number input on a
-             birthday brings a spinner nobody wants and silently accepts
-             exponent notation. This gets the numeric keypad on a phone
-             without either. */
-          inputMode="numeric"
-          autoComplete="bday-day"
-          maxLength={2}
-          placeholder="DD"
-          aria-invalid={invalid}
-          aria-describedby={describedBy}
-          value={parts.day}
-          onChange={(e) =>
-            update({ day: e.target.value.replace(/\D/g, "").slice(0, 2) })
-          }
-          className="h-11 text-base"
-        />
-      </div>
-
-      <div className="flex min-w-[8rem] flex-1 flex-col gap-1.5">
-        <label htmlFor={monthId} className="font-medium text-strong text-xs">
-          Month
-        </label>
-        <select
-          id={monthId}
-          autoComplete="bday-month"
-          aria-invalid={invalid}
-          aria-describedby={describedBy}
-          value={parts.month}
-          onChange={(e) => update({ month: e.target.value })}
-          className="h-11 rounded-control border border-input bg-card px-3 text-base text-strong"
-        >
-          <option value="">Month</option>
-          {MONTHS.map((label, i) => (
-            <option key={label} value={String(i + 1).padStart(2, "0")}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      <div className="flex w-[6rem] flex-col gap-1.5">
-        <label htmlFor={yearId} className="font-medium text-strong text-xs">
-          Year
-        </label>
-        <Input
-          id={yearId}
-          inputMode="numeric"
-          autoComplete="bday-year"
-          maxLength={4}
-          placeholder="YYYY"
-          aria-invalid={invalid}
-          aria-describedby={describedBy}
-          value={parts.year}
-          onChange={(e) =>
-            update({ year: e.target.value.replace(/\D/g, "").slice(0, 4) })
-          }
-          className="h-11 text-base"
-        />
-      </div>
+      {fields.map((field) => (
+        <div key={field.key} className="flex min-w-0 flex-col gap-2">
+          <Label htmlFor={field.id} className="text-foreground">
+            {field.label}
+          </Label>
+          <div className="relative">
+            <select
+              id={field.id}
+              autoComplete={field.autoComplete}
+              aria-invalid={invalid}
+              aria-describedby={describedBy}
+              value={parts[field.key]}
+              onChange={(e) => update({ [field.key]: e.target.value })}
+              className={cn(
+                SELECT_CLASS,
+                parts[field.key] === "" && "text-muted-foreground",
+              )}
+            >
+              <option value="" disabled>
+                {field.label}
+              </option>
+              {field.options.map((option) => (
+                <option
+                  key={option.value}
+                  value={option.value}
+                  className="text-foreground"
+                >
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDown
+              aria-hidden
+              className="-translate-y-1/2 pointer-events-none absolute top-1/2 right-3.5 size-4 text-muted-foreground"
+            />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

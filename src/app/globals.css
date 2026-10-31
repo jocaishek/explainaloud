@@ -1,369 +1,5 @@
 @import "tailwindcss";
 
-/* The landing's blue is sampled off the shore photograph rather than picked:
- * its average is #30466f, its deep water #1b2052, its foam #95b8cc. Chrome
- * that sits over a photograph has to come from the photograph or it reads as
- * two products stapled together, which is what the forest green was doing to
- * the navy.
- *
- * The three verdict colours are deliberately untouched. They are not brand —
- * they mean correct, missed and vague, and they have to mean that on both
- * sides of sign-in. Now that the accent is blue they stop competing with it
- * and read purely as data, which is the one good thing about this change. */
-main.lp-v2 {
-  --background: #eceff5;
-  --foreground: #16253d;
-  --card: #fcfdff;
-  --panel-deep: #142744;
-  --card-foreground: #16253d;
-  --muted: #e0e5ee;
-  --muted-foreground: #5b6a82;
-  --primary: #1d3a63;
-  --primary-foreground: #eef2f8;
-  --border: rgba(21, 40, 68, 0.18);
-  --brand: #ffffff;
-  --brand-ink: #2b5c8f;
-  --brand-deep: #1d3a63;
-  --brand-foreground: #122540;
-  --accent-solid: #fbfcff;
-  --accent-solid-hover: #e7eef8;
-  --strong: #16253d;
-  --ok: #2f9b68;
-  --ok-light: #bfe4cf;
-  --vague: #c68a2d;
-  --vague-light: #f0d8ad;
-  --miss: #c94f43;
-  --miss-light: #efc1bb;
-
-  /* The same three verdicts, at the weight running text needs on the dark
-     ground.
-     The `-light` tints are display stops: at 60px in the headline they read as
-     green and red without argument, and at the size of a sentence they read as
-     tinted white — which is the one thing they cannot be where the whole point
-     is that a word changes colour as it is marked. The full stops are the
-     other extreme, dark enough against near-black to lose their hue.
-     These sit between: unmistakably the same green, amber and red, measured on
-     the hero ground at 9.7:1, 9.1:1 and 6.4:1. Three more values in a palette
-     that is meant to be reserved, and they earn it by being the same three
-     meanings rather than a fourth. */
-  --ok-spoken: #6fce9d;
-  --vague-spoken: #e2b463;
-  --miss-spoken: #e58a7e;
-
-  /* Restated, because this block forces light surfaces regardless of the
-     reader's theme. Without it, somebody browsing in dark mode gets the lifted
-     night flame on a near-white card, which is the one place it washes out. */
-  --flame: #ea580c;
-  --flame-core: #fdba74;
-  --flame-glow: rgba(234, 88, 12, 0.3);
-}
-
-/* One word of the hero's spoken line, arriving.
- *
- * A keyframe rather than a transition, which is the opposite of the rule and
- * correct for exactly this case: each span mounts once, plays once and is never
- * retargeted, so there is nothing for an interruptible transition to interrupt.
- * `both` holds the end state after it finishes.
- *
- * It is here rather than in the component because the component is a client
- * module rendering thirty of these at a time, and thirty `motion` elements each
- * running their own rAF loop over a WebGL canvas is how the hero dropped frames
- * the first time. */
-@keyframes lp-said-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-
-.lp-said {
-  animation: lp-said-in 180ms linear both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-said {
-    animation: none;
-  }
-}
-
-/* The abstract field, not a photograph of anything.
- *
- * A reviewer asked why there was an ocean behind the headline, and the answer
- * turned out to be that there was: `main` still ships a night-shore photograph,
- * because the abstract has been sitting unmerged. The complaint was about a
- * literal sea, not about this.
- *
- * Which matters, because the two fail differently. A photograph of a beach has
- * to be justified — it is a place, and a reader asks what the place has to do
- * with rehearsing a talk. A field of colour is a ground: it carries the type
- * and gets out of the way, the same job a sheet of paper does.
- *
- * Cropped past the source's logo badge (ends y=65), its footer (starts y=1080)
- * and a hard vertical seam at x=168..186 where column brightness jumps 36 to
- * 164. Blur 0.8 before the upscale, only enough to take the source WebP's block
- * artifacts off — more than that destroys the specular bands, which are the
- * only reason the image is worth having.
- */
-/* Both the descendant shape the landing uses and the same-element shape the
-   auth screens use (`main.lp-v2.lp-atmosphere`) — the latter got no ground at
-   all under the descendant-only selector, which the water shader used to
-   paper over. */
-:is(.lp-v2 .lp-atmosphere, .lp-v2.lp-atmosphere) {
-  isolation: isolate;
-  /* The ground under the generated field, and the whole picture when the
-     field cannot run. Not the WebP any more: a still image behind this
-     headline has now been rejected three times, once as a photograph of a
-     place nobody could connect to the product and twice as an abstract that
-     read as stock. What is here instead is the same palette the shader
-     resolves to, laid out in the same composition, so the fallback is a
-     deliberate frame rather than a blank rectangle waiting for a script. */
-  background:
-    radial-gradient(
-      120% 90% at 78% 28%,
-      rgba(48, 106, 176, 0.55) 0%,
-      rgba(20, 55, 108, 0.4) 34%,
-      rgba(4, 14, 34, 0) 72%
-    ),
-    radial-gradient(
-      90% 70% at 92% 78%,
-      rgba(24, 74, 138, 0.4) 0%,
-      rgba(4, 12, 28, 0) 66%
-    ),
-    linear-gradient(112deg, #030a18 0%, #071633 46%, #0d2a52 100%);
-}
-
-/* Heaviest where the display type sits, lifting through the middle so the
- * artwork is actually visible, back over the lower third where the buttons
- * and the tagline are. */
-/* Two scrims, because the hero has two jobs on two axes.
- *
- * The horizontal one holds the left column dark so the headline has a bed —
- * which is what the reference itself does: an empty navy third with the type
- * in it, and the artwork to the right of it. It is gone by 62%, so the swirl
- * is never touched.
- *
- * The vertical one is only for the bottom band, where the product panel and
- * the tagline sit over whatever the crop happens to put behind them. */
-/* Two scrims on two axes. The horizontal one holds the left column dark so
- * the headline has a bed — the artwork's own composition does the same, an
- * empty field with the type in it and the picture to the right of it. It is
- * gone by 64%, so the swirl itself is never touched. The vertical one is only
- * for the bottom band, under the product panel. */
-/* One axis on a phone, two on a desktop.
- *
- * The horizontal scrim exists to hold a left-hand column dark so the headline
- * has a bed while the artwork sits to the right of it. That composition only
- * exists above `lg`. On a narrow screen the headline is centred over the full
- * width, so a gradient that is 88% opaque at the left edge and clear by 64%
- * is simply a wash over the whole frame, and it was most of why the field was
- * invisible on a phone. Below the breakpoint only the vertical one runs. */
-/* The scrim over the hero's water.
- *
- * It used to clear almost completely through the middle — 0.06 at 42% — and on
- * a wide screen the horizontal pass fell to zero by 64%, which is exactly where
- * the panel and the mark sit. The field is a live fluid, so what that produced
- * was the busiest part of the page directly behind the thing the page is
- * trying to get read.
- *
- * These values are the closing section's, which nobody has ever complained
- * about: the water is present, it moves, and it stays behind the type instead
- * of competing with it. Same field, same ground, same treatment at both ends
- * of the page — which is the argument that section already makes for itself. */
-.lp-v2 .lp-hero-scrim {
-  background: linear-gradient(
-    180deg,
-    rgba(4, 12, 26, 0.55) 0%,
-    rgba(4, 12, 26, 0.42) 42%,
-    rgba(4, 12, 26, 0.55) 74%,
-    rgba(3, 9, 20, 0.72) 100%
-  );
-}
-
-@media (min-width: 1024px) {
-  .lp-v2 .lp-hero-scrim {
-    /* The horizontal pass still favours the left, because that is where the
-       headline is and it needs the most protection. What it no longer does is
-       reach zero: 0.28 on the right keeps the field readable as water without
-       letting it fight the panel sitting on top of it. */
-    background:
-      linear-gradient(
-        90deg,
-        rgba(3, 10, 24, 0.9) 0%,
-        rgba(3, 10, 24, 0.78) 30%,
-        rgba(3, 10, 24, 0.46) 50%,
-        rgba(3, 10, 24, 0.28) 64%
-      ),
-      linear-gradient(
-        180deg,
-        rgba(4, 12, 26, 0.5) 0%,
-        rgba(4, 12, 26, 0.36) 42%,
-        rgba(4, 12, 26, 0.5) 74%,
-        rgba(3, 9, 20, 0.7) 100%
-      );
-  }
-}
-
-.lp-v2 .lp-sky-nav {
-  background: linear-gradient(
-    180deg,
-    rgba(9, 22, 44, 0.92),
-    rgba(9, 22, 44, 0.54)
-  );
-  transition:
-    background 160ms cubic-bezier(0.23, 1, 0.32, 1),
-    color 160ms cubic-bezier(0.23, 1, 0.32, 1),
-    border-color 160ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-html:has(main.lp-v2) {
-  scroll-behavior: smooth;
-}
-
-.lp-v2 [id] {
-  scroll-margin-top: 4rem;
-}
-
-.lp-v2 .lp-nav-link {
-  position: relative;
-  padding-block: 0.45rem;
-  color: rgba(238, 242, 248, 0.76);
-}
-
-.lp-v2 .lp-nav-link::after {
-  position: absolute;
-  right: 0;
-  bottom: 0.12rem;
-  left: 0;
-  height: 1px;
-  background: currentColor;
-  content: "";
-  transform: scaleX(0);
-  transform-origin: right;
-  transition: transform 300ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-
-.lp-v2 .lp-nav-link:hover {
-  color: var(--primary-foreground);
-}
-
-.lp-v2 .lp-nav-link:hover::after,
-.lp-v2 .lp-nav-link:focus-visible::after {
-  transform: scaleX(1);
-  transform-origin: left;
-}
-
-/* Past the hero the bar floats over warm stock, and a green wash there reads
- * as a tint someone forgot to remove rather than as the same bar. Blur is
- * allowed here and nowhere else on the page: this is the one element that
- * genuinely sits over content scrolling underneath it. */
-.lp-v2 .lp-sky-nav.is-light {
-  background: rgba(255, 255, 255, 0.94);
-  /* No `saturate()`. It was pulling colour out of whatever scrolled beneath
-     and pushing it into the bar, which is exactly the tint this is meant not
-     to have. Blur alone is what makes it read as glass. */
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-color: var(--border);
-  color: var(--strong);
-}
-
-/* On touch devices the blur goes: re-filtering the strip under a fixed bar on
- * every scroll frame is a measurable slice of mobile scroll jank, and behind
- * 94% opaque white the blur is doing almost nothing a slightly denser white
- * doesn't. Desktop keeps the glass. */
-@media (pointer: coarse) {
-  .lp-v2 .lp-sky-nav.is-light {
-    background: rgba(255, 255, 255, 0.97);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-  }
-}
-
-.lp-v2 .lp-sky-nav.is-light .lp-nav-link {
-  color: var(--muted-foreground);
-}
-
-.lp-v2 .lp-sky-nav.is-light .lp-nav-link:hover {
-  color: var(--strong);
-}
-
-.lp-v2 .lp-sky-nav.is-light .lp-nav-brand,
-.lp-v2 .lp-sky-nav.is-light .lp-nav-login {
-  color: var(--strong);
-}
-
-/* The one inverted control has to invert with it, or it disappears into the
- * stock the moment the bar turns light. */
-.lp-v2 .lp-sky-nav.is-light .lp-nav-cta {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--primary-foreground);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html:has(main.lp-v2) {
-    scroll-behavior: auto;
-  }
-}
-
-:is(.lp-v2 .lp-atmosphere, .lp-v2.lp-atmosphere)::before {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
-  content: "";
-  opacity: 0.13;
-  pointer-events: none;
-  mix-blend-mode: soft-light;
-}
-
-/* A radial glow that tracked `--cursor-x` / `--cursor-y` lived here. Once the
- * pointer effects went, nothing set those variables, so it froze into a
- * blurred orb parked behind the headline — the exact decoration `design.md`
- * bans by name. Removed rather than re-pointed. */
-
-.lp-v2 .lp-verdict-ok,
-.lp-v2 .lp-verdict-vague {
-  font-style: italic;
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  background-size: 100% 0.08em;
-}
-
-.lp-v2 .lp-reveal-ok {
-  color: var(--ok-light);
-  text-decoration: underline;
-  text-decoration-thickness: 0.07em;
-  text-underline-offset: 0.12em;
-}
-
-.lp-v2 .lp-reveal-vague {
-  color: var(--vague-light);
-  text-decoration: underline;
-  text-decoration-thickness: 0.07em;
-  text-underline-offset: 0.12em;
-}
-
-.lp-v2 .lp-reveal-range:focus-visible {
-  opacity: 1;
-  height: 0.2rem;
-  top: 50%;
-  outline: 2px solid var(--foreground);
-  outline-offset: 4px;
-}
-
-.lp-v2 .lp-verdict-ok {
-  color: var(--ok);
-  background-image: linear-gradient(var(--ok), var(--ok));
-}
-
-.lp-v2 .lp-verdict-vague {
-  color: var(--vague);
-  background-image: linear-gradient(var(--vague), var(--vague));
-}
-
 /* `dark:` follows the class, not the operating system.
  *
  * Tailwind v4's default `dark:` variant is `prefers-color-scheme`, and this
@@ -383,432 +19,150 @@ html:has(main.lp-v2) {
  * the utility it modifies. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Light theme. The default everywhere, marketing page included: the
-   transmission-script world it is built in is printed paper with hard rules,
-   and it only reads on a light ground. */
+/* Ink and paper, on both sides of the sign-in.
+ *
+ * One neutral ramp, a near-black ink as the only action colour, and colour
+ * kept for the things that mean something: the three verdicts and the streak
+ * flame. The landing, the auth screens and the app all read these same values;
+ * `.register-app` no longer answers any of them, it only sets the app's
+ * spacing rhythm. See `.claude/rules/design.md`.
+ */
 :root {
-  --background: #fbfbfb;
-  --foreground: #3f3f46;
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a;
+  --background: #f8f9fa;
+  --foreground: #141517;
+  --muted: #f2f3f5;
+  --muted-foreground: #6a6d72;
   --card: #ffffff;
-  --card-foreground: #3f3f46;
+  --card-foreground: #141517;
   --popover: #ffffff;
-  --popover-foreground: #3f3f46;
-  --border: rgba(9, 9, 11, 0.1);
-  --input: rgba(9, 9, 11, 0.12);
-  --primary: #18181b;
+  --popover-foreground: #141517;
+  /* Hairlines are the ink at 8%, so an edge reads as an edge rather than as
+     a drawn box. Inputs get a little more, because they have to be found. */
+  --border: rgba(20, 21, 23, 0.08);
+  --input: rgba(20, 21, 23, 0.14);
+  --primary: #141517;
   --primary-foreground: #ffffff;
-  --secondary: #f4f4f5;
-  --secondary-foreground: #18181b;
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
+  --secondary: #f2f3f5;
+  --secondary-foreground: #141517;
+  --accent: #f2f3f5;
+  --accent-foreground: #141517;
   --destructive: oklch(0.577 0.245 27.325);
-  --ring: #2b5c8f;
-  /* Brand text on a near-white surface, in the deep stop rather than the
-     luminous one. This was `#fbbf24` — amber, carried over from the dark
-     register, and about 1.7:1 on white, so any word set in it was very nearly
-     invisible. The deep stop clears 4.8:1 and is the same colour the app
-     register already answers this token with. */
-  --brand-ink: #2b5c8f;
-  /* The three stops as variables rather than as literals in `@theme`.
-     Twenty-five files across the app already ask for `bg-brand-deep` or
-     `text-brand-ink` and are right to — those names say what the colour is
-     for. Making them indirect is what lets the app register answer with its
-     own accent without a rename touching every one of those files, and it is
-     why there is no mass find-and-replace in this change. */
-  --brand: #1d3a63;
-  --brand-deep: #16253d;
-  /* The gold at the top of the ramp. It is what the landing's glass edges and
-     ground glows are made of, and the app now reads its accent from this end
-     of the ramp rather than the red end — so it needs a name on both sides. */
-  --brand-high: #9cc8f2;
-  /* Dark ink on the sunset, not white. #f97316 is a light, luminous colour —
-     white type on it sits at 2.6:1, and the label on the one button somebody
-     is meant to press cannot be the least readable text on the page. */
-  --brand-foreground: #eef2f8;
+  --ring: #141517;
 
-  /* Strong/among-text pairs used across the app so a component never has to
-     hardcode a hex to get "brighter than body copy" or "dimmer than it". */
-  --strong: #18181b;
-  --subtle: #71717a;
-  --surface: rgba(9, 9, 11, 0.04);
-  --surface-border: rgba(9, 9, 11, 0.08);
+  /* The brand names are kept as indirections because twenty-odd files ask
+     for `bg-brand-deep` or `text-brand-ink`, and those names still say what
+     the colour is for. The answer is the ink now; there is no second hue. */
+  --brand: #141517;
+  --brand-deep: #141517;
+  --brand-high: #4a4d52;
+  --brand-ink: #141517;
+  --brand-foreground: #ffffff;
 
-  /* The three verdicts, and the only colours in the product that are neither
-     brand nor ink. They are reserved: green means the claim was correct, red
-     means a step was missed, amber means it was said but not in a checkable
-     form. Each clears 4.5:1 as text on both the app background and the
-     landing page's stock.
+  --strong: #141517;
+  --subtle: #6a6d72;
+  --surface: rgba(20, 21, 23, 0.04);
+  --surface-border: rgba(20, 21, 23, 0.08);
 
-     Declared at the root rather than inside the landing page's own block,
-     because they mean the same thing on both sides of the sign-in and a pace
-     chart in the app has to be able to say "racing" in the same amber the
-     transcript uses for "vague". */
-  --ok: #0f7a3d;
-  --miss: #c4271c;
-  --vague: #96600a;
+  /* The three verdicts: correct, said but not checkably, never reached.
+     Reserved, and each clears 4.5:1 as text on the page and on a card. */
+  --ok: #1f7a50;
+  --miss: #b23b30;
+  --vague: #8a5a12;
 
-  /* The streak flame. One more reserved colour, declared here for the same
-     reason the verdicts are: it means the same thing on both sides of the
-     sign-in, so the flame somebody sees on the landing page is the flame they
-     earn afterwards.
-
-     **It is orange, and it is deliberately not the amber verdict.** Amber
-     already carries a judgement — said, but not in a checkable form — and the
-     two must never be confusable, because one of them appears in a marked
-     transcript. So this is a saturated red-orange rather than the muted gold
-     `--vague` is: at a glance, in the same view, they read as different
-     things rather than as two weights of one thing. The core is a lighter
-     orange, not a yellow, for the same reason.
-
-     Nothing but the streak may use it. That is the condition on which a
-     product with a reserved palette gets to add a colour at all. */
+  /* The streak flame, the one colour that is not a verdict. Red-orange, so it
+     can never be mistaken for the tan of `--vague` in the same view. Nothing
+     but the streak may use it. */
   --flame: #ea580c;
   --flame-core: #fdba74;
   --flame-glow: rgba(234, 88, 12, 0.3);
-}
 
-/* Dark theme — the original #121212 canvas.
- *
- * **Cards have to be visibly cards.** #171717 on #121212 is five points of
- * luminance, which is not a step: on screen every panel dissolved into the
- * page and the whole app read as one undifferentiated dark field with text
- * floating on it. That flatness is most of what makes a dark interface look
- * unfinished, and it is the difference between this and the dark tools it
- * gets compared to — theirs separate ground from surface clearly enough that
- * you can see where one panel stops and the next begins.
- *
- * So the card moves up and the ground stays put, which keeps every existing
- * contrast ratio against `--background` intact while giving the panels an
- * edge you can actually see. The border lifts with it for the same reason: a
- * 0.1 white hairline on a surface this dark is a rumour. */
-.dark {
-  --background: #121212;
-  --foreground: #a1a1aa;
-  --muted: #232323;
-  --muted-foreground: #71717a;
-  --card: #1d1d1d;
-  --card-foreground: #a1a1aa;
-  --popover: #1d1d1d;
-  --popover-foreground: #a1a1aa;
-  --border: rgba(255, 255, 255, 0.14);
-  --input: rgba(255, 255, 255, 0.1);
-  --primary: #ffffff;
-  --primary-foreground: #121212;
-  --secondary: #1e1e1e;
-  --secondary-foreground: #ffffff;
-  --accent: #1e1e1e;
-  --accent-foreground: #ffffff;
-  --destructive: oklch(0.637 0.237 25.331);
-  --ring: #9cc8f2;
-  /* Brand text on a near-black surface, lightened.
-
-     The deep stop is dark enough to carry a white label and therefore too
-     dark to be one: as small text on #121212 it is the wrong side of the
-     4.5:1 a paragraph needs. This tint of the same hue clears it without
-     reading as a different colour. `#8f8bff` was the ultramarine version of
-     exactly this decision, left behind when the accent changed. */
-  --brand-ink: #9cc8f2;
-
-  --strong: #ffffff;
-  --subtle: #8b8b93;
-  --surface: rgba(255, 255, 255, 0.06);
-  --surface-border: rgba(255, 255, 255, 0.12);
-
-  /* One stop up, for the same reason `--brand-ink` moves: a mid-weight orange
-     that is vivid on paper is a brown smudge on carbon. */
-  --flame: #fb7a33;
-  --flame-core: #fed7aa;
-  --flame-glow: rgba(251, 122, 51, 0.26);
-}
-
-/* ---------------------------------------------------------------------------
- * The app register.
- *
- * The landing page and the signed-in app are two visual registers on purpose
- * (see `.claude/rules/design.md`). The landing is a monument: photocopy stock,
- * hard hairlines, no card edges, a serif at display size, and three colours
- * that all mean something. The app is a tool somebody sits inside for twenty
- * minutes, where legibility and calm beat impact.
- *
- * The mistake to avoid here — and the one the first attempt at this made — is
- * expressing that as a second `:root`. Overwriting the root palette gives the
- * app its canvas by taking the landing page's away, which is how the previous
- * branch ended up unmergeable against a landing rebuild: two changes editing
- * the same forty lines to say opposite things.
- *
- * So the shape is: `:root` keeps the landing's values *and* declares the
- * register-shaped tokens with landing-correct defaults (flat corners, no
- * elevation, ink for the accent). `.register-app` re-points those same tokens
- * at the app's answers. Every component below reads the token and never the
- * literal, so one class on the app shell switches the whole product over and
- * neither side has to know the other exists.
- *
- * What deliberately does not appear in either block: `--ok`, `--miss` and
- * `--vague`. The three verdicts are the same green, red and tan on both sides
- * of the sign-in, because the colour somebody is shown before they sign up has
- * to be the colour they are graded in afterwards. That thread is the main
- * thing stopping this reading as two products.
- * ------------------------------------------------------------------------- */
-:root {
-  /* Landing defaults: the page has no cards, so it has no card radius and no
-     elevation. Written out rather than left undefined so a shared primitive
-     rendered outside the app degrades to the landing's flat world instead of
-     to whatever the browser does with an empty `var()`. */
-  --r-card: 0px;
-  --r-control: 0px;
+  /* Shape. Three radii: controls, cards, and round. */
+  --r-card: 16px;
+  --r-control: 10px;
   --r-pill: 9999px;
 
-  --elev-rest: none;
-  --elev-hover: none;
-  --elev-float: none;
+  /* Elevation is soft, small and neutral, and it sits under a hairline
+     border rather than replacing one. */
+  --elev-rest:
+    0 1px 2px rgba(20, 21, 23, 0.04), 0 8px 24px -12px rgba(20, 21, 23, 0.12);
+  --elev-hover:
+    0 2px 4px rgba(20, 21, 23, 0.05), 0 16px 32px -16px rgba(20, 21, 23, 0.18);
+  --elev-float: 0 8px 24px rgba(20, 21, 23, 0.1);
 
-  --accent-solid: #18181b;
-  --accent-solid-hover: #3f3f46;
+  --accent-solid: #141517;
+  --accent-solid-hover: #2b2d31;
   --accent-contrast: #ffffff;
-  --accent-ring: rgba(24, 24, 27, 0.28);
-  --accent-wash: rgba(24, 24, 27, 0.06);
+  --accent-ring: rgba(20, 21, 23, 0.24);
+  --accent-wash: rgba(20, 21, 23, 0.05);
 
-  /* The vertical rhythm between blocks on a page. One number, so "generous"
-     is a value somebody can change rather than a habit each screen re-guesses
-     with its own `gap-10`. */
+  /* The vertical rhythm between blocks on a page. */
   --stack: 2rem;
   --measure: 72rem;
 }
 
-.register-app {
-  /* Surfaces. The page is not white; the cards are. That single step of
-     separation is what lets a card read as raised without a heavy shadow
-     doing the work.
+/* Night. A neutral carbon with the ink inverted: the action colour becomes an
+ * off-white with dark type on it, and cards separate from the page by a step
+ * of surface and a hairline rather than by shadow. */
+.dark {
+  --background: #0f0f10;
+  --foreground: #ededed;
+  --muted: #1d1d20;
+  --muted-foreground: #a1a1a6;
+  --card: #18181b;
+  --card-foreground: #ededed;
+  --popover: #18181b;
+  --popover-foreground: #ededed;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.18);
+  --primary: #ededed;
+  --primary-foreground: #141415;
+  --secondary: #232326;
+  --secondary-foreground: #ededed;
+  --accent: #232326;
+  --accent-foreground: #ededed;
+  --destructive: oklch(0.637 0.237 25.331);
+  --ring: #ededed;
 
-     Cool, not warm. This was `#f2f2f0` over white — the landing's old warm
-     stock — and it is now the landing's `#eceff5`, because the landing is
-     navy and a warm grey next to it reads as a different product. Signing in
-     should not change the temperature of the room. */
-  --background: #eceff5;
-  --card: #fcfdff;
-  --popover: #fcfdff;
-  --muted: #e0e5ee;
-  --secondary: #e0e5ee;
+  --brand: #ededed;
+  --brand-deep: #ededed;
+  --brand-high: #a1a1a6;
+  --brand-ink: #ededed;
+  --brand-foreground: #141415;
 
-  /* Two weights of voice and no more: what you read, and what you read only
-     if you want to. A third grey is where hierarchy turns into mud. Both are
-     the landing's, so body copy is literally the same ink on both sides of
-     signing in. */
-  --foreground: #16253d;
-  --card-foreground: #16253d;
-  --popover-foreground: #16253d;
-  --secondary-foreground: #16253d;
-  --muted-foreground: #5b6a82;
-  --strong: #16253d;
-  --subtle: #5b6a82;
+  --strong: #ffffff;
+  --subtle: #a1a1a6;
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-border: rgba(255, 255, 255, 0.1);
 
-  /* Borders carry the separating, not shadows. At 8% of the text colour they
-     read as an edge rather than as a drawn box, and tinting them with the ink
-     rather than using a grey keeps them from going cold against the canvas. */
-  --border: rgba(21, 40, 68, 0.18);
-  --input: rgba(21, 40, 68, 0.3);
-  --surface: rgba(21, 40, 68, 0.03);
-  --surface-border: rgba(21, 40, 68, 0.1);
+  /* Re-checked against carbon rather than carried over. */
+  --ok: #4cc38a;
+  --miss: #f07a70;
+  --vague: #d6b37a;
 
-  /* One accent, and it means "you can act on this": primary buttons, links,
-     focus, the active nav item, progress. Never decoration, and never a
-     surface larger than a control.
+  /* One stop up: a mid orange that is vivid on paper is a smudge on carbon. */
+  --flame: #fb7a33;
+  --flame-core: #fed7aa;
+  --flame-glow: rgba(251, 122, 51, 0.26);
 
-     **Amber, not the red end of the ramp.** The app used to sit on `#f97316`
-     over `#c2410c`, which is the bottom two stops of the landing's warm ramp
-     and the two least like it: `#c2410c` as a button fill is a brick red that
-     reads as brown next to the landing's gold, and it was the fill on every
-     primary control in the product. The landing's warmth comes from the *top*
-     of that ramp — `#fbbf24` in the glass edges and the ground glow — so the
-     app now runs `#f59e0b` over `#b45309` and carries `#fbbf24` as its own
-     high stop. Same ramp, read from the gold end.
-
-     The one thing this must not do is collide with `--vague` (`#96600a`),
-     which means "said, but not checkably" and is the same hue family. It
-     clears it on value and saturation — but see `pace-panel.tsx`, where the
-     two used to be plotted against each other and are no longer. */
-  /* Navy, not amber. The whole of the paragraph that used to be here argued
-     for reading the landing's warm ramp from its gold end, and it was a good
-     argument for a landing page that no longer exists: that page is navy now,
-     and an amber primary button one screen after a navy one is the seam this
-     register was invented to prevent. Same reasoning, new accent.
-
-     The polarity flips with it, and both tokens have to move together. Amber
-     is luminous, so it took dark ink; navy is dark, so it takes light. A fill
-     changed without its label is how a button ends up with 2:1 text on it. */
-  --accent-solid: #1d3a63;
-  --accent-solid-hover: #16253d;
-  --accent-contrast: #eef2f8;
-  --accent-ring: rgba(43, 92, 143, 0.38);
-  --accent-wash: rgba(29, 58, 99, 0.09);
-  --ring: #2b5c8f;
-
-  /* The brand stops, answered in the app's accent. `brand-deep` is the
-     pressed and hovered one and the fill under a light label, `brand-ink` is
-     what words are set in, `brand-high` is the lit edge and the glow. */
-  --brand: #1d3a63;
-  --brand-deep: #16253d;
-  --brand-high: #9cc8f2;
-  --brand-ink: #2b5c8f;
-  --brand-foreground: #eef2f8;
-
-  /* Three radii. Panels at 20, controls at 12, pills round. A fourth value is
-     how a system starts drifting, so there is deliberately nowhere to put
-     one. */
-  /* The demo's shapes, because the app is what the demo is advertising.
-     A visitor watches a panel of square-cornered fields and chips get filled
-     in, signs up, and lands on pill buttons and soft rounded cards. That is a
-     different product as far as the eye is concerned, however well the colours
-     match — shape is read faster than hue.
-
-     `--r-card` stays at 20, which is the radius of the demo's own outer
-     window. `--r-control` goes to zero, which is every field, chip and button
-     inside it. Buttons were the loudest offender: `rounded-full` was hardcoded
-     into the shared component, so every control in the product was a pill no
-     matter what this token said. */
-  /* 16, not 20. The larger figure came from the landing's demo window, where
-     one big panel carries a whole section; repeated across a dashboard of
-     small panels the same radius reads soft rather than considered. */
-  --r-card: 16px;
-  --r-control: 0px;
-
-  /* Elevation, tinted with the text hue rather than pure black — a neutral
-     shadow on a slightly warm canvas reads as dirt. Three steps and no more:
-     at rest, under the cursor, and floating over the page. */
-  /* The landing's elevation: a hard offset shadow, not a soft glow.
-     Every panel on the marketing page is a hairline border with a solid shadow
-     sitting behind and below it, and that shape is most of what the page looks
-     like. A blurred drop shadow is the single detail that kept the app reading
-     as a different product even after the colours matched. The tint is the
-     ink's own hue rather than black, so it sits in the same light as
-     everything around it. */
-  /* No elevation. The app used to sit on hard offset shadows and they were
-     the loudest generic thing on every screen — a panel with a slab of colour
-     behind it is the single most recognisable "generated interface" tell, and
-     forty cards each carrying one turned the product into a sheet of stickers.
-     Separation now comes from where it already came from on the landing: the
-     card is lighter than the ground and it has a hairline.
-
-     Kept as tokens rather than deleted, because `shadow-rest` is written into
-     forty call sites and those are all still correct — they ask this file for
-     the register's elevation and this register's answer is none. That is what
-     the indirection is for. */
   --elev-rest: none;
   --elev-hover: none;
-  --elev-float: none;
+  --elev-float: 0 8px 24px rgba(0, 0, 0, 0.4);
 
+  --accent-solid: #ededed;
+  --accent-solid-hover: #ffffff;
+  --accent-contrast: #141415;
+  --accent-ring: rgba(255, 255, 255, 0.3);
+  --accent-wash: rgba(255, 255, 255, 0.08);
+}
+
+/* The app register. It answers no colour: a screen somebody sits inside for
+ * twenty minutes needs its own spacing rhythm, not its own palette, so this
+ * re-points density and nothing else. */
+.register-app {
   --stack: 2.75rem;
   --measure: 74rem;
 
-  /* Inter, for the interface only. The landing keeps Archivo over Source
-     Serif — a serif headline reads as a sentence somebody wrote, which is
-     right for a page whose whole content is an argument, and wrong for a
-     screen of controls that has to stay legible at 13px for twenty minutes. */
-  /* One voice. Inter was the app's own face, from when this was two products
-     with a seam between them; it is one product now, so the app sets its type
-     in the landing's sans. */
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
-  background-color: var(--background);
-  color: var(--foreground);
-}
-
-/* The app, at night.
- *
- * `.register-app` answers the surface and ink tokens with literals, and it is
- * more specific than `.dark`, so every one of those literals won that fight —
- * the theme switcher moved the landing page and left the app on white paper.
- * The visible symptom was smaller and stranger than "dark mode is broken":
- * utilities resolved against `.register-app` and came back light, `@theme`
- * variables read from inline styles resolved at `:root` and came back dark,
- * and a chart label ended up a black slab on a white panel.
- *
- * So the app gets its own night values at the same specificity. This is the
- * warm stock inverted, not a neutral grey: the same carbon the landing's
- * `ground-deep` uses, so both registers are dark in the same colour.
- *
- * The accent does not move. Amber over carbon is the pairing the landing
- * already runs, and `--accent-contrast` stays dark ink because the fill is
- * just as luminous at night. `--brand-ink` does move — the deep stop is too
- * dark to set words in against carbon. */
-.dark .register-app {
-  /* Neutral dark, with the landing's blue as the accent.
-   *
-   * This was navy for one revision and navy was wrong for a tool: a saturated
-   * hue across every surface of a screen somebody sits inside for twenty
-   * minutes is a tint they cannot get away from, and it made the app read as a
-   * darker copy of the marketing page rather than as somewhere to work.
-   *
-   * The neutral does the opposite. Nothing on the canvas has a hue, so the
-   * only colour on screen is the accent and the three verdicts — which is the
-   * entire point of a workspace: the coloured things are the data.
-   *
-   * The world is still one world. What crosses the seam is the accent, the
-   * verdicts, the type and the shapes; the ground is allowed to differ,
-   * because the landing's ground is doing a job (carrying a headline for three
-   * seconds) that this one is not.
-   *
-   * Measured: body 14.6:1 on a card, secondary 7.0, accent 10.1. Card against
-   * page is 1.12:1, which is deliberately slight — on a dark theme separation
-   * comes from the hairline border, and a card light enough to separate on
-   * luminance alone glows.
-   */
-  --background: #09090b;
-  --card: #18181b;
-  --popover: #18181b;
-  --muted: #212124;
-  --secondary: #212124;
-
-  --foreground: #e9e9ec;
-  --card-foreground: #e9e9ec;
-  --popover-foreground: #e9e9ec;
-  --secondary-foreground: #e9e9ec;
-  --muted-foreground: #a2a2a9;
-  --strong: #ffffff;
-  --subtle: #a2a2a9;
-
-  --border: rgba(255, 255, 255, 0.12);
-  --input: rgba(255, 255, 255, 0.24);
-  --surface: rgba(255, 255, 255, 0.04);
-  --surface-border: rgba(255, 255, 255, 0.1);
-
-  /* The one colour on the canvas, and the thread back to the landing. Dark
-     ink on it, because it is a light fill. */
-  --accent-solid: #9cc8f2;
-  --accent-solid-hover: #cfe6ff;
-  --accent-contrast: #09090b;
-  --accent-ring: rgba(156, 200, 242, 0.4);
-  --accent-wash: rgba(156, 200, 242, 0.12);
-  --ring: #9cc8f2;
-
-  --brand: #9cc8f2;
-  --brand-deep: #cfe6ff;
-  --brand-high: #eaf4ff;
-  --brand-ink: #9cc8f2;
-  --brand-foreground: #09090b;
-
-  /* The landing's elevation, not a soft glow.
-     Every panel on the marketing page is a hairline border with a hard offset
-     shadow behind it, and that shape is most of what the page looks like. A
-     blurred drop shadow is what made the app read as a different product even
-     when the colours matched. Offset in black, since the ground is neutral —
-     the landing tints its own because the ground there is navy. */
-  /* Night, same answer. A hard black slab behind a dark card was worse than
-     the light one: on carbon it reads as a rendering fault rather than as
-     depth. The hairline does the separating, which the block above already
-     says is how a dark theme is meant to do it. */
-  --elev-rest: none;
-  --elev-hover: none;
-  --elev-float: none;
-
-  /* The three verdicts, re-checked against this canvas rather than carried
-     over: 11.3, 7.3 and 11.2 on the page. They mean the same thing on both
-     sides of signing in and never follow the brand. */
-  --ok: #4ade80;
-  --miss: #fb7185;
-  --vague: #d6c19a;
-
   background-color: var(--background);
   color: var(--foreground);
 }
@@ -908,7 +262,7 @@ html:has(main.lp-v2) {
  * 16px is loose at 64px, and the line height comes down to just over one.
  */
 .font-display {
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.035em;
 }
 
@@ -942,21 +296,6 @@ html:has(main.lp-v2) {
   }
   html {
     color-scheme: light;
-  }
-  /* Smooth scrolling, only where something scrolls to an anchor.
-   *
-   * This was on `html` unconditionally, so it applied inside the app too —
-   * where there are no in-page anchors and nothing to travel to, and where
-   * its only effect is that keyboard scrolling (space, Page Down, arrows) is
-   * animated by the browser instead of jumping. An animated scroll that drops
-   * frames feels far worse than an instant one, and it is the other half of
-   * "like low battery mode".
-   *
-   * `:has()` is what lets this stay on the scrolling element while still
-   * being conditional: the landing's root carries `.tx`, so only a document
-   * containing the landing gets it. */
-  html:has(.tx) {
-    scroll-behavior: smooth;
   }
 
   /* Every figure that can change is tabular.
@@ -1025,75 +364,6 @@ html:has(main.lp-v2) {
   }
 }
 
-/* Glassmorphism surface used by all UI mockups and bento cards. Modeled on
-   Apple's frosted "material" panels: blur plus a saturation boost so colors
-   behind the glass stay vivid instead of washing out grey. Only reads as
-   glass when a glow orb sits behind it — keep the ambient gradients in
-   place wherever this class is used. */
-:root {
-  --glass-from: rgba(255, 255, 255, 0.72);
-  --glass-to: rgba(255, 255, 255, 0.4);
-  --glass-border: rgba(9, 9, 11, 0.08);
-  --glass-highlight: rgba(255, 255, 255, 0.9);
-  --capsule-bg: rgba(255, 255, 255, 0.72);
-}
-.dark {
-  --glass-from: rgba(255, 255, 255, 0.08);
-  --glass-to: rgba(255, 255, 255, 0.03);
-  --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-highlight: rgba(255, 255, 255, 0.12);
-  --capsule-bg: rgba(23, 23, 23, 0.72);
-}
-
-.glass {
-  background: linear-gradient(155deg, var(--glass-from), var(--glass-to));
-  /* Written unprefixed and left to the compiler, which is where prefixes
-     belong. Note it currently emits only `-webkit-backdrop-filter` for this
-     project's default targets, so the blur is missing in Firefox — a
-     browserslist question, not something another hand-written line fixes. */
-  backdrop-filter: blur(24px) saturate(180%);
-  border: 1px solid var(--glass-border);
-  box-shadow: inset 0 1px 1px var(--glass-highlight);
-}
-
-/* Phones drop the backdrop blur.
- *
- * `backdrop-filter` is the most expensive thing on this page: the compositor
- * re-samples and blurs everything behind every glass surface on each frame,
- * and the landing page has more than a dozen of them. On a phone GPU that is
- * the difference between a page that settles and one that keeps working after
- * it has loaded. The panels keep their translucent fill and their lit edge, so
- * at that size the loss is a blur nobody can see through a 6-inch screen
- * anyway. */
-@media (max-width: 767px) {
-  .dark .glass {
-    background: rgba(24, 24, 27, 0.72);
-  }
-}
-
-/* Hover lift for glass cards — pointer devices only */
-@media (hover: hover) and (pointer: fine) {
-  .glass-lift {
-    transition:
-      transform 200ms cubic-bezier(0.23, 1, 0.32, 1),
-      border-color 200ms ease,
-      box-shadow 200ms ease;
-  }
-  .glass-lift:hover {
-    transform: translateY(-4px);
-    border-color: color-mix(in srgb, var(--color-brand) 35%, transparent);
-    box-shadow: inset 0 1px 1px var(--glass-highlight);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .glass-lift,
-  .glass-lift:hover {
-    transition: none;
-    transform: none;
-  }
-}
-
 /* Typewriter caret. Blinks only while the text is at rest — see TypedText. */
 @keyframes caret {
   0%,
@@ -1102,157 +372,6 @@ html:has(main.lp-v2) {
   }
   50%,
   100% {
-    opacity: 0;
-  }
-}
-.animate-caret {
-  animation: caret 1s step-end infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .animate-caret {
-    animation: none;
-  }
-}
-
-@keyframes waveform {
-  0%,
-  100% {
-    transform: scaleY(0.3);
-  }
-  50% {
-    transform: scaleY(1);
-  }
-}
-
-.waveform-bar {
-  transform-origin: bottom;
-  animation: waveform 900ms ease-in-out infinite;
-}
-
-/* ---------------------------------------------------------------------------
-   The transmission script
-   ---------------------------------------------------------------------------
-   The landing page is built as an as-live broadcast script: a printed running
-   order with a timecode gutter, hard rules instead of card edges, and text
-   that gets cued in time rather than fading in. These are the primitives that
-   world needs and the app does not. Everything above this line belongs to the
-   signed-in app.
-   -------------------------------------------------------------------------- */
-
-/* Script stock. Not paper-cream and not pure white — the cool grey a running
-   order is photocopied onto, so black rules sit on it without vibrating. */
-.tx {
-  --stock: #f2f2f0;
-  --ink: #0c0c0d;
-  --rule: rgba(12, 12, 13, 0.16);
-  --rule-strong: rgba(12, 12, 13, 0.5);
-  /* The timecode column. Narrow on a phone, where 5.5rem was a seventh of
-     the screen given over to a two-character label and left every paragraph
-     beside it setting at about thirty characters. */
-  --gutter: 2.75rem;
-
-  background: var(--stock);
-  color: var(--ink);
-}
-@media (min-width: 768px) {
-  .tx {
-    --gutter: 5.5rem;
-  }
-}
-@media (min-width: 1024px) {
-  .tx {
-    --gutter: 8rem;
-  }
-}
-
-/* A drenched region: the same script, printed the other way up.
- *
- * The brand is meant to hold whole regions rather than sit in a button, and
- * that only works if the rules, the labels and the type all re-derive from the
- * new ground instead of being restated in white one by one. Redefining the
- * three variables the world is built from does the whole section at once.
- *
- * Reserved for regions with no verdict colour in them. Green on ultramarine is
- * unreadable and, worse, stops meaning "correct" — the marking always stays on
- * the grey stock. */
-.tx-invert {
-  /* Ink, not the brand hue.
-   *
-   * This region was a full-bleed ultramarine panel, which made the largest
-   * single colour on the page a colour that means nothing. The base is
-   * monotone now - paper, grey stock, ink - and the only colour anywhere is a
-   * verdict on a word somebody said. A saturated field this size was
-   * competing with the three colours the whole product runs on. */
-  --stock: #101012;
-  --ink: #ffffff;
-  --rule: rgba(255, 255, 255, 0.3);
-  --rule-strong: rgba(255, 255, 255, 0.65);
-  background: var(--stock);
-  color: var(--ink);
-}
-
-/* The cue wipe.
- *
- * A word is not faded in when it is marked — a wipe travels across it, left to
- * right, the way a caption fills.
- *
- * Both the wash and the rule under it are backgrounds on the text span itself,
- * not a positioned element behind it, and that is the whole trick. A headline
- * wraps, and a marked phrase can therefore be two line fragments rather than
- * one rectangle. Anything absolutely positioned inside it gets the union of
- * those fragments — a single block that overhangs the end of the first line
- * and runs under the start of the second. `box-decoration-break: clone` gives
- * each fragment its own background box instead, so the mark follows the words
- * wherever the line happens to break.
- *
- * A rule under the words and nothing behind them. The first version filled the
- * box with a tinted wash as well, and at headline size that is a solid colour
- * block per phrase — the marking stopped being marking and became a stack of
- * coloured bricks. The line alone says the same thing and lets the words stay
- * words.
- *
- * `.cue-idle` is the unmarked state and needs no JavaScript to reach: a page
- * whose script never runs is a page of plain readable sentences, not a blank
- * one. */
-@keyframes cue-wipe {
-  from {
-    background-size: 0% 0.085em;
-  }
-  to {
-    background-size: 100% 0.085em;
-  }
-}
-.cue-idle,
-.cue-mark {
-  background-repeat: no-repeat;
-  background-position: 0 100%;
-  padding-bottom: 0.06em;
-  -webkit-box-decoration-break: clone;
-  box-decoration-break: clone;
-}
-.cue-idle {
-  background-size: 0% 0.085em;
-}
-.cue-mark {
-  background-size: 100% 0.085em;
-  animation: cue-wipe 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
-}
-
-/* The node that is currently working.
- *
- * A ring that grows out of the node and fades, on a slow repeat: the shape
- * that means "something is happening here" on every piece of equipment that
- * has ever had a status light, and it is drawn geometry rather than a glow, so
- * it survives the rule against blurred halos. Only ever one at a time — two
- * things pinging at once reads as an error state. */
-@keyframes work-ping {
-  0% {
-    transform: scale(1);
-    opacity: 0.55;
-  }
-  70%,
-  100% {
-    transform: scale(2.6);
     opacity: 0;
   }
 }
@@ -1276,51 +395,6 @@ html:has(main.lp-v2) {
   background: var(--stock);
 }
 
-/* ---------------------------------------------------------------------------
- * Section grounds.
- *
- * The middle of this page was four sections alternating between two greys, and
- * "quiet" was the accurate description: nothing about arriving at 04 felt
- * different from arriving at 03, so the whole middle read as one long ruled
- * document that could be skimmed at speed.
- *
- * The reference alternates full-bleed saturated fields against near-black —
- * and that rhythm is what makes a long page
- * feel like it has chapters rather than paragraphs.
- *
- * **The one hard constraint, and it decides which section gets what.** Green,
- * red and tan mean *correct*, *missed* and *vague* on a word somebody said,
- * and nowhere else. A verdict has to stay legible and has to keep meaning a
- * verdict, so any section that marks a transcript keeps a light ground and
- * takes a wash rather than a field. Only 02 — which shows the four steps and
- * marks nothing — can carry the saturated dark. That is why the colour is not
- * simply alternated down the page.
- *
- * The grounds also move. `--ground-t` runs 0 to 1 across each section via
- * `animation-timeline: view()`, drifting the field's centre as the section
- * passes, so the colour is doing something while you read rather than sitting
- * behind you. No JavaScript, off the main thread, and it degrades to a static
- * ground where the timeline is unsupported.
- * ------------------------------------------------------------------------- */
-.ground {
-  position: relative;
-  isolation: isolate;
-}
-.ground::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--ground-field, none);
-  /* Anchored to the section and slid a little as it passes. A large soft field
-     moving 6% of its own width is a slow shift in where the light is, not a
-     drifting blob — the thing on the banned list is a blurred orb used *as*
-     decoration, and this is the ground of a full-bleed region. */
-  background-position: 50% 44%;
-  background-size: 140% 160%;
-  background-repeat: no-repeat;
-}
-
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     /* `background-position` directly, rather than a registered `<number>`
@@ -1338,183 +412,7 @@ html:has(main.lp-v2) {
         background-position: 50% 56%;
       }
     }
-    /* On the pseudo-element, since that is what carries the field. `view()`
-       inside a pseudo resolves against its originating element, so the range
-       is still the section's own pass through the viewport. */
-    .ground::before {
-      animation: ground-pass linear both;
-      animation-timeline: view();
-      animation-range: cover 0% cover 100%;
-    }
   }
-}
-
-/* The deep warm stock, and the page's only mid-tone.
- *
- * **Why this exists.** The page used to run white → near-black → white →
- * white → white → near-black: two hard inversions with almost nothing between
- * them, because the three "light" sections sat at #ffffff, #f6f3f1 and #ffffff
- * — a two per cent step, which is no step at all. So the whole tonal budget
- * was spent on two full eye adaptations, one of them in the first two screens,
- * and the middle of the page was flat. It read as a flash, three identical
- * rooms, then another flash.
- *
- * The fix is to spend the range rather than the inversions. This is the bottom
- * of the light ramp, and it is a real step down from paper without asking
- * anybody's eyes to re-adapt. There is now exactly one inversion on the page,
- * at the close, where going dark means "this is the end" rather than "a
- * section happened".
- *
- * `#f2ede6` is not a taste value, it is a floor: it is the deepest warm stock
- * on which all three verdicts still clear 4.5:1 (green 4.66, red 4.93, tan
- * 4.54). One step deeper and the tan fails. Anything laid on this ground may
- * therefore still mark. */
-.ground-warm {
-  --stock: #f2ede6;
-  /* The region arrives and leaves. It does not start and stop.
-   *
-   * A `background-color` paints edge to edge, so the section met the white
-   * above and below it on two hard lines — a block of colour dropped into the
-   * page, which is exactly what "it doesn't flow" describes. The brief asks
-   * for sections to bleed into each other, and this is the mechanism: the
-   * stock is a vertical gradient that *begins and ends at the colour of its
-   * neighbours*, so there is no edge to see.
-   *
-   * White at both ends specifically, not `transparent`. The page root is
-   * `#f2f2f0` and the sections either side are `#ffffff`; fading to
-   * transparent would reveal the root and leave a faint grey seam exactly
-   * where the join was supposed to disappear. */
-  background-image: linear-gradient(
-    180deg,
-    #ffffff 0%,
-    var(--stock) 15%,
-    var(--stock) 80%,
-    #ffffff 100%
-  );
-  /* Golden hour, raked across the section rather than pooled in a corner.
-   *
-   * Two soft radials at 22% and 12% gave a flat beige field with a smudge in
-   * it — the reading was "dull", and fairly: beige is what warm looks like
-   * with the light taken out. A single directional gradient falling from the
-   * top-left reads as *light on a surface*, which is the same idea the brand
-   * is named after, and it costs one declaration.
-   *
-   * The strength is only available because this section marks nothing. Even
-   * the old 22% amber put the tan verdict at 4.16 where the wash was
-   * heaviest — under the 4.5 a marked word needs. So this is the ground for
-   * sections that carry no verdicts, and the bare `#f2ede6` floor is what a
-   * marking section may use. */
-  --ground-field:
-    linear-gradient(
-      164deg,
-      rgba(251, 191, 36, 0.5) 0%,
-      rgba(249, 115, 22, 0.15) 38%,
-      rgba(249, 115, 22, 0) 72%
-    ),
-    radial-gradient(
-      58% 70% at 96% 100%,
-      rgba(194, 65, 12, 0.16) 0%,
-      rgba(249, 115, 22, 0) 70%
-    );
-}
-
-/* The light fades out where the stock does.
- *
- * Without this the gradient above dissolves the warm ground into white while
- * the sunset field carries straight on to the section boundary and redraws
- * the hard edge in gold — a worse version of the problem, because now the
- * seam is the brightest thing on the page. Masked to the same envelope, the
- * whole region arrives and leaves as one. */
-.ground-warm::before {
-  -webkit-mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 17%,
-    #000 78%,
-    transparent 100%
-  );
-  mask-image: linear-gradient(
-    180deg,
-    transparent 0%,
-    #000 17%,
-    #000 78%,
-    transparent 100%
-  );
-}
-
-/* The two tints. Light enough that a red or a tan verdict on top still clears
-   4.5:1, which is the whole reason these sections take a tint and not a field.
-   Same hue, one value apart — deeper first, lifting as the page runs out. */
-.ground-tint {
-  --stock: #f6f3f1;
-  background-color: var(--stock);
-  --ground-field: radial-gradient(
-    70% 60% at 78% 10%,
-    rgba(249, 115, 22, 0) 0%,
-    rgba(249, 115, 22, 0) 70%
-  );
-}
-.ground-tint-soft {
-  --stock: #ffffff;
-  background-color: var(--stock);
-  --ground-field: radial-gradient(
-    64% 62% at 16% 14%,
-    rgba(251, 191, 36, 0.1) 0%,
-    rgba(249, 115, 22, 0) 68%
-  );
-}
-
-/* White, but not blank. The marking section keeps a pure ground so the three
-   verdict colours read exactly as they will inside the product, and gets its
-   colour from one soft band at the top edge instead. */
-.ground-aura {
-  --stock: #ffffff;
-  background-color: var(--stock);
-  --ground-field: radial-gradient(
-    80% 40% at 50% 0%,
-    rgba(249, 115, 22, 0) 0%,
-    rgba(249, 115, 22, 0) 72%
-  );
-}
-
-/* ---------------------------------------------------------------------------
- * The scroll-driven set.
- *
- * All of these are welded to the scrollbar rather than fired at a threshold,
- * so they run backwards when you scroll up and they are exactly as far along
- * as you have pushed them. That is the difference between a page that responds
- * and a page that plays cutscenes at you.
- *
- * All of them are also CSS. `animation-timeline: view()` needs no observer, no
- * scroll listener and no rAF loop, and it runs off the main thread — so this
- * whole set costs less per frame than the one `useHeroScroll` listener that
- * predates it. Everything sits inside `@supports` and degrades to the finished
- * state.
- * ------------------------------------------------------------------------- */
-
-/* A row that slides in from the side, alternating direction down a list.
- *
- * Used on the four steps in 02. A ladder of rows all rising by the same amount
- * is one gesture repeated four times; alternating the side they come from
- * makes the list read as being dealt out. */
-.deal-in {
-  --deal-from: -2.5rem;
-}
-.deal-in:nth-child(even) {
-  --deal-from: 2.5rem;
-}
-
-/* A word wiped in the colour of its verdict, the way the product marks it.
-   The wipe is the page doing to its own copy exactly what the recorder does to
-   yours, which is the one animation here that is also an argument. */
-.wipe-mark {
-  background-image: linear-gradient(
-    var(--wipe-colour, currentColor),
-    var(--wipe-colour, currentColor)
-  );
-  background-repeat: no-repeat;
-  background-position: 0 88%;
-  background-size: 0% 2px;
 }
 
 @supports (animation-timeline: view()) {
@@ -1529,11 +427,6 @@ html:has(main.lp-v2) {
         opacity: 1;
       }
     }
-    .deal-in {
-      animation: deal-in linear both;
-      animation-timeline: view();
-      animation-range: entry 8% entry 62%;
-    }
 
     @keyframes wipe-mark {
       from {
@@ -1543,42 +436,6 @@ html:has(main.lp-v2) {
         background-size: 100% 2px;
       }
     }
-    .wipe-mark {
-      animation: wipe-mark linear both;
-      animation-timeline: view();
-      animation-range: entry 25% entry 70%;
-    }
-  }
-}
-
-/* Without the timeline, the marked words are simply underlined. The point of
-   the wipe is the colour, and the colour has to be there either way. */
-@supports not (animation-timeline: view()) {
-  .wipe-mark {
-    background-size: 100% 2px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .wipe-mark {
-    background-size: 100% 2px;
-  }
-}
-/* The level meter running through the on-air strip.
- *
- * The track holds two copies of a seamless tile, so translating exactly -50%
- * lands copy two where copy one began and the loop has no landing point.
- *
- * Only the on-air strip uses this now. A larger version of the same drawing
- * ran behind the first viewport for one revision and it was the wrong idea in
- * the right clothes: a moving thing behind a sentence competes with the
- * sentence however faint it is. Fifteen pixels of it inside a band that is
- * already there does not. */
-@keyframes wave-drift {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-  to {
-    transform: translate3d(-50%, 0, 0);
   }
 }
 
@@ -1596,23 +453,6 @@ html:has(main.lp-v2) {
 }
 .tally-lamp {
   animation: tally 1.4s steps(1, end) infinite;
-}
-
-/* Timecode digits must not reflow as they count. Tabular figures do that
-   without a fixed width per character, which would break at every size. */
-.tc {
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-/* Rules are the only container on this page. Cards were the thing being
-   replaced, so nothing here draws a box: a row is defined by the hairline
-   above it and the one below the block it belongs to. */
-.rule-t {
-  border-top: 1px solid var(--rule);
-}
-.rule-b {
-  border-bottom: 1px solid var(--rule);
 }
 
 /* Scroll reveal. Driven by `ScrollReveal`, which toggles the attribute.
@@ -1690,64 +530,6 @@ html:has(main.lp-v2) {
   transform: translateY(var(--reveal-rise));
 }
 
-/* Type arriving from behind its own baseline.
- *
- * Each line is a window with `overflow: hidden`, and the words inside start
- * fully below it. Nothing fades — the line is simply not there yet and then
- * it is, the way a printed line would if the paper were sliding up past a
- * slot. It is the one motion on the page with a physical explanation, which
- * is why it is reserved for the single largest piece of type on a screen and
- * never used on a paragraph.
- *
- * `padding-bottom` on the window is not optional: descenders (g, y, p) sit
- * below the baseline, and a window sized to the line box alone shears them
- * off at rest. */
-.mask-line {
-  display: block;
-  overflow: hidden;
-  padding-bottom: 0.12em;
-  margin-bottom: -0.12em;
-}
-.mask-line > span {
-  display: block;
-  transition: transform var(--dur-reveal) var(--ease-enter);
-  transition-delay: calc(var(--rise-index) * var(--reveal-stagger));
-}
-[data-rise="out"] .mask-line > span {
-  transform: translateY(105%);
-}
-
-/* Display type filled with a gradient that fades into its own background.
- *
- * The reference's signature: the headline does not sit on the dark band, it
- * emerges from it — bright at the cap line, dissolving toward the baseline, so
- * a two-line block has no hard bottom edge.
- *
- * It has to be declared on the inner `span` rather than on the heading, and
- * that is not a style preference. `background-clip: text` clips an element's
- * background to the glyphs *that element paints*, and here the heading paints
- * none of them: `.mask-line > span` carries a transform, which puts the text in
- * its own layer. Applied to the heading, the effect silently renders nothing at
- * all — transparent text over a background clipped to no glyphs — which is
- * exactly what it did on the first attempt.
- *
- * The ramp bottoms out at 52% rather than near zero. The reference can fade a
- * word to almost nothing because that word is decoration; the last line here is
- * somebody's name, and a name that disappears is a bug, not an effect.
- *
- * Deliberately not one of the blurred radial fields this product has twice had
- * removed. This is a two-stop linear ramp inside letterforms; there is no glow
- * anywhere on the band. */
-.fill-fade > span {
-  background-image: linear-gradient(
-    180deg,
-    #ffffff 22%,
-    rgba(255, 255, 255, 0.52) 100%
-  );
-  background-clip: text;
-  color: transparent;
-}
-
 /* ---------------------------------------------------------------------------
  * Panels that come into play as you scroll to them.
  *
@@ -1790,16 +572,6 @@ html:has(main.lp-v2) {
       }
     }
 
-    .lay-in {
-      animation: panel-lay linear both;
-      animation-timeline: view();
-      /* Finished well before the panel reaches the middle of the screen. Run
-         to `entry 100%` and the panel is still assembling when it is already
-         the thing you are reading. */
-      animation-range: entry 5% entry 70%;
-      will-change: transform, opacity, clip-path;
-    }
-
     /* Half the travel and none of the clip, for the small fragments orbiting
        the headline. They are already in the first viewport, so a full arrival
        would mean the page assembling itself in front of somebody who has not
@@ -1813,11 +585,6 @@ html:has(main.lp-v2) {
         transform: none;
         opacity: 1;
       }
-    }
-    .lay-in-soft {
-      animation: panel-lay-soft linear both;
-      animation-timeline: view();
-      animation-range: entry 0% entry 55%;
     }
   }
 }
@@ -1849,128 +616,15 @@ html:has(main.lp-v2) {
   }
 }
 
-/* The hero, reacting to its own scroll.
- *
- * `--hero-t` runs 0 to 1 across the first viewport, written once per frame by
- * `useHeroScroll` onto this one element. Everything below reads it, so a frame
- * costs one style recalculation on one subtree rather than an inherited
- * variable invalidating every descendant on the page.
- *
- * The wordmark settles back and loosens as you leave it, and the two artifact
- * panels drift at different rates — the near one faster than the far one,
- * which is the whole of parallax. Small numbers on purpose: this is the page
- * acknowledging the scroll, not a ride.
- */
-.hero-scroll {
-  --hero-t: 0;
-}
-.hero-mark {
-  transform: scale(calc(1 - var(--hero-t) * 0.06))
-    translate3d(0, calc(var(--hero-t) * -1.4rem), 0);
-  opacity: calc(1 - var(--hero-t) * 0.55);
-  transform-origin: 50% 0;
-  will-change: transform;
-}
-.hero-drift-near {
-  transform: translate3d(0, calc(var(--hero-t) * -3.5rem), 0);
-  will-change: transform;
-}
-.hero-drift-far {
-  transform: translate3d(0, calc(var(--hero-t) * -1.6rem), 0);
-  will-change: transform;
-}
-
-/* Where the two hero artifacts sit when there is room to orbit.
- *
- * They are absolutely positioned against the centred 46rem column, and a fixed
- * `-19rem` offset from that column runs off the side of any window narrower
- * than about 84rem — which is most laptops, so the panels arrived cropped to a
- * sliver. The `max()` is the fix: the ideal offset, or the furthest the panel
- * can go while keeping 1.25rem of air to the viewport edge, whichever keeps it
- * on screen. `(46rem - 100vw) / 2` is where the viewport edge is in the
- * column's own coordinates.
- *
- * CSS rather than utility classes because a Tailwind arbitrary value
- * containing a comma does not generate — the same reason the wordmark's
- * `min()` is inline. */
-@media (min-width: 64rem) {
-  .hero-orbit-left,
-  .hero-orbit-right {
-    position: absolute;
-    margin-top: 0;
-  }
-  .hero-orbit-left {
-    width: 15rem;
-    top: 3.5rem;
-    left: max(-19rem, calc((46rem - 100vw) / 2 + 1.25rem));
-  }
-  .hero-orbit-right {
-    width: 14rem;
-    top: 9rem;
-    right: max(-18rem, calc((46rem - 100vw) / 2 + 1.25rem));
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hero-mark,
-  .hero-drift-near,
-  .hero-drift-far {
-    transform: none;
-    opacity: 1;
-  }
-}
-
-/* Ink fading down the glyphs, the light-register version of `.fill-fade`.
- *
- * Same reason it exists: the wordmark should emerge from the stock rather than
- * sit on it. Declared on the element itself here — the wordmark carries no
- * mask, so it paints its own text and `background-clip` has glyphs to clip
- * to. */
-.fill-fade-ink {
-  background-image: linear-gradient(
-    180deg,
-    var(--ink, #101012) 30%,
-    rgba(16, 16, 18, 0.42) 100%
-  );
-  background-clip: text;
-  color: transparent;
-}
-
-/* The same move, played once on mount rather than on scroll.
- *
- * The masthead of a screen is above the fold by definition, so the observer
- * reports it as already visible and it never animates — it is simply there
- * when the page paints. A route somebody navigated to should arrive, so the
- * one line at the top of it plays this instead, and everything below keeps
- * waiting to be scrolled to. */
-@keyframes mask-enter {
-  from {
-    transform: translateY(105%);
-  }
-  to {
-    transform: none;
-  }
-}
-.mask-enter > span {
-  animation: mask-enter var(--dur-reveal) var(--ease-enter) both;
-  animation-delay: calc(var(--rise-index, 0) * var(--reveal-stagger));
-}
-
 @media (prefers-reduced-motion: reduce) {
   [data-rise],
   .mask-line > span {
     transition: none;
   }
-  .mask-enter > span {
-    animation: none;
-  }
   /* Belt and braces: the observer never runs under this setting, so nothing
      is ever marked `out`. This is here in case that guard is ever lost. */
   [data-rise="out"] {
     opacity: 1;
-    transform: none;
-  }
-  [data-rise="out"] .mask-line > span {
     transform: none;
   }
 }
@@ -1989,171 +643,9 @@ html:has(main.lp-v2) {
   .tally-lamp {
     animation: none;
   }
-  .cue-mark {
-    clip-path: none;
-  }
   .press {
     transition: none;
   }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .waveform-bar {
-    animation: none;
-    transform: scaleY(0.6);
-  }
-}
-
-/* ---------------------------------------------------------------------------
- * The sunset register — tarmac black, Athens gold.
- *
- * Scoped to `.register-sunset` rather than `:root` for the same reason the app
- * register is: the landing and the signed-in product are two worlds, and a
- * second `:root` gives one its canvas by taking the other's away.
- *
- * **The problem this block had to solve.** The three verdict colours are the
- * product's entire semantic: green means the claim was correct, red means a
- * step was missed, tan means it was said but not checkably. On a near-black
- * canvas the shipped values fail outright — `#0f7a3d` green sits at 2.4:1 on
- * `#0b0b0c`, well under the 4.5:1 a marked word needs to be read. And the
- * brief's accent family is gold and amber, which is *the same hue* as the tan
- * that means "vague". A brand colour indistinguishable from a verdict is worse
- * than an ugly brand colour: it makes the marking unreadable as marking.
- *
- * So the verdicts get dark-canvas values here — lifted in value, held at the
- * same hue, so they still read as the greens and reds somebody will be graded
- * in — and `--vague` is pulled to a desaturated sand that separates from the
- * luminous CTA gold by saturation rather than by hue. Both stay reserved: they
- * mark words and nothing else, and the sunset accents never touch a
- * transcript.
- * ------------------------------------------------------------------------- */
-/* The landing runs in this world.
- *
- * `.tx` is the class the page root already carries, and every section below it
- * derives its ground from the same three variables — so re-pointing them here
- * converts the whole page instead of requiring each of the six sections to be
- * rewritten. That indirection was built for exactly this. */
-.register-sunset {
-  /* Tarmac. Not pure black — a carbon with a trace of warmth in it, so the
-     gold reads as light falling on the surface rather than as a sticker. */
-  --stock: #0b0b0c;
-  --carbon: #141416;
-  --carbon-high: #1b1b1e;
-  --ink: #f4f1ea;
-  --ink-soft: rgba(244, 241, 234, 0.62);
-  --ink-faint: rgba(244, 241, 234, 0.38);
-
-  /* Athens at sunset: three stops of one warm ramp, low to high. */
-  --sun-deep: #c2410c;
-  --sun: #f97316;
-  --sun-high: #fbbf24;
-  --sun-glow: rgba(249, 115, 22, 0.22);
-
-  /* Hairlines and glass. The border is the light source, not a box edge —
-     brighter at the top where the sun would catch it. */
-  --rule: rgba(244, 241, 234, 0.1);
-  --rule-strong: rgba(244, 241, 234, 0.28);
-  --glass: rgba(24, 24, 27, 0.55);
-  --glass-edge: rgba(251, 191, 36, 0.18);
-
-  /* Verdicts, lifted for this canvas. Same three meanings, same three hues,
-     read against black instead of paper. */
-  --ok: #4ade80;
-  --miss: #fb7185;
-  --vague: #d6c19a;
-
-  background-color: var(--stock);
-  color: var(--ink);
-}
-
-/* Frosted panel.
- *
- * Real glass, not a grey box: a translucent fill so the glow behind it shows
- * through, a hairline that is warmer along the top edge, and an inset
- * highlight standing in for the lit bevel. The blur is what makes it glass and
- * it is also the most expensive thing on the page, which is why it is dropped
- * on small screens — nobody sees through a blur on a 6-inch display. */
-.glass-panel {
-  background:
-    linear-gradient(
-      160deg,
-      rgba(255, 255, 255, 0.9),
-      rgba(255, 255, 255, 0.62) 60%
-    ),
-    rgba(255, 252, 248, 0.5);
-  border: 1px solid rgba(194, 65, 12, 0.14);
-  border-top-color: rgba(251, 191, 36, 0.45);
-  /* Through a variable, so the app can switch it off. See below. */
-  --glass-blur: blur(18px) saturate(150%);
-  backdrop-filter: var(--glass-blur);
-  /* The lit top edge only. The tinted lift under it is gone with every other
-     cast shadow in the product. */
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.85);
-}
-
-/* The blur, only where there is something to blur.
- *
- * `backdrop-filter` is the most expensive property on any page that uses it:
- * the compositor snapshots the region behind the element, blurs it, and does
- * that again on every frame the element or anything behind it moves — during a
- * scroll, every frame, for the panel's whole area.
- *
- * On the landing it buys something: those panels float over ground fields with
- * real structure in them. In the app it buys nothing, and that is measurable
- * rather than a matter of taste — the canvas behind these panels is a flat
- * `#f2f2f0` with no field, no image and no gradient, and blurring a uniform
- * colour returns the same uniform colour. Every pixel of that work was being
- * spent to produce an identical image.
- *
- * **Written as opt-in rather than as an override, and that is not a style
- * choice.** The first attempt was `.register-app .glass-panel { backdrop-filter:
- * none }`, which reached the browser as `.register-app .glass-panel { }` —
- * Lightning CSS drops declarations whose value is the property's initial
- * value, so an override that says "none" is silently deleted and the blur
- * survives. Anything that turns this off by resetting it will be eaten the
- * same way. Turning it *on* in one place cannot be.
- *
- * `.tx` is the landing root, and the `min-width` is why the blur was already
- * dropped on phones: nobody sees through a blur on a six-inch display.
- *
- * The panel still looks like glass everywhere, because the translucent fill,
- * the warm hairline and the lit top edge are what made it look like glass. */
-.register-app .glass-panel {
-  --glass-blur: none;
-}
-@media (max-width: 767px) {
-  .glass-panel {
-    backdrop-filter: none;
-    background: #fffdfb;
-  }
-}
-
-/* The sunset behind the page.
- *
- * The brief asks for sections to bleed into each other rather than being cut
- * apart by rules, and this is how: a soft warm field low in the section, so
- * one region ends by getting darker rather than by hitting a line. It is a
- * ground, not a floating orb — it defines the region and the type sits in it. */
-.sunset-field {
-  position: relative;
-  isolation: isolate;
-}
-.sunset-field::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background:
-    radial-gradient(
-      120% 60% at 50% 108%,
-      var(--sun-glow) 0%,
-      rgba(249, 115, 22, 0) 62%
-    ),
-    radial-gradient(
-      90% 50% at 82% -10%,
-      rgba(251, 191, 36, 0.1) 0%,
-      rgba(251, 191, 36, 0) 60%
-    );
 }
 
 /* The hero fragments' idle drift, deleted.
@@ -2224,632 +716,6 @@ html:has(main.lp-v2) {
   [data-slot="dropdown-menu-content"][data-state="closed"] {
     animation: none;
   }
-}
-
-/* ── The demo console ─────────────────────────────────────────────────────
- *
- * The scrub rail. A range input rather than a div with a click handler,
- * because keyboard and screen-reader users get the whole demo for free — the
- * arrow keys move through the take exactly as dragging does.
- *
- * `--lp-scrub` is written by the component each frame; the track paints the
- * filled portion from it, so there is no second element to keep in step.
- */
-.lp-v2 .lp-scrub {
-  -webkit-appearance: none;
-  appearance: none;
-  height: 1.5rem;
-  background: transparent;
-  cursor: pointer;
-}
-
-.lp-v2 .lp-scrub::-webkit-slider-runnable-track {
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--primary-foreground) var(--lp-scrub, 0%),
-    rgba(238, 242, 248, 0.18) var(--lp-scrub, 0%)
-  );
-}
-
-.lp-v2 .lp-scrub::-moz-range-track {
-  height: 2px;
-  background: linear-gradient(
-    90deg,
-    var(--primary-foreground) var(--lp-scrub, 0%),
-    rgba(238, 242, 248, 0.18) var(--lp-scrub, 0%)
-  );
-}
-
-.lp-v2 .lp-scrub::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  width: 0.7rem;
-  height: 0.7rem;
-  margin-top: -0.31rem;
-  border-radius: 999px;
-  background: var(--primary-foreground);
-}
-
-.lp-v2 .lp-scrub::-moz-range-thumb {
-  width: 0.7rem;
-  height: 0.7rem;
-  border: 0;
-  border-radius: 999px;
-  background: var(--primary-foreground);
-}
-
-.lp-v2 .lp-scrub:focus-visible {
-  outline: 2px solid var(--primary-foreground);
-  outline-offset: 4px;
-}
-
-/* ── The read-through, as a recording ────────────────────────────────────
- *
- * How far down the page you are, drawn as a waveform being captured rather
- * than as a bar being filled.
- *
- * It was a two pixel line with `transform: scaleX()` on it, which is the
- * progress indicator every site has. It answered the question and said
- * nothing. This answers the same question and also says what the product is:
- * the page listens to you the way the product listens to you, and scrolling
- * lays down a take.
- *
- * Two identical layers. The dim one is the whole page; the lit one is clipped
- * to how much of it has been read. That is exactly the shape of a recording
- * in progress, so nobody has to be told what it means.
- */
-.lp-v2 .lp-read-through {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  left: 0;
-  height: 10px;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.lp-v2 .lp-read-wave {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1px;
-  padding: 0 8px;
-}
-
-/* Every bar is the same element; only the height varies, and it is set
- * inline from one shared array so the two layers cannot drift apart. */
-.lp-v2 .lp-read-wave > span {
-  flex: 1 1 0;
-  min-width: 1px;
-  border-radius: 1px;
-  background: currentColor;
-}
-
-.lp-v2 .lp-read-wave-dim {
-  color: color-mix(in oklab, var(--brand-ink) 22%, transparent);
-}
-
-/* The captured part. Clipped by GSAP from fully hidden to fully shown, which
- * is why this sits exactly on top of the dim layer rather than replacing it. */
-.lp-v2 .lp-read-wave-lit {
-  color: var(--brand-ink);
-  clip-path: inset(0% 100% 0% 0%);
-}
-
-/* The recording head: the live edge of the take.
- *
- * Two parts, and both are needed. The hairline is the exact boundary, so the
- * eye can see precisely how much has been captured. The glow around it is
- * what makes it read as *active* rather than as a divider — a still line at a
- * boundary is a ruler, and a line with light coming off it is a machine
- * running.
- *
- * It pulses on its own clock rather than on scroll, so it is alive even when
- * the page is still. That is the point: the recorder does not stop listening
- * because you stopped moving.
- */
-.lp-v2 .lp-read-head {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  z-index: 2;
-  width: 2px;
-  margin-left: -1px;
-  background: var(--brand-ink);
-  /* A 2px bar in the accent is legible without a halo around it. */
-  animation: lp-head-pulse 1.4s ease-in-out infinite;
-}
-
-.lp-v2 .lp-sky-nav:not(.is-light) .lp-read-head {
-  background: #eef2f8;
-}
-
-@keyframes lp-head-pulse {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scaleY(0.7);
-  }
-  50% {
-    opacity: 1;
-    transform: scaleY(1);
-  }
-}
-
-/* A head that pulses forever is motion nobody asked for. */
-@media (prefers-reduced-motion: reduce) {
-  .lp-v2 .lp-read-head {
-    animation: none;
-    opacity: 0.9;
-  }
-}
-
-/* Over the hero the bar is dark and the ink has to invert with it, the same
- * way the wordmark and the button already do. */
-.lp-v2 .lp-sky-nav:not(.is-light) .lp-read-wave-dim {
-  color: rgba(238, 242, 248, 0.22);
-}
-
-.lp-v2 .lp-sky-nav:not(.is-light) .lp-read-wave-lit {
-  color: rgba(238, 242, 248, 0.85);
-}
-
-/* The horizontal step rail is pinned by ScrollTrigger, which measures the
- * track's width. A track whose children can shrink measures differently after
- * the pin lands, so the cards are told not to. */
-.lp-v2 .lp-rail-card {
-  flex: 0 0 auto;
-}
-
-/* The headline's second voice.
- *
- * It was an italic, and there is no italic in this type system to use. Weight
- * carries it instead: the emphasised phrase sets a step heavier than the roman
- * around it and takes the accent colour. Weight is the one contrast that
- * survives greyscale, which colour on its own would not.
- */
-.lp-v2 .lp-hero-em {
-  font-weight: 700;
-  /* Lit blue, sampled off the brightest band the field resolves to, rather
-     than `--accent-solid`. That token is the near white the primary button
-     needs behind dark ink; as type on a dark field it is the same colour as
-     the rest of the headline, so the emphasis disappeared entirely the moment
-     the italic went. */
-  color: #a8cdf5;
-}
-
-/* ── The take, running along a curve ──────────────────────────────────────
- *
- * A paragraph set on an invisible SVG path. The `<path>` is never stroked and
- * never filled; it exists only as a rail for the glyphs, which is what makes
- * this a wall of words that reads as a picture rather than as a wall of
- * words.
- *
- * Two of them, and the pair is the argument. The left curve is a take exactly
- * as it was spoken, in the same grey as any other quiet copy on the page. The
- * right curve is the same take after the grader has been through it, and its
- * colours arrive in sequence along the path, so it reads as being marked
- * rather than as having been marked. Green where a claim landed, tan where it
- * was said but not checkably, red where the point was never reached.
- *
- * Both are `aria-hidden`, and every claim they make is also made in the
- * headline and in the demo below, so nothing is available only to somebody
- * who can see them.
- * ------------------------------------------------------------------------ */
-.lp-v2 .lp-flow {
-  position: absolute;
-  z-index: 0;
-  display: block;
-  pointer-events: none;
-  /* Never an anchor for scroll anchoring.
-   *
-   * This is the whole of the "page jitters when you scroll a little" bug,
-   * and it is not a scroll handler — nothing in the page calls a scroll
-   * method, and the document height never changes. It is the browser doing
-   * its job with bad material.
-   *
-   * Chrome picks a DOM node near the top of the viewport, and if that node
-   * moves or resizes because of layout above it, Chrome shifts the scroll
-   * position to keep it visually still. The streams are the worst possible
-   * candidate: the marquee walks `startOffset`, so the glyphs travel along
-   * the curve and the `text`, `textPath` and `tspan` boxes are re-measured
-   * constantly — 1,966 resize events on the tspans alone in two and a half
-   * seconds. Anchor to one of those and the page is pulled a pixel or two
-   * back and forth forever.
-   *
-   * The marquee has since been capped to about 24 writes a second on a
-   * coarse pointer and stopped entirely while the hero is off screen, which
-   * thins that stream of resizes but does not end it. This stays.
-   *
-   * `overflow-anchor: none` takes an element and its subtree out of the
-   * candidate set. It belongs here rather than on `html`, which would turn
-   * anchoring off for the whole document and lose the thing it is good at —
-   * holding your place when something above you loads. These curves are
-   * `aria-hidden` decoration; they should never have been holding anybody's
-   * place to begin with. */
-  overflow-anchor: none;
-  /* Only the arrival. The motion belongs to the words now — the marquee
-     slides them along their paths — and a transform drift on top of that
-     made the whole drawing swim. */
-  animation: lp-flow-in 900ms var(--ease-enter) both;
-}
-
-/* One drawing, at every width.
- *
- * There were two here, and a breakpoint choosing between them, and both of
- * those were mistakes. The streams were switched off below `lg` on the
- * reasoning that a curve needing 60% of the viewport cannot have it on a
- * phone; then a second, portrait drawing was written to fill the gap, and
- * the page became two products with a seam in the middle of it — the
- * handover landing on any half-screen desktop window, which is where "this
- * looks bad when the window gets smaller" came from.
- *
- * What a narrow frame needs is not a different drawing. It is the same one,
- * smaller — which is what every other site with artwork in its hero does, and
- * what `preserveAspectRatio` cannot give you, because it scales the type
- * along with the geometry and four-pixel type is not type. `scaleFlow` in
- * `landing-redesign.tsx` does it instead: the shapes are scaled by the
- * width, the type is left at the size it reads at, and the slack goes into
- * the gap between the top curves and the bottom one, which is empty by
- * design and is where the headline sits. */
-.lp-v2 .lp-flow path {
-  fill: none;
-  stroke: none;
-}
-
-.lp-v2 .lp-flow text {
-  font-size: 16px;
-  font-weight: 500;
-  letter-spacing: -0.005em;
-  fill: color-mix(in oklab, var(--muted-foreground) 46%, transparent);
-}
-
-/* Bleeding off the edges on purpose: a take that stops inside the frame is a
-   caption, and one that runs off the page is a take. */
-/* Both live in the margins either side of the centred column and never reach
-   into it. The first pass gave them 60% of the width each and the two curves
-   ran straight through the headline and the buttons. */
-/* Three streams, drawn from a sketch, with the words in motion.
- *
- * One S climbing off the top edge on the left, one arc falling from the top
- * edge to the right edge, one big wave running the whole foot of the page.
- * All three share one 1440x900 coordinate space so they are composed against
- * each other, and each SVG covers the whole hero — `slice` keeps the drawing
- * pinned to the edges at any aspect ratio.
- *
- * The words travel their curves — see the marquee in the component — so the
- * only CSS motion left here is the arrival fade. The fade level stays: at
- * full strength a moving stream reads as a stock ticker to be read; at ~45%
- * it is weather, and the verdict colours do the telling.
- *
- * **The fade is applied once.** It used to be applied twice: an `opacity` on
- * each SVG *and* an alpha in the text's `fill`, which multiply — 0.45 of 0.42
- * is 0.19, so the streams were drawn at less than half the strength this
- * paragraph claims and the hero read as having no curves at all. Worse, an
- * element `opacity` cannot tell a faded stream from a verdict: it took the
- * same half out of `--ok`, `--vague` and `--miss`, so the three colours that
- * are supposed to mean exactly one thing everywhere in the product were
- * quietly weaker here than anywhere else. The level now lives in the fill
- * alone, where it applies to the grey and leaves a mark at full strength.
- * ------------------------------------------------------------------------ */
-.lp-v2 .lp-flow {
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.lp-v2 .lp-flow-tl {
-  opacity: 1;
-}
-
-.lp-v2 .lp-flow-tl text {
-  font-size: 17px;
-  fill: color-mix(in oklab, var(--muted-foreground) 44%, transparent);
-}
-
-.lp-v2 .lp-flow-tr {
-  opacity: 1;
-}
-
-.lp-v2 .lp-flow-tr text {
-  font-size: 18px;
-  font-weight: 550;
-  fill: color-mix(in oklab, var(--muted-foreground) 46%, transparent);
-}
-
-/* The wave is the star: the longest path, the marked take, the widest arc of
-   colour. Slightly larger and slightly stronger than the two above. */
-.lp-v2 .lp-flow-bw {
-  opacity: 1;
-}
-
-.lp-v2 .lp-flow-bw text {
-  font-size: 20px;
-  font-weight: 550;
-  fill: color-mix(in oklab, var(--muted-foreground) 52%, transparent);
-}
-
-/* A deeper stop on the page's own ramp: the demo chapter's ground. Mixed
-   from tokens rather than written as a hex, and kept far above the floor a
-   marked transcript needs — the verdicts inside the console sit on the
-   console's own dark window, not on this field. */
-.lp-v2 .lp-ground-tint {
-  background: color-mix(in oklab, var(--panel-deep) 7%, var(--background));
-}
-
-/* ── The steps, held and scrubbed ─────────────────────────────────────────
- *
- * Everything here is behind `.is-live`, which only the script adds and only
- * above `lg` with motion allowed and real travel measured. The resting
- * layout — the three-column staircase — is complete on its own, which is the
- * whole reason the horizontal version is allowed to exist.
- * ------------------------------------------------------------------------ */
-/* Pinned by ScrollTrigger, so no position of its own — just the held
-   screen's layout. */
-.lp-v2 .lp-steps-stage.is-live {
-  display: flex;
-  height: 100svh;
-  flex-direction: column;
-  justify-content: center;
-  overflow: hidden;
-}
-
-.lp-v2 .lp-steps-track.is-live {
-  display: flex;
-  max-width: none;
-  flex-wrap: nowrap;
-  align-items: flex-start;
-  gap: 5vw;
-  /* A short lead-in so the first card is already under the heading. */
-  padding-inline: 7vw 0;
-  will-change: transform;
-}
-
-/* Hidden in the stacked layout, where it would otherwise be a fourth grid
-   cell; a real 42vw flex item in the run, so the third card travels all the
-   way in before the hold releases. */
-.lp-v2 .lp-steps-tail {
-  display: none;
-}
-
-.lp-v2 .lp-steps-track.is-live > .lp-steps-tail {
-  display: block;
-  /* Long enough that the third panel travels fully in, short enough that it
-     does not end up stranded at the far left of an empty screen. */
-  flex: 0 0 24vw;
-  /* Not zero-height. Chrome leaves zero-height boxes out of the overflow
-     area entirely, so a flat spacer — like the trailing padding and the
-     `::after` before it — measured as no travel at all. One transparent
-     pixel is enough to exist. */
-  height: 1px;
-}
-
-.lp-v2 .lp-steps-track.is-live > .lp-step {
-  width: min(34rem, 40vw);
-  /* Sized to its words. At 28rem each panel was two thirds empty card under
-     three lines of copy, which read as unfinished rather than as calm. */
-  min-height: min(18rem, 40svh);
-  flex: 0 0 auto;
-  /* The staircase is a vertical idea; the travel is the order now. This
-     out-specifies the `lg:mt-*` utilities, which is what kept the staircase
-     out of live mode the last time nothing did. */
-  margin-top: 0;
-  border: 1px solid var(--border);
-  padding: 2.25rem 2.5rem 2.5rem;
-  opacity: 0.35;
-  transform: translateX(2.5rem);
-  transition:
-    opacity 520ms var(--ease-enter),
-    transform 520ms var(--ease-enter);
-}
-
-/* One ground for all three. These were tinted green, tan and red, and those
-   are the verdict colours — reserved for marking an explanation, so a step
-   card painted red read as a step somebody had got wrong. The rule above
-   each panel still carries the colour; the panel no longer does. */
-.lp-v2 .lp-steps-track.is-live > .lp-step {
-  background: var(--card);
-}
-
-.lp-v2 .lp-steps-track.is-live > .lp-step[data-lit="1"] {
-  opacity: 1;
-  transform: none;
-}
-
-/* The mark itself: at rest the rule is a 4rem tab; as the step crosses the
-   head it draws the full width of the panel, which is the grader's gesture. */
-.lp-v2 .lp-steps-track.is-live .lp-step-rule {
-  width: 4rem;
-  transition: width 700ms var(--ease-enter) 120ms;
-}
-
-.lp-v2 .lp-steps-track.is-live > .lp-step[data-lit="1"] .lp-step-rule {
-  width: 100%;
-}
-
-/* A held screen earns its hold with scale. */
-.lp-v2 .lp-steps-track.is-live h3 {
-  margin-top: 1.25rem;
-  max-width: 15ch;
-  font-size: clamp(1.9rem, 2.8vw, 2.7rem);
-}
-
-.lp-v2 .lp-steps-track.is-live p {
-  margin-top: 1.25rem;
-  max-width: 34ch;
-  font-size: 1.05rem;
-}
-
-/* No arrival animation on a run any more.
- *
- * This faded each run from grey to its verdict once, on a stagger, at load.
- * The grading is positional now — a gradient fixed to the frame that the
- * words travel through — so a run is grey when it enters and marked once it
- * has moved, every lap rather than only the first. A CSS animation on `fill`
- * would beat the inline gradient for its whole duration and undo that. */
-
-.lp-v2 .lp-flow tspan[data-mark="ok"] {
-  fill: var(--ok);
-}
-
-.lp-v2 .lp-flow tspan[data-mark="vague"] {
-  fill: var(--vague);
-}
-
-.lp-v2 .lp-flow tspan[data-mark="miss"] {
-  fill: var(--miss);
-}
-
-/* `both`, as everywhere on this page: before its delay a run is unmarked,
-   after it, marked, forever. A reader whose animations never run gets the
-   finished take rather than a blank curve. */
-@keyframes lp-flow-in {
-  from {
-    opacity: 0;
-    transform: scale(1.04);
-  }
-}
-
-/* Sideways only. Rotating a row that is ruled against five other rows makes
-   the set look crooked rather than alive; sliding it along its own axis reads
-   as the current moving, which is what it is. */
-@media (prefers-reduced-motion: reduce) {
-  .lp-v2 .lp-flow,
-  .lp-v2 .lp-flow-b,
-  .lp-v2 .lp-flow-e {
-    animation: none;
-  }
-}
-
-/* ── The page's own claims, judged ──────────────────────────────────────
- *
- * The one piece of motion here that could not appear on any other page.
- *
- * This was a rule that wiped in under the phrase — the literal mark a grader
- * makes on paper. Right idea, wrong object. A coloured underline arriving
- * beneath a headline is the commonest emphasis device there is, it fought the
- * baseline at every size, and it had to be fixed twice for landing on the
- * ascenders of the line below. A thing that needs that much defending usually
- * does not want to be there.
- *
- * The verdict now arrives *through* the words: each character takes the colour
- * in turn, left to right, at reading speed, driven by GSAP against scroll. The
- * phrase changes state rather than acquiring a decoration, which is much
- * closer to what the product does to a sentence — and because the colour lands
- * on the words themselves, the association is learned without a legend. By the
- * time green, amber and red turn up in the demo they already mean something.
- *
- * `--*-mark` and not `--ok` / `--vague` / `--miss` directly, because the same
- * three verdicts have to be read on two very different grounds: the fills are
- * tuned for light stock and go muddy on the hero's water, while the tints are
- * washed out on paper. One name, answered correctly per ground.
- */
-.lp-v2 {
-  --ok-mark: var(--ok);
-  --vague-mark: var(--vague);
-  --miss-mark: var(--miss);
-}
-
-/* On the hero and the closing band the type sits on near-black water, so the
- * verdicts take their lit cuts. */
-.lp-v2 .lp-atmosphere {
-  --ok-mark: var(--ok-light);
-  --vague-mark: var(--vague-light);
-  --miss-mark: var(--miss-light);
-}
-
-/* Weight, not only colour. Colour alone fails in greyscale and for the eight
- * per cent of men who cannot separate the green from the red — which for a
- * product whose whole vocabulary is three colours would be a poor joke. The
- * sweep animates weight alongside hue; this is the resting state for anyone
- * the animation never runs for. */
-.lp-v2 .lp-verdict {
-  font-weight: 700;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .lp-v2 .lp-verdict[data-verdict="ok"] {
-    color: var(--ok-mark);
-  }
-  .lp-v2 .lp-verdict[data-verdict="vague"] {
-    color: var(--vague-mark);
-  }
-  .lp-v2 .lp-verdict[data-verdict="miss"] {
-    color: var(--miss-mark);
-  }
-}
-
-/* ── The auth card, as one of the landing's panels ──────────────────────
- *
- * The card was light, and it was wrong twice over.
- *
- * It rendered as a murky grey box with an orange edge, because `.glass-panel`
- * is a warm translucent white with an amber border — a treatment built for
- * warm stock, laid over navy water, where the translucency picks up the
- * background and the amber edge has nothing to do with anything on screen.
- *
- * And even fixed, a white rounded rectangle floating on a photograph is the
- * default sign-in page. The landing already has a vocabulary for "a panel with
- * product inside it": the deep navy field, a hairline border, square corners
- * and a hard offset shadow. The rehearsal panel in the hero is exactly that.
- * So the sign-in form is one of those, and the screen stops being a form on a
- * background and becomes the next panel in the same page.
- *
- * The card's radii and density still come from `register-app`, because those
- * are what a control needs. Only the colour and the surface treatment are the
- * landing's.
- */
-.lp-v2 .register-app {
-  --background: transparent;
-  --card: #142744;
-  --popover: #142744;
-  --muted: #1c3355;
-  --secondary: #1c3355;
-
-  --foreground: #e5ecf6;
-  --card-foreground: #e5ecf6;
-  --popover-foreground: #e5ecf6;
-  --secondary-foreground: #e5ecf6;
-  --muted-foreground: #a9b8ce;
-  --strong: #ffffff;
-  --subtle: #a9b8ce;
-
-  --border: rgba(238, 242, 248, 0.14);
-  --input: rgba(238, 242, 248, 0.28);
-  --surface: rgba(238, 242, 248, 0.05);
-  --surface-border: rgba(238, 242, 248, 0.12);
-
-  /* Lit blue carrying dark ink, the same polarity the app uses on its dark
-     ground. A navy fill would be invisible against a navy panel. */
-  --accent-solid: #9cc8f2;
-  --accent-solid-hover: #cfe6ff;
-  --accent-contrast: #0a1526;
-  --accent-ring: rgba(156, 200, 242, 0.4);
-  --accent-wash: rgba(156, 200, 242, 0.12);
-  --ring: #9cc8f2;
-
-  --brand: #9cc8f2;
-  --brand-deep: #cfe6ff;
-  --brand-high: #eaf4ff;
-  --brand-ink: #9cc8f2;
-  --brand-foreground: #0a1526;
-}
-
-/* The panel itself. Square and ruled rather than blurred and rounded: this is
- * the hero's rehearsal panel, reused. `backdrop-filter` is deliberately off —
- * `design.md` allows blur only for a bar floating over scrolling content, and
- * a translucent card over a moving water shader would shimmer as the field
- * moves underneath it. */
-.lp-v2 .register-app .glass-panel {
-  background: var(--panel-deep);
-  border: 1px solid rgba(238, 242, 248, 0.15);
-  border-radius: 0;
-  --glass-blur: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 /* ---------------------------------------------------------------------------
@@ -2967,13 +833,4 @@ html:has(main.lp-v2) {
   .streak-flame[data-lit] .streak-flame-core {
     animation: none;
   }
-}
-
-/* A day the streak did not reach. Ruled rather than filled, so the week reads
-   as seven slots with some of them taken rather than as a row of buttons. */
-.streak-day {
-  transition:
-    background-color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
-    color var(--dur-ui, 180ms) var(--ease-exit, ease-out),
-    border-color var(--dur-ui, 180ms) var(--ease-exit, ease-out);
 }

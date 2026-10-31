@@ -26,13 +26,22 @@ export function VoiceBaselinePanel({
   return (
     <div className="flex flex-col gap-4">
       {existingWpm && !result && (
-        <p className="rounded-xl bg-surface px-4 py-3 text-sm leading-6 text-subtle">
-          Your saved pace is{" "}
-          <span className="font-medium text-strong">
-            {existingWpm} words a minute
-          </span>
-          . Recording again replaces it.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-4 border-border border-t pt-4">
+          <div className="min-w-0">
+            <p className="font-medium text-[0.9375rem] text-strong">
+              Your usual pace
+            </p>
+            <p className="mt-0.5 text-sm text-subtle">
+              Recording again below replaces it
+            </p>
+          </div>
+          <p className="font-medium text-2xl text-strong tabular-nums">
+            {existingWpm}
+            <span className="ml-1 font-normal text-sm text-subtle">
+              words a minute
+            </span>
+          </p>
+        </div>
       )}
 
       <VoiceWarmup

@@ -1,51 +1,41 @@
 # Design
 
-**One register.** The landing page and the signed-in app are the same world:
-same stock, same ink, same sunset accent, same shapes, same type. This file
-previously described two — a serif monument on paper and a calm blue tool —
-and that split is retired. It was a defensible call and it produced a visible
-seam at sign-in; the decision now is that a person should not be able to tell
-they have crossed one.
+**One register.** The landing page, the auth screens and the signed-in app are
+the same world: the same paper, the same ink, the same shapes and the same
+type. A person should not be able to tell they have crossed the sign-in.
 
-| | Both sides |
+| | Everywhere |
 |---|---|
-| Canvas | `#f2f2f0` warm stock, cards in white |
-| Accent | Amber `#f59e0b` over `#b45309`, `#fbbf24` for the lit edge and glow. Dark ink on the fill, never white |
-| Panels | Frosted glass over a warm field, or a ruled card |
-| Elevation | Tinted with `rgba(124, 45, 18, …)`, never neutral |
-| Display | Geist, weight 600, tracking -0.035em |
+| Canvas | `#f8f9fa` paper, cards in white |
+| Accent | None. Ink `#141517` is the action colour: the primary button, the selection, today's bar. White type on it |
+| Panels | A white card with a hairline border (ink at 8%) and a small, soft, neutral shadow (`--elev-rest`) |
+| Radii | Controls 10 (`--r-control`), cards 16 (`--r-card`), round (`--r-pill`) |
+| Display | Geist, weight 400, tracking -0.035em |
 | Body | Geist |
-| Labels | Body face, sentence case. Martian Mono only for metadata and timecodes |
+| Labels | Body face, sentence case. Martian Mono only for metadata, timecodes and URLs |
+| Motion | One curve, `cubic-bezier(0.22, 1, 0.36, 1)`. One entrance per page |
 
-`.register-app` still exists, and still exists for a reason: the app needs its
-own radii, its own spacing rhythm and its own denser type scale, because a
-screen somebody sits inside for twenty minutes is not a screen they read for
-three seconds. What it no longer does is answer a different question about
-*colour* or *typeface*. It re-points shape and density, and nothing else.
+Colour is kept for the things that mean something — the three verdicts and the
+streak flame — so the chrome stays quiet and the marked transcript, the topic
+progress and the streak are what a person sees first.
 
-## How the two registers are built
+This is the result of the October 2026 redesign, worked out in mockups first
+(see the PR that introduced it) and then run through the `unslop` checklist:
+4px spacing grid, three text roles, one icon set (lucide, 16px, 1.5 stroke), no
+glows, gradients or washes, no greeting headlines, no trailing periods on short
+labels.
 
-`src/app/globals.css`. `:root` holds the answers; `.register-app` re-points the
-shape-and-density subset for the app. **Neither side may hardcode a value the
-other owns** — that indirection is what let the whole product change accent
-twice in one afternoon by editing four lines.
+## How the register is built
 
-The important consequence: `--elev-rest` is `none` outside the app, and
-`--r-card` is `0px`. A shared component written as `rounded-card border
-border-border shadow-rest` is therefore correct in *both* registers without
-knowing which one it is rendering in — flat and ruled on the landing, raised and
-soft in the app. That is why there is one `Card`, one `Button` and one `Input`
-rather than two sets, and why a `className` override at a call site deciding the
-register is always a bug.
+`src/app/globals.css`. `:root` holds every answer and `.dark` holds the night
+ones. `.register-app` (on the app shell) re-points the app's spacing rhythm and
+nothing else — a screen somebody sits inside for twenty minutes needs its own
+density, not its own palette. **Components read tokens, never literals**: that
+indirection is what lets the product change its look by editing one block.
 
-The landing's own artifact panels set `rounded-[20px]` directly, and that is the
-one sanctioned exception: they are a bespoke composition on a single page rather
-than instances of the shared card. It stays an exception. The moment a second
-page needs that panel, it becomes a component and reads the token.
-
-`--brand`, `--brand-deep` and `--brand-ink` are indirections for the same
-reason. They name what a colour is *for*, so the files across the app can keep
-asking for `bg-brand-deep` and get the right answer on either side.
+`--brand`, `--brand-deep` and `--brand-ink` still exist as indirections because
+files across the app ask for `bg-brand-deep` or `text-brand-ink`, and those
+names say what the colour is for. They answer with the ink now.
 
 ## What crosses the seam unchanged
 
@@ -68,10 +58,9 @@ product:
   enough to be confused with it would put a celebration and a judgement in the
   same colour in the same view. Different hue family, legible at a glance.
 
-  Declared at `:root`, restated inside `main.lp-v2` because that block forces
-  light surfaces whatever the reader's theme, and lifted one stop in `.dark`
-  because a mid-weight orange that is vivid on paper is a brown smudge on
-  carbon. A component asks for the token and is right in all three.
+  Declared at `:root` and lifted one stop in `.dark`, because a mid-weight
+  orange that is vivid on paper is a brown smudge on carbon. A component asks
+  for the token and is right in both themes.
 
 - **The mono voice.** Martian Mono, uppercase, small, tracked — for **metadata
   and timecodes**, and nothing else.
@@ -93,48 +82,28 @@ product:
 
 ## Banned, both registers
 
-- **Floating blurred orbs.** A soft radial shape sitting over a layout as
-  decoration — removed twice, still banned. This is *not* the same as a section
-  ground: `.ground-deep` and the two tints are full-bleed fields that define a
-  region and carry its type, which is what the reference set does and what
-  makes a long page read as chapters. The test is whether removing it changes
-  the section's identity or just removes a smudge.
+- **Floating blurred orbs, colour washes and glows.** A soft coloured shape
+  sitting over a layout as decoration — removed three times, still banned. The
+  last one was a lavender-to-ice inner glow on the landing's panels; it went in
+  the October 2026 pass for the same reason as the others.
 - Glassmorphism and `backdrop-filter` as decoration. Blur is for a bar floating
   over scrolling content, and nothing else.
-- A colour that is neither a verdict, the streak flame, nor the register's
-  single accent. The flame is the one addition this list has taken, it was
-  taken deliberately, and it did not open a door: adding a fifth means making
-  the same case, which is that the thing being coloured means exactly one
-  thing, means it everywhere, and is confusable with none of the four. The
-  landing's grounds are the one warm ramp at four values — a deep field, two
-  tints, and a band on white — and adding a second hue as scenery is how a
-  reserved palette stops being reserved. (This line named `#3b37e6`
-  ultramarine until the sunset landed; if you find another ultramarine in the
-  codebase it is a leftover, not a decision.)
+- A colour that is neither a verdict, the streak flame, nor the ink. The flame
+  is the one addition this list has taken, it was taken deliberately, and it
+  did not open a door: adding another means making the same case, which is that
+  the thing being coloured means exactly one thing, means it everywhere, and is
+  confusable with none of the four. (The product has been amber, navy and
+  ultramarine before; if you find one of those in the codebase it is a
+  leftover, not a decision.)
 - **A saturated ground under a marked transcript.** Green, red and tan have to
   stay legible and keep meaning *correct*, *missed* and *vague*. Every section
-  that marks anything takes a light ground, and `#f2ede6` is the floor for the
-  bare stock: it is the deepest warm value on which all three verdicts still
-  clear 4.5:1. One step below it the tan fails.
-
-  **Count the ground field, not just the stock.** A wash is laid *over* the
-  stock, so the number that matters is the blend at its heaviest point, not
-  the hex in `background-color`. `.ground-warm` carries a strong sunset rake
-  and lands the tan near 3.9:1 where the light is brightest — fine, because
-  section 02 marks nothing, and disqualifying for any section that does. A
-  section that marks takes a light stock *and* a light field.
+  that marks anything sits on the paper or on a white card, where all three
+  clear 4.5:1.
 - **More than one inversion on a page.** Light to dark and back is a full eye
   adaptation, and a reader who does it twice in six sections reports the page
-  as flashing at them — which is exactly what happened. A page gets at most one
-  crossing, and it goes where the meaning is: the landing's close, because
-  going dark there says *this is the end*. The dashboard gets none at all; the
-  top of a tool somebody opens ten times a day is not a different region, it is
-  the top of the page.
-
-  The corollary is that chapters have to come from the light range instead, so
-  spend it. Three "different" sections at `#ffffff`, `#f6f3f1` and `#ffffff` is
-  a two per cent step, which is no step at all — that flatness is what made the
-  two dark bands read as flashes rather than as structure.
+  as flashing at them — which is exactly what happened. Today no page has one:
+  the landing is light from top to bottom, and its sections are separated by
+  space and by white cards on the paper rather than by bands of colour.
 - **The machine describing itself to the person using it.** Pipeline diagrams,
   role names, model names, agent counts. It is all true and none of it is
   something a person revising for a test can act on, and a page that leads with
@@ -144,13 +113,9 @@ product:
   system that produced it.
 - 3D tilt, magnetic buttons, typewriter headlines.
 - Cursor-following effects **as decoration**: a halo, a trailing dot, a
-  particle spawner, anything that draws a shape where the pointer is. The
-  landing's hero field is the one sanctioned exception and it is not that: the
-  pointer lays a short, ageing wake into a fluid that is already flowing, so
-  there is no shape attached to the cursor, nothing is drawn on top of the
-  page, and standing still returns the field to its own motion within about a
-  second and a half. The test is whether the effect exists when the pointer
-  does not. A halo does not; this does.
+  particle spawner, anything that draws a shape where the pointer is. (The
+  landing's demo film draws a cursor, and it is not that: it is part of a
+  recorded product walkthrough, not attached to the reader's pointer.)
 - Pure-black shadows. Elevation is tinted with the text hue or it reads as dirt.
 - Spring or overshoot easing.
 - A hex or a pixel radius written into a component. Tokens, always.
@@ -190,8 +155,8 @@ larger size, the page looks unset.
 
 **There is no italic.** Geist ships none, and a synthetic slant at display
 size shears the word and reads as a rendering fault. Emphasis in headlines is
-weight plus the accent colour, which is also the only pairing that survives
-greyscale.
+weight and, where something is being marked, the verdict colour of what it
+was marked as.
 
 ## On Inter
 

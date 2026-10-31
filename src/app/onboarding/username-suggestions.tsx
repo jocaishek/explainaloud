@@ -67,13 +67,13 @@ export function UsernameSuggestions({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="text-[0.8rem] text-subtle">Free right now:</span>
+      <span className="text-muted-foreground text-sm">Free right now</span>
       {free.map((name) => (
         <button
           key={name}
           type="button"
           onClick={() => onPick(name)}
-          className="press rounded-pill border border-border bg-surface px-2.5 py-1 font-mono text-[0.75rem] text-strong transition-colors hover:border-[color:var(--accent-ring)] hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
+          className="h-8 rounded-control border border-border bg-card px-3 text-foreground text-sm transition-[border-color,transform] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:border-input active:scale-[0.98] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] motion-reduce:transition-none motion-reduce:active:scale-100"
         >
           @{name}
         </button>

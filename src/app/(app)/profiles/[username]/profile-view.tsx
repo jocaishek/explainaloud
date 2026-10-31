@@ -72,10 +72,10 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-stack px-4 py-8 pb-14 sm:px-6 lg:px-10 lg:py-10">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-4 px-4 pt-8 pb-32 sm:px-8">
       <Link
         href="/friends"
-        className="press inline-flex w-fit items-center gap-1.5 text-[0.85rem] text-subtle transition-colors hover:text-strong"
+        className="press inline-flex w-fit items-center gap-1.5 rounded-control text-sm text-subtle transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-strong focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
       >
         <ArrowLeft aria-hidden className="size-3.5" />
         Friends
@@ -83,7 +83,7 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
 
       <section
         data-rise=""
-        className="rounded-card border border-border bg-card p-6 shadow-rest sm:p-8"
+        className="rounded-card border border-border bg-card p-6 shadow-rest"
       >
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 items-center gap-4">
@@ -94,10 +94,10 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
               size={64}
             />
             <div className="min-w-0">
-              <h1 className="truncate font-display text-[1.6rem] text-strong leading-tight tracking-[-0.03em]">
+              <h1 className="truncate font-normal text-[2rem] text-strong leading-10 tracking-[-0.03em]">
                 {name}
               </h1>
-              <p className="mt-1 truncate font-mono text-[0.8rem] text-subtle">
+              <p className="mt-0.5 truncate font-mono text-subtle text-xs">
                 @{profile.username}
               </p>
             </div>
@@ -106,7 +106,7 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
           <div className="flex shrink-0 flex-col items-start gap-2 sm:items-end">
             {isSelf && (
               <Button asChild variant="outline" size="sm">
-                <Link href="/profile">Edit your profile</Link>
+                <Link href="/settings#profile">Edit your profile</Link>
               </Button>
             )}
 
@@ -232,12 +232,12 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
 
         {/* The two numbers, or the reason they are not here. */}
         {profile.topics !== null && profile.streak !== null ? (
-          <div className="mt-7 flex flex-wrap items-center gap-x-10 gap-y-4 border-border border-t pt-6">
+          <div className="mt-6 flex flex-wrap items-center gap-x-10 gap-y-4 border-border border-t pt-5">
             <p className="flex items-center gap-2.5">
-              {profile.streak > 0 && <StreakFlame size="lg" />}
+              {profile.streak > 0 && <StreakFlame size="md" />}
               {profile.streak > 0 ? (
-                <span className="text-[1.05rem]">
-                  <span className="font-display text-[1.9rem] text-strong leading-none tracking-[-0.035em] tabular-nums">
+                <span className="text-base">
+                  <span className="font-medium text-2xl text-strong leading-none tabular-nums">
                     {profile.streak}
                   </span>
                   <span className="ml-2 text-subtle">
@@ -245,13 +245,13 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
                   </span>
                 </span>
               ) : (
-                <span className="text-[1.05rem] text-subtle">
+                <span className="text-base text-subtle">
                   {streakLabel(profile.streak)}
                 </span>
               )}
             </p>
-            <p className="text-[1.05rem]">
-              <span className="font-display text-[1.9rem] text-strong leading-none tracking-[-0.035em] tabular-nums">
+            <p className="text-base">
+              <span className="font-medium text-2xl text-strong leading-none tabular-nums">
                 {profile.topics}
               </span>
               <span className="ml-2 text-subtle">
@@ -260,9 +260,9 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
             </p>
           </div>
         ) : (
-          <div className="mt-7 flex items-start gap-3 border-border border-t pt-6">
+          <div className="mt-6 flex items-start gap-3 border-border border-t pt-5">
             <Lock aria-hidden className="mt-0.5 size-4 shrink-0 text-subtle" />
-            <p className="max-w-[52ch] text-[0.88rem] text-subtle leading-relaxed">
+            <p className="max-w-[52ch] text-sm text-subtle leading-relaxed">
               Once you are friends you will each see two things about the other:
               how many topics they have built, and how many days in a row they
               have recorded. Not the topics, not the recordings, and nothing
@@ -272,7 +272,7 @@ export function ProfileView({ profile }: { profile: PublicProfile }) {
         )}
       </section>
 
-      <p className="text-[0.8rem] text-subtle">
+      <p className="text-[0.8125rem] text-subtle">
         On Explainaloud since{" "}
         {new Date(profile.member_since).toLocaleDateString(undefined, {
           year: "numeric",

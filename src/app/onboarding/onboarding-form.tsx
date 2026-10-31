@@ -1,22 +1,16 @@
 "use client";
 
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Check } from "lucide-react";
 import {
-  ArrowLeft,
-  ArrowRight,
-  AtSign,
-  AudioLines,
-  CalendarDays,
-  Check,
-  CheckCircle2,
-  CircleUserRound,
-  Compass,
-  GraduationCap,
-  Presentation,
-  SlidersHorizontal,
-} from "lucide-react";
-import { useActionState, useEffect, useId, useState } from "react";
+  type KeyboardEvent,
+  useActionState,
+  useEffect,
+  useId,
+  useState,
+} from "react";
 import { DateOfBirthField } from "~/components/date-of-birth-field";
+import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { Button } from "~/components/ui/button";
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
@@ -34,7 +28,7 @@ import { UsernameField } from "./username-field";
 import { UsernameSuggestions } from "./username-suggestions";
 import { VoiceWarmup, type WarmupResult } from "./voice-warmup";
 
-const EASE = [0.23, 1, 0.32, 1] as const;
+const EASE = [0.22, 1, 0.36, 1] as const;
 const STEPS = [
   "Your name",
   "Username",
@@ -42,30 +36,41 @@ const STEPS = [
   "How you'll use it",
   "Voice warm-up",
 ] as const;
-const STEP_ICONS = [
-  CircleUserRound,
-  AtSign,
-  CalendarDays,
-  SlidersHorizontal,
-  AudioLines,
+
+/** The question each step asks, and the one line under it. */
+const COPY = [
+  {
+    title: "What's your name?",
+    help: "This is how your home page and progress reports will greet you",
+  },
+  {
+    title: "Pick a username",
+    help: "Friends find you by it. It can't be changed later, so pick one you like",
+  },
+  {
+    title: "When's your birthday?",
+    help: "We only use it to check you're old enough for your own account. It can't be changed later",
+  },
+  {
+    title: "How will you use Explainaloud?",
+    help: "This shapes what we put in front of you first. You can change it in settings",
+  },
+  {
+    title: "Let's hear your voice",
+    help: "Ten seconds explaining something you already know, so we learn your normal pace",
+  },
 ] as const;
-const USE_TYPE_ICONS = {
-  school: GraduationCap,
-  teacher: Presentation,
-  personal: Compass,
-} as const;
+
+const FIELD_CLASS = "h-12 px-3.5 text-base md:text-base";
 
 export function OnboardingForm({ email }: { email: string }) {
   const shouldReduceMotion = useReducedMotion();
   const firstNameId = useId();
   const lastNameId = useId();
-  const dobId = useId();
+  const headingId = useId();
   const errorId = useId();
 
   const [step, setStep] = useState(0);
-  // Direction drives which way the panel slides, so going Back visibly
-  // reverses rather than replaying the forward animation.
-  const [direction, setDirection] = useState<1 | -1>(1);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [username, setUsername] = useState("");
@@ -132,444 +137,386 @@ export function OnboardingForm({ email }: { email: string }) {
       return;
     }
     setLocalError(null);
-    setDirection(1);
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   }
 
   function back() {
     setLocalError(null);
-    setDirection(-1);
     setStep((s) => Math.max(s - 1, 0));
-  }
-
-  function goToCompletedStep(index: number) {
-    if (index >= step) return;
-    setLocalError(null);
-    setDirection(-1);
-    setStep(index);
   }
 
   function clearCurrentError() {
     if (localError?.step === step) setLocalError(null);
   }
 
-  const slide = shouldReduceMotion
-    ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 } }
-    : {
-        initial: { opacity: 0, x: direction * 32, filter: "blur(4px)" },
-        animate: { opacity: 1, x: 0, filter: "blur(0px)" },
-        exit: { opacity: 0, x: direction * -32, filter: "blur(4px)" },
-      };
+  // A new question starts at the top of the page, not wherever the last
+  // one's button left the scroll.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: runs per step on purpose
+  useEffect(() => {
+    window.scrollTo({ top: 0 });
+  }, [step]);
 
   const error =
     (localError?.step === step ? localError.message : null) ?? state.error;
   const isLastStep = step === STEPS.length - 1;
+  /* Continue looks unavailable until the step is answerable, but stays
+     clickable: pressing it is how somebody finds out *why* it is not ready,
+     and a truly disabled button would swallow that question silently. */
+  const stepReady = stepError(step) === null;
+  const copy = COPY[step] ?? COPY[0];
 
   return (
-    <form
-      action={formAction}
-      onKeyDown={(event) => {
-        if (
-          event.key === "Enter" &&
-          !isLastStep &&
-          event.target instanceof HTMLInputElement
-        ) {
-          event.preventDefault();
-          next();
-        }
-      }}
-      onSubmit={(event) => {
-        if (!isLastStep) {
-          event.preventDefault();
-          next();
-          return;
-        }
-        const problem = stepError(STEPS.length - 1);
-        if (problem) {
-          event.preventDefault();
-          setLocalError({ step: STEPS.length - 1, message: problem });
-        }
-      }}
-      className="flex w-full flex-col gap-7"
-    >
-      {/* Every value travels with the form even while its step is unmounted. */}
-      <input type="hidden" name="firstName" value={firstName} />
-      <input type="hidden" name="lastName" value={lastName} />
-      <input type="hidden" name="dateOfBirth" value={dateOfBirth} />
-      <input type="hidden" name="useType" value={useType ?? ""} />
-      <input type="hidden" name="username" value={username} />
-      {/* Read from the browser rather than guessed from an IP, because a VPN
-          moves the IP and not the person. Streaks are counted in it. */}
-      <input type="hidden" name="timezone" value={timezone} />
+    <>
+      <header className="sticky top-0 z-10 bg-background">
+        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6 max-sm:px-4">
+          <span className="flex items-center gap-2 text-foreground">
+            <ExplainaloudMark disc className="size-5 shrink-0 text-strong" />
+            <span className="font-medium text-base tracking-[-0.02em]">
+              explainaloud
+            </span>
+          </span>
+          <span
+            className="text-muted-foreground text-sm tabular-nums"
+            aria-live="polite"
+          >
+            Step {step + 1} of {STEPS.length}
+          </span>
+        </div>
+        <div
+          className="h-0.5 bg-border"
+          role="progressbar"
+          aria-label="Setup progress"
+          aria-valuemin={1}
+          aria-valuemax={STEPS.length}
+          aria-valuenow={step + 1}
+          aria-valuetext={`${STEPS[step]}, step ${step + 1} of ${STEPS.length}`}
+        >
+          <span
+            className="block h-full origin-left bg-foreground transition-transform duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none"
+            style={{ transform: `scaleX(${(step + 1) / STEPS.length})` }}
+          />
+        </div>
+      </header>
 
-      <StepIndicator
-        step={step}
-        onStepSelect={goToCompletedStep}
-        reduceMotion={!!shouldReduceMotion}
-      />
+      <form
+        action={formAction}
+        onKeyDown={(event) => {
+          if (
+            event.key === "Enter" &&
+            !isLastStep &&
+            (event.target instanceof HTMLInputElement ||
+              event.target instanceof HTMLSelectElement)
+          ) {
+            event.preventDefault();
+            next();
+          }
+        }}
+        onSubmit={(event) => {
+          if (!isLastStep) {
+            event.preventDefault();
+            next();
+            return;
+          }
+          const problem = stepError(STEPS.length - 1);
+          if (problem) {
+            event.preventDefault();
+            setLocalError({ step: STEPS.length - 1, message: problem });
+          }
+        }}
+        className="mx-auto flex w-full max-w-[560px] flex-col px-6 pt-20 pb-24 max-sm:px-4 max-sm:pt-10 max-sm:pb-16"
+      >
+        {/* Every value travels with the form even while its step is unmounted. */}
+        <input type="hidden" name="firstName" value={firstName} />
+        <input type="hidden" name="lastName" value={lastName} />
+        <input type="hidden" name="dateOfBirth" value={dateOfBirth} />
+        <input type="hidden" name="useType" value={useType ?? ""} />
+        <input type="hidden" name="username" value={username} />
+        {/* Read from the browser rather than guessed from an IP, because a VPN
+            moves the IP and not the person. Streaks are counted in it. */}
+        <input type="hidden" name="timezone" value={timezone} />
 
-      <div className="min-h-[19rem]">
         <AnimatePresence mode="wait" initial={false}>
-          <motion.div
+          <motion.section
             key={step}
-            initial={slide.initial}
-            animate={slide.animate}
-            exit={slide.exit}
+            aria-labelledby={headingId}
+            initial={shouldReduceMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
             transition={{
-              duration: shouldReduceMotion ? 0.1 : 0.22,
+              duration: shouldReduceMotion ? 0.1 : 0.24,
               ease: EASE,
             }}
-            className="flex flex-col gap-5"
           >
-            <div>
-              <p className="mb-2 text-sm font-medium text-brand-ink">
-                Step {step + 1} of {STEPS.length}
-              </p>
-              <h2 className="text-3xl font-semibold tracking-tight text-strong text-balance">
-                {step === 0 && "What should we call you?"}
-                {step === 1 && "Pick your username"}
-                {step === 2 && "When were you born?"}
-                {step === 3 && "How will you use Explainaloud?"}
-                {step === 4 && "Let's hear your voice"}
-              </h2>
-              <p className="mt-2 max-w-md text-sm leading-6 text-subtle">
-                {step === 0 &&
-                  "This is how your dashboard and progress reports will greet you."}
-                {step === 2 &&
-                  "We use this to confirm you're old enough for your own account."}
-                {step === 1 &&
-                  "This is how friends find you. You can't change it later, so pick one you like."}
-                {step === 3 && "This shapes what we put in front of you first."}
-                {step === 4 &&
-                  "Thirty seconds explaining something you already know. It teaches us your normal speaking pace, which is what makes the gap-finding work."}
-              </p>
-            </div>
+            <h1
+              id={headingId}
+              className="text-balance font-normal text-[2rem] text-foreground leading-10 tracking-[-0.02em] max-sm:text-[1.75rem] max-sm:leading-9"
+            >
+              {copy.title}
+            </h1>
+            <p className="mt-2 text-base text-muted-foreground leading-6">
+              {copy.help}
+            </p>
 
-            {step === 0 && (
-              <div className="flex flex-col gap-4">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div>
-                    <Label htmlFor={firstNameId} className="sr-only">
-                      First name
-                    </Label>
-                    <Input
-                      id={firstNameId}
-                      autoFocus
-                      autoComplete="given-name"
-                      placeholder="First name"
-                      value={firstName}
-                      aria-invalid={!!error}
-                      aria-describedby={error ? errorId : undefined}
-                      onChange={(event) => {
-                        setFirstName(event.target.value);
-                        clearCurrentError();
-                      }}
-                      className="h-12 bg-surface px-4 text-base placeholder:text-subtle"
-                    />
+            <div className="mt-8 flex flex-col gap-4">
+              {step === 0 && (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor={firstNameId} className="text-foreground">
+                        First name
+                      </Label>
+                      <Input
+                        id={firstNameId}
+                        autoFocus
+                        autoComplete="given-name"
+                        value={firstName}
+                        aria-invalid={!!error}
+                        aria-describedby={error ? errorId : undefined}
+                        onChange={(event) => {
+                          setFirstName(event.target.value);
+                          clearCurrentError();
+                        }}
+                        className={FIELD_CLASS}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor={lastNameId} className="text-foreground">
+                        Last name
+                      </Label>
+                      <Input
+                        id={lastNameId}
+                        autoComplete="family-name"
+                        value={lastName}
+                        aria-invalid={!!error}
+                        aria-describedby={error ? errorId : undefined}
+                        onChange={(event) => {
+                          setLastName(event.target.value);
+                          clearCurrentError();
+                        }}
+                        className={FIELD_CLASS}
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <Label htmlFor={lastNameId} className="sr-only">
-                      Last name
-                    </Label>
-                    <Input
-                      id={lastNameId}
-                      autoComplete="family-name"
-                      placeholder="Last name"
-                      value={lastName}
-                      aria-invalid={!!error}
-                      aria-describedby={error ? errorId : undefined}
-                      onChange={(event) => {
-                        setLastName(event.target.value);
-                        clearCurrentError();
-                      }}
-                      className="h-12 bg-surface px-4 text-base placeholder:text-subtle"
-                    />
-                  </div>
-                </div>
 
-                <div className="flex items-center gap-2 text-xs text-subtle">
-                  <CheckCircle2 className="size-4 text-brand-ink" />
-                  <span className="truncate">{email} verified</span>
-                </div>
-              </div>
-            )}
+                  <p className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Check aria-hidden className="size-4 shrink-0" />
+                    <span className="truncate">{email} verified</span>
+                  </p>
+                </>
+              )}
 
-            {step === 1 && (
-              <div className="flex max-w-md flex-col gap-4">
-                <UsernameField
-                  value={username}
-                  onChange={(next) => {
-                    setUsername(next);
-                    clearCurrentError();
-                  }}
-                  onAvailability={setUsernameFree}
-                />
-                {/* Only in front of an empty field. Once somebody is typing
-                    their own idea, a row of alternatives is an interruption. */}
-                {username.length === 0 && (
-                  <UsernameSuggestions
-                    firstName={firstName}
-                    lastName={lastName}
-                    onPick={(picked) => {
-                      setUsername(picked);
+              {step === 1 && (
+                <>
+                  <UsernameField
+                    value={username}
+                    onChange={(next) => {
+                      setUsername(next);
                       clearCurrentError();
                     }}
+                    onAvailability={setUsernameFree}
                   />
-                )}
-              </div>
-            )}
+                  {/* Only in front of an empty field. Once somebody is typing
+                      their own idea, a row of alternatives is an interruption. */}
+                  {username.length === 0 && (
+                    <UsernameSuggestions
+                      firstName={firstName}
+                      lastName={lastName}
+                      onPick={(picked) => {
+                        setUsername(picked);
+                        clearCurrentError();
+                      }}
+                    />
+                  )}
+                </>
+              )}
 
-            {step === 2 && (
-              <div className="flex max-w-md flex-col gap-4">
-                <div className="flex flex-col gap-2">
-                  <span id={dobId} className="font-medium text-sm text-strong">
-                    Date of birth
-                  </span>
+              {step === 2 && (
+                <>
                   <DateOfBirthField
+                    /* Remounted when somebody steps back to this question,
+                       so it has to be told what they already picked. */
+                    defaultValue={dateOfBirth}
                     invalid={!!error}
-                    describedBy={error ? errorId : dobId}
+                    describedBy={error ? errorId : headingId}
                     onChange={(value) => {
                       setDateOfBirth(value);
                       clearCurrentError();
                     }}
                   />
-                </div>
-                <div className="rounded-xl bg-surface px-4 py-3">
-                  <p className="text-xs leading-5 text-subtle">
-                    Explainaloud requires users to be at least 13. Your birth
-                    date is only used for account eligibility.
+                  <p className="text-muted-foreground text-sm leading-5">
+                    You need to be at least 13 to have your own account. Your
+                    birthday is never shown to anyone
                   </p>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="flex flex-col gap-3">
-                {USE_TYPES.map((option) => (
-                  <UseTypeOption
-                    key={option}
-                    option={option}
-                    selected={useType === option}
-                    reduceMotion={!!shouldReduceMotion}
-                    onSelect={() => {
-                      setUseType(option);
-                      setLocalError(null);
-                    }}
-                  />
-                ))}
-              </div>
-            )}
-
-            {step === 4 && (
-              <VoiceWarmup
-                result={warmupResult}
-                skipped={warmupSkipped}
-                onComplete={(next) => {
-                  setWarmupResult(next);
-                  setWarmupSkipped(false);
-                }}
-                onSkip={() => setWarmupSkipped(true)}
-              />
-            )}
-          </motion.div>
-        </AnimatePresence>
-      </div>
-
-      <AnimatePresence>
-        {error && (
-          <motion.p
-            initial={shouldReduceMotion ? false : { opacity: 0, y: -6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={shouldReduceMotion ? undefined : { opacity: 0 }}
-            transition={{
-              duration: shouldReduceMotion ? 0 : 0.2,
-              ease: EASE,
-            }}
-            role="alert"
-            id={errorId}
-            className="text-sm text-destructive"
-          >
-            {error}
-          </motion.p>
-        )}
-      </AnimatePresence>
-
-      <div className="flex items-center justify-between gap-3">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={back}
-          disabled={step === 0 || pending}
-          className={cn(
-            "gap-1.5 rounded-full motion-reduce:transition-none",
-            // `invisible`, not `opacity-0`: the Button variant's
-            // `disabled:opacity-50` is generated after plain opacity
-            // utilities and would win the moment this button is disabled.
-            step === 0 && "invisible",
-          )}
-        >
-          <ArrowLeft className="size-4" />
-          Back
-        </Button>
-
-        {/* Distinct keys are load-bearing. Without them React reuses one DOM
-            node for both buttons and only swaps `type`; the click that
-            advances to the last step then finds a node that has become
-            type="submit" by the time the browser runs the default action,
-            and submits the form before the user has picked anything. */}
-        {isLastStep ? (
-          <Button
-            key="finish"
-            type="submit"
-            disabled={pending}
-            className="group h-11 gap-1.5 bg-accent-solid px-6 font-semibold text-accent-contrast transition-colors duration-200 hover:bg-accent-solid-hover"
-          >
-            {pending ? "Setting up…" : "Finish setup"}
-            {!pending && <Check className="size-4" />}
-          </Button>
-        ) : (
-          <Button
-            key="continue"
-            type="button"
-            onClick={next}
-            className="group h-11 gap-1.5 bg-accent-solid px-6 font-semibold text-accent-contrast transition-colors duration-200 hover:bg-accent-solid-hover"
-          >
-            Continue
-            <ArrowRight className="size-4 transition-transform duration-200 ease-out group-hover:translate-x-0.5 motion-reduce:transform-none motion-reduce:transition-none" />
-          </Button>
-        )}
-      </div>
-    </form>
-  );
-}
-
-function StepIndicator({
-  step,
-  onStepSelect,
-  reduceMotion,
-}: {
-  step: number;
-  onStepSelect: (step: number) => void;
-  reduceMotion: boolean;
-}) {
-  return (
-    /* Five columns, because there are five steps. It said four, from before
-       the username step existed, and a five-item grid in a four-column track
-       wraps the last one onto a second row of its own — a progress indicator
-       that is visibly one step wider than the track it sits in. */
-    <ol className="grid grid-cols-5 gap-1 rounded-xl bg-surface p-1">
-      {STEPS.map((label, index) => {
-        const Icon = STEP_ICONS[index];
-        const complete = index < step;
-        const active = index === step;
-
-        return (
-          <li key={label}>
-            <button
-              type="button"
-              disabled={index > step}
-              aria-current={active ? "step" : undefined}
-              onClick={() => onStepSelect(index)}
-              className={cn(
-                "relative flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2.5 text-left font-medium text-xs transition-colors duration-200 lg:justify-start lg:px-3 motion-reduce:transition-none",
-                active
-                  ? "text-strong"
-                  : complete
-                    ? "text-brand-ink hover:text-strong"
-                    : "text-subtle",
+                </>
               )}
-            >
-              {active && (
-                <motion.span
-                  layoutId="onboarding-active-step"
-                  className="absolute inset-0 rounded-lg bg-card"
-                  transition={{ duration: reduceMotion ? 0 : 0.25, ease: EASE }}
+
+              {step === 3 && (
+                <UseTypeChoices
+                  labelledBy={headingId}
+                  value={useType}
+                  onChange={(option) => {
+                    setUseType(option);
+                    setLocalError(null);
+                  }}
                 />
               )}
-              <span className="relative flex size-5 shrink-0 items-center justify-center">
-                {complete ? (
-                  <Check className="size-4" />
-                ) : Icon ? (
-                  <Icon className="size-4" />
-                ) : null}
-              </span>
-              {/* Five labels do not fit beside five icons until the panel is
-                  wide. Below that the icon is the whole control and the label
-                  is read out rather than drawn. */}
-              <span className="relative hidden truncate lg:inline">
-                {label}
-              </span>
-              <span className="sr-only lg:hidden">{label}</span>
+
+              {step === 4 && (
+                <VoiceWarmup
+                  result={warmupResult}
+                  skipped={warmupSkipped}
+                  onComplete={(next) => {
+                    setWarmupResult(next);
+                    setWarmupSkipped(false);
+                  }}
+                  onSkip={() => setWarmupSkipped(true)}
+                />
+              )}
+            </div>
+          </motion.section>
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {error && (
+            <motion.p
+              initial={shouldReduceMotion ? false : { opacity: 0, y: -4 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={shouldReduceMotion ? undefined : { opacity: 0 }}
+              transition={{
+                duration: shouldReduceMotion ? 0 : 0.2,
+                ease: EASE,
+              }}
+              role="alert"
+              id={errorId}
+              className="mt-6 text-destructive text-sm"
+            >
+              {error}
+            </motion.p>
+          )}
+        </AnimatePresence>
+
+        <div className="mt-8 grid gap-3">
+          {/* Distinct keys are load-bearing. Without them React reuses one DOM
+              node for both buttons and only swaps `type`; the click that
+              advances to the last step then finds a node that has become
+              type="submit" by the time the browser runs the default action,
+              and submits the form before the user has picked anything. */}
+          {isLastStep ? (
+            <Button
+              key="finish"
+              type="submit"
+              disabled={pending}
+              className="h-12 w-full text-base"
+            >
+              {pending ? "Setting up…" : "Finish setup"}
+            </Button>
+          ) : (
+            <Button
+              key="continue"
+              type="button"
+              onClick={next}
+              aria-disabled={!stepReady}
+              className="h-12 w-full text-base aria-disabled:opacity-50"
+            >
+              Continue
+            </Button>
+          )}
+
+          {step > 0 && (
+            <button
+              type="button"
+              onClick={back}
+              disabled={pending}
+              className="h-9 justify-self-center rounded-control px-3 text-muted-foreground text-sm transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] disabled:opacity-50 motion-reduce:transition-none"
+            >
+              Back
             </button>
-          </li>
-        );
-      })}
-    </ol>
+          )}
+        </div>
+      </form>
+    </>
   );
 }
 
-function UseTypeOption({
-  option,
-  selected,
-  reduceMotion,
-  onSelect,
+/**
+ * One row per answer, the whole row is the control, and the radio dot sits on
+ * the right where the eye ends the line. Arrow keys move the choice, as they
+ * do in any native radio group.
+ */
+function UseTypeChoices({
+  labelledBy,
+  value,
+  onChange,
 }: {
-  option: UseType;
-  selected: boolean;
-  reduceMotion: boolean;
-  onSelect: () => void;
+  labelledBy: string;
+  value: UseType | null;
+  onChange: (option: UseType) => void;
 }) {
-  const { title, description } = USE_TYPE_LABELS[option];
-  const Icon = USE_TYPE_ICONS[option];
+  function onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
+    const forward = event.key === "ArrowDown" || event.key === "ArrowRight";
+    const backward = event.key === "ArrowUp" || event.key === "ArrowLeft";
+    if (!forward && !backward) return;
+    event.preventDefault();
+    const current = value ? USE_TYPES.indexOf(value) : -1;
+    const length = USE_TYPES.length;
+    const nextIndex = forward
+      ? (current + 1) % length
+      : (current - 1 + length) % length;
+    const option = USE_TYPES[nextIndex];
+    if (!option) return;
+    onChange(option);
+    event.currentTarget
+      .querySelectorAll<HTMLButtonElement>('[role="radio"]')
+      [nextIndex]?.focus();
+  }
 
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      aria-label={`${title}: ${description}`}
-      className={cn(
-        "group flex items-center gap-4 rounded-xl border p-4 text-left transition-[border-color,background-color,transform] duration-200 ease-out active:scale-[0.99] motion-reduce:transition-none motion-reduce:active:scale-100",
-        selected
-          ? "border-brand bg-brand/10"
-          : "border-border bg-surface hover:border-brand/40 hover:bg-brand/[0.04]",
-      )}
+    <div
+      role="radiogroup"
+      aria-labelledby={labelledBy}
+      onKeyDown={onKeyDown}
+      className="grid gap-2"
     >
-      <span
-        className={cn(
-          "flex size-10 shrink-0 items-center justify-center rounded-lg transition-colors duration-200 motion-reduce:transition-none",
-          selected
-            ? "bg-accent-solid text-accent-contrast"
-            : "bg-card text-subtle group-hover:text-brand-ink",
-        )}
-      >
-        <Icon className="size-5" />
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block font-medium text-strong">{title}</span>
-        <span className="mt-0.5 block text-sm leading-5 text-subtle">
-          {description}
-        </span>
-      </span>
-      <span
-        className={cn(
-          "flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors duration-200 motion-reduce:transition-none",
-          selected ? "border-brand bg-brand" : "border-border",
-        )}
-      >
-        <AnimatePresence>
-          {selected && (
-            <motion.span
-              initial={reduceMotion ? false : { scale: 0.5, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={reduceMotion ? undefined : { scale: 0.5, opacity: 0 }}
-              transition={{ duration: reduceMotion ? 0 : 0.18, ease: EASE }}
-            >
-              <Check className="size-3 text-white" />
-            </motion.span>
-          )}
-        </AnimatePresence>
-      </span>
-    </button>
+      {USE_TYPES.map((option, index) => {
+        const { title, description } = USE_TYPE_LABELS[option];
+        const selected = value === option;
+        const focusable = value ? selected : index === 0;
+        return (
+          // biome-ignore lint/a11y/useSemanticElements: a native radio needs a `name`, which would post a stray key with the profile form; arrows and roving focus are handled above
+          <button
+            key={option}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            tabIndex={focusable ? 0 : -1}
+            onClick={() => onChange(option)}
+            className={cn(
+              "grid grid-cols-[1fr_auto] items-center gap-3 rounded-control border bg-card p-4 text-left transition-[border-color,box-shadow] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] motion-reduce:transition-none",
+              selected
+                ? "border-foreground shadow-[inset_0_0_0_0.5px_var(--foreground)]"
+                : "border-input hover:border-foreground/30",
+            )}
+          >
+            <span className="min-w-0">
+              <span className="block font-medium text-base text-foreground">
+                {title}
+              </span>
+              <span className="mt-0.5 block text-muted-foreground text-sm leading-5">
+                {description}
+              </span>
+            </span>
+            <span
+              aria-hidden
+              className={cn(
+                "size-5 shrink-0 rounded-full transition-[border-width,border-color] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+                selected
+                  ? "border-[6px] border-foreground"
+                  : "border-[1.5px] border-input",
+              )}
+            />
+          </button>
+        );
+      })}
+    </div>
   );
 }

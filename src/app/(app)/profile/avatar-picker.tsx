@@ -3,6 +3,7 @@
 import { Camera, Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
+import { buttonVariants } from "~/components/ui/button";
 import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 import { removeAvatar, saveAvatar } from "./actions";
@@ -152,7 +153,7 @@ export function AvatarPicker({
           type="button"
           onClick={() => input.current?.click()}
           aria-label={shown ? "Change your picture" : "Add a picture"}
-          className="press group relative block size-20 overflow-hidden rounded-full bg-accent-wash outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
+          className="press group relative block size-16 overflow-hidden rounded-full bg-accent-wash outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
         >
           {shown ? (
             /* A plain `img`, and the rule is suppressed rather than followed.
@@ -178,7 +179,7 @@ export function AvatarPicker({
               height={80}
             />
           ) : (
-            <span className="flex size-full items-center justify-center font-medium text-[1.4rem] text-brand-ink">
+            <span className="flex size-full items-center justify-center font-medium text-2xl text-brand-ink">
               {initials}
             </span>
           )}
@@ -212,15 +213,12 @@ export function AvatarPicker({
       </div>
 
       <div className="min-w-0">
-        <p className="text-[0.85rem] text-subtle leading-relaxed">
-          PNG, JPEG, WebP or GIF, up to 5 MB. You choose the crop.
-        </p>
-        <div className="mt-2 flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <button
             type="button"
             onClick={() => input.current?.click()}
             disabled={busy}
-            className="press font-medium text-[0.85rem] text-[color:var(--accent-solid)] underline-offset-4 hover:underline disabled:opacity-50"
+            className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
           >
             {shown ? "Change picture" : "Upload a picture"}
           </button>
@@ -235,12 +233,18 @@ export function AvatarPicker({
                   else router.refresh();
                 })
               }
-              className="press text-[0.85rem] text-subtle underline-offset-4 hover:text-strong hover:underline disabled:opacity-50"
+              className={cn(
+                buttonVariants({ variant: "ghost", size: "sm" }),
+                "text-subtle",
+              )}
             >
               Remove
             </button>
           )}
         </div>
+        <p className="mt-1.5 text-[0.8125rem] text-subtle">
+          PNG, JPEG, WebP or GIF, up to 5 MB. You choose the crop
+        </p>
         {error && (
           <p role="alert" className="mt-2 text-[0.8rem] text-destructive">
             {error}

@@ -1,4 +1,4 @@
-import { CheckCircle2 } from "lucide-react";
+import { Check } from "lucide-react";
 import Link from "next/link";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
 import { createClient } from "~/lib/supabase/server";
@@ -43,32 +43,31 @@ export default async function EmailConfirmedPage() {
   }
 
   return (
-    /* The auth screens' room. This page was a hardcoded near-black one-off —
-       neither the landing's navy nor the app's stock — so the click out of the
-       confirmation email landed somewhere that looked like a third product.
-       The content block below carries `register-app` for the same reason the
-       auth card does: the accent tokens the button reads take their
-       lit-on-navy polarity from the `.lp-v2 .register-app` override, which is
-       a descendant selector. */
-    <main className="lp-v2 lp-atmosphere flex min-h-screen w-full flex-col items-center justify-center px-6 py-16 text-white">
+    /* The auth screens' room: the same light page and card as sign-in and
+       onboarding, so the click out of the confirmation email lands in the
+       product it is confirming rather than somewhere that looks like a
+       third one. */
+    <main className="flex min-h-svh w-full flex-col items-center bg-background px-6 py-10 text-foreground max-sm:px-4 sm:justify-center sm:py-16">
       <Link
         href="/"
-        className="flex items-center gap-2 text-base font-semibold tracking-tight text-white transition-opacity hover:opacity-80"
+        className="flex items-center gap-2 rounded-control text-foreground transition-opacity duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:opacity-80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
       >
-        <ExplainaloudMark className="size-6 shrink-0 text-brand-ink" />
-        Explainaloud
+        <ExplainaloudMark disc className="size-5 shrink-0 text-strong" />
+        <span className="font-medium text-base tracking-[-0.02em]">
+          explainaloud
+        </span>
       </Link>
 
-      <div className="register-app mt-10 flex w-full max-w-md flex-col items-center bg-transparent text-center">
-        <span className="flex size-14 items-center justify-center rounded-full bg-brand/10">
-          <CheckCircle2 className="size-7 text-brand-ink" aria-hidden />
+      <div className="mt-12 flex w-full max-w-md flex-col items-center rounded-card border border-border bg-card p-8 text-center shadow-rest max-sm:p-6">
+        <span className="flex size-12 items-center justify-center rounded-full bg-muted">
+          <Check className="size-6 text-foreground" aria-hidden />
         </span>
 
-        <h1 className="mt-6 text-3xl font-semibold tracking-tight text-balance">
+        <h1 className="mt-6 text-balance font-normal text-[2rem] leading-10 tracking-[-0.02em] max-sm:text-[1.75rem] max-sm:leading-9">
           Your email is confirmed
         </h1>
 
-        <p className="mt-3 text-sm leading-6 text-[#A1A1AA]">
+        <p className="mt-2 text-base text-muted-foreground leading-6">
           {signedIn
             ? user?.email
               ? `${user.email} is verified and you're signed in on this device.`
@@ -78,17 +77,18 @@ export default async function EmailConfirmedPage() {
 
         <Link
           href={destination}
-          className="press mt-8 inline-flex h-11 items-center justify-center rounded-full bg-accent-solid px-7 font-semibold text-accent-contrast transition-colors duration-200 hover:bg-accent-solid-hover"
+          className="mt-8 inline-flex h-12 w-full items-center justify-center rounded-control bg-accent-solid px-6 font-medium text-accent-contrast text-base shadow-rest transition-[background-color,transform] duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-accent-solid-hover focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] active:scale-[0.98] motion-reduce:transition-none motion-reduce:active:scale-100"
         >
           {signedIn ? "Continue to Explainaloud" : "Log in"}
         </Link>
       </div>
 
-      <p className="mt-10 text-sm text-[#71717A]">
-        <Link href="/" className="transition-colors hover:text-white">
-          Back to home
-        </Link>
-      </p>
+      <Link
+        href="/"
+        className="mt-8 rounded-control px-3 py-2 text-muted-foreground text-sm transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
+      >
+        Back to home
+      </Link>
     </main>
   );
 }

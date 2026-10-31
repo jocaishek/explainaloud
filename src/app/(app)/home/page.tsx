@@ -1,11 +1,20 @@
 import type { Course, Folder } from "~/lib/folders";
+import { courseHref, courseTitle } from "~/lib/folders";
+import { ownStreak } from "~/lib/own-streak";
 import type { SpeechMetrics } from "~/lib/speech-metrics";
 import { requireProfile } from "~/lib/supabase/server";
 import { TopicGrid } from "../topic-grid";
+import {
+  StatCard,
+  StreakIcon,
+  TonightForm,
+  UpNext,
+  type UpNextItem,
+  WeekCard,
+  type WeekDay,
+} from "./dashboard";
 import { FirstRunTour } from "./first-run";
-import { HomeHeader } from "./home-header";
 import { PacePanel, type PaceSession, paceStanding } from "./pace-panel";
-import { StandingPanel, type WeekDay } from "./standing-panel";
 
 /**
  * How many bars the pace chart draws, and how many rows it reads to find them.
@@ -16,6 +25,9 @@ import { StandingPanel, type WeekDay } from "./standing-panel";
  */
 const PACE_BARS = 5;
 const PACE_WINDOW = 20;
+
+/** A grade at or above this is a topic in hand rather than one to practise. */
+const READY_SCORE = 80;
 
 export default async function DashboardPage() {
   const { supabase, user, profile } = await requireProfile();
@@ -55,8 +67,9 @@ export default async function DashboardPage() {
     { data: baseline },
     { data: recent },
     { count: sessionCount },
-    { data: streak },
+    currentStreak,
     { data: week },
+    { data: graded },
   ] = await Promise.all([
     supabase
       .from("folders")
@@ -99,8 +112,25 @@ export default async function DashboardPage() {
       .from("course_sessions")
       .select("id", { count: "exact", head: true })
       .eq("user_id", user.id),
-    supabase.rpc("own_streak", { zone }),
+    ownStreak(zone),
     supabase.rpc("streak_week", { zone }),
+    // Every recording's topic, grade and date, for Up next. Newest first, so
+    // the first row seen for a course is its most recent. Unbounded, like the
+    // topic hubs' read: three small columns, and a window would quietly call
+    // an old topic "not explained yet".
+    supabase
+      .from("course_sessions")
+      .select("course_id, score, started_at, analyzed_at")
+      .eq("user_id", user.id)
+      .order("started_at", { ascending: false })
+      .returns<
+        Array<{
+          course_id: string;
+          score: number | null;
+          started_at: string;
+          analyzed_at: string | null;
+        }>
+      >(),
   ]);
 
   /* Unreliable recordings are dropped rather than drawn faintly.
@@ -135,118 +165,195 @@ export default async function DashboardPage() {
 
   const baselineWpm = baseline?.median_wpm ?? baseline?.capable_wpm ?? null;
 
-  /* The two RPCs come back untyped, so they are narrowed here rather than
-     asserted at the call. A streak that failed to load is not a streak of
-     zero, but on a dashboard the difference is invisible and the alternative
-     is an error state for a decoration. */
-  const currentStreak = typeof streak === "number" ? streak : 0;
+  /* The week RPC comes back untyped, so it is narrowed here rather than
+     asserted at the call. */
   const weekDays = (week ?? []) as WeekDay[];
 
   const topicCount = courses?.length ?? 0;
   const recorded = sessionCount ?? 0;
 
-  /* Three totals, and their labels are the whole caption now.
-   *
-   * These used to be a ruled row across the page, each figure carrying a line
-   * saying what it counted. In the corner there is no room for that line, and
-   * two of the three only ever restated the label. The one that carried
-   * something real — that the rate has the pauses taken out — is said by the
-   * pace chart, which is the only place the rate is worth reading in detail. */
-  const figures = [
-    { label: "Explanations", value: recorded, measured: recorded > 0 },
-    {
-      label: "Pace",
-      value: baselineWpm ?? 0,
-      unit: "wpm",
-      measured: (baselineWpm ?? 0) > 0,
-    },
-    { label: "Topics", value: topicCount, measured: topicCount > 0 },
-  ];
+  const weekRecorded = weekDays.filter((d) => d.sessions > 0).length;
+  const weekSessions = weekDays.reduce((sum, d) => sum + d.sessions, 0);
+  const latestPace = paceSessions.at(-1)?.wpm ?? null;
+  const paceDelta =
+    latestPace !== null && baselineWpm
+      ? latestPace - Math.round(baselineWpm)
+      : null;
 
-  /* Whether there is a chart to draw, and the one line that stands in for it
-     when there is not. */
+  /* Each topic's latest grade, and which topics have been explained at all.
+     A recording that was never graded (analysis failed, or is still running)
+     still counts as explained: telling somebody to explain a topic "for the
+     first time" after they did is the one thing this list must not say. */
+  const latest = new Map<string, { score: number | null; at: string }>();
+  const spoken = new Set<string>();
+  for (const row of graded ?? []) {
+    spoken.add(row.course_id);
+    if (row.analyzed_at && !latest.has(row.course_id)) {
+      latest.set(row.course_id, { score: row.score, at: row.started_at });
+    }
+  }
+  const explainedCount = (courses ?? []).filter((c) => spoken.has(c.id)).length;
+
+  /* Up next, from the grades: the weakest topic to practise, a topic never
+     explained, and a topic in hand that has not been said for longest. Three
+     at most, and never the same topic twice. */
+  const upNext: UpNextItem[] = [];
+  const all = courses ?? [];
+  const weakest = all
+    .filter((c) => {
+      const score = latest.get(c.id)?.score;
+      return typeof score === "number" && score < READY_SCORE;
+    })
+    .sort(
+      (a, b) => (latest.get(a.id)?.score ?? 0) - (latest.get(b.id)?.score ?? 0),
+    )[0];
+  if (weakest) {
+    upNext.push({
+      key: `practice-${weakest.id}`,
+      tone: "practice",
+      why: "Gaps to close",
+      title: `Practise ${courseTitle(weakest)}`,
+      detail: `Your last explanation scored ${latest.get(weakest.id)?.score}. The gap report shows what was missed`,
+      href: `${courseHref(weakest)}/gaps`,
+      action: "See what you missed",
+    });
+  }
+  const fresh = all.find((c) => !spoken.has(c.id));
+  if (fresh) {
+    upNext.push({
+      key: `fresh-${fresh.id}`,
+      tone: "fresh",
+      why: "Not explained yet",
+      title: `Explain ${courseTitle(fresh)}`,
+      detail: "About three minutes, out loud",
+      href: `${courseHref(fresh)}/record`,
+      action: "Start explaining",
+    });
+  }
+  const stale = all
+    .filter((c) => {
+      const score = latest.get(c.id)?.score;
+      return typeof score === "number" && score >= READY_SCORE;
+    })
+    .sort((a, b) =>
+      (latest.get(a.id)?.at ?? "").localeCompare(latest.get(b.id)?.at ?? ""),
+    )[0];
+  if (stale) {
+    const at = latest.get(stale.id)?.at;
+    upNext.push({
+      key: `again-${stale.id}`,
+      tone: "again",
+      why: "In hand",
+      title: `Say ${courseTitle(stale)} again`,
+      detail: at
+        ? `Last explained ${new Date(at).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: zone })}. A quick run keeps it from slipping`
+        : "A quick run keeps it from slipping",
+      href: `${courseHref(stale)}/record`,
+      action: "Explain again",
+    });
+  }
+  if (upNext.length === 0) {
+    upNext.push({
+      key: "first-topic",
+      tone: "fresh",
+      why: "Start here",
+      title: "Make your first topic",
+      detail: "Type a topic or add your notes, then explain it out loud",
+      href: "/new",
+      action: "New topic",
+    });
+  }
+
+  /* Whether there is a pace chart to draw, and the one line that stands in
+     for it when there is not. */
   const pace = paceStanding({
     baselineWpm,
     plotted: paceSessions.length,
     recorded,
   });
 
-  /* Where this account stands, in one line, said from the numbers rather than
-     from a copy deck. The three states are the three shapes an account can be
-     in, and each one names the next thing to do rather than congratulating
-     anybody for arriving. */
-  const lede =
-    topicCount === 0
-      ? "Nothing here yet. Start a topic and the rest of this page fills itself in."
-      : recorded === 0
-        ? `${topicCount} ${topicCount === 1 ? "topic" : "topics"} ready to go. The next step is explaining one out loud.`
-        : `${recorded} ${recorded === 1 ? "explanation" : "explanations"} across ${topicCount} ${topicCount === 1 ? "topic" : "topics"}. Carry on below, or start something new.`;
+  const date = new Date().toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: zone,
+  });
 
   return (
-    /* One column, one measure, from the top of the page to the bottom of the
-       topic list. The rail down the left is the app's frame; everything in
-       here is the screen. */
-    <div className="mx-auto flex w-full max-w-[var(--measure)] flex-col gap-stack px-4 py-8 pb-14 sm:px-6 lg:px-10 lg:py-10 lg:pb-16">
-      <HomeHeader firstName={profile.first_name} lede={lede} />
-
-      {/* Where this account stands, one line under the greeting.
-       *
-       * It sat in the corner beside the header for one release and the corner
-       * is the wrong shape: a greeting and a sentence are about 70px tall, no
-       * honest arrangement of a streak, a week and three totals is, and the
-       * difference showed up as an empty column under the lede. Full width it
-       * is a single row, so nothing is left hanging next to it.
-       *
-       * `order-2` until `md`, because on a phone the strip has to stack into
-       * three parts and that is a screen of readout between somebody and the
-       * only thing on this page that is theirs. There it goes below the
-       * topics; there is no corner to put it in and no row to share. */}
-      <StandingPanel
-        streak={currentStreak}
-        week={weekDays}
-        figures={figures}
-        className="order-2 md:order-none"
-      />
-
-      {/* Your topics, immediately.
-       *
-       * They used to be the last thing on the page, under a streak band, a
-       * row of totals and a two-panel row — so opening the app put four
-       * screens of summary between somebody and the only thing on it that is
-       * theirs. The summary is worth having and it is not worth arriving at
-       * first: a dashboard whose top half is about the dashboard is a page
-       * you scroll past every time.
-       *
-       * The panel that used to lead — a numbered "Start here" of the three
-       * steps — is gone rather than moved. It was a restatement of the loop
-       * for somebody who had already learned it, and every route in it is
-       * still one click away: the grid's own new-topic tile is `/new`, and
-       * Record sits in the rail. The first-run tour still teaches the loop,
-       * once, to the only people who need telling. */}
-      <div data-rise="" data-tour="topics" className="order-1 md:order-none">
-        <TopicGrid folders={folders ?? []} courses={courses ?? []} />
+    <div className="mx-auto flex w-full max-w-[90rem] flex-col gap-4 px-4 py-8 pb-16 sm:px-6 lg:px-8">
+      <div data-rise="">
+        <TonightForm date={date} />
       </div>
 
-      {/* The chart, or the reason there is not one yet.
-       *
-       * The panel used to carry its own empty state, and it had to: it sat in
-       * a row, so rendering nothing left a hole and told nobody why the thing
-       * they had been promised was missing. The answer then was a full-height
-       * card of dashed ghost bars — about 370px to say "not yet".
-       *
-       * Out of that row nothing is left behind, so the reason can be what it
-       * always was in substance: one sentence, in the place the chart will
-       * appear. The principle survives and the furniture does not. */}
+      {/* Four numbers, each with what it compares to. */}
+      <section
+        aria-label="Your numbers"
+        data-rise=""
+        className="mt-4 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"
+      >
+        <StatCard
+          label="Streak"
+          icon={<StreakIcon streak={currentStreak} />}
+          value={currentStreak}
+          unit={currentStreak === 1 ? "day" : "days"}
+          note={`${weekRecorded} of 7 days this week`}
+        />
+        <StatCard
+          label="Explanations"
+          value={recorded}
+          note={`${weekSessions} this week`}
+        />
+        <StatCard
+          label="Speaking pace"
+          value={baselineWpm ? Math.round(baselineWpm) : null}
+          unit="wpm"
+          note={
+            paceDelta !== null ? (
+              <>
+                <span className="font-medium text-strong tabular-nums">
+                  {paceDelta > 0 ? `+${paceDelta}` : paceDelta}
+                </span>{" "}
+                on your latest measured recording
+              </>
+            ) : baselineWpm ? (
+              "Your usual pace"
+            ) : (
+              "Measured on your first recording"
+            )
+          }
+        />
+        <StatCard
+          label="Topics"
+          value={topicCount}
+          note={`${explainedCount} explained so far`}
+        />
+      </section>
+
+      <div
+        data-rise=""
+        className="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+      >
+        <WeekCard week={weekDays} />
+        <UpNext items={upNext.slice(0, 3)} />
+      </div>
+
+      {/* Your topics, with their folders. */}
+      <section
+        data-rise=""
+        data-tour="topics"
+        className="rounded-card border border-border bg-card p-6 shadow-rest"
+      >
+        <TopicGrid folders={folders ?? []} courses={courses ?? []} />
+      </section>
+
+      {/* The pace chart, or the reason there is not one yet. */}
       {pace.charted ? (
-        <div data-rise="" className="order-3 md:order-none">
+        <div data-rise="">
           <PacePanel sessions={paceSessions} baselineWpm={baselineWpm} />
         </div>
       ) : (
         pace.note && (
-          <p
-            data-rise=""
-            className="order-3 border-border border-t pt-4 text-[0.85rem] text-subtle leading-relaxed md:order-none"
-          >
+          <p data-rise="" className="px-1 text-sm text-subtle leading-relaxed">
             {pace.note}
           </p>
         )

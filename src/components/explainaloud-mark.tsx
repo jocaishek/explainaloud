@@ -29,9 +29,8 @@
  * That is not a nicety: this icon is masked to a circle everywhere it appears,
  * so a mark that only fits a square is a mark that gets clipped.
  *
- * Both parts take `currentColor`, so the mark is ultramarine on the page's
- * grey stock and white on an ultramarine tile without either being written
- * down twice.
+ * Both parts take `currentColor`, so the mark is ink on the page and paper on
+ * an ink fill without either being written down twice.
  */
 
 /** The cue triangle, filled. Corners cut 4.5 units back and rounded through. */
@@ -56,10 +55,35 @@ export const EXPLAINALOUD_MARK_SMILE = "M 17.5 39.5 A 18 18 0 0 0 42.5 50.5";
 export function ExplainaloudMark({
   className,
   strokeWidth = 5,
+  disc = false,
 }: {
   className?: string;
   strokeWidth?: number;
+  /**
+   * Set the mark on a filled disc, exactly as the favicon draws it: the disc in
+   * `currentColor`, the glyph in the page colour, centred on its measured
+   * bounds (30, 34.05) rather than on the grid's (32, 32). Mastheads use this
+   * so the logo on the page is the logo in the tab.
+   */
+  disc?: boolean;
 }) {
+  if (disc) {
+    return (
+      <svg viewBox="0 0 64 64" aria-hidden="true" className={className}>
+        <circle cx="32" cy="32" r="32" fill="currentColor" />
+        <g transform="translate(32 32) scale(0.82) translate(-30 -34.05)">
+          <path d={EXPLAINALOUD_MARK_EYE} fill="var(--background)" />
+          <path
+            d={EXPLAINALOUD_MARK_SMILE}
+            fill="none"
+            stroke="var(--background)"
+            strokeWidth={strokeWidth}
+            strokeLinecap="round"
+          />
+        </g>
+      </svg>
+    );
+  }
   return (
     <svg
       viewBox="0 0 64 64"
