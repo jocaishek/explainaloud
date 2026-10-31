@@ -41,7 +41,7 @@ export function Landing() {
     <div className={cn(styles.root, "min-h-dvh bg-background text-foreground")}>
       <nav
         aria-label="Main"
-        className="mx-auto grid h-16 max-w-[1240px] grid-cols-[1fr_auto_1fr] items-center px-6 max-[820px]:grid-cols-[1fr_auto]"
+        className="mx-auto grid h-16 max-w-[1240px] grid-cols-[1fr_auto_1fr] items-center px-6 max-[820px]:grid-cols-[1fr_auto] max-[400px]:px-4"
       >
         <Link
           href="/"
@@ -55,8 +55,10 @@ export function Landing() {
             How it works
           </a>
         </div>
-        <div className="flex items-center justify-end gap-6 text-muted-foreground text-sm">
-          <Link href="/login" className={navLink}>
+        <div className="flex items-center justify-end gap-6 whitespace-nowrap text-muted-foreground text-sm max-[400px]:gap-4">
+          {/* The smallest phones keep the one action; Log in is also in the
+              footer and the closing card. */}
+          <Link href="/login" className={cn(navLink, "max-[359px]:hidden")}>
             Log in
           </Link>
           <Link

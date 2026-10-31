@@ -29,8 +29,9 @@ export function TopicSpinner() {
   const [items, setItems] = useState<Item[]>([
     { id: 0, text: TOPICS[0], phase: "cur" },
   ]);
-  const [width, setWidth] = useState<string>();
+  const [fit, setFit] = useState<{ width: string; scale: number }>();
   const rulerRef = useRef<HTMLSpanElement>(null);
+  const spinRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -38,19 +39,35 @@ export function TopicSpinner() {
     const frames: number[] = [];
     let interval: number | undefined;
 
-    const widthOf = (text: string) => {
+    /* How wide the topic is at full size, and how much it has to shrink to
+       fit the headline. On a phone the longer topics ("the French
+       Revolution") are wider than the screen at headline size, so they scale
+       down rather than run off the edge; anything that fits stays full size. */
+    let current = TOPICS[0];
+    const fitOf = (text: string) => {
       const ruler = rulerRef.current;
-      if (!ruler) return undefined;
+      const line = spinRef.current?.parentElement;
+      if (!ruler || !line) return undefined;
       ruler.textContent = text;
-      return `${Math.ceil(ruler.getBoundingClientRect().width) + 24}px`;
+      const needed = Math.ceil(ruler.getBoundingClientRect().width) + 24;
+      const room = line.clientWidth;
+      const scale = room > 0 ? Math.min(1, room / needed) : 1;
+      return { width: `${Math.floor(needed * scale)}px`, scale };
     };
+    const refit = (text: string) => {
+      current = text;
+      setFit(fitOf(text));
+    };
+    const resize = new ResizeObserver(() => setFit(fitOf(current)));
+    const line = spinRef.current?.parentElement;
+    if (line) resize.observe(line);
 
     let index = 0;
     const spin = () => {
       index += 1;
       const id = index;
       const text = TOPICS[id % TOPICS.length];
-      setWidth(widthOf(text));
+      refit(text);
       setItems((prev) => [
         ...prev
           .filter((item) => item.phase !== "out")
@@ -78,7 +95,7 @@ export function TopicSpinner() {
 
     document.fonts.ready.then(() => {
       if (cancelled) return;
-      setWidth(widthOf(TOPICS[0]));
+      refit(TOPICS[0]);
       if (reduced) return;
       // The name holds a little longer than the rest, so it reads first.
       schedule.at(3200, () => {
@@ -89,6 +106,7 @@ export function TopicSpinner() {
 
     return () => {
       cancelled = true;
+      resize.disconnect();
       schedule.clear();
       for (const frame of frames) cancelAnimationFrame(frame);
       window.clearInterval(interval);
@@ -98,9 +116,14 @@ export function TopicSpinner() {
   return (
     <>
       <span
+        ref={spinRef}
         aria-hidden="true"
         className={styles.spin}
-        style={width ? ({ "--w": width } as CSSProperties) : undefined}
+        style={
+          fit
+            ? ({ "--w": fit.width, "--fit": fit.scale } as CSSProperties)
+            : undefined
+        }
       >
         {items.map((item) => (
           <span
