@@ -10,8 +10,12 @@ import { cn } from "~/lib/utils";
 export function SignOutButton({
   /** Icon only, for the retracted rail. The label becomes the tooltip. */
   compact = false,
+  /** `rail` sits among the nav items; `outline` is a standalone button, as on
+   *  the account card in Settings. Styling only — the action is the same. */
+  appearance = "rail",
 }: {
   compact?: boolean;
+  appearance?: "rail" | "outline";
 }) {
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
@@ -32,6 +36,21 @@ export function SignOutButton({
    * only one nobody should hit by accident on the way to something else, so it
    * gets the ghost treatment: legible, labelled, and not competing. */
   const label = signingOut ? "Signing out…" : "Sign out";
+
+  if (appearance === "outline") {
+    return (
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        disabled={signingOut}
+        onClick={handleSignOut}
+      >
+        <LogOut className="size-3.5" />
+        {label}
+      </Button>
+    );
+  }
 
   return (
     <Button

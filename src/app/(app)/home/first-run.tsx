@@ -210,14 +210,12 @@ export function FirstRunTour({ seen }: { seen: boolean }) {
         aria-modal="false"
         aria-labelledby="tour-title"
         className={cn(
-          "-translate-x-1/2 glass-panel fixed bottom-6 left-1/2 z-50 w-[min(26rem,calc(100vw-2rem))]",
-          "rounded-card p-5 text-left",
+          "-translate-x-1/2 fixed bottom-6 left-1/2 z-50 w-[min(26rem,calc(100vw-2rem))]",
+          "rounded-card border border-border bg-card p-5 text-left shadow-float",
         )}
       >
         <div className="flex items-baseline justify-between gap-4">
-          <span className="font-mono text-[0.62rem] text-subtle uppercase tracking-[0.09em]">
-            {current.kicker}
-          </span>
+          <span className="text-subtle text-xs">{current.kicker}</span>
           <button
             type="button"
             onClick={close}

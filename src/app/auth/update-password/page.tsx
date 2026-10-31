@@ -53,13 +53,13 @@ export default function UpdatePasswordPage() {
     <main className="flex min-h-screen w-full items-center justify-center bg-background px-6 text-foreground">
       <form
         onSubmit={handleSubmit}
-        className="flex w-full max-w-sm flex-col gap-4 rounded-2xl border border-white/10 bg-[#171717] p-6/40"
+        className="flex w-full max-w-sm flex-col gap-4 rounded-card border border-border bg-card p-6 shadow-rest"
       >
         <div>
-          <h1 className="text-lg font-semibold text-white">
+          <h1 className="font-medium text-lg text-strong">
             Set a new password
           </h1>
-          <p className="mt-1 text-sm text-[#71717A]">
+          <p className="mt-1 text-sm text-subtle">
             Choose a new password for your account.
           </p>
         </div>
@@ -79,11 +79,7 @@ export default function UpdatePasswordPage() {
           placeholder="Confirm new password"
         />
         {error && <p className="text-sm text-destructive">{error}</p>}
-        <Button
-          type="submit"
-          disabled={submitting}
-          className="bg-accent-solid font-semibold text-accent-contrast transition-transform hover:bg-accent-solid-hover active:scale-[0.98]"
-        >
+        <Button type="submit" disabled={submitting} className="h-11">
           {submitting ? "Saving…" : "Save new password"}
         </Button>
       </form>

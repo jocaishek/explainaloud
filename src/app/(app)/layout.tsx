@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { isAdminEmail } from "~/lib/admin";
 import type { Folder } from "~/lib/folders";
+import { ownStreak } from "~/lib/own-streak";
 import { requireProfile } from "~/lib/supabase/server";
 import { AppShell, type RailCourse } from "./app-shell";
 
@@ -29,32 +30,41 @@ export default async function DashboardLayout({
      closed. */
   const railCollapsed = (await cookies()).get("rail-collapsed")?.value === "1";
 
-  const [{ data: folders }, { data: courses }, { data: pendingRequests }] =
-    await Promise.all([
-      supabase
-        .from("folders")
-        .select("id, name, color, created_at")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true })
-        .returns<Folder[]>(),
-      supabase
-        .from("courses")
-        .select("id, slug, topic, name, folder_id, pinned")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(RAIL_COURSES)
-        .returns<RailCourse[]>(),
-      /* A number, not the rows. The badge needs a count and this query runs on
+  const [
+    { data: folders },
+    { data: courses },
+    { data: pendingRequests },
+    streak,
+  ] = await Promise.all([
+    supabase
+      .from("folders")
+      .select("id, name, color, created_at")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: true })
+      .returns<Folder[]>(),
+    supabase
+      .from("courses")
+      .select("id, slug, topic, name, folder_id, pinned")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(RAIL_COURSES)
+      .returns<RailCourse[]>(),
+    /* A number, not the rows. The badge needs a count and this query runs on
          every screen in the app, so asking for the list of people waiting and
          then calling `.length` on it would be a table read per navigation for
          a digit. */
-      supabase.rpc("incoming_request_count"),
-    ]);
+    supabase.rpc("incoming_request_count"),
+    /* The streak sits at the foot of the rail on every screen, counted in
+       the profile's own zone: a run of days is a run of *their* days. Cached,
+       so home and settings, which show it too, do not ask a second time. */
+    ownStreak(profile.timezone ?? "UTC"),
+  ]);
 
   return (
     <AppShell
       firstName={profile.first_name}
       lastName={profile.last_name}
+      username={profile.username}
       avatarUrl={profile.avatar_url}
       showAdmin={isAdminEmail(user.email)}
       folders={folders ?? []}
@@ -62,6 +72,7 @@ export default async function DashboardLayout({
       pendingRequests={
         typeof pendingRequests === "number" ? pendingRequests : 0
       }
+      streak={streak}
       defaultCollapsed={railCollapsed}
     >
       {children}

@@ -153,80 +153,103 @@ export function FriendSearch({
     return map;
   }, [friends, requests]);
 
+  /* The answer panel floats under the field, so it has to know when to get
+     out of the way: a click anywhere else, or Escape, puts it away without
+     throwing the query out. Focusing the field again brings it back. */
+  const [open, setOpen] = useState(false);
+  const container = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onPointerDown(event: PointerEvent) {
+      if (!container.current?.contains(event.target as Node)) setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  const term = query.trim();
+  const showShort =
+    !emailTyped && !results && term.length > 0 && term.length < MIN_QUERY;
+  const hasAnswer = emailTyped || failed || results !== null || showShort;
+
   return (
-    <section
-      aria-labelledby={`${id}-heading`}
-      className="overflow-hidden rounded-card border border-border bg-card shadow-rest"
+    <search
+      ref={container}
+      aria-label="Find someone"
+      className="relative w-full sm:w-[25rem]"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") setOpen(false);
+      }}
+      onFocus={() => setOpen(true)}
     >
-      <div className="border-border border-b px-5 py-4">
-        <h2
-          id={`${id}-heading`}
-          className="font-semibold text-[1.02rem] text-strong tracking-[-0.015em]"
+      <Search
+        aria-hidden
+        className="pointer-events-none absolute top-3.5 left-3.5 size-4 text-subtle"
+      />
+      <Input
+        id={`${id}-input`}
+        ref={inputRef}
+        value={query}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setOpen(true);
+        }}
+        autoCapitalize="none"
+        autoCorrect="off"
+        autoComplete="off"
+        spellCheck={false}
+        aria-label="Find someone by username or name"
+        aria-controls={`${id}-results`}
+        aria-expanded={open && hasAnswer}
+        placeholder="Find someone by username or name"
+        className="rounded-pill pr-10 pl-10 placeholder:text-subtle"
+      />
+      {searching && (
+        <Loader2
+          aria-hidden
+          className="pointer-events-none absolute top-3.5 right-3.5 size-4 animate-spin text-subtle"
+        />
+      )}
+      {!searching && query.length > 0 && (
+        <button
+          type="button"
+          onClick={() => setQuery("")}
+          aria-label="Clear the search"
+          className="press absolute top-2 right-2 flex size-7 items-center justify-center rounded-pill text-subtle transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-muted hover:text-strong"
         >
-          Find someone
-        </h2>
-        <p className="mt-1.5 text-[0.88rem] text-subtle leading-relaxed">
-          Their username, or the name they signed up with.
-        </p>
+          <X className="size-3.5" />
+        </button>
+      )}
 
-        <div className="relative mt-4">
-          <Search
-            aria-hidden
-            className="-translate-y-1/2 absolute top-1/2 left-3.5 size-4 text-subtle"
-          />
-          <Input
-            ref={inputRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            aria-label="Search for someone"
-            placeholder="Username or name"
-            className="h-11 bg-surface pr-10 pl-10 text-base placeholder:text-subtle"
-          />
-          {searching && (
-            <Loader2
-              aria-hidden
-              className="-translate-y-1/2 absolute top-1/2 right-3.5 size-4 animate-spin text-subtle"
-            />
-          )}
-          {!searching && query.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setQuery("")}
-              aria-label="Clear the search"
-              className="press -translate-y-1/2 absolute top-1/2 right-2.5 flex size-7 items-center justify-center rounded-control text-subtle transition-colors hover:bg-muted hover:text-strong"
-            >
-              <X className="size-3.5" />
-            </button>
-          )}
-        </div>
-      </div>
-
-      <div aria-live="polite">
+      <div
+        id={`${id}-results`}
+        aria-live="polite"
+        hidden={!(open && hasAnswer)}
+        className="absolute top-full right-0 left-0 z-20 mt-2 max-h-[min(24rem,60vh)] overflow-y-auto rounded-card border border-border bg-popover p-1 text-popover-foreground shadow-float"
+      >
         {emailTyped && (
-          <p className="px-5 py-4 text-[0.88rem] text-subtle leading-relaxed">
+          <p className="px-3 py-3 text-sm text-subtle leading-relaxed">
             People are not searchable by email address, so that nobody can work
             out who holds one. Ask them for their username instead.
           </p>
         )}
 
         {!emailTyped && failed && (
-          <p className="px-5 py-4 text-[0.88rem] text-subtle">
+          <p className="px-3 py-3 text-sm text-subtle">
             Couldn&rsquo;t search just now. Try again in a moment.
           </p>
         )}
 
         {!emailTyped && !failed && results?.length === 0 && (
-          <p className="px-5 py-4 text-[0.88rem] text-subtle">
+          <p className="px-3 py-3 text-sm text-subtle">
             Nobody by that name. Usernames are exact, so it is worth checking
             the spelling.
           </p>
         )}
 
         {!emailTyped && !failed && results && results.length > 0 && (
-          <ul className="divide-y divide-border">
+          <ul>
             {results.map((person) => {
               /* The search said who; the page says where you stand. */
               const known = standing.get(person.user_id);
@@ -246,17 +269,11 @@ export function FriendSearch({
           </ul>
         )}
 
-        {!emailTyped &&
-          !failed &&
-          !results &&
-          query.trim().length > 0 &&
-          query.trim().length < MIN_QUERY && (
-            <p className="px-5 py-4 text-[0.88rem] text-subtle">
-              Two letters or more.
-            </p>
-          )}
+        {showShort && (
+          <p className="px-3 py-3 text-sm text-subtle">Two letters or more.</p>
+        )}
       </div>
-    </section>
+    </search>
   );
 }
 
@@ -294,35 +311,29 @@ function ResultRow({
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-2.5 px-5 py-4">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-control px-2 py-2 transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:bg-muted">
       {/* Straight to their page. Deciding whether to add somebody from one
           line of a result list is deciding on a name and a handle, which for
           two people with the same name is not a decision at all. */}
       <Link
         href={`/profiles/${person.username}`}
-        className="press flex min-w-0 flex-1 items-center gap-3 rounded-control transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
+        className="press flex min-w-0 flex-1 items-center gap-3 rounded-control focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]"
       >
         <PersonAvatar
           firstName={person.first_name}
           lastName={person.last_name}
           avatarUrl={person.avatar_url}
-          size={40}
+          size={36}
         />
         <span className="min-w-0 flex-1">
-          <span className="block truncate font-medium text-[0.92rem] text-strong">
+          <span className="block truncate font-medium text-[0.9375rem] text-strong leading-5">
             {person.first_name} {person.last_name}
           </span>
-          <span className="block truncate font-mono text-[0.72rem] text-subtle">
+          <span className="block truncate font-mono text-subtle text-xs leading-5">
             @{person.username}
           </span>
         </span>
       </Link>
-      {note && (
-        <p role="alert" className="text-[0.78rem] text-destructive">
-          {note}
-        </p>
-      )}
-
       {person.status === "none" && (
         <Button size="sm" onClick={add} disabled={pending} className="gap-1.5">
           {pending ? (
@@ -351,17 +362,23 @@ function ResultRow({
       )}
 
       {person.status === "outgoing" && (
-        <span className="flex items-center gap-1.5 whitespace-nowrap text-[0.8rem] text-subtle">
+        <span className="flex items-center gap-1.5 whitespace-nowrap px-2 text-[0.8125rem] text-subtle">
           <Clock aria-hidden className="size-3.5" />
           Asked
         </span>
       )}
 
       {person.status === "friends" && (
-        <span className="flex items-center gap-1.5 whitespace-nowrap text-[0.8rem] text-subtle">
+        <span className="flex items-center gap-1.5 whitespace-nowrap px-2 text-[0.8125rem] text-subtle">
           <Check aria-hidden className="size-3.5" />
           Friends
         </span>
+      )}
+
+      {note && (
+        <p role="alert" className="w-full text-destructive text-xs">
+          {note}
+        </p>
       )}
     </div>
   );

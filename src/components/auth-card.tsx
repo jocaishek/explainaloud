@@ -306,7 +306,7 @@ export function AuthCard({
       {stage === "forgot-password" && (
         <form
           onSubmit={handleForgotPassword}
-          className="glass-panel flex w-full flex-col gap-4 rounded-card p-6"
+          className="flex w-full flex-col gap-4 rounded-card border border-border bg-card p-6 shadow-rest"
         >
           <div>
             <h3 className="text-base font-semibold text-strong">
@@ -373,7 +373,7 @@ export function AuthCard({
       {stage === "form" && (
         <form
           onSubmit={handleSubmit}
-          className="glass-panel flex w-full flex-col gap-4 rounded-card p-6"
+          className="flex w-full flex-col gap-4 rounded-card border border-border bg-card p-6 shadow-rest"
         >
           <div className="flex flex-col gap-2">
             {/* Google's own button when Identity Services is available, so
@@ -536,7 +536,7 @@ export function AuthCard({
       )}
 
       {stage === "check-email" && (
-        <div className="glass-panel flex w-full flex-col gap-5 rounded-card p-6">
+        <div className="flex w-full flex-col gap-5 rounded-card border border-border bg-card p-6 shadow-rest">
           <div>
             <h3 className="text-base font-semibold text-strong">
               Verify your email

@@ -3,6 +3,7 @@
 import { Check, Loader2, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { Input } from "~/components/ui/input";
+import { Label } from "~/components/ui/label";
 import { createClient } from "~/lib/supabase/client";
 import { USERNAME_MAX, usernameError } from "~/lib/username";
 import { cn } from "~/lib/utils";
@@ -103,15 +104,20 @@ export function UsernameField({
             ? "Couldn't check just now. You can still continue."
             : null;
 
+  /* Free is plain ink with a tick, not the verdict green. Green means a claim
+     held up under grading, and it means nothing else anywhere. */
   const tone =
     status.kind === "free"
-      ? "text-[color:var(--ok)]"
+      ? "text-foreground"
       : status.kind === "taken" || status.kind === "invalid"
         ? "text-destructive"
-        : "text-subtle";
+        : "text-muted-foreground";
 
   return (
     <div className="flex flex-col gap-2">
+      <Label htmlFor={id} className="text-foreground">
+        Username
+      </Label>
       <div className="relative">
         {/* The @ is part of the field rather than part of the value. Typing it
             yourself is the first thing everybody does and the first thing every
@@ -123,7 +129,7 @@ export function UsernameField({
             * handle, which is the whole thing the prefix exists to show. */}
         <span
           aria-hidden
-          className="-translate-y-1/2 absolute top-1/2 left-3.5 text-[1.05rem] text-subtle"
+          className="-translate-y-1/2 pointer-events-none absolute top-1/2 left-3.5 text-base text-muted-foreground"
         >
           @
         </span>
@@ -136,7 +142,6 @@ export function UsernameField({
           autoComplete="off"
           maxLength={USERNAME_MAX}
           placeholder="jovannyshek"
-          aria-label="Username"
           aria-invalid={status.kind === "invalid" || status.kind === "taken"}
           value={value}
           onChange={(event) => {
@@ -151,14 +156,17 @@ export function UsernameField({
                 .slice(0, USERNAME_MAX),
             );
           }}
-          className="h-12 bg-surface pr-11 pl-[1.85rem] text-base placeholder:text-subtle"
+          className="h-12 pr-11 pl-8 text-base md:text-base"
         />
         <span className="-translate-y-1/2 absolute top-1/2 right-4">
           {status.kind === "checking" && (
-            <Loader2 aria-hidden className="size-4 animate-spin text-subtle" />
+            <Loader2
+              aria-hidden
+              className="size-4 animate-spin text-muted-foreground motion-reduce:animate-none"
+            />
           )}
           {status.kind === "free" && (
-            <Check aria-hidden className="size-4 text-[color:var(--ok)]" />
+            <Check aria-hidden className="size-4 text-foreground" />
           )}
           {(status.kind === "taken" || status.kind === "invalid") && (
             <X aria-hidden className="size-4 text-destructive" />
@@ -166,10 +174,7 @@ export function UsernameField({
         </span>
       </div>
 
-      <p
-        aria-live="polite"
-        className={cn("min-h-[1.25rem] text-[0.82rem]", tone)}
-      >
+      <p aria-live="polite" className={cn("min-h-5 text-sm leading-5", tone)}>
         {message ?? "Letters and numbers. Friends find you by this."}
       </p>
     </div>

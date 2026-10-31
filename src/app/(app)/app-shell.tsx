@@ -2,24 +2,36 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import {
+  ChevronsUpDown,
   House,
+  LogOut,
   Menu,
   Mic,
   PanelLeft,
   Plus,
   Settings,
   ShieldCheck,
+  User,
   Users,
   X,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useState } from "react";
 import { ExplainaloudMark } from "~/components/explainaloud-mark";
-import { SignOutButton } from "~/components/sign-out-button";
+import { StreakFlame } from "~/components/streak-flame";
 import { StreakToast } from "~/components/streak-toast";
 import { Button } from "~/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu";
 import type { Folder } from "~/lib/folders";
+import { streakLabel } from "~/lib/streak";
+import { createClient } from "~/lib/supabase/client";
 import { cn } from "~/lib/utils";
 import { type RailCourse, RailTopics } from "./rail-topics";
 
@@ -66,8 +78,8 @@ const PRIMARY = [
   { href: "/friends", label: "Friends", icon: Users },
 ];
 
-/* Settings is no longer in this list. It is a gear beside the account block at
-   the foot of the rail — see the identity row below. */
+/* Settings and your profile are not in this list. They live in the account
+   menu at the foot of the rail, with sign-out — see `AccountMenu`. */
 const ADMIN = { href: "/admin", label: "Admin", icon: ShieldCheck };
 
 type NavItem = (typeof PRIMARY)[number];
@@ -77,9 +89,9 @@ export type { RailCourse } from "./rail-topics";
 /** The cookie the retracted state is remembered in. */
 const RAIL_COOKIE = "rail-collapsed";
 
-/* The same curve as `--ease-enter`. Not a spring: an indicator that overshoots
+/* The product's one easing curve. Not a spring: an indicator that overshoots
    its own tab draws attention to the animation rather than to where you are. */
-const EASE = [0.23, 1, 0.32, 1] as const;
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 /**
  * Is `href` this page, or a page inside it?
@@ -137,25 +149,23 @@ function RailLink({
       aria-label={collapsed ? item.label : undefined}
       title={collapsed ? item.label : undefined}
       className={cn(
-        "press relative flex items-center gap-3 rounded-control py-2.5 font-medium text-sm transition-colors duration-200",
-        collapsed ? "justify-center px-0" : "px-3",
-        /* The active item is the one place in the frame the accent appears.
-           Everything else is ink or grey, so "where am I" is answered by the
-           only colour on screen. */
-        active
-          ? "text-[color:var(--accent-solid)]"
-          : "text-subtle hover:bg-muted hover:text-strong",
+        "press relative flex h-9 items-center gap-2.5 rounded-control text-sm transition-colors duration-150",
+        collapsed ? "justify-center px-0" : "px-2",
+        /* The active item is a raised step of surface with a hairline, in
+           ink. Everything else is the muted grey, so "where am I" is answered
+           without a colour of its own. */
+        active ? "text-strong" : "text-subtle hover:bg-muted hover:text-strong",
       )}
     >
       {active && (
         <motion.span
           layoutId={layoutId}
           transition={{ duration: 0.28, ease: EASE }}
-          className="absolute inset-0 rounded-control bg-accent-wash"
+          className="absolute inset-0 rounded-control border border-border bg-card shadow-rest"
         />
       )}
       <span className="relative flex shrink-0 items-center">
-        <Icon aria-hidden className="size-[1.05rem]" />
+        <Icon aria-hidden strokeWidth={1.5} className="size-4" />
         {/* Retracted, the count has nowhere to sit beside a label, so it
             becomes a dot on the glyph. Expanded it is the number, ranged
             right, because "three people are waiting" and "somebody is
@@ -173,7 +183,7 @@ function RailLink({
           {badge > 0 && (
             <span
               aria-hidden
-              className="relative ml-auto flex min-w-5 items-center justify-center rounded-pill bg-accent-wash px-1.5 py-0.5 font-medium text-[0.68rem] text-brand-ink tabular-nums"
+              className="relative ml-auto font-mono text-subtle text-xs tabular-nums"
             >
               {badge > 9 ? "9+" : badge}
             </span>
@@ -189,9 +199,133 @@ function RailLink({
   );
 }
 
+/**
+ * You, at the foot of the rail: your face and name, and the menu behind them.
+ *
+ * Profile, settings and sign-out used to be three separate controls here — a
+ * link, a gear and a button — which put the least consequential and the most
+ * consequential action in the product an inch apart. They are one menu now,
+ * opened from the one thing in the rail that is about you.
+ */
+function AccountMenu({
+  firstName,
+  lastName,
+  username,
+  avatarUrl,
+  collapsed,
+  current,
+  onNavigate,
+}: {
+  firstName: string;
+  lastName: string;
+  username: string | null;
+  avatarUrl: string | null;
+  collapsed: boolean;
+  /** On the settings page, which is where your profile lives now. */
+  current: boolean;
+  onNavigate?: () => void;
+}) {
+  const router = useRouter();
+  const [signingOut, setSigningOut] = useState(false);
+
+  async function signOut() {
+    setSigningOut(true);
+    await createClient().auth.signOut();
+    router.push("/");
+    router.refresh();
+  }
+
+  const name = `${firstName} ${lastName}`.trim();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label={collapsed ? `${name}, account menu` : undefined}
+          title={collapsed ? name : undefined}
+          className={cn(
+            "press flex min-w-0 items-center gap-2.5 rounded-control py-2 text-left outline-none transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-[color:var(--accent-ring)]",
+            collapsed ? "justify-center px-0" : "px-2",
+            current && "bg-muted",
+          )}
+        >
+          <span
+            aria-hidden
+            className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-solid font-medium text-[0.72rem] text-accent-contrast"
+          >
+            {avatarUrl ? (
+              // biome-ignore lint/performance/noImgElement: a 32px avatar; see profile/avatar-picker.tsx
+              <img
+                src={avatarUrl}
+                alt=""
+                width={32}
+                height={32}
+                className="size-full object-cover"
+              />
+            ) : (
+              initials(firstName, lastName)
+            )}
+          </span>
+          {!collapsed && (
+            <>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate font-medium text-sm text-strong">
+                  {name}
+                </span>
+                {username && (
+                  <span className="block truncate text-subtle text-xs">
+                    @{username}
+                  </span>
+                )}
+              </span>
+              <ChevronsUpDown
+                aria-hidden
+                strokeWidth={1.5}
+                className="size-4 shrink-0 text-subtle"
+              />
+            </>
+          )}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        side="top"
+        align="start"
+        sideOffset={8}
+        className="w-[var(--radix-dropdown-menu-trigger-width)] min-w-56"
+      >
+        <DropdownMenuItem asChild>
+          <Link href="/settings#profile" onClick={onNavigate}>
+            <User strokeWidth={1.5} />
+            Your profile
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/settings" onClick={onNavigate}>
+            <Settings strokeWidth={1.5} />
+            Settings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          disabled={signingOut}
+          onSelect={(event) => {
+            event.preventDefault();
+            void signOut();
+          }}
+        >
+          <LogOut strokeWidth={1.5} />
+          {signingOut ? "Signing out…" : "Sign out"}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 function Rail({
   firstName,
   lastName,
+  username,
+  streak,
   avatarUrl,
   showAdmin,
   folders,
@@ -203,6 +337,9 @@ function Rail({
 }: {
   firstName: string;
   lastName: string;
+  username: string | null;
+  /** Current streak in days, counted in the profile's zone. */
+  streak: number;
   avatarUrl: string | null;
   showAdmin: boolean;
   folders: Folder[];
@@ -224,7 +361,7 @@ function Rail({
   return (
     <div
       className={cn(
-        "flex h-full flex-col gap-5 overflow-y-auto overflow-x-hidden py-5",
+        "flex h-full flex-col gap-4 overflow-y-auto overflow-x-hidden py-4",
         collapsed ? "px-2" : "px-3",
       )}
     >
@@ -243,9 +380,9 @@ function Rail({
           aria-label="Explainaloud, home"
           className="press flex min-w-0 items-center gap-2.5 text-strong"
         >
-          <ExplainaloudMark className="size-7 shrink-0 text-[color:var(--accent-solid)]" />
+          <ExplainaloudMark disc className="size-6 shrink-0 text-strong" />
           {!collapsed && (
-            <span className="truncate font-semibold text-[0.95rem] tracking-[-0.01em]">
+            <span className="truncate font-medium text-base tracking-[-0.02em]">
               explainaloud
             </span>
           )}
@@ -270,10 +407,7 @@ function Rail({
       <Button
         asChild
         size={collapsed ? "icon" : "default"}
-        className={cn(
-          "gap-2 font-semibold",
-          collapsed ? "self-center" : "w-full",
-        )}
+        className={cn("gap-2", collapsed ? "self-center" : "w-full")}
       >
         <Link href="/new" onClick={onNavigate} aria-label="New topic">
           <Plus className="size-4" />
@@ -309,7 +443,7 @@ function Rail({
         />
       )}
 
-      <div className="mt-auto flex flex-col gap-0.5 border-border border-t pt-3">
+      <div className="mt-auto flex flex-col gap-1 border-border border-t pt-3">
         {footer.length > 0 && (
           <nav aria-label="Account">
             <ul className="flex flex-col gap-0.5">
@@ -328,73 +462,42 @@ function Rail({
           </nav>
         )}
 
-        {/* Identity on the left, preferences on the right.
-         *
-         * Settings used to be a full-width row *above* this, which read as
-         * "Settings, and separately, you" — and made your own name the one
-         * thing in the rail that was not a link. They are the same block
-         * now: your face and your name open your profile, the gear beside
-         * them opens the app's settings, and the word "Settings" is gone
-         * because a gear at the foot of a sidebar has needed no label since
-         * about 2008. */}
+        {/* The streak, on every screen. Quiet when there is none: the flame
+            is reserved for a run that exists. */}
         <div
           className={cn(
-            "mt-2 flex min-w-0 items-center gap-1",
-            collapsed ? "flex-col justify-center gap-1.5" : "",
+            "flex h-9 items-center gap-2.5 text-sm",
+            collapsed ? "justify-center" : "px-2",
           )}
+          title={collapsed ? streakLabel(streak) : undefined}
         >
-          <Link
-            href="/profile"
-            onClick={onNavigate}
-            aria-current={isActive(pathname, "/profile") ? "page" : undefined}
-            aria-label={collapsed ? "Your profile" : undefined}
-            title={collapsed ? `${firstName} ${lastName}` : undefined}
-            className={cn(
-              "press flex min-w-0 items-center gap-2.5 rounded-control py-1.5 transition-colors hover:bg-muted",
-              collapsed ? "justify-center px-0" : "flex-1 px-1",
-            )}
-          >
+          {streak > 0 ? (
+            <StreakFlame size="sm" />
+          ) : (
+            <span aria-hidden className="size-4" />
+          )}
+          {!collapsed && (
             <span
-              aria-hidden
-              className="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-accent-wash font-medium text-[0.72rem] text-brand-ink"
-            >
-              {avatarUrl ? (
-                // biome-ignore lint/performance/noImgElement: a 32px avatar; see profile/avatar-picker.tsx
-                <img
-                  src={avatarUrl}
-                  alt=""
-                  width={32}
-                  height={32}
-                  className="size-full object-cover"
-                />
-              ) : (
-                initials(firstName, lastName)
+              className={cn(
+                "tabular-nums",
+                streak > 0 ? "font-medium text-strong" : "text-subtle",
               )}
+            >
+              {streakLabel(streak)}
             </span>
-            {!collapsed && (
-              <span className="min-w-0 truncate text-sm text-strong">
-                {firstName} {lastName}
-              </span>
-            )}
-          </Link>
-
-          <Link
-            href="/settings"
-            onClick={onNavigate}
-            aria-current={isActive(pathname, "/settings") ? "page" : undefined}
-            aria-label="Settings"
-            title="Settings"
-            className={cn(
-              "press flex size-8 shrink-0 items-center justify-center rounded-control transition-colors hover:bg-muted",
-              isActive(pathname, "/settings")
-                ? "bg-accent-wash text-[color:var(--accent-solid)]"
-                : "text-subtle hover:text-strong",
-            )}
-          >
-            <Settings className="size-[1.05rem]" />
-          </Link>
+          )}
+          {collapsed && <span className="sr-only">{streakLabel(streak)}</span>}
         </div>
-        <SignOutButton compact={collapsed} />
+
+        <AccountMenu
+          firstName={firstName}
+          lastName={lastName}
+          username={username}
+          avatarUrl={avatarUrl}
+          collapsed={collapsed}
+          current={isActive(pathname, "/settings")}
+          onNavigate={onNavigate}
+        />
       </div>
     </div>
   );
@@ -403,6 +506,8 @@ function Rail({
 export function AppShell({
   firstName,
   lastName,
+  username,
+  streak,
   avatarUrl,
   showAdmin,
   folders,
@@ -413,6 +518,8 @@ export function AppShell({
 }: {
   firstName: string;
   lastName: string;
+  username: string | null;
+  streak: number;
   avatarUrl: string | null;
   showAdmin: boolean;
   folders: Folder[];
@@ -461,6 +568,8 @@ export function AppShell({
   const rail = {
     firstName,
     lastName,
+    username,
+    streak,
     avatarUrl,
     showAdmin,
     folders,
@@ -482,9 +591,9 @@ export function AppShell({
           screen changed. */}
       <aside
         className={cn(
-          "sticky top-0 hidden h-screen shrink-0 border-border border-r bg-card lg:block",
-          "transition-[width] duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-none",
-          collapsed ? "w-[4.25rem]" : "w-64",
+          "sticky top-0 hidden h-screen shrink-0 border-border border-r bg-background lg:block",
+          "transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          collapsed ? "w-[4.25rem]" : "w-62",
         )}
       >
         <Rail {...rail} collapsed={collapsed} onToggle={toggleRail} />
@@ -509,12 +618,12 @@ export function AppShell({
             href="/home"
             className="press flex min-w-0 items-center gap-2.5 text-strong"
           >
-            <ExplainaloudMark className="size-6 shrink-0 text-[color:var(--accent-solid)]" />
-            <span className="truncate font-semibold text-[0.92rem] tracking-[-0.01em]">
+            <ExplainaloudMark disc className="size-6 shrink-0 text-strong" />
+            <span className="truncate font-medium text-base tracking-[-0.02em]">
               explainaloud
             </span>
           </Link>
-          <Button asChild size="sm" className="ml-auto gap-1.5 font-semibold">
+          <Button asChild size="sm" className="ml-auto gap-1.5">
             <Link href="/new" aria-label="New topic">
               <Plus className="size-4" />
               <span className="hidden sm:inline">New topic</span>
@@ -548,7 +657,7 @@ export function AppShell({
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ duration: 0.28, ease: EASE }}
-              className="absolute inset-y-0 left-0 w-[17rem] max-w-[85vw] border-border border-r bg-card"
+              className="absolute inset-y-0 left-0 w-[17rem] max-w-[85vw] border-border border-r bg-background"
             >
               <button
                 type="button"

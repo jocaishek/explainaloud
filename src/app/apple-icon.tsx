@@ -34,7 +34,7 @@ export default function AppleIcon() {
            the disc are the page colour rather than a white or black box.
            Opaque on purpose: an Apple touch icon has no alpha channel, and a
            transparent PNG is composited onto black by iOS. */
-        background: "#f2f2f0",
+        background: "#f8f9fa",
       }}
     >
       {/* A real circle, matching `icon.svg`.
@@ -53,7 +53,7 @@ export default function AppleIcon() {
           alignItems: "center",
           justifyContent: "center",
           borderRadius: "50%",
-          background: "#142744",
+          background: "#141517",
         }}
       >
         {/* Rasterised to PNG, so the label is inert here — but the lint rule is
@@ -62,15 +62,15 @@ export default function AppleIcon() {
         <svg
           width="138"
           height="138"
-          viewBox="0 0 64 64"
+          viewBox="-2 2.05 64 64"
           fill="none"
           role="img"
           aria-label="Explainaloud"
         >
-          <path d={EYE} fill="#aed4f7" />
+          <path d={EYE} fill="#f8f9fa" />
           <path
             d={SMILE}
-            stroke="#aed4f7"
+            stroke="#f8f9fa"
             strokeWidth="5"
             strokeLinecap="round"
           />

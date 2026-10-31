@@ -9,7 +9,7 @@ import { audioExtension, preferredRecorderMimeType } from "~/lib/audio";
 import { MIN_SPEAKING_SECONDS } from "~/lib/speech-metrics";
 import { cn } from "~/lib/utils";
 
-const EASE = [0.23, 1, 0.32, 1] as const;
+const EASE = [0.22, 1, 0.36, 1] as const;
 
 /**
  * Hard stop for the warm-up.
@@ -222,40 +222,40 @@ export function VoiceWarmup({
           afterwards is a step people skip, and the explanation then never gets
           read at all. What this buys them has to be legible before they decide. */}
       {stage !== "done" && (
-        <div className="rounded-xl border border-brand/25 bg-brand/[0.05] p-5">
-          <p className="text-sm leading-6 text-subtle">
-            <span className="font-medium text-strong">
+        <div className="rounded-card border border-border bg-card p-5">
+          <p className="text-muted-foreground text-sm leading-6">
+            <span className="font-medium text-foreground">
               Everyone talks at a different speed.
             </span>{" "}
             Some people are just careful, and there is no &ldquo;normal&rdquo;
             pace we could measure you against. So we learn yours first.
           </p>
-          <p className="mt-3 text-sm leading-6 text-subtle">
+          <p className="mt-3 text-muted-foreground text-sm leading-6">
             Once we know how you sound explaining something you genuinely know,
             we can tell the difference between{" "}
-            <span className="font-medium text-strong">thinking carefully</span>{" "}
+            <span className="font-medium text-foreground">
+              thinking carefully
+            </span>{" "}
             and{" "}
-            <span className="font-medium text-strong">
+            <span className="font-medium text-foreground">
               not actually knowing it yet
             </span>
             . That is what lets us point at the exact sentence you got shaky on,
             instead of just handing you a score.
           </p>
-          <p className="mt-3 text-xs leading-5 text-subtle">
+          <p className="mt-3 text-muted-foreground text-sm leading-5">
             Takes ten seconds, once. Skip it and we work your pace out from your
             first few real sessions instead, which takes longer to get right.
           </p>
         </div>
       )}
 
-      <div className="rounded-xl border border-border bg-surface p-5">
-        <p className="text-xs font-medium tracking-[0.14em] text-subtle uppercase">
-          Read this, then talk
-        </p>
-        <p className="mt-2 text-lg leading-snug font-semibold text-strong">
+      <div className="rounded-card border border-border bg-muted p-5">
+        <p className="text-muted-foreground text-sm">Read this, then talk</p>
+        <p className="mt-2 font-medium text-foreground text-xl leading-7 tracking-[-0.01em]">
           {WARMUP_QUESTION}
         </p>
-        <p className="mt-2 text-sm leading-6 text-subtle">
+        <p className="mt-2 text-muted-foreground text-sm leading-6">
           Explain it like you&apos;re talking to a seven-year-old. There is no
           right answer and nothing here is graded. This is only so we know how
           fast you normally talk. Ten seconds is plenty.
@@ -265,7 +265,7 @@ export function VoiceWarmup({
       {stage === "recording" && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between text-sm">
-            <span className="flex items-center gap-2 font-medium text-strong">
+            <span className="flex items-center gap-2 font-medium text-foreground">
               <span
                 className={cn(
                   "size-2 rounded-full bg-destructive",
@@ -274,7 +274,7 @@ export function VoiceWarmup({
               />
               Recording
             </span>
-            <span className="font-mono tabular-nums text-subtle">
+            <span className="font-mono text-muted-foreground tabular-nums">
               {secondsLeft}s left
             </span>
           </div>
@@ -283,7 +283,7 @@ export function VoiceWarmup({
               to answer "how much have I got left" — which is the only question
               anyone asks of a bar during a ten-second recording. */}
           <div
-            className="h-2 overflow-hidden rounded-full bg-card"
+            className="h-1.5 overflow-hidden rounded-full bg-muted"
             role="progressbar"
             aria-label="Time left in the warm-up"
             aria-valuemin={0}
@@ -293,12 +293,12 @@ export function VoiceWarmup({
             <div
               className={cn(
                 "h-full rounded-full transition-[width,background-color] duration-100 ease-linear motion-reduce:transition-none",
-                longEnough ? "bg-green-500" : "bg-brand",
+                longEnough ? "bg-foreground" : "bg-muted-foreground",
               )}
               style={{ width: `${Math.max(0, 1 - progress) * 100}%` }}
             />
           </div>
-          <p className="text-xs text-subtle">
+          <p className="text-muted-foreground text-sm">
             {longEnough
               ? "That's enough to work with. Stop whenever you like."
               : `Keep going for at least ${MIN_SPEAKING_SECONDS} seconds.`}
@@ -313,19 +313,19 @@ export function VoiceWarmup({
             initial={shouldReduceMotion ? false : { opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: shouldReduceMotion ? 0 : 0.24, ease: EASE }}
-            className="rounded-xl border border-brand/30 bg-brand/[0.06] p-5"
+            className="rounded-card border border-border bg-card p-5"
           >
-            <p className="flex items-center gap-2 text-sm font-semibold text-strong">
-              <Check className="size-4 text-brand-ink" />
+            <p className="flex items-center gap-2 font-medium text-base text-foreground">
+              <Check aria-hidden className="size-4 shrink-0" />
               Got it. You speak at about {Math.round(result.medianWpm)} words a
               minute.
             </p>
-            <p className="mt-3 text-sm leading-6 text-subtle">
+            <p className="mt-3 text-muted-foreground text-sm leading-6">
               That is your baseline. From now on, when you slow down or hesitate
               part-way through explaining something, we can tell it apart from
               how you normally talk, and show you the exact spot.
             </p>
-            <p className="mt-3 text-sm leading-6 text-subtle">
+            <p className="mt-3 text-muted-foreground text-sm leading-6">
               We kept the numbers, not the recording. Your audio was deleted the
               moment it was measured.
             </p>
@@ -337,7 +337,7 @@ export function VoiceWarmup({
             key="skipped"
             initial={shouldReduceMotion ? false : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="rounded-xl bg-surface px-4 py-3 text-xs leading-5 text-subtle"
+            className="rounded-control bg-muted px-4 py-3 text-muted-foreground text-sm leading-5"
           >
             Skipped, that&apos;s fine. We&apos;ll work your usual pace out from
             your first few real sessions instead. You can do this later from
@@ -356,8 +356,9 @@ export function VoiceWarmup({
         {stage === "recording" ? (
           <Button
             type="button"
+            variant="destructive"
             onClick={stop}
-            className="h-11 gap-2 rounded-full bg-destructive px-5 font-semibold text-white transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none"
+            className="h-11 gap-2 px-5 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
             <Square className="size-4" />
             Stop
@@ -368,12 +369,7 @@ export function VoiceWarmup({
             onClick={start}
             disabled={stage === "uploading"}
             variant={stage === "done" ? "outline" : "default"}
-            className={cn(
-              "h-11 gap-2 rounded-full px-5 font-semibold transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none",
-              stage === "done"
-                ? "border-border bg-surface text-strong"
-                : "bg-accent-solid text-accent-contrast hover:bg-accent-solid-hover",
-            )}
+            className="h-11 gap-2 px-5 motion-reduce:transition-none motion-reduce:active:scale-100"
           >
             <Mic className="size-4" />
             {stage === "uploading"
@@ -390,7 +386,7 @@ export function VoiceWarmup({
           <button
             type="button"
             onClick={onSkip}
-            className="text-sm font-medium text-subtle underline underline-offset-2 transition-colors hover:text-strong"
+            className="h-9 rounded-control px-3 text-muted-foreground text-sm transition-colors duration-150 ease-[cubic-bezier(0.22,1,0.36,1)] hover:text-foreground focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)] motion-reduce:transition-none"
           >
             Skip this
           </button>

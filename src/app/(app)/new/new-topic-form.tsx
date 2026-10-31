@@ -62,10 +62,13 @@ function fileKey(file: File) {
 
 export function NewTopicForm({
   folderId,
+  initialTopic,
   initialError,
   unlimited = false,
 }: {
   folderId?: string;
+  /** Pre-fills the topic field, e.g. from home's opening line. */
+  initialTopic?: string;
   initialError?: string;
   /** Admins bypass the per-topic source cap. */
   unlimited?: boolean;
@@ -269,6 +272,7 @@ export function NewTopicForm({
           type="text"
           name="topic"
           required
+          defaultValue={initialTopic}
           disabled={!!createdCourseId}
           placeholder={
             purpose === "talk"

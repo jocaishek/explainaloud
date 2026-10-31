@@ -2,27 +2,20 @@
 
 import { Check, Copy } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { PersonAvatar } from "~/components/person-avatar";
-import { StreakFlame } from "~/components/streak-flame";
-import { streakLabel } from "~/lib/streak";
-import { cn } from "~/lib/utils";
+import { Button } from "~/components/ui/button";
+import { Card } from "~/components/ui/card";
 import type { You } from "./types";
 
 /** How long the button says "Copied" before going back to offering to copy. */
 const COPIED_MS = 1600;
 
 /**
- * You, at the top of your own friends screen.
+ * Your handle, and a way to hand it to somebody.
  *
  * This card exists because of a question the feature could not answer: a
  * person adds friends by username, and had no way to find out what their own
- * one was, let alone hand it to somebody. The answer was buried on the profile
- * page, one navigation away from the only screen where it is needed.
- *
- * It shows the same two numbers a friend sees, and that is the second reason
- * it is here. A screen that displays other people's streaks and topic counts
- * while showing you something different is a screen where you cannot tell what
- * you are sharing. What you see here is what they see.
+ * one was, let alone hand it to somebody. Your streak and topic count live in
+ * the ranked list now, in your own row, beside everybody else's.
  */
 export function YourHandle({ you }: { you: You }) {
   const [copied, setCopied] = useState(false);
@@ -59,93 +52,44 @@ export function YourHandle({ you }: { you: You }) {
   }
 
   return (
-    <section
-      aria-label="Your profile"
-      /* Always a column. It used to go horizontal at `sm`, which is a
-         viewport width — and this card no longer occupies the viewport, it
-         occupies a 20rem sidebar. A breakpoint that asks about the window
-         while the element lives in a fixed column is a breakpoint asking the
-         wrong question. */
-      className="flex flex-col gap-4 rounded-card border border-border bg-card p-5 shadow-rest"
-    >
-      <div className="flex min-w-0 items-center gap-3.5">
-        <PersonAvatar
-          firstName={you.firstName}
-          lastName={you.lastName}
-          avatarUrl={you.avatarUrl}
-          size={46}
-        />
-        <div className="min-w-0">
-          <p className="truncate font-medium text-[1.05rem] text-strong">
-            {you.firstName} {you.lastName}
-          </p>
-          {you.username ? (
-            <button
-              type="button"
+    <section aria-labelledby="invite-heading">
+      <Card className="gap-0 p-6">
+        <h2
+          id="invite-heading"
+          className="font-medium text-lg text-strong leading-6"
+        >
+          Invite a friend
+        </h2>
+        <p className="mt-1 text-sm text-subtle leading-5">
+          Friends find you by your username. Send them the link and
+          they&rsquo;ll land on your profile
+        </p>
+
+        <div className="mt-4 flex items-center justify-between gap-3 rounded-control border border-border bg-background py-2 pr-2 pl-3.5">
+          <code className="min-w-0 truncate font-mono text-sm text-strong">
+            {you.username ? `@${you.username}` : "—"}
+          </code>
+          {you.username && (
+            <Button
+              size="sm"
               onClick={copy}
               aria-label={`Copy a link to your profile, @${you.username}`}
-              className={cn(
-                "press -mx-1 mt-0.5 flex items-center gap-1.5 rounded-control px-1 py-0.5 transition-colors",
-                "hover:bg-muted focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-[color:var(--accent-ring)]",
-              )}
             >
-              <span className="truncate font-mono text-[0.76rem] text-subtle">
-                @{you.username}
-              </span>
               {copied ? (
-                <Check
-                  aria-hidden
-                  className="size-3.5 shrink-0 text-[color:var(--ok)]"
-                />
+                <Check aria-hidden className="size-3.5" />
               ) : (
-                <Copy aria-hidden className="size-3.5 shrink-0 text-subtle" />
+                <Copy aria-hidden className="size-3.5" />
               )}
-              <span className="whitespace-nowrap text-[0.72rem] text-subtle">
-                {copied ? "Link copied" : "Copy link"}
-              </span>
-              {/* Announced rather than only drawn, because the icon swap is
-                  the entire feedback and a screen reader cannot see it. */}
-              <span aria-live="polite" className="sr-only">
-                {copied ? "Link copied" : ""}
-              </span>
-            </button>
-          ) : (
-            /* Unreachable once the backfill has run, and kept because
-               "unreachable" and "cannot happen" are different words. It says
-               nothing and asks for nothing: there is no action to offer. */
-            <p className="mt-0.5 font-mono text-[0.76rem] text-subtle">
-              &mdash;
-            </p>
+              {copied ? "Copied" : "Copy link"}
+            </Button>
           )}
+          {/* Announced rather than only drawn, because the label swap is the
+              entire feedback and a screen reader cannot see it. */}
+          <span aria-live="polite" className="sr-only">
+            {copied ? "Link copied" : ""}
+          </span>
         </div>
-      </div>
-
-      {/* Said, not labelled. This is exactly what a friend sees on your card,
-          so it is written the same way there and here: a number and the word
-          for what it counts, in the body face, at a size somebody reads. */}
-      <p className="flex flex-wrap items-center gap-x-5 gap-y-1 border-border border-t pt-4 text-[0.95rem]">
-        <span className="flex items-center gap-2">
-          {you.streak > 0 && <StreakFlame size="sm" />}
-          {you.streak > 0 ? (
-            <span>
-              <span className="font-semibold text-strong tabular-nums">
-                {you.streak}
-              </span>
-              <span className="text-subtle"> day streak</span>
-            </span>
-          ) : (
-            <span className="text-subtle">{streakLabel(you.streak)}</span>
-          )}
-        </span>
-        <span>
-          <span className="font-semibold text-strong tabular-nums">
-            {you.topics}
-          </span>
-          <span className="text-subtle">
-            {you.topics === 1 ? " topic" : " topics"}
-          </span>
-        </span>
-      </p>
+      </Card>
     </section>
   );
 }
