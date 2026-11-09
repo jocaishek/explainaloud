@@ -21,13 +21,13 @@ export const contentType = "image/png";
 export const alt =
   "explainaloud: upload your notes, explain the topic out loud, and see exactly what you missed";
 
-/* The page's own colours: ink on paper, and the three verdicts at their
+/* The page's own colours: espresso on warm paper, and the three verdicts at their
  * light-stock values. Literals, because an image route has no stylesheet. */
-const PAGE = "#f8f9fa";
-const INK = "#141517";
-const MUTED = "#6a6d72";
-const LINE = "#d9dadc";
-const OK = "#1f7a50";
+const PAGE = "#f6f1e9";
+const INK = "#2b2018";
+const MUTED = "#6e6255";
+const LINE = "#ddd3c4";
+const OK = "#1b7048";
 const VAGUE = "#8a5a12";
 const MISS = "#b23b30";
 

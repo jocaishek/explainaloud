@@ -1,14 +1,14 @@
 # Design
 
 **One register.** The landing page, the auth screens and the signed-in app are
-the same world: the same paper, the same ink, the same shapes and the same
-type. A person should not be able to tell they have crossed the sign-in.
+the same world: the same warm paper, the same espresso, the same shapes and the
+same type. A person should not be able to tell they have crossed the sign-in.
 
 | | Everywhere |
 |---|---|
-| Canvas | `#f8f9fa` paper, cards in white |
-| Accent | None. Ink `#141517` is the action colour: the primary button, the selection, today's bar. White type on it |
-| Panels | A white card with a hairline border (ink at 8%) and a small, soft, neutral shadow (`--elev-rest`) |
+| Canvas | `#f6f1e9` warm paper, cards in `#fdfbf7` |
+| Accent | None. Espresso `#2b2018` is both the text and the action colour: the primary button, the selection, today's bar. Cream type on it |
+| Panels | A card with a hairline border (espresso at 10%) and a small, soft shadow tinted with the espresso (`--elev-rest`) |
 | Radii | Controls 10 (`--r-control`), cards 16 (`--r-card`), round (`--r-pill`) |
 | Display | Geist, weight 400, tracking -0.035em |
 | Body | Geist |
@@ -18,6 +18,10 @@ type. A person should not be able to tell they have crossed the sign-in.
 Colour is kept for the things that mean something — the three verdicts and the
 streak flame — so the chrome stays quiet and the marked transcript, the topic
 progress and the streak are what a person sees first.
+
+The warm paper and espresso replaced a cool grey `#f8f9fa` with near-black ink
+in November 2026: same structure, warmer room. Night mode is the same ramp
+turned down — a dark roast page with cream text.
 
 This is the result of the October 2026 redesign, worked out in mockups first
 (see the PR that introduced it) and then run through the `unslop` checklist:
@@ -35,7 +39,7 @@ indirection is what lets the product change its look by editing one block.
 
 `--brand`, `--brand-deep` and `--brand-ink` still exist as indirections because
 files across the app ask for `bg-brand-deep` or `text-brand-ink`, and those
-names say what the colour is for. They answer with the ink now.
+names say what the colour is for. They answer with the espresso now.
 
 ## What crosses the seam unchanged
 
@@ -88,7 +92,8 @@ product:
   the October 2026 pass for the same reason as the others.
 - Glassmorphism and `backdrop-filter` as decoration. Blur is for a bar floating
   over scrolling content, and nothing else.
-- A colour that is neither a verdict, the streak flame, nor the ink. The flame
+- A colour that is neither a verdict, the streak flame, nor the espresso and
+  its paper. The flame
   is the one addition this list has taken, it was taken deliberately, and it
   did not open a door: adding another means making the same case, which is that
   the thing being coloured means exactly one thing, means it everywhere, and is
@@ -97,8 +102,9 @@ product:
   leftover, not a decision.)
 - **A saturated ground under a marked transcript.** Green, red and tan have to
   stay legible and keep meaning *correct*, *missed* and *vague*. Every section
-  that marks anything sits on the paper or on a white card, where all three
-  clear 4.5:1.
+  that marks anything sits on the paper, a card or the muted surface, where
+  all three clear 4.5:1 (the green was deepened to `#1b7048` so it still does
+  on the warmer muted surface).
 - **More than one inversion on a page.** Light to dark and back is a full eye
   adaptation, and a reader who does it twice in six sections reports the page
   as flashing at them — which is exactly what happened. Today no page has one:
