@@ -19,53 +19,57 @@
  * the utility it modifies. */
 @custom-variant dark (&:where(.dark, .dark *));
 
-/* Ink and paper, on both sides of the sign-in.
+/* Espresso on warm paper, on both sides of the sign-in.
  *
- * One neutral ramp, a near-black ink as the only action colour, and colour
- * kept for the things that mean something: the three verdicts and the streak
- * flame. The landing, the auth screens and the app all read these same values;
- * `.register-app` no longer answers any of them, it only sets the app's
- * spacing rhythm. See `.claude/rules/design.md`.
+ * One warm neutral ramp: a cream page, near-white cards, and espresso as both
+ * the text and the only action colour. Colour is kept for the things that mean
+ * something: the three verdicts and the streak flame. The landing, the auth
+ * screens and the app all read these same values; `.register-app` only sets
+ * the app's spacing rhythm. See `.claude/rules/design.md`.
+ *
+ * Contrast, measured: espresso on the page 14.1:1, secondary text 5.3:1, and
+ * every verdict at least 4.7:1 on the page, a card and the muted surface.
  */
 :root {
-  --background: #f8f9fa;
-  --foreground: #141517;
-  --muted: #f2f3f5;
-  --muted-foreground: #6a6d72;
-  --card: #ffffff;
-  --card-foreground: #141517;
-  --popover: #ffffff;
-  --popover-foreground: #141517;
-  /* Hairlines are the ink at 8%, so an edge reads as an edge rather than as
-     a drawn box. Inputs get a little more, because they have to be found. */
-  --border: rgba(20, 21, 23, 0.08);
-  --input: rgba(20, 21, 23, 0.14);
-  --primary: #141517;
-  --primary-foreground: #ffffff;
-  --secondary: #f2f3f5;
-  --secondary-foreground: #141517;
-  --accent: #f2f3f5;
-  --accent-foreground: #141517;
+  --background: #f6f1e9;
+  --foreground: #2b2018;
+  --muted: #ece4d7;
+  --muted-foreground: #6e6255;
+  --card: #fdfbf7;
+  --card-foreground: #2b2018;
+  --popover: #fdfbf7;
+  --popover-foreground: #2b2018;
+  /* Hairlines are the espresso at 10%, so an edge reads as an edge rather
+     than as a drawn box. Inputs get more, because they have to be found. */
+  --border: rgba(43, 32, 24, 0.1);
+  --input: rgba(43, 32, 24, 0.18);
+  --primary: #2b2018;
+  --primary-foreground: #fdfbf7;
+  --secondary: #ece4d7;
+  --secondary-foreground: #2b2018;
+  --accent: #ece4d7;
+  --accent-foreground: #2b2018;
   --destructive: oklch(0.577 0.245 27.325);
-  --ring: #141517;
+  --ring: #2b2018;
 
   /* The brand names are kept as indirections because twenty-odd files ask
      for `bg-brand-deep` or `text-brand-ink`, and those names still say what
-     the colour is for. The answer is the ink now; there is no second hue. */
-  --brand: #141517;
-  --brand-deep: #141517;
-  --brand-high: #4a4d52;
-  --brand-ink: #141517;
-  --brand-foreground: #ffffff;
+     the colour is for. The answer is the espresso; there is no second hue. */
+  --brand: #2b2018;
+  --brand-deep: #2b2018;
+  --brand-high: #5a4a3d;
+  --brand-ink: #2b2018;
+  --brand-foreground: #fdfbf7;
 
-  --strong: #141517;
-  --subtle: #6a6d72;
-  --surface: rgba(20, 21, 23, 0.04);
-  --surface-border: rgba(20, 21, 23, 0.08);
+  --strong: #2b2018;
+  --subtle: #6e6255;
+  --surface: rgba(43, 32, 24, 0.04);
+  --surface-border: rgba(43, 32, 24, 0.1);
 
   /* The three verdicts: correct, said but not checkably, never reached.
-     Reserved, and each clears 4.5:1 as text on the page and on a card. */
-  --ok: #1f7a50;
+     Reserved. The green is a step deeper than it was on grey paper, so it
+     still clears 4.5:1 on the warmer muted surface. */
+  --ok: #1b7048;
   --miss: #b23b30;
   --vague: #8a5a12;
 
@@ -81,65 +85,65 @@
   --r-control: 10px;
   --r-pill: 9999px;
 
-  /* Elevation is soft, small and neutral, and it sits under a hairline
-     border rather than replacing one. */
+  /* Elevation is soft and small, tinted with the espresso rather than black
+     so it sits in the same warm light, and it sits under a hairline. */
   --elev-rest:
-    0 1px 2px rgba(20, 21, 23, 0.04), 0 8px 24px -12px rgba(20, 21, 23, 0.12);
+    0 1px 2px rgba(43, 32, 24, 0.05), 0 8px 24px -12px rgba(43, 32, 24, 0.14);
   --elev-hover:
-    0 2px 4px rgba(20, 21, 23, 0.05), 0 16px 32px -16px rgba(20, 21, 23, 0.18);
-  --elev-float: 0 8px 24px rgba(20, 21, 23, 0.1);
+    0 2px 4px rgba(43, 32, 24, 0.06), 0 16px 32px -16px rgba(43, 32, 24, 0.2);
+  --elev-float: 0 8px 24px rgba(43, 32, 24, 0.12);
 
-  --accent-solid: #141517;
-  --accent-solid-hover: #2b2d31;
-  --accent-contrast: #ffffff;
-  --accent-ring: rgba(20, 21, 23, 0.24);
-  --accent-wash: rgba(20, 21, 23, 0.05);
+  --accent-solid: #2b2018;
+  --accent-solid-hover: #43342a;
+  --accent-contrast: #fdfbf7;
+  --accent-ring: rgba(43, 32, 24, 0.24);
+  --accent-wash: rgba(43, 32, 24, 0.05);
 
   /* The vertical rhythm between blocks on a page. */
   --stack: 2rem;
   --measure: 72rem;
 }
 
-/* Night. A neutral carbon with the ink inverted: the action colour becomes an
- * off-white with dark type on it, and cards separate from the page by a step
- * of surface and a hairline rather than by shadow. */
+/* Night. The same warm ramp turned down: a dark roast for the page, cream for
+ * text and for the action colour (with espresso type on it), and cards that
+ * separate from the page by a step of surface and a hairline, not a shadow. */
 .dark {
-  --background: #0f0f10;
-  --foreground: #ededed;
-  --muted: #1d1d20;
-  --muted-foreground: #a1a1a6;
-  --card: #18181b;
-  --card-foreground: #ededed;
-  --popover: #18181b;
-  --popover-foreground: #ededed;
-  --border: rgba(255, 255, 255, 0.1);
-  --input: rgba(255, 255, 255, 0.18);
-  --primary: #ededed;
-  --primary-foreground: #141415;
-  --secondary: #232326;
-  --secondary-foreground: #ededed;
-  --accent: #232326;
-  --accent-foreground: #ededed;
+  --background: #141210;
+  --foreground: #efe9de;
+  --muted: #221e1a;
+  --muted-foreground: #aaa398;
+  --card: #1c1916;
+  --card-foreground: #efe9de;
+  --popover: #1c1916;
+  --popover-foreground: #efe9de;
+  --border: rgba(239, 233, 222, 0.1);
+  --input: rgba(239, 233, 222, 0.18);
+  --primary: #efe9de;
+  --primary-foreground: #1c1916;
+  --secondary: #262220;
+  --secondary-foreground: #efe9de;
+  --accent: #262220;
+  --accent-foreground: #efe9de;
   --destructive: oklch(0.637 0.237 25.331);
-  --ring: #ededed;
+  --ring: #efe9de;
 
-  --brand: #ededed;
-  --brand-deep: #ededed;
-  --brand-high: #a1a1a6;
-  --brand-ink: #ededed;
-  --brand-foreground: #141415;
+  --brand: #efe9de;
+  --brand-deep: #efe9de;
+  --brand-high: #aaa398;
+  --brand-ink: #efe9de;
+  --brand-foreground: #1c1916;
 
-  --strong: #ffffff;
-  --subtle: #a1a1a6;
-  --surface: rgba(255, 255, 255, 0.05);
-  --surface-border: rgba(255, 255, 255, 0.1);
+  --strong: #fbf7f0;
+  --subtle: #aaa398;
+  --surface: rgba(239, 233, 222, 0.05);
+  --surface-border: rgba(239, 233, 222, 0.1);
 
-  /* Re-checked against carbon rather than carried over. */
+  /* Re-checked against the dark roast rather than carried over. */
   --ok: #4cc38a;
   --miss: #f07a70;
   --vague: #d6b37a;
 
-  /* One stop up: a mid orange that is vivid on paper is a smudge on carbon. */
+  /* One stop up: a mid orange that is vivid on paper is a smudge at night. */
   --flame: #fb7a33;
   --flame-core: #fed7aa;
   --flame-glow: rgba(251, 122, 51, 0.26);
@@ -148,11 +152,11 @@
   --elev-hover: none;
   --elev-float: 0 8px 24px rgba(0, 0, 0, 0.4);
 
-  --accent-solid: #ededed;
-  --accent-solid-hover: #ffffff;
-  --accent-contrast: #141415;
-  --accent-ring: rgba(255, 255, 255, 0.3);
-  --accent-wash: rgba(255, 255, 255, 0.08);
+  --accent-solid: #efe9de;
+  --accent-solid-hover: #fbf7f0;
+  --accent-contrast: #1c1916;
+  --accent-ring: rgba(239, 233, 222, 0.3);
+  --accent-wash: rgba(239, 233, 222, 0.08);
 }
 
 /* The app register. It answers no colour: a screen somebody sits inside for
@@ -391,7 +395,7 @@
  * "section four". Every accent clears 4.5:1 as text on both papers.
  */
 .paper {
-  --stock: #ffffff;
+  --stock: var(--card);
   background: var(--stock);
 }
 
