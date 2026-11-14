@@ -120,7 +120,7 @@ export default async function DashboardPage() {
     // an old topic "not explained yet".
     supabase
       .from("course_sessions")
-      .select("course_id, score, started_at, analyzed_at")
+      .select("course_id, score, started_at, analyzed_at, mode")
       .eq("user_id", user.id)
       .order("started_at", { ascending: false })
       .returns<
@@ -129,6 +129,7 @@ export default async function DashboardPage() {
           score: number | null;
           started_at: string;
           analyzed_at: string | null;
+          mode: string | null;
         }>
       >(),
   ]);
@@ -174,11 +175,6 @@ export default async function DashboardPage() {
 
   const weekRecorded = weekDays.filter((d) => d.sessions > 0).length;
   const weekSessions = weekDays.reduce((sum, d) => sum + d.sessions, 0);
-  const latestPace = paceSessions.at(-1)?.wpm ?? null;
-  const paceDelta =
-    latestPace !== null && baselineWpm
-      ? latestPace - Math.round(baselineWpm)
-      : null;
 
   /* Each topic's latest grade, and which topics have been explained at all.
      A recording that was never graded (analysis failed, or is still running)
@@ -193,6 +189,34 @@ export default async function DashboardPage() {
     }
   }
   const explainedCount = (courses ?? []).filter((c) => spoken.has(c.id)).length;
+
+  /* The biggest climb on any one topic, first graded take to latest.
+   *
+   * This card used to be speaking pace, which is a measurement rather than
+   * an achievement — and the dashboard is the screen somebody sees when
+   * deciding whether to start again. Progress on meaningful work is the
+   * strongest everyday motivator people report (Amabile & Kramer, 2011), so
+   * the dashboard leads with their own, measured against their own past.
+   * Pace still has its chart further down. */
+  // Open explanations only: an interview is graded against different things,
+  // so a climb from one kind to the other is not a climb.
+  const firstScore = new Map<string, number>();
+  const lastScore = new Map<string, number>();
+  for (const row of graded ?? []) {
+    if (row.mode === "interview") continue;
+    if (!row.analyzed_at || typeof row.score !== "number") continue;
+    // Newest first: the first row seen is the latest take, the last the first.
+    if (!lastScore.has(row.course_id)) lastScore.set(row.course_id, row.score);
+    firstScore.set(row.course_id, row.score);
+  }
+  let climb: { gain: number; course: Course } | null = null;
+  for (const course of courses ?? []) {
+    const first = firstScore.get(course.id);
+    const last = lastScore.get(course.id);
+    if (typeof first !== "number" || typeof last !== "number") continue;
+    const gain = last - first;
+    if (gain > 0 && (!climb || gain > climb.gain)) climb = { gain, course };
+  }
 
   /* Up next, from the grades: the weakest topic to practise, a topic never
      explained, and a topic in hand that has not been said for longest. Three
@@ -213,9 +237,9 @@ export default async function DashboardPage() {
       tone: "practice",
       why: "Gaps to close",
       title: `Practise ${courseTitle(weakest)}`,
-      detail: `Your last explanation scored ${latest.get(weakest.id)?.score}. The gap report shows what was missed`,
-      href: `${courseHref(weakest)}/gaps`,
-      action: "See what you missed",
+      detail: `Scored ${latest.get(weakest.id)?.score} last time. You already know which points to add`,
+      href: `${courseHref(weakest)}/re-teach`,
+      action: "Practise what you missed",
     });
   }
   const fresh = all.find((c) => !spoken.has(c.id));
@@ -304,22 +328,13 @@ export default async function DashboardPage() {
           note={`${weekSessions} this week`}
         />
         <StatCard
-          label="Speaking pace"
-          value={baselineWpm ? Math.round(baselineWpm) : null}
-          unit="wpm"
+          label="Most improved"
+          value={climb ? climb.gain : null}
+          unit={climb ? "points" : undefined}
           note={
-            paceDelta !== null ? (
-              <>
-                <span className="font-medium text-strong tabular-nums">
-                  {paceDelta > 0 ? `+${paceDelta}` : paceDelta}
-                </span>{" "}
-                on your latest measured recording
-              </>
-            ) : baselineWpm ? (
-              "Your usual pace"
-            ) : (
-              "Measured on your first recording"
-            )
+            climb
+              ? `${courseTitle(climb.course)}, since your first take`
+              : "Explain a topic twice to see your climb"
           }
         />
         <StatCard

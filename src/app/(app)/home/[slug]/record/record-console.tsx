@@ -2957,6 +2957,14 @@ export function RecordConsole({
    * instruction that rewrites itself is worse than one that arrives late.
    */
   const drafting = interviewing && writing && (!live || status === "between");
+  /** The claims the grader marked correct in this take — the same count the
+      score's accuracy is built from (see `coverage-report.ts`) — which the
+      finished panel leads with. Claims, not key points: one point can be made
+      in several sentences. An interview's spans live on its segments. */
+  const explainedPoints = (
+    segments.length > 0 ? segments.flatMap((segment) => segment.spans) : spans
+  ).filter((span) => span.status === "correct").length;
+
   /**
    * Whether the take is finished and every answer has come back graded.
    *
@@ -3332,19 +3340,80 @@ export function RecordConsole({
             {/* No score here. A number attached to the thing you just said
                 invites judging the take rather than reading what was missed —
                 the score belongs on the gap report, once. */}
-            <div className="rounded-card border border-border bg-surface p-4">
-              <p className="text-sm text-foreground">{report.verdict}</p>
+            {/* What went right comes first, and gets the headline.
+             *
+             * This is the last thing somebody sees of a take, and the
+             * peak-end rule (Kahneman et al., 1993) says the end is most of
+             * how the whole thing is remembered. It used to be one sentence
+             * of verdict over a stack of red boxes, so the memory of
+             * explaining something out loud was a list of failures — the
+             * memory that decides whether they open the app tomorrow.
+             * Nothing is hidden: every miss is still listed below, in full.
+             * It is ordered the way feedback that people act on is ordered
+             * (Hattie & Timperley, 2007): where you are, then where next. */}
+            <div className="rounded-card border border-border bg-card p-5 shadow-rest">
+              <p className="font-display text-2xl text-strong">
+                {explainedPoints > 0
+                  ? `You got ${explainedPoints} ${explainedPoints === 1 ? "thing" : "things"} right`
+                  : "First pass done"}
+              </p>
+              <p className="mt-2 text-foreground text-sm leading-relaxed">
+                {report.verdict}
+              </p>
+              {report.strengths.length > 0 && (
+                <ul className="mt-4 flex flex-col gap-2">
+                  {report.strengths.slice(0, 3).map((strength) => (
+                    <li
+                      key={strength}
+                      className="flex gap-2 text-foreground text-sm leading-6"
+                    >
+                      <span
+                        aria-hidden
+                        className="mt-2 size-2 shrink-0 rounded-full bg-ok"
+                      />
+                      {strength}
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
+
+            {/* The misses as a short, countable list — "two to add", not "two
+                failures". A goal that looks close gets worked at harder than
+                one that looks far (Kivetz et al., 2006), and a point not
+                reached yet is not a wrong answer: only an actual error keeps
+                the red. */}
+            {report.gaps.length > 0 && (
+              <h3 className="mt-2 font-medium text-base text-strong">
+                {report.gaps.length === 1
+                  ? "One point to add next time"
+                  : `${report.gaps.length} points to add next time`}
+              </h3>
+            )}
 
             {report.gaps.map((gap, index) => (
               <div
                 key={gap.phrase}
                 id={`record-gap-${index}`}
                 tabIndex={-1}
-                className="scroll-mt-24 rounded-control border border-miss/30 bg-miss/[0.06] p-4"
+                className={cn(
+                  "scroll-mt-24 rounded-control border p-4",
+                  gap.category === "missing_step"
+                    ? "border-border bg-card"
+                    : "border-miss/30 bg-miss/[0.06]",
+                )}
               >
-                <p className="font-medium text-miss text-xs first-letter:uppercase">
-                  {gap.category.replace(/_/g, " ")}
+                <p
+                  className={cn(
+                    "font-medium text-xs first-letter:uppercase",
+                    gap.category === "missing_step"
+                      ? "text-subtle"
+                      : "text-miss",
+                  )}
+                >
+                  {gap.category === "missing_step"
+                    ? "Not said yet"
+                    : gap.category.replace(/_/g, " ")}
                 </p>
                 {/* The phrase only. Teaching lives in Re-Teach: putting the
                     explanation here hands over the answer at the moment the
@@ -3378,21 +3447,53 @@ export function RecordConsole({
                 *
                 * A URL that names the session cannot do that. `?session=` is
                 * also what the dashboard's pace chart has always used. */}
-            <Button
-              asChild
-              className="mt-1 h-11 w-fit gap-2 rounded-control bg-accent-solid px-6 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
-            >
-              <Link
-                href={
-                  displayedSessionId
-                    ? `/home/${slug}/gaps?session=${displayedSessionId}`
-                    : `/home/${slug}/gaps`
-                }
+            {/* One obvious next step, named as an action with a size.
+                "Practise these 2" is a plan; "see the full gap report" is a
+                place. Specific next actions are the ones that get done
+                (Gollwitzer, 1999). The report stays one click away. */}
+            <div className="mt-1 flex flex-wrap items-center gap-x-5 gap-y-3">
+              {report.gaps.length > 0 && (
+                <Button
+                  asChild
+                  className="h-11 w-fit gap-2 rounded-control bg-accent-solid px-6 font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
+                >
+                  <Link
+                    href={
+                      displayedSessionId
+                        ? `/home/${slug}/re-teach?session=${displayedSessionId}`
+                        : `/home/${slug}/re-teach`
+                    }
+                  >
+                    {report.gaps.length === 1
+                      ? "Practise the one you missed"
+                      : `Practise these ${report.gaps.length}`}
+                    <ArrowRight aria-hidden className="size-4" />
+                  </Link>
+                </Button>
+              )}
+              <Button
+                asChild
+                variant={report.gaps.length > 0 ? "ghost" : "default"}
+                className={cn(
+                  "h-11 w-fit gap-2 rounded-control px-6 font-semibold transition-transform duration-200 ease-out active:scale-[0.97]",
+                  report.gaps.length === 0 &&
+                    "bg-accent-solid text-accent-contrast hover:bg-accent-solid-hover",
+                )}
               >
-                See the full gap report
-                <ArrowRight aria-hidden className="size-4" />
-              </Link>
-            </Button>
+                <Link
+                  href={
+                    displayedSessionId
+                      ? `/home/${slug}/gaps?session=${displayedSessionId}`
+                      : `/home/${slug}/gaps`
+                  }
+                >
+                  See your full report
+                  {report.gaps.length === 0 && (
+                    <ArrowRight aria-hidden className="size-4" />
+                  )}
+                </Link>
+              </Button>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
