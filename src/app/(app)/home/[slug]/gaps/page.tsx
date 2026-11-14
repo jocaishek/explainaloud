@@ -143,12 +143,36 @@ export default async function GapReportPage({
       }>
     >();
 
+  /* The take being read, and the graded take before it. Known before the
+     report itself is fetched: absent `?session=`, the report is the newest
+     graded take, which is `graded[0]`. */
+  const currentId = wanted ?? graded?.[0]?.id ?? null;
+  const currentIndex = (graded ?? []).findIndex((g) => g.id === currentId);
+  /* Only takes of the same kind are compared. An interview and an open
+     explanation are graded against different things, and the session picker
+     already refuses to treat their scores as comparable. */
+  const kind = (mode: string | null) =>
+    mode === "interview" ? "interview" : "topic";
+  const currentKind = kind(graded?.[currentIndex]?.mode ?? null);
+  const sameKind = (graded ?? []).filter(
+    (g) => kind(g.mode) === currentKind && typeof g.score === "number",
+  );
+  const previous =
+    currentIndex >= 0
+      ? ((graded ?? [])
+          .slice(currentIndex + 1)
+          .find(
+            (g) => kind(g.mode) === currentKind && typeof g.score === "number",
+          ) ?? null)
+      : null;
+
   const [
     { data: session },
     { data: baseline },
     { data: pastSessions },
     { data: course },
     { data: newest },
+    { count: previousMisses },
   ] = await Promise.all([
     (wanted
       ? supabase
@@ -212,6 +236,14 @@ export default async function GapReportPage({
         report: unknown;
         transcript: string | null;
       }>(),
+    // How many points the take before this one had to fix. Head-only.
+    previous
+      ? supabase
+          .from("gaps")
+          .select("id", { count: "exact", head: true })
+          .eq("session_id", previous.id)
+          .eq("user_id", user.id)
+      : Promise.resolve({ count: null }),
   ]);
 
   /* An attempt newer than the report being shown, with no report of its own.
@@ -503,11 +535,32 @@ export default async function GapReportPage({
           </div>
         </div>
       ) : (
-        <KnowledgeScore
-          score={score}
-          verdict={session.report.verdict}
-          heading={copy.scoreHeading}
-        />
+        <>
+          <KnowledgeScore
+            score={score}
+            verdict={session.report.verdict}
+            heading={copy.scoreHeading}
+          />
+          <div className="grid gap-4 md:grid-cols-2">
+            <ProgressNote
+              score={score}
+              previousScore={previous?.score ?? null}
+              best={Math.max(
+                ...sameKind
+                  .filter((g) => g.id !== session.id)
+                  .map((g) => g.score ?? 0),
+                0,
+              )}
+              misses={weaknesses.length}
+              previousMisses={previous ? (previousMisses ?? null) : null}
+            />
+            <NextStep
+              slug={slug}
+              sessionId={session.id}
+              misses={weaknesses.length}
+            />
+          </div>
+        </>
       )}
 
       {/* Two columns on a wide screen: what you did on the left — the score's
@@ -650,7 +703,7 @@ export default async function GapReportPage({
               id="strengths-heading"
               className="text-base font-semibold text-strong"
             >
-              Knowledge strengths
+              What you got right
             </h2>
             {session.report.strengths.length > 0 ? (
               <ul className="flex flex-col gap-2">
@@ -740,6 +793,126 @@ export default async function GapReportPage({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * This take against the last one on the same topic.
+ *
+ * The comparison is with the person's own earlier self and with nobody else.
+ * Seeing yourself improve is one of the most reliably motivating things a
+ * person can be shown (Amabile & Kramer, 2011, "the progress principle"), and
+ * a temporal comparison does it without the threat that ranking against
+ * other people carries (Wilson & Ross, 2001; Wood, 1989).
+ *
+ * Every line is a fact the database holds. A drop is never headlined: it is
+ * not hidden either — the score is right above — but the line that speaks
+ * points at the best take instead, which is the honest thing that is also
+ * useful, because one bad take does not undo a good one.
+ */
+function ProgressNote({
+  score,
+  previousScore,
+  best,
+  misses,
+  previousMisses,
+}: {
+  score: number;
+  previousScore: number | null;
+  /** The best score on any other graded take of this topic; 0 when none. */
+  best: number;
+  misses: number;
+  previousMisses: number | null;
+}) {
+  let headline: string;
+  let detail: string;
+  if (previousScore === null) {
+    headline = "Your first take on this topic";
+    detail =
+      "This is the score to beat. The next take starts with everything this page found.";
+  } else if (score > previousScore) {
+    headline = `Up ${score - previousScore} since your last take`;
+    detail =
+      score > best
+        ? "Your best on this topic so far."
+        : `Your best on this topic is ${best}.`;
+  } else if (score === previousScore) {
+    headline = "Level with your last take";
+    detail = `Your best on this topic is ${Math.max(best, score)}.`;
+  } else {
+    headline = `Your best on this topic is ${best}`;
+    detail = "Takes go up and down. The points on this page are what moves it.";
+  }
+
+  return (
+    <section
+      aria-label="Since your last take"
+      className={cn(PANEL, "flex flex-col gap-1.5 p-5")}
+    >
+      <p className="font-medium text-base text-strong">{headline}</p>
+      <p className="text-sm text-subtle leading-relaxed">{detail}</p>
+      {previousMisses !== null && misses < previousMisses && (
+        <p className="mt-1 text-sm text-strong">
+          {misses === 0
+            ? `Nothing left to fix, down from ${previousMisses}`
+            : `${misses} to fix, down from ${previousMisses}`}
+        </p>
+      )}
+    </section>
+  );
+}
+
+/**
+ * The one thing to do next, and roughly how big it is.
+ *
+ * A plan that names the action ("practise these three") is carried out far
+ * more often than an intention ("look at the report") (Gollwitzer, 1999).
+ * With nothing to fix, the next step is to say it again on another day:
+ * spacing a retrieval out is what makes it last (Cepeda et al., 2006), and it
+ * is also the honest reason to come back.
+ */
+function NextStep({
+  slug,
+  sessionId,
+  misses,
+}: {
+  slug: string;
+  sessionId: string;
+  misses: number;
+}) {
+  const practise = misses > 0;
+  return (
+    <section
+      aria-label="Next step"
+      className={cn(PANEL, "flex flex-col items-start gap-1.5 p-5")}
+    >
+      <p className="font-medium text-base text-strong">
+        {practise
+          ? misses === 1
+            ? "One point between you and the whole topic"
+            : `${misses} points between you and the whole topic`
+          : "Nothing left to fix"}
+      </p>
+      <p className="text-sm text-subtle leading-relaxed">
+        {practise
+          ? "Go over each one, then explain the topic again."
+          : "Say it again tomorrow. Explaining it once more after a night's sleep is what makes it stick."}
+      </p>
+      <Link
+        href={
+          practise
+            ? `/home/${slug}/re-teach?session=${sessionId}`
+            : `/home/${slug}/record`
+        }
+        className="mt-3 w-fit rounded-control bg-accent-solid px-4 py-2 font-semibold text-accent-contrast text-sm transition-transform duration-200 ease-out hover:bg-accent-solid-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-[0.97]"
+      >
+        {practise
+          ? misses === 1
+            ? "Practise it"
+            : `Practise these ${misses}`
+          : "Explain it again"}
+      </Link>
+    </section>
   );
 }
 

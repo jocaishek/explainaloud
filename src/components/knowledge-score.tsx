@@ -4,11 +4,6 @@ import { useEffect, useState } from "react";
 import { useMediaQuery } from "~/hooks/use-media-query";
 import { cn } from "~/lib/utils";
 
-function scoreColor(score: number) {
-  const hue = Math.round((Math.max(0, Math.min(100, score)) / 100) * 120);
-  return `hsl(${hue} 72% 46%)`;
-}
-
 export function KnowledgeScore({
   score,
   verdict,
@@ -64,8 +59,6 @@ export function KnowledgeScore({
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const color = scoreColor(displayed);
-
   return (
     <section
       aria-labelledby="score-heading"
@@ -78,10 +71,13 @@ export function KnowledgeScore({
         <h2 id="score-heading" className="text-base font-semibold text-strong">
           {heading}
         </h2>
-        <p
-          className="font-mono text-2xl font-semibold tabular-nums"
-          style={{ color }}
-        >
+        {/* Ink, not a red-to-green ramp. The ramp painted every score
+            under fifty in the colour this product reserves for a wrong
+            answer, so a first attempt — the one most likely to be low — read
+            as a verdict on the person rather than a starting point. Green,
+            tan and red mean one thing each here (see design.md), and "how
+            far along" is not one of them. */}
+        <p className="font-mono text-2xl font-semibold text-strong tabular-nums">
           <span aria-hidden>{displayed}</span>
           <span className="sr-only">{score}</span>
           <span className="text-sm font-normal text-subtle"> / 100</span>
@@ -105,13 +101,12 @@ export function KnowledgeScore({
             also parsing the rest of the page. */}
         <div
           className={cn(
-            "h-full origin-left rounded-full",
+            "h-full origin-left rounded-full bg-accent-solid",
             !reduceMotion &&
               "transition-transform duration-[1100ms] ease-[cubic-bezier(0.16,1,0.3,1)]",
           )}
           style={{
             transform: `scaleX(${(grown ? score : 0) / 100})`,
-            backgroundColor: color,
           }}
         />
       </div>

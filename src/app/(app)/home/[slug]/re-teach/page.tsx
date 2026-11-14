@@ -114,10 +114,21 @@ export default async function ReTeachPage({
             basePath="re-teach"
           />
         )}
-        <p className="text-sm text-subtle">
-          {gaps.length} thing{gaps.length === 1 ? "" : "s"} to go back over.
-          Each one is just the piece you missed.
-        </p>
+        {/* Framed as distance to the whole topic, because a goal that looks
+            close is worked at harder than one that looks far (Kivetz, Urminsky
+            & Zheng, 2006) — and "two to go back over" is the same fact as
+            "two points from having all of it". */}
+        <div className="flex flex-col gap-1">
+          <h2 className="font-display text-2xl text-strong">
+            {gaps.length === 1
+              ? "One point between you and the whole topic"
+              : `${gaps.length} points between you and the whole topic`}
+          </h2>
+          <p className="text-sm text-subtle">
+            Each one is just the piece you missed. Read it, then explain the
+            topic again.
+          </p>
+        </div>
 
         {gaps.map((gap) => {
           const sectionIndex = findRelatedSectionIndex(
@@ -133,7 +144,9 @@ export default async function ReTeachPage({
               className="flex scroll-mt-24 flex-col gap-3 rounded-card border border-border bg-surface p-4"
             >
               <p className="font-medium text-brand-ink text-xs first-letter:uppercase">
-                {gap.category.replace(/_/g, " ")}
+                {gap.category === "missing_step"
+                  ? "Not said yet"
+                  : gap.category.replace(/_/g, " ")}
               </p>
 
               <p className="text-sm text-subtle">
@@ -164,12 +177,17 @@ export default async function ReTeachPage({
           );
         })}
 
-        <Link
-          href={`/home/${slug}/record`}
-          className="w-fit rounded-control bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
-        >
-          Record another explanation
-        </Link>
+        <div className="flex flex-col items-start gap-2 border-border border-t pt-6">
+          <p className="text-sm text-subtle">
+            Every point you explain on the next take comes off this list.
+          </p>
+          <Link
+            href={`/home/${slug}/record`}
+            className="w-fit rounded-control bg-accent-solid px-5 py-2 text-sm font-semibold text-accent-contrast transition-transform duration-200 ease-out hover:bg-accent-solid-hover active:scale-[0.97]"
+          >
+            Explain it again
+          </Link>
+        </div>
       </div>
     </PageEnter>
   );
